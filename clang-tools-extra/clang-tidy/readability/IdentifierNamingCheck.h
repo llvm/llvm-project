@@ -11,8 +11,7 @@
 
 #include "../utils/RenamerClangTidyCheck.h"
 #include <optional>
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace readability {
 
 enum StyleKind : int;
@@ -211,7 +210,6 @@ struct OptionEnumMapping<readability::IdentifierNamingCheck::CaseType> {
       std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
   getEnumMapping();
 };
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H

@@ -12,6 +12,7 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 
@@ -40,7 +41,7 @@ static constexpr int THIRTYTWO_OVER_PI_28_LSB_EXP[N_ENTRIES] = {
 
 // Return k and y, where
 //   k = round(x * 16 / pi) and y = (x * 16 / pi) - k.
-static inline int64_t small_range_reduction(double x, double &y) {
+LIBC_INLINE int64_t small_range_reduction(double x, double &y) {
   double prod = x * THIRTYTWO_OVER_PI_28[0];
   double kd = fputil::nearest_integer(prod);
   y = prod - kd;
@@ -55,7 +56,7 @@ static inline int64_t small_range_reduction(double x, double &y) {
 // contributing to the lowest 6 binary digits (k & 63).  If the least
 // significant bit of x * the least significant bit of THIRTYTWO_OVER_PI_28[i]
 // >= 64, we can completely ignore THIRTYTWO_OVER_PI_28[i].
-static inline int64_t large_range_reduction(double x, int x_exp, double &y) {
+LIBC_INLINE int64_t large_range_reduction(double x, int x_exp, double &y) {
   int idx = 0;
   y = 0;
   int x_lsb_exp_m4 = x_exp - fputil::FloatProperties<float>::MANTISSA_WIDTH;

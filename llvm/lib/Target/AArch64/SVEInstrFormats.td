@@ -549,6 +549,10 @@ class SVE_Shift_Add_All_Active_Pat<ValueType vtd, SDPatternOperator op, ValueTyp
 : Pat<(vtd (add vt1:$Op1, (op (pt (SVEAllActive)), vt2:$Op2, vt3:$Op3))),
       (inst $Op1, $Op2, $Op3)>;
 
+class SVE2p1_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
+    : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
+                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
+
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -8861,8 +8865,9 @@ class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc> {
-  def : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, SDPatternOperator intrinsic> {
+  def NAME : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, nxv8i16, nxv4i32>;
 }
 
 // SVE2 multi-vec shift narrow

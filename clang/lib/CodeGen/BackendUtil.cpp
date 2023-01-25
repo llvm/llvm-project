@@ -300,21 +300,6 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   return TLII;
 }
 
-static CodeGenOpt::Level getCGOptLevel(const CodeGenOptions &CodeGenOpts) {
-  switch (CodeGenOpts.OptimizationLevel) {
-  default:
-    llvm_unreachable("Invalid optimization level!");
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default; // O2/Os/Oz
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-}
-
 static std::optional<llvm::CodeModel::Model>
 getCodeModel(const CodeGenOptions &CodeGenOpts) {
   unsigned CodeModel = llvm::StringSwitch<unsigned>(CodeGenOpts.CodeModel)
@@ -579,7 +564,10 @@ void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   std::string FeaturesStr =
       llvm::join(TargetOpts.Features.begin(), TargetOpts.Features.end(), ",");
   llvm::Reloc::Model RM = CodeGenOpts.RelocationModel;
-  CodeGenOpt::Level OptLevel = getCGOptLevel(CodeGenOpts);
+  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+      CodeGenOpt::getLevel(CodeGenOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  CodeGenOpt::Level OptLevel = *OptLevelOrNone;
 
   llvm::TargetOptions Options;
   if (!initTargetOptions(Diags, Options, CodeGenOpts, TargetOpts, LangOpts,
@@ -1161,7 +1149,10 @@ static void runThinLTOBackend(
   Conf.CodeModel = getCodeModel(CGOpts);
   Conf.MAttrs = TOpts.Features;
   Conf.RelocModel = CGOpts.RelocationModel;
-  Conf.CGOptLevel = getCGOptLevel(CGOpts);
+  std::optional<CodeGenOpt::Level> OptLevelOrNone =
+      CodeGenOpt::getLevel(CGOpts.OptimizationLevel);
+  assert(OptLevelOrNone && "Invalid optimization level!");
+  Conf.CGOptLevel = *OptLevelOrNone;
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(Diags, Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);

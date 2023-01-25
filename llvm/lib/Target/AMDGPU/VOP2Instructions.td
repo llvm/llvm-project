@@ -1013,7 +1013,7 @@ defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
 } // End SubtargetPredicate = HasFmaLegacy32
 
-let SubtargetPredicate = HasVFmacF64Inst,
+let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",
     DisableEncoding="$src2",
     isConvertibleToThreeAddress = 1,
@@ -2280,9 +2280,9 @@ let AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A" in {
   }
 } // End AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A"
 
-let SubtargetPredicate = HasVFmacF64Inst in {
+let SubtargetPredicate = HasFmacF64Inst in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
-} // End SubtargetPredicate = HasVFmacF64Inst
+} // End SubtargetPredicate = HasFmacF64Inst
 
 let SubtargetPredicate = isGFX90APlus, IsSingle = 1 in {
   defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;

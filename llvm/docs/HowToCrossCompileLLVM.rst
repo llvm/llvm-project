@@ -42,8 +42,7 @@ The CMake options you need to add are:
 
  * ``-DCMAKE_SYSTEM_NAME=<target-system>``
  * ``-DCMAKE_INSTALL_PREFIX=<install-dir>``
- * ``-DLLVM_TABLEGEN=<path-to-host-bin>/llvm-tblgen``
- * ``-DCLANG_TABLEGEN=<path-to-host-bin>/clang-tblgen``
+ * ``-DLLVM_NATIVE_TOOL_DIR=<path-to-host-bin>``
  * ``-DLLVM_DEFAULT_TARGET_TRIPLE=arm-linux-gnueabihf``
  * ``-DLLVM_TARGET_ARCH=ARM``
  * ``-DLLVM_TARGETS_TO_BUILD=ARM``
@@ -66,9 +65,12 @@ In addition to the ones above, you'll also need:
  * Appropriate use of ``-I`` and ``-L``, depending on how the cross GCC is installed,
    and where are the libraries and headers.
 
-The TableGen options are required to compile it with the host compiler,
-so you'll need to compile LLVM (or at least ``llvm-tblgen``) to your host
-platform before you start. The CXX flags define the target, cpu (which in this case
+The ``LLVM_NATIVE_TOOL_DIR`` option allows you to reuse prebuilt binaries
+(``llvm-tblgen``, ``clang-tblgen`` etc) for the build host, if such are
+available. If that's not available, the LLVM cross build will automatically
+launch a nested build to build the tools that are required.
+
+The CXX flags define the target, cpu (which in this case
 defaults to ``fpu=VFP3`` with NEON), and forcing the hard-float ABI. If you're
 using Clang as a cross-compiler, you will *also* have to set ``--sysroot``
 to make sure it picks the correct linker.

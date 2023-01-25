@@ -14,9 +14,7 @@
 #include <llvm/ADT/APFloat.h>
 #include <llvm/ADT/SmallVector.h>
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Detects magic numbers, integer and floating point literals embedded in code.
 ///
@@ -102,8 +100,6 @@ private:
       IgnoredDoublePointValues;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MAGICNUMBERSCHECK_H

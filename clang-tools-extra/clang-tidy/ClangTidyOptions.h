@@ -22,8 +22,7 @@
 #include <utility>
 #include <vector>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 /// Contains a list of line ranges in a single file.
 struct FileFilter {
@@ -71,6 +70,14 @@ struct ClangTidyOptions {
 
   /// WarningsAsErrors filter.
   std::optional<std::string> WarningsAsErrors;
+
+  /// File extensions to consider to determine if a given diagnostic is located
+  /// in a header file.
+  std::optional<std::vector<std::string>> HeaderFileExtensions;
+
+  /// File extensions to consider to determine if a given diagnostic is located
+  /// is located in an implementation file.
+  std::optional<std::vector<std::string>> ImplementationFileExtensions;
 
   /// Output warnings from headers matching this filter. Warnings from
   /// main files will always be displayed.
@@ -320,7 +327,6 @@ parseConfigurationWithDiags(llvm::MemoryBufferRef Config, DiagCallback Handler);
 /// Serializes configuration to a YAML-encoded string.
 std::string configurationAsText(const ClangTidyOptions &Options);
 
-} // end namespace tidy
-} // end namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H

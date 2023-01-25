@@ -1325,9 +1325,9 @@ static SDValue lowerLoadF128(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(Op.getNode());
   assert(LdNode && LdNode->getOffset().isUndef() && "Unexpected node type");
-  unsigned Alignment = LdNode->getAlign().value();
+  Align Alignment = LdNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   SDValue Lo64 =
       DAG.getLoad(MVT::f64, DL, LdNode->getChain(), LdNode->getBasePtr(),
@@ -1372,9 +1372,9 @@ static SDValue lowerLoadI1(SDValue Op, SelectionDAG &DAG) {
   assert(LdNode && LdNode->getOffset().isUndef() && "Unexpected node type");
 
   SDValue BasePtr = LdNode->getBasePtr();
-  unsigned Alignment = LdNode->getAlign().value();
+  Align Alignment = LdNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   EVT AddrVT = BasePtr.getValueType();
   EVT MemVT = LdNode->getMemoryVT();
@@ -1464,9 +1464,9 @@ static SDValue lowerStoreF128(SDValue Op, SelectionDAG &DAG) {
   SDNode *Lo64 = DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, DL, MVT::i64,
                                     StNode->getValue(), SubRegOdd);
 
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
 
   // VE stores Hi64 to 8(addr) and Lo64 to 0(addr)
   SDValue OutChains[2];
@@ -1498,9 +1498,9 @@ static SDValue lowerStoreI1(SDValue Op, SelectionDAG &DAG) {
   assert(StNode && StNode->getOffset().isUndef() && "Unexpected node type");
 
   SDValue BasePtr = StNode->getBasePtr();
-  unsigned Alignment = StNode->getAlign().value();
+  Align Alignment = StNode->getAlign();
   if (Alignment > 8)
-    Alignment = 8;
+    Alignment = Align(8);
   EVT AddrVT = BasePtr.getValueType();
   EVT MemVT = StNode->getMemoryVT();
   if (MemVT == MVT::v256i1 || MemVT == MVT::v4i64) {
@@ -1632,8 +1632,9 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
 
   // Load the actual argument out of the pointer VAList.
   // We can't count on greater alignment than the word size.
-  return DAG.getLoad(VT, DL, InChain, VAList, MachinePointerInfo(),
-                     std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8);
+  return DAG.getLoad(
+      VT, DL, InChain, VAList, MachinePointerInfo(),
+      Align(std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8));
 }
 
 SDValue VETargetLowering::lowerDYNAMIC_STACKALLOC(SDValue Op,

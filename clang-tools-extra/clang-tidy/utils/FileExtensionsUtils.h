@@ -15,9 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 typedef llvm::SmallSet<llvm::StringRef, 5> FileExtensionsSet;
 
@@ -61,8 +59,6 @@ getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions);
 bool isFileExtension(StringRef FileName,
                      const FileExtensionsSet &FileExtensions);
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H

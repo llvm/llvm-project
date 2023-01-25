@@ -15,8 +15,7 @@
 #include <functional>
 #include <memory>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 class ClangTidyCheck;
 class ClangTidyContext;
@@ -94,7 +93,6 @@ public:
   virtual ClangTidyOptions getModuleOptions();
 };
 
-} // end namespace tidy
-} // end namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYMODULE_H

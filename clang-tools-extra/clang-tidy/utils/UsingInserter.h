@@ -16,9 +16,7 @@
 #include <optional>
 #include <set>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 // UsingInserter adds using declarations for |QualifiedName| to the surrounding
 // function.
@@ -44,7 +42,5 @@ private:
   std::set<NameInFunction> AddedUsing;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_USINGINSERTER_H

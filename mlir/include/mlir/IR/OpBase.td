@@ -1078,6 +1078,9 @@ class AnyAttrOf<list<Attr> allowedAttrs, string summary = "",
     let convertFromStorage = fromStorage;
 }
 
+def LocationAttr : Attr<CPred<"$_self.isa<::mlir::LocationAttr>()">,
+                        "location attribute">;
+
 def BoolAttr : Attr<CPred<"$_self.isa<::mlir::BoolAttr>()">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
   let returnType = [{ bool }];
@@ -1476,6 +1479,9 @@ class TypedArrayAttrBase<Attr element, string summary>: ArrayAttrBase<
 
   Attr elementAttr = element;
 }
+
+def LocationArrayAttr : TypedArrayAttrBase<LocationAttr,
+                                           "location array attribute">;
 
 def AffineMapArrayAttr : TypedArrayAttrBase<AffineMapAttr,
                                       "AffineMap array attribute"> {

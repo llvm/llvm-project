@@ -75,46 +75,49 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
 /// Is this builtin supported according to the given language options?
 static bool builtinIsSupported(const Builtin::Info &BuiltinInfo,
                                const LangOptions &LangOpts) {
-  if (bool BuiltinsUnsupported =
-          LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr)
+  /* Builtins Unsupported */
+  if (LangOpts.NoBuiltin && strchr(BuiltinInfo.Attributes, 'f') != nullptr)
     return false;
-  if (bool CorBuiltinsUnsupported =
-          !LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
+  /* CorBuiltins Unsupported */
+  if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
     return false;
-  if (bool MathBuiltinsUnsupported =
-          LangOpts.NoMathBuiltin && BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
+  /* MathBuiltins Unsupported */
+  if (LangOpts.NoMathBuiltin && BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
     return false;
-  if (bool GnuModeUnsupported =
-          !LangOpts.GNUMode && (BuiltinInfo.Langs & GNU_LANG))
+  /* GnuMode Unsupported */
+  if (!LangOpts.GNUMode && (BuiltinInfo.Langs & GNU_LANG))
     return false;
-  if (bool MSModeUnsupported =
-          !LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
+  /* MSMode Unsupported */
+  if (!LangOpts.MicrosoftExt && (BuiltinInfo.Langs & MS_LANG))
     return false;
-  if (bool ObjCUnsupported = !LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
+  /* ObjC Unsupported */
+  if (!LangOpts.ObjC && BuiltinInfo.Langs == OBJC_LANG)
     return false;
-  if (bool OclCUnsupported =
-          !LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES))
+  /* OpenCLC Unsupported */
+  if (!LangOpts.OpenCL && (BuiltinInfo.Langs & ALL_OCL_LANGUAGES))
     return false;
-  if (bool OclGASUnsupported =
-          !LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS))
+  /* OopenCL GAS Unsupported */
+  if (!LangOpts.OpenCLGenericAddressSpace && (BuiltinInfo.Langs & OCL_GAS))
     return false;
-  if (bool OclPipeUnsupported =
-          !LangOpts.OpenCLPipes && (BuiltinInfo.Langs & OCL_PIPE))
+  /* OpenCL Pipe Unsupported */
+  if (!LangOpts.OpenCLPipes && (BuiltinInfo.Langs & OCL_PIPE))
     return false;
 
   // Device side enqueue is not supported until OpenCL 2.0. In 2.0 and higher
   // support is indicated with language option for blocks.
-  if (bool OclDSEUnsupported =
-          (LangOpts.getOpenCLCompatibleVersion() < 200 || !LangOpts.Blocks) &&
-          (BuiltinInfo.Langs & OCL_DSE))
+
+  /* OpenCL DSE Unsupported */
+  if ((LangOpts.getOpenCLCompatibleVersion() < 200 || !LangOpts.Blocks) &&
+      (BuiltinInfo.Langs & OCL_DSE))
     return false;
-  if (bool OpenMPUnsupported =
-          !LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG)
+  /* OpenMP Unsupported */
+  if (!LangOpts.OpenMP && BuiltinInfo.Langs == OMP_LANG)
     return false;
-  if (bool CUDAUnsupported = !LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG)
+  /* CUDA Unsupported */
+  if (!LangOpts.CUDA && BuiltinInfo.Langs == CUDA_LANG)
     return false;
-  if (bool CPlusPlusUnsupported =
-          !LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
+  /* CPlusPlus Unsupported */
+  if (!LangOpts.CPlusPlus && BuiltinInfo.Langs == CXX_LANG)
     return false;
   return true;
 }

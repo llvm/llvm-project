@@ -201,10 +201,6 @@ class RVVBuiltin<string suffix, string prototype, string type_range,
   // This builtin support mask agnostic and undisturbed policy.
   bit HasMaskPolicy = true;
 
-  // This builtin prototype is tail undisturbed policy. It also means the
-  // default polcy without suffix is tail undisturbed.
-  bit IsPrototypeDefaultTU = false;
-
   // This builtin prototype with TA or TAMA policy could not support overloading
   // API. Other policy intrinsic functions would support overloading API with
   // suffix `_tu`, `tumu`, `tuma`, `tamu` and `tama`.
@@ -296,6 +292,11 @@ multiclass RVVOutBuiltinSet<string intrinsic_name, string type_range,
 multiclass RVVOp0BuiltinSet<string intrinsic_name, string type_range,
                             list<list<string>> suffixes_prototypes>
     : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [0]>;
+
+// IntrinsicTypes is output, op1 [-1, 0]
+multiclass RVVOutOp0BuiltinSet<string intrinsic_name, string type_range,
+                               list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 0]>;
 
 // IntrinsicTypes is output, op1 [-1, 1]
 multiclass RVVOutOp1BuiltinSet<string intrinsic_name, string type_range,
@@ -453,13 +454,34 @@ class RVVMaskOp0Builtin<string prototype> : RVVOp0Builtin<"m", prototype, "c"> {
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand,
-    HasMaskedOffOperand = false,
-    IsPrototypeDefaultTU = true in {
-  multiclass RVVSlideBuiltinSet {
+    HasMaskedOffOperand = false in {
+  multiclass RVVSlideUpBuiltinSet {
     defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
                                [["vx","v", "vvvz"]]>;
     defm "" : RVVOutBuiltinSet<NAME, "csil",
                                [["vx","Uv", "UvUvUvz"]]>;
+  }
+}
+
+let UnMaskedPolicyScheme = HasPassthruOperand,
+    ManualCodegen = [{
+      if (IsMasked) {
+        std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+        if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+      } else {
+        if (PolicyAttrs == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
+      }
+
+      Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
+    }] in {
+  multiclass RVVSlideDownBuiltinSet {
+    defm "" : RVVOutBuiltinSet<NAME, "csilxfd",
+                               [["vx","v", "vvz"]]>;
+    defm "" : RVVOutBuiltinSet<NAME, "csil",
+                               [["vx","Uv", "UvUvz"]]>;
   }
 }
 
@@ -496,22 +518,22 @@ class RVVConvToNarrowingSignedBuiltin<string overloaded_name>
 class RVVConvToNarrowingUnsignedBuiltin<string overloaded_name>
     : RVVConvBuiltin<"Uv", "UvFw", "csi", overloaded_name>;
 
-let HasMaskedOffOperand = false in {
+let HasMaskedOffOperand = true in {
   multiclass RVVSignedReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                  [["vs", "vSv", "SvSvvSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
+                                  [["vs", "vSv", "SvvSv"]]>;
   }
   multiclass RVVUnsignedReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "csil",
-                                  [["vs", "UvUSv", "USvUSvUvUSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "csil",
+                                  [["vs", "UvUSv", "USvUvUSv"]]>;
   }
   multiclass RVVFloatingReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "xfd",
-                                  [["vs", "vSv", "SvSvvSv"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xfd",
+                                  [["vs", "vSv", "SvvSv"]]>;
   }
   multiclass RVVFloatingWidenReductionBuiltin {
-    defm "" : RVVOutOp1BuiltinSet<NAME, "xf",
-                                  [["vs", "vSw", "SwSwvSw"]]>;
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xf",
+                                  [["vs", "vSw", "SwvSw"]]>;
   }
 }
 
@@ -1849,8 +1871,7 @@ defm vwmulsu : RVVOutOp0Op1BuiltinSet<"vwmulsu", "csi",
 }
 
 // 12.13. Vector Single-Width Integer Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = true in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vmacc  : RVVIntTerBuiltinSet;
 defm vnmsac : RVVIntTerBuiltinSet;
 defm vmadd  : RVVIntTerBuiltinSet;
@@ -1961,8 +1982,7 @@ let Log2LMUL = [-2, -1, 0, 1, 2] in {
 }
 
 // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand,
-    IsPrototypeDefaultTU = true in {
+let UnMaskedPolicyScheme = HasPolicyOperand in {
 defm vfmacc  : RVVFloatingTerBuiltinSet;
 defm vfnmacc : RVVFloatingTerBuiltinSet;
 defm vfmsac  : RVVFloatingTerBuiltinSet;
@@ -2079,7 +2099,6 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 // 15.1. Vector Single-Width Integer Reduction Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = HasPassthruOperand,
-    IsPrototypeDefaultTU = true,
     HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
 defm vredmaxu : RVVUnsignedReductionBuiltin;
@@ -2092,11 +2111,11 @@ defm vredxor : RVVIntReductionBuiltinSet;
 
 // 15.2. Vector Widening Integer Reduction Instructions
 // Vector Widening Integer Reduction Operations
-let HasMaskedOffOperand = false in {
-  defm vwredsum : RVVOutOp1BuiltinSet<"vwredsum", "csi",
-                                      [["vs", "vSw", "SwSwvSw"]]>;
-  defm vwredsumu : RVVOutOp1BuiltinSet<"vwredsumu", "csi",
-                                       [["vs", "UvUSw", "USwUSwUvUSw"]]>;
+let HasMaskedOffOperand = true in {
+  defm vwredsum : RVVOutOp0BuiltinSet<"vwredsum", "csi",
+                                      [["vs", "vSw", "SwvSw"]]>;
+  defm vwredsumu : RVVOutOp0BuiltinSet<"vwredsumu", "csi",
+                                       [["vs", "UvUSw", "USwUvUSw"]]>;
 }
 
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
@@ -2162,12 +2181,12 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
     defm vmv_x : RVVOp0BuiltinSet<"vmv_x_s", "csil",
                                    [["s", "ve", "ev"],
                                     ["s", "UvUe", "UeUv"]]>;
-  let OverloadedName = "vmv_s", IsPrototypeDefaultTU = true,
+  let OverloadedName = "vmv_s",
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vmv_s : RVVOutBuiltinSet<"vmv_s_x", "csil",
-                                   [["x", "v", "vve"],
-                                    ["x", "Uv", "UvUvUe"]]>;
+                                   [["x", "v", "ve"],
+                                    ["x", "Uv", "UvUe"]]>;
 }
 
 // 17.2. Floating-Point Scalar Move Instructions
@@ -2175,19 +2194,19 @@ let HasMasked = false, MaskedPolicyScheme = NonePolicy in {
   let HasVL = false, OverloadedName = "vfmv_f" in
     defm vfmv_f : RVVOp0BuiltinSet<"vfmv_f_s", "xfd",
                                      [["s", "ve", "ev"]]>;
-  let OverloadedName = "vfmv_s", IsPrototypeDefaultTU = true,
+  let OverloadedName = "vfmv_s",
       UnMaskedPolicyScheme = HasPassthruOperand,
       SupportOverloading = false in
     defm vfmv_s : RVVOutBuiltinSet<"vfmv_s_f", "xfd",
-                                     [["f", "v", "vve"],
-                                      ["x", "Uv", "UvUvUe"]]>;
+                                     [["f", "v", "ve"],
+                                      ["x", "Uv", "UvUe"]]>;
 }
 
 // 17.3. Vector Slide Instructions
 // 17.3.1. Vector Slideup Instructions
-defm vslideup   : RVVSlideBuiltinSet;
+defm vslideup   : RVVSlideUpBuiltinSet;
 // 17.3.2. Vector Slidedown Instructions
-defm vslidedown : RVVSlideBuiltinSet;
+defm vslidedown : RVVSlideDownBuiltinSet;
 
 // 17.3.3. Vector Slide1up Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
@@ -2216,8 +2235,7 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 }
 
 // 17.5. Vector Compress Instruction
-let IsPrototypeDefaultTU = true,
-    HasMasked = false,
+let HasMasked = false,
     UnMaskedPolicyScheme = HasPassthruOperand,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
@@ -2228,10 +2246,10 @@ let IsPrototypeDefaultTU = true,
     }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilxfd",
-                                    [["vm", "v", "vvvm"]]>;
+                                    [["vm", "v", "vvm"]]>;
   // unsigned type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csil",
-                                    [["vm", "Uv", "UvUvUvm"]]>;
+                                    [["vm", "Uv", "UvUvm"]]>;
 }
 
 // Miscellaneous

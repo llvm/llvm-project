@@ -1511,7 +1511,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // size of the register which isn't useful.
 
     unsigned PartOffset = VA.getLocMemOffset();
-    unsigned Alignment = MinAlign(VT.getStoreSize(), PartOffset);
+    Align Alignment = commonAlignment(Align(VT.getStoreSize()), PartOffset);
 
     MachinePointerInfo PtrInfo(AMDGPUAS::PARAM_I_ADDRESS);
     SDValue Arg = DAG.getLoad(

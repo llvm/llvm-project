@@ -13,9 +13,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 /// Checks for classes where some, but not all, of the special member functions
 /// are defined.
@@ -72,9 +70,7 @@ private:
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 namespace llvm {
 /// Specialization of DenseMapInfo to allow ClassDefId objects in DenseMaps
