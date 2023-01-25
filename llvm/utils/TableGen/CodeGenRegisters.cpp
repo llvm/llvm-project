@@ -1659,8 +1659,8 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
          "register enum value mismatch");
 
   // For simplicitly make the SetID the same as EnumValue.
-  IntEqClasses UberSetIDs(Registers.size()+1);
-  std::set<unsigned> AllocatableRegs;
+  IntEqClasses UberSetIDs(Registers.size() + 1);
+  BitVector AllocatableRegs(Registers.size() + 1);
   for (auto &RegClass : RegBank.getRegClasses()) {
     if (!RegClass.Allocatable)
       continue;
@@ -1672,16 +1672,16 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
     unsigned USetID = UberSetIDs.findLeader((*Regs.begin())->EnumValue);
     assert(USetID && "register number 0 is invalid");
 
-    AllocatableRegs.insert((*Regs.begin())->EnumValue);
+    AllocatableRegs.set((*Regs.begin())->EnumValue);
     for (const CodeGenRegister *CGR : llvm::drop_begin(Regs)) {
-      AllocatableRegs.insert(CGR->EnumValue);
+      AllocatableRegs.set(CGR->EnumValue);
       UberSetIDs.join(USetID, CGR->EnumValue);
     }
   }
   // Combine non-allocatable regs.
   for (const auto &Reg : Registers) {
     unsigned RegNum = Reg.EnumValue;
-    if (AllocatableRegs.count(RegNum))
+    if (AllocatableRegs.test(RegNum))
       continue;
 
     UberSetIDs.join(0, RegNum);
@@ -1704,7 +1704,6 @@ static void computeUberSets(std::vector<UberRegSet> &UberSets,
 
     UberRegSet *USet = &UberSets[USetID];
     USet->Regs.push_back(&Reg);
-    sortAndUniqueRegisters(USet->Regs);
     RegSets[i++] = USet;
   }
 }
