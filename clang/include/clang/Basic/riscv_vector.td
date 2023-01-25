@@ -467,10 +467,10 @@ let UnMaskedPolicyScheme = HasPassthruOperand,
     ManualCodegen = [{
       if (IsMasked) {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+        if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
           Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       } else {
-        if (PolicyAttrs == TAIL_AGNOSTIC)
+        if (PolicyAttrs & RVV_VTA)
           Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       }
 
@@ -649,12 +649,12 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         if (IsMasked) {
           // Move mask to right before vl.
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
           IntrinsicTypes = {ResultType, Ops[4]->getType()};
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           IntrinsicTypes = {ResultType, Ops[3]->getType()};
         }
@@ -939,8 +939,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
 
       // Please refer to comment under 'defvar NFList' in this file
-      if ((IsMasked && PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ||
-          (!IsMasked && PolicyAttrs == TAIL_AGNOSTIC))
+      if ((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+          (!IsMasked && PolicyAttrs & RVV_VTA))
         Operands.append(NF, llvm::PoisonValue::get(ResultType));
       else {
         if (IsMasked)
@@ -949,8 +949,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
           Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
       }
       unsigned PtrOperandIdx = IsMasked ?
-        (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ? NF + 1 : 2 * NF + 1 :
-        (PolicyAttrs == TAIL_AGNOSTIC) ? NF : 2 * NF;
+        ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ? NF + 1 : 2 * NF + 1 :
+        (PolicyAttrs & RVV_VTA) ? NF : 2 * NF;
       Value *PtrOperand = Ops[PtrOperandIdx];
       Value *VLOperand = Ops[PtrOperandIdx + 1];
       Operands.push_back(PtrOperand);
@@ -1004,8 +1004,8 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       SmallVector<llvm::Value*, 12> Operands;
 
       // Please refer to comment under 'defvar NFList' in this file
-      if ((IsMasked && PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ||
-          (!IsMasked && PolicyAttrs == TAIL_AGNOSTIC))
+      if ((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+          (!IsMasked && PolicyAttrs & RVV_VTA))
         Operands.append(NF, llvm::PoisonValue::get(ResultType));
       else {
         if (IsMasked)
@@ -1014,8 +1014,8 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
           Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
       }
       unsigned PtrOperandIdx = IsMasked ?
-        (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ? NF + 1 : 2 * NF + 1 :
-        (PolicyAttrs == TAIL_AGNOSTIC) ? NF : 2 * NF;
+        ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ? NF + 1 : 2 * NF + 1 :
+        (PolicyAttrs & RVV_VTA) ? NF : 2 * NF;
       Value *PtrOperand = Ops[PtrOperandIdx];
       Value *NewVLOperand = Ops[PtrOperandIdx + 1];
       Value *VLOperand = Ops[PtrOperandIdx + 2];
@@ -1071,8 +1071,8 @@ multiclass RVVStridedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
 
       // Please refer to comment under 'defvar NFList' in this file
-      if ((IsMasked && PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ||
-          (!IsMasked && PolicyAttrs == TAIL_AGNOSTIC))
+      if ((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+          (!IsMasked && PolicyAttrs & RVV_VTA))
         Operands.append(NF, llvm::PoisonValue::get(ResultType));
       else {
         if (IsMasked)
@@ -1081,8 +1081,8 @@ multiclass RVVStridedSegLoad<string op> {
           Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
       }
       unsigned PtrOperandIdx = IsMasked ?
-        (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ? NF + 1 : 2 * NF + 1 :
-        (PolicyAttrs == TAIL_AGNOSTIC) ? NF : 2 * NF;
+        ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ? NF + 1 : 2 * NF + 1 :
+        (PolicyAttrs & RVV_VTA) ? NF : 2 * NF;
       Value *PtrOperand = Ops[PtrOperandIdx];
       Value *StrideOperand = Ops[PtrOperandIdx + 1];
       Value *VLOperand = Ops[PtrOperandIdx + 2];
@@ -1133,8 +1133,8 @@ multiclass RVVIndexedSegLoad<string op> {
       SmallVector<llvm::Value*, 12> Operands;
 
       // Please refer to comment under 'defvar NFList' in this file
-      if ((IsMasked && PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ||
-          (!IsMasked && PolicyAttrs == TAIL_AGNOSTIC))
+      if ((IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+          (!IsMasked && PolicyAttrs & RVV_VTA))
         Operands.append(NF, llvm::PoisonValue::get(ResultType));
       else {
         if (IsMasked)
@@ -1143,8 +1143,8 @@ multiclass RVVIndexedSegLoad<string op> {
           Operands.append(Ops.begin() + NF, Ops.begin() + 2 * NF);
       }
       unsigned PtrOperandIdx = IsMasked ?
-        (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC) ? NF + 1 : 2 * NF + 1 :
-        (PolicyAttrs == TAIL_AGNOSTIC) ? NF : 2 * NF;
+        ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ? NF + 1 : 2 * NF + 1 :
+        (PolicyAttrs & RVV_VTA) ? NF : 2 * NF;
       Value *PtrOperand = Ops[PtrOperandIdx];
       Value *IndexOperand = Ops[PtrOperandIdx + 1];
       Value *VLOperand = Ops[PtrOperandIdx + 2];
@@ -1333,10 +1333,10 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
       {
         if (IsMasked) {
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
@@ -1366,10 +1366,10 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
       {
         if (IsMasked) {
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
@@ -1421,7 +1421,7 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
       {
         if (IsMasked) {
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           Ops.insert(Ops.begin() + 2, Ops[1]);
           Ops.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
@@ -1430,7 +1430,7 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
                             Ops[2]->getType(),
                             Ops.back()->getType()};
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
           // op1, po2, vl
           IntrinsicTypes = {ResultType,
@@ -1456,10 +1456,10 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       {
         if (IsMasked) {
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
         auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
@@ -1498,10 +1498,10 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       {
         if (IsMasked) {
           std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-          if (PolicyAttrs == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          if ((PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA))
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         } else {
-          if (PolicyAttrs == TAIL_AGNOSTIC)
+          if (PolicyAttrs & RVV_VTA)
             Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
         }
         Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType())); 
@@ -1901,7 +1901,7 @@ let HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       // insert poison passthru
-      if (PolicyAttrs == TAIL_AGNOSTIC)
+      if (PolicyAttrs & RVV_VTA)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
@@ -2043,7 +2043,7 @@ let HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       // insert poison passthru
-      if (PolicyAttrs == TAIL_AGNOSTIC)
+      if (PolicyAttrs & RVV_VTA)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
@@ -2240,7 +2240,7 @@ let HasMasked = false,
     MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
       // insert poison passthru
-      if (PolicyAttrs == TAIL_AGNOSTIC)
+      if (PolicyAttrs & RVV_VTA)
         Ops.insert(Ops.begin(), llvm::PoisonValue::get(ResultType));
       IntrinsicTypes = {ResultType, Ops.back()->getType()};
     }] in {
