@@ -2952,4 +2952,14 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_uclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
   def int_aarch64_sve_fclamp_single_x4 : SME2_VG4_Multi_Single_Single_Intrinsic;
+
+  //
+  // Multi-vector add/sub and accumulate into ZA
+  //
+  foreach intr = ["add", "sub"] in {
+    foreach za = ["za32", "za64"] in {
+      def int_aarch64_sme_ # intr # _ # za # _vg1x2 : SME2_ZA_Write_VG2_Intrinsic;
+      def int_aarch64_sme_ # intr # _ # za # _vg1x4 : SME2_ZA_Write_VG4_Intrinsic;
+    }
+  }
 }
