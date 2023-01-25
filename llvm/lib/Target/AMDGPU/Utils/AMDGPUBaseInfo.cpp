@@ -2109,6 +2109,10 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX9_GFX10_GFX11(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI) || isGFX11(STI);
+}
+
 bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
   return isVI(STI) || isGFX9(STI) || isGFX10(STI);
 }
