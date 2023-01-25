@@ -39,7 +39,7 @@ bool lldb_private::DefaultComputeSwiftResourceDirectory(
 
   static const llvm::StringRef kResourceDirSuffixes[] = {
       "lib/swift",
-      "lib" LLDB_INSTALL_LIBDIR_BASENAME "/lldb/swift",
+      LLDB_INSTALL_LIBDIR_BASENAME "/lldb/swift",
   };
   for (const auto &Suffix : kResourceDirSuffixes) {
     llvm::SmallString<256> swift_path(parent_path);
