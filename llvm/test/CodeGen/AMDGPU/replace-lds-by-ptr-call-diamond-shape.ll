@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
 
 ; DESCRIPTION:
 ;
@@ -17,10 +17,9 @@
 ; Pointer replacement code should be added.
 define internal void @func_uses_lds() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds_used_within_func.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [4 x i32] addrspace(3)*
-; CHECK:   %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %2, i32 0, i32 0
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds_used_within_func.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %gep = getelementptr inbounds [4 x i32], ptr addrspace(3) %1, i32 0, i32 0
 ; CHECK:   ret void
 entry:
   %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* @lds_used_within_func, i32 0, i32 0
@@ -67,7 +66,7 @@ define protected amdgpu_kernel void @kernel_reaches_lds() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([4 x i32] addrspace(3)* @lds_used_within_func to i16), i16 addrspace(3)* @lds_used_within_func.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_func to i16), ptr addrspace(3) @lds_used_within_func.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:
