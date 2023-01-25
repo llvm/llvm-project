@@ -277,7 +277,7 @@ public:
 
   /// Ask Remote Mirrors about the children of a composite type.
   llvm::Optional<unsigned> GetNumChildren(CompilerType type,
-                                          ValueObject *valobj);
+                                          ExecutionContextScope *exe_scope);
 
   /// Determine the enum case name for the \p data value of the enum \p type.
   /// This is performed using Swift reflection.
