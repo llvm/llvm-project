@@ -73,6 +73,7 @@ add_clang_library(clangAST
   Interp/EvalEmitter.cpp
   Interp/Frame.cpp
   Interp/Function.cpp
+  Interp/InterpBuiltin.cpp
   Interp/Interp.cpp
   Interp/InterpBlock.cpp
   Interp/InterpFrame.cpp
