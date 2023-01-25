@@ -973,12 +973,16 @@ bool AArch64TargetInfo::initFeatureMap(
       }
     }
   for (const auto &Feature : FeaturesVec)
-    if (Feature[0] == '+') {
-      std::string F;
-      llvm::AArch64::getFeatureOption(Feature, F);
-      UpdatedFeaturesVec.push_back(F);
-    } else if (Feature[0] != '?')
-      UpdatedFeaturesVec.push_back(Feature);
+    if (Feature[0] != '?') {
+      std::string UpdatedFeature = Feature;
+      if (Feature[0] == '+') {
+        std::optional<llvm::AArch64::ExtensionInfo> Extension =
+          llvm::AArch64::parseArchExtension(Feature.substr(1));
+        if (Extension)
+          UpdatedFeature = Extension->Feature.str();
+      }
+      UpdatedFeaturesVec.push_back(UpdatedFeature);
+    }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
 }
