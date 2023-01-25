@@ -333,6 +333,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_USER:
     {
       uint32_t Index = 0;
+      uint32_t InvalidEntries = 0;
       for (const std::string &Function : readFunctionOrderFile()) {
         std::vector<uint64_t> FuncAddrs;
 
@@ -355,8 +356,10 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
         }
 
         if (FuncAddrs.empty()) {
-          errs() << "BOLT-WARNING: Reorder functions: can't find function for "
-                 << Function << ".\n";
+          if (opts::Verbosity >= 1)
+            errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                   << "for " << Function << "\n";
+          ++InvalidEntries;
           continue;
         }
 
@@ -366,17 +369,22 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
           BinaryFunction *BF = BC.getFunctionForSymbol(FuncBD->getSymbol());
           if (!BF) {
-            errs() << "BOLT-WARNING: Reorder functions: can't find function for "
-                   << Function << ".\n";
+            if (opts::Verbosity >= 1)
+              errs() << "BOLT-WARNING: Reorder functions: can't find function "
+                     << "for " << Function << "\n";
+            ++InvalidEntries;
             break;
           }
           if (!BF->hasValidIndex())
             BF->setIndex(Index++);
           else if (opts::Verbosity > 0)
             errs() << "BOLT-WARNING: Duplicate reorder entry for " << Function
-                   << ".\n";
+                   << "\n";
         }
       }
+      if (InvalidEntries)
+        errs() << "BOLT-WARNING: Reorder functions: can't find functions for "
+               << InvalidEntries << " entries in -function-order list\n";
     }
     break;
   }
