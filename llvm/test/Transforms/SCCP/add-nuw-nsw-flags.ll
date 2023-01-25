@@ -5,8 +5,8 @@ define i8 @range_from_lshr(i8 %a) {
 ; CHECK-LABEL: @range_from_lshr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_SHR:%.*]] = lshr i8 [[A:%.*]], 1
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A_SHR]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw i8 [[A_SHR]], -128
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[A_SHR]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i8 [[A_SHR]], -128
 ; CHECK-NEXT:    [[ADD_3:%.*]] = add i8 [[A_SHR]], -127
 ; CHECK-NEXT:    [[ADD_4:%.*]] = add i8 [[A_SHR]], -1
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i8 [[ADD_1]], [[ADD_2]]
@@ -30,7 +30,7 @@ define i8 @a_and_15_add_1(i8 %a) {
 ; CHECK-LABEL: @a_and_15_add_1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_AND:%.*]] = and i8 [[A:%.*]], 15
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A_AND]], 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[A_AND]], 1
 ; CHECK-NEXT:    ret i8 [[ADD_1]]
 ;
 entry:
@@ -73,9 +73,9 @@ define i8 @sge_0_and_sle_90(i8 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[SGT]], [[SLT]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw i8 [[A]], 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[A]], 1
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw i8 [[A]], -91
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i8 [[A]], -91
 ; CHECK-NEXT:    [[ADD_4:%.*]] = add i8 [[A]], -90
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i8 [[ADD_1]], [[ADD_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i8 [[RES_1]], [[ADD_3]]
