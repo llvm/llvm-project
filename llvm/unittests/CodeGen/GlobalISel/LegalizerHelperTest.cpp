@@ -28,7 +28,7 @@ public:
 TEST_F(AArch64GISelMITest, LowerRotates) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -81,7 +81,7 @@ TEST_F(AArch64GISelMITest, LowerRotates) {
 TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -138,7 +138,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesNonPow2) {
 TEST_F(AArch64GISelMITest, LowerRotatesVector) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -185,7 +185,7 @@ TEST_F(AArch64GISelMITest, LowerRotatesVector) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -217,7 +217,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ0) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -251,7 +251,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ1) {
 TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -286,7 +286,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTLZ) {
 TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -321,7 +321,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarCTTZ) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -354,7 +354,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ2) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -388,7 +388,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP1) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -423,7 +423,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP2) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -450,7 +450,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTTZ3) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -481,7 +481,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ0) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -512,7 +512,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZLibcall) {
 TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -553,7 +553,7 @@ TEST_F(AArch64GISelMITest, LowerBitCountingCTLZ1) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -588,7 +588,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZ) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -624,7 +624,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTLZZeroUndef) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -657,7 +657,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTPOP) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -691,7 +691,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ_ZERO_UNDEF) {
 TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -725,7 +725,7 @@ TEST_F(AArch64GISelMITest, WidenBitCountingCTTZ) {
 TEST_F(AArch64GISelMITest, WidenUADDO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -764,7 +764,7 @@ TEST_F(AArch64GISelMITest, WidenUADDO) {
 TEST_F(AArch64GISelMITest, WidenUSUBO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -803,7 +803,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBO) {
 TEST_F(AArch64GISelMITest, WidenSADDO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -842,7 +842,7 @@ TEST_F(AArch64GISelMITest, WidenSADDO) {
 TEST_F(AArch64GISelMITest, WidenSSUBO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -880,7 +880,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBO) {
 TEST_F(AArch64GISelMITest, WidenUADDE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -920,7 +920,7 @@ TEST_F(AArch64GISelMITest, WidenUADDE) {
 TEST_F(AArch64GISelMITest, WidenUSUBE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -960,7 +960,7 @@ TEST_F(AArch64GISelMITest, WidenUSUBE) {
 TEST_F(AArch64GISelMITest, WidenSADDE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1000,7 +1000,7 @@ TEST_F(AArch64GISelMITest, WidenSADDE) {
 TEST_F(AArch64GISelMITest, WidenSSUBE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1040,7 +1040,7 @@ TEST_F(AArch64GISelMITest, WidenSSUBE) {
 TEST_F(AArch64GISelMITest, WidenUMULOCondition) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1075,7 +1075,7 @@ TEST_F(AArch64GISelMITest, WidenUMULOCondition) {
 TEST_F(AArch64GISelMITest, NarrowUADDO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1112,7 +1112,7 @@ TEST_F(AArch64GISelMITest, NarrowUADDO) {
 TEST_F(AArch64GISelMITest, NarrowUSUBO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1149,7 +1149,7 @@ TEST_F(AArch64GISelMITest, NarrowUSUBO) {
 TEST_F(AArch64GISelMITest, NarrowSADDO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1186,7 +1186,7 @@ TEST_F(AArch64GISelMITest, NarrowSADDO) {
 TEST_F(AArch64GISelMITest, NarrowSSUBO) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1223,7 +1223,7 @@ TEST_F(AArch64GISelMITest, NarrowSSUBO) {
 TEST_F(AArch64GISelMITest, NarrowUADDE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1262,7 +1262,7 @@ TEST_F(AArch64GISelMITest, NarrowUADDE) {
 TEST_F(AArch64GISelMITest, NarrowUSUBE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1301,7 +1301,7 @@ TEST_F(AArch64GISelMITest, NarrowUSUBE) {
 TEST_F(AArch64GISelMITest, NarrowSADDE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1340,7 +1340,7 @@ TEST_F(AArch64GISelMITest, NarrowSADDE) {
 TEST_F(AArch64GISelMITest, NarrowSSUBE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -1379,7 +1379,7 @@ TEST_F(AArch64GISelMITest, NarrowSSUBE) {
 TEST_F(AArch64GISelMITest, FewerElementsAnd) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const LLT V2S32 = LLT::fixed_vector(2, 32);
   const LLT V5S32 = LLT::fixed_vector(5, 32);
@@ -1425,7 +1425,7 @@ TEST_F(AArch64GISelMITest, FewerElementsAnd) {
 TEST_F(AArch64GISelMITest, MoreElementsAnd) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32 = LLT::scalar(32);
   LLT v2s32 = LLT::fixed_vector(2, 32);
@@ -1475,7 +1475,7 @@ TEST_F(AArch64GISelMITest, MoreElementsAnd) {
 TEST_F(AArch64GISelMITest, FewerElementsPhi) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s1 = LLT::scalar(1);
   LLT s32 = LLT::scalar(32);
@@ -1572,7 +1572,7 @@ TEST_F(AArch64GISelMITest, FewerElementsPhi) {
 TEST_F(AArch64GISelMITest, LowerFNEG) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1620,7 +1620,7 @@ TEST_F(AArch64GISelMITest, LowerFNEG) {
 TEST_F(AArch64GISelMITest, LowerMinMax) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT v2s32 = LLT::fixed_vector(2, 32);
@@ -1707,7 +1707,7 @@ TEST_F(AArch64GISelMITest, LowerMinMax) {
 TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   LLT S16 = LLT::scalar(16);
@@ -1756,7 +1756,7 @@ TEST_F(AArch64GISelMITest, WidenScalarBuildVector) {
 TEST_F(AArch64GISelMITest, LowerMergeValues) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const LLT S32 = LLT::scalar(32);
   const LLT S24 = LLT::scalar(24);
@@ -1861,7 +1861,7 @@ TEST_F(AArch64GISelMITest, LowerMergeValues) {
 TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -1900,7 +1900,7 @@ TEST_F(AArch64GISelMITest, WidenScalarMergeValuesPointer) {
 TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -1933,7 +1933,7 @@ TEST_F(AArch64GISelMITest, WidenSEXTINREG) {
 TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info, these aren't actually relevant to the test.
   DefineLegalizerInfo(A, {
@@ -1966,7 +1966,7 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG) {
 TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info, these aren't actually relevant to the test.
   DefineLegalizerInfo(
@@ -2000,7 +2000,7 @@ TEST_F(AArch64GISelMITest, NarrowSEXTINREG2) {
 TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info, these aren't actually relevant to the test.
   DefineLegalizerInfo(
@@ -2032,7 +2032,7 @@ TEST_F(AArch64GISelMITest, LowerSEXTINREG) {
 TEST_F(AArch64GISelMITest, LibcallFPExt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2072,7 +2072,7 @@ TEST_F(AArch64GISelMITest, LibcallFPExt) {
 TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2115,7 +2115,7 @@ TEST_F(AArch64GISelMITest, LibcallFPTrunc) {
 TEST_F(AArch64GISelMITest, LibcallSimple) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2139,7 +2139,7 @@ TEST_F(AArch64GISelMITest, LibcallSimple) {
 TEST_F(AArch64GISelMITest, LibcallMul) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2197,7 +2197,7 @@ TEST_F(AArch64GISelMITest, LibcallMul) {
 TEST_F(AArch64GISelMITest, LibcallSRem) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2255,7 +2255,7 @@ TEST_F(AArch64GISelMITest, LibcallSRem) {
 TEST_F(AArch64GISelMITest, LibcallURem) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2313,7 +2313,7 @@ TEST_F(AArch64GISelMITest, LibcallURem) {
 TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2367,7 +2367,7 @@ TEST_F(AArch64GISelMITest, LibcallCtlzZeroUndef) {
 TEST_F(AArch64GISelMITest, LibcallFAdd) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2420,7 +2420,7 @@ TEST_F(AArch64GISelMITest, LibcallFAdd) {
 TEST_F(AArch64GISelMITest, LibcallFSub) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2473,7 +2473,7 @@ TEST_F(AArch64GISelMITest, LibcallFSub) {
 TEST_F(AArch64GISelMITest, LibcallFMul) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2526,7 +2526,7 @@ TEST_F(AArch64GISelMITest, LibcallFMul) {
 TEST_F(AArch64GISelMITest, LibcallFDiv) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2579,7 +2579,7 @@ TEST_F(AArch64GISelMITest, LibcallFDiv) {
 TEST_F(AArch64GISelMITest, LibcallFExp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2627,7 +2627,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp) {
 TEST_F(AArch64GISelMITest, LibcallFExp2) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2675,7 +2675,7 @@ TEST_F(AArch64GISelMITest, LibcallFExp2) {
 TEST_F(AArch64GISelMITest, LibcallFRem) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2723,7 +2723,7 @@ TEST_F(AArch64GISelMITest, LibcallFRem) {
 TEST_F(AArch64GISelMITest, LibcallFPow) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2771,7 +2771,7 @@ TEST_F(AArch64GISelMITest, LibcallFPow) {
 TEST_F(AArch64GISelMITest, LibcallFMa) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2820,7 +2820,7 @@ TEST_F(AArch64GISelMITest, LibcallFMa) {
 TEST_F(AArch64GISelMITest, LibcallFCeil) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2868,7 +2868,7 @@ TEST_F(AArch64GISelMITest, LibcallFCeil) {
 TEST_F(AArch64GISelMITest, LibcallFFloor) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2916,7 +2916,7 @@ TEST_F(AArch64GISelMITest, LibcallFFloor) {
 TEST_F(AArch64GISelMITest, LibcallFMinNum) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -2967,7 +2967,7 @@ TEST_F(AArch64GISelMITest, LibcallFMinNum) {
 TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -3018,7 +3018,7 @@ TEST_F(AArch64GISelMITest, LibcallFMaxNum) {
 TEST_F(AArch64GISelMITest, LibcallFSqrt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -3066,7 +3066,7 @@ TEST_F(AArch64GISelMITest, LibcallFSqrt) {
 TEST_F(AArch64GISelMITest, LibcallFRint) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -3114,7 +3114,7 @@ TEST_F(AArch64GISelMITest, LibcallFRint) {
 TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -3165,7 +3165,7 @@ TEST_F(AArch64GISelMITest, LibcallFNearbyInt) {
 TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {
@@ -3204,7 +3204,7 @@ TEST_F(AArch64GISelMITest, NarrowScalarExtract) {
 TEST_F(AArch64GISelMITest, LowerInsert) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, { getActionDefinitionsBuilder(G_INSERT).lower(); });
@@ -3299,7 +3299,7 @@ TEST_F(AArch64GISelMITest, LowerInsert) {
 TEST_F(AArch64GISelMITest, LowerFFloor) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(A, {});
@@ -3331,7 +3331,7 @@ TEST_F(AArch64GISelMITest, LowerFFloor) {
 TEST_F(AArch64GISelMITest, LowerBSWAP) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3373,7 +3373,7 @@ TEST_F(AArch64GISelMITest, LowerBSWAP) {
 TEST_F(AArch64GISelMITest, LowerSDIVREM) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(
@@ -3404,7 +3404,7 @@ TEST_F(AArch64GISelMITest, LowerSDIVREM) {
 TEST_F(AArch64GISelMITest, LowerUDIVREM) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Declare your legalization info
   DefineLegalizerInfo(
@@ -3435,7 +3435,7 @@ TEST_F(AArch64GISelMITest, LowerUDIVREM) {
 TEST_F(AArch64GISelMITest, WidenUnmerge) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3483,7 +3483,7 @@ TEST_F(AArch64GISelMITest, WidenUnmerge) {
 TEST_F(AArch64GISelMITest, BitcastLoad) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT P0 = LLT::pointer(0, 64);
   LLT S32 = LLT::scalar(32);
@@ -3517,7 +3517,7 @@ TEST_F(AArch64GISelMITest, BitcastLoad) {
 TEST_F(AArch64GISelMITest, BitcastStore) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT P0 = LLT::pointer(0, 64);
   LLT S32 = LLT::scalar(32);
@@ -3551,7 +3551,7 @@ TEST_F(AArch64GISelMITest, BitcastStore) {
 TEST_F(AArch64GISelMITest, BitcastSelect) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S1 = LLT::scalar(1);
   LLT S32 = LLT::scalar(32);
@@ -3598,7 +3598,7 @@ TEST_F(AArch64GISelMITest, BitcastSelect) {
 TEST_F(AArch64GISelMITest, BitcastBitOps) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT S32 = LLT::scalar(32);
   LLT V4S8 = LLT::fixed_vector(4, 8);
@@ -3650,7 +3650,7 @@ TEST_F(AArch64GISelMITest, BitcastBitOps) {
 TEST_F(AArch64GISelMITest, CreateLibcall) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3677,7 +3677,7 @@ TEST_F(AArch64GISelMITest, CreateLibcall) {
 TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3741,7 +3741,7 @@ TEST_F(AArch64GISelMITest, NarrowImplicitDef) {
 TEST_F(AArch64GISelMITest, WidenFreeze) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3791,7 +3791,7 @@ TEST_F(AArch64GISelMITest, WidenFreeze) {
 TEST_F(AArch64GISelMITest, NarrowFreeze) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3875,7 +3875,7 @@ TEST_F(AArch64GISelMITest, NarrowFreeze) {
 TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3928,7 +3928,7 @@ TEST_F(AArch64GISelMITest, FewerElementsFreeze) {
 TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -3966,7 +3966,7 @@ TEST_F(AArch64GISelMITest, MoreElementsFreeze) {
 TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -4050,7 +4050,7 @@ TEST_F(AArch64GISelMITest, FewerElementsInsertVectorElt) {
 TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -4094,7 +4094,7 @@ TEST_F(AArch64GISelMITest, widenScalarUnmerge) {
 TEST_F(AArch64GISelMITest, moreElementsShuffle) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -4146,7 +4146,7 @@ TEST_F(AArch64GISelMITest, moreElementsShuffle) {
 TEST_F(AArch64GISelMITest, narrowScalarShiftByConstant) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   DefineLegalizerInfo(A, {});
 
@@ -4188,7 +4188,7 @@ TEST_F(AArch64GISelMITest, narrowScalarShiftByConstant) {
 TEST_F(AArch64GISelMITest, MoreElementsSelect) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s1 = LLT::scalar(1);
   LLT s64 = LLT::scalar(64);

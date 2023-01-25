@@ -23,14 +23,14 @@ TEST_F(LazyReexportsTest, BasicLocalCallThroughManagerOperation) {
   // Bail out if we can not detect the host.
   if (!JTMB) {
     consumeError(JTMB.takeError());
-    return;
+    GTEST_SKIP();
   }
 
   // Bail out if we can not build a local call-through manager.
   auto LCTM = createLocalLazyCallThroughManager(JTMB->getTargetTriple(), ES, 0);
   if (!LCTM) {
     consumeError(LCTM.takeError());
-    return;
+    GTEST_SKIP();
   }
 
   auto DummyTarget = ES.intern("DummyTarget");
