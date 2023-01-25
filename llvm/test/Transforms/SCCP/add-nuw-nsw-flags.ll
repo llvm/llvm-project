@@ -192,3 +192,51 @@ entry:
   %res = add i64 %a, %fn.addr
   ret i64 %res
 }
+
+define internal <4 x i8> @test_propagate_argument(<4 x i8> %a, <4 x i8> %b) {
+; CHECK-LABEL: @test_propagate_argument(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i8> [[A:%.*]], <i8 3, i8 3, i8 3, i8 3>
+; CHECK-NEXT:    ret <4 x i8> [[ADD]]
+;
+entry:
+  %add = add <4 x i8> %a, %b
+  ret <4 x i8> %add
+}
+
+define <4 x i8> @test_propagate_caller(<4 x i8> %a) {
+; CHECK-LABEL: @test_propagate_caller(
+; CHECK-NEXT:    [[RES_1:%.*]] = call <4 x i8> @test_propagate_argument(<4 x i8> [[A:%.*]], <4 x i8> <i8 3, i8 3, i8 3, i8 3>)
+; CHECK-NEXT:    ret <4 x i8> [[RES_1]]
+;
+  %add = add <4 x i8> <i8 1, i8 1, i8 1, i8 1>, <i8 2, i8 2, i8 2, i8 2>
+  %res.1 = call <4 x i8> @test_propagate_argument(<4 x i8> %a, <4 x i8> %add)
+  ret <4 x i8> %res.1
+}
+
+define i16 @test_add_in_different_block(i1 %c, i8 %a) {
+; CHECK-LABEL: @test_add_in_different_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A:%.*]], 0
+; CHECK-NEXT:    [[COND4:%.*]] = select i1 [[CMP]], i8 1, i8 0
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[COND4]] to i16
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 1, [[CONV]]
+; CHECK-NEXT:    ret i16 [[ADD]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %cmp = icmp eq i8 %a, 0
+  %cond4 = select i1 %cmp, i8 1, i8 0
+  %conv = sext i8 %cond4 to i16
+  br i1 %c, label %then, label %else
+
+then:
+  %add = add i16 1, %conv
+  ret i16 %add
+
+else:
+  ret i16 0
+}
