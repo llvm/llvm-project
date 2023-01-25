@@ -21,3 +21,5 @@ In Polly |version| the following important changes have been incorporated.
   In the future we hope that Polly can collaborate better with LoopVectorize,
   like Polly marking a loop is safe to vectorize with a specific simd width,
   instead of replicating its functionality.
+
+- Polly-ACC has been removed.
