@@ -21,21 +21,13 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Primitives.h"
+
 namespace clang {
 namespace interp {
 
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
-
-/// Helper to compare two comparable types.
-template <typename T>
-ComparisonCategoryResult Compare(const T &X, const T &Y) {
-  if (X < Y)
-    return ComparisonCategoryResult::Less;
-  if (X > Y)
-    return ComparisonCategoryResult::Greater;
-  return ComparisonCategoryResult::Equal;
-}
 
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
