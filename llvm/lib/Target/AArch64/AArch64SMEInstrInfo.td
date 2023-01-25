@@ -609,13 +609,13 @@ defm FRINTN_4Z4Z: sme2_frint_vector_vg4_multi<"frintn", 0b1000000>;
 defm FRINTP_2Z2Z: sme2_frint_vector_vg2_multi<"frintp", 0b10010>;
 defm FRINTP_4Z4Z: sme2_frint_vector_vg4_multi<"frintp", 0b1001000>;
 
-defm MOVA_MXI2Z   : sme2_mova_vec_to_tile_vg2_multi<"mova">;
-defm MOVA_MXI4Z   : sme2_mova_vec_to_tile_vg4_multi<"mova">;
+defm MOVA_MXI2Z   : sme2_mova_vec_to_tile_vg2_multi<"mova", int_aarch64_sme_write_hor_vg2, int_aarch64_sme_write_ver_vg2>;
+defm MOVA_MXI4Z   : sme2_mova_vec_to_tile_vg4_multi<"mova", int_aarch64_sme_write_hor_vg4, int_aarch64_sme_write_ver_vg4>;
 defm MOVA_2ZMXI  : sme2_mova_tile_to_vec_vg2_multi<"mova">;
 defm MOVA_4ZMXI : sme2_mova_tile_to_vec_vg4_multi<"mova">;
 
-defm MOVA_VG2_MXI2Z  : sme2_mova_vec_to_array_vg2_multi<"mova">;
-defm MOVA_VG4_MXI4Z  : sme2_mova_vec_to_array_vg4_multi<"mova">;
+defm MOVA_VG2_MXI2Z  : sme2_mova_vec_to_array_vg2_multi<"mova", int_aarch64_sme_write_vg1x2>;
+defm MOVA_VG4_MXI4Z  : sme2_mova_vec_to_array_vg4_multi<"mova", int_aarch64_sme_write_vg1x4>;
 defm MOVA_VG2_2ZMXI : sme2_mova_array_to_vec_vg2_multi<0b000, "mova">;
 defm MOVA_VG4_4ZMXI : sme2_mova_array_to_vec_vg4_multi<0b1000, "mova">;
 
