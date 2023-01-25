@@ -1284,7 +1284,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     Value *A = CSrc->getOperand(0);
     unsigned SrcSize = A->getType()->getScalarSizeInBits();
     unsigned MidSize = CSrc->getType()->getScalarSizeInBits();
-    unsigned DstSize = Zext.getType()->getScalarSizeInBits();
+    unsigned DstSize = DestTy->getScalarSizeInBits();
     // If we're actually extending zero bits, then if
     // SrcSize <  DstSize: zext(a & mask)
     // SrcSize == DstSize: a & mask
@@ -1293,7 +1293,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
       APInt AndValue(APInt::getLowBitsSet(SrcSize, MidSize));
       Constant *AndConst = ConstantInt::get(A->getType(), AndValue);
       Value *And = Builder.CreateAnd(A, AndConst, CSrc->getName() + ".mask");
-      return new ZExtInst(And, Zext.getType());
+      return new ZExtInst(And, DestTy);
     }
 
     if (SrcSize == DstSize) {
@@ -1302,7 +1302,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
                                                            AndValue));
     }
     if (SrcSize > DstSize) {
-      Value *Trunc = Builder.CreateTrunc(A, Zext.getType());
+      Value *Trunc = Builder.CreateTrunc(A, DestTy);
       APInt AndValue(APInt::getLowBitsSet(DstSize, MidSize));
       return BinaryOperator::CreateAnd(Trunc,
                                        ConstantInt::get(Trunc->getType(),
@@ -1317,16 +1317,15 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   Constant *C;
   Value *X;
   if (match(Src, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Constant(C)))) &&
-      X->getType() == Zext.getType())
-    return BinaryOperator::CreateAnd(X,
-                                     ConstantExpr::getZExt(C, Zext.getType()));
+      X->getType() == DestTy)
+    return BinaryOperator::CreateAnd(X, ConstantExpr::getZExt(C, DestTy));
 
   // zext((trunc(X) & C) ^ C) -> ((X & zext(C)) ^ zext(C)).
   Value *And;
   if (match(Src, m_OneUse(m_Xor(m_Value(And), m_Constant(C)))) &&
       match(And, m_OneUse(m_And(m_Trunc(m_Value(X)), m_Specific(C)))) &&
-      X->getType() == Zext.getType()) {
-    Constant *ZC = ConstantExpr::getZExt(C, Zext.getType());
+      X->getType() == DestTy) {
+    Constant *ZC = ConstantExpr::getZExt(C, DestTy);
     return BinaryOperator::CreateXor(Builder.CreateAnd(X, ZC), ZC);
   }
 
