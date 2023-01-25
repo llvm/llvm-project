@@ -179,8 +179,8 @@ define i32 @select_pre(ptr %px, ptr %py) {
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[PY:%.*]], align 4
 ; CHECK-NEXT:    [[T3:%.*]] = load i32, ptr [[PX:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[T2]], [[T3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[T3]], i32 [[T2]]
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[CMP]], ptr [[PX]], ptr [[PY]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP]], i32 [[T3]], i32 [[T2]]
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %t2 = load i32, ptr %py, align 4
