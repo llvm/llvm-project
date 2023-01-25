@@ -196,6 +196,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot5-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
+      Features["dot9-insts"] = true;
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
