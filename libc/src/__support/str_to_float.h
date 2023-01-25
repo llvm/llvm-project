@@ -76,7 +76,8 @@ template <class T> LIBC_INLINE void set_implicit_bit(fputil::FPBits<T> &) {
 
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
-inline void set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
+LIBC_INLINE void
+set_implicit_bit<long double>(fputil::FPBits<long double> &result) {
   result.set_implicit_bit(result.get_unbiased_exponent() != 0);
 }
 #endif
@@ -190,7 +191,7 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
 
 #if !defined(LONG_DOUBLE_IS_DOUBLE)
 template <>
-inline bool eisel_lemire<long double>(
+LIBC_INLINE bool eisel_lemire<long double>(
     typename fputil::FPBits<long double>::UIntType mantissa, int32_t exp10,
     typename fputil::FPBits<long double>::UIntType *outputMantissa,
     uint32_t *outputExp2) {

@@ -59,7 +59,7 @@ constexpr size_t MID_INT_SIZE = 192;
 namespace internal {
 
 // Returns floor(log_10(2^e)); requires 0 <= e <= 1650.
-constexpr inline uint32_t log10_pow2(const uint32_t e) {
+LIBC_INLINE constexpr uint32_t log10_pow2(const uint32_t e) {
   // The first value this approximation fails for is 2^1651 which is just
   // greater than 10^297. assert(e >= 0); assert(e <= 1650);
   return (e * 78913) >> 18;
@@ -69,14 +69,14 @@ constexpr inline uint32_t log10_pow2(const uint32_t e) {
 // power of 2 was also a power of 10, but since that doesn't exist this is
 // always accurate. This is used to calculate the maximum number of base-10
 // digits a given e-bit number could have.
-constexpr inline uint32_t ceil_log10_pow2(const uint32_t e) {
+LIBC_INLINE constexpr uint32_t ceil_log10_pow2(const uint32_t e) {
   return log10_pow2(e) + 1;
 }
 
 // Returns the maximum number of 9 digit blocks a number described by the given
 // index (which is ceil(exponent/16)) and mantissa width could need.
-constexpr inline uint32_t length_for_num(const uint32_t idx,
-                                         const uint32_t mantissa_width) {
+LIBC_INLINE constexpr uint32_t length_for_num(const uint32_t idx,
+                                              const uint32_t mantissa_width) {
   //+8 to round up when dividing by 9
   return (ceil_log10_pow2(16 * idx) + ceil_log10_pow2(mantissa_width) +
           (BLOCK_SIZE - 1)) /
@@ -90,7 +90,7 @@ constexpr inline uint32_t length_for_num(const uint32_t idx,
 // floor(5^(-9i) * 2^(e + c_1 - 9i) + 1) % (10^9 * 2^c_1)
 
 template <size_t INT_SIZE>
-constexpr inline cpp::UInt<MID_INT_SIZE>
+LIBC_INLINE constexpr cpp::UInt<MID_INT_SIZE>
 get_table_positive(int exponent, size_t i, const size_t constant) {
   // INT_SIZE is the size of int that is used for the internal calculations of
   // this function. It should be large enough to hold 2^(exponent+constant), so
@@ -131,8 +131,8 @@ get_table_positive(int exponent, size_t i, const size_t constant) {
 // calculations.
 // The formula being used looks more like this:
 // floor(10^(9*(-i)) * 2^(c_0 + (-e))) % (10^9 * 2^c_0)
-inline cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
-                                                  const size_t constant) {
+LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i,
+                                                       const size_t constant) {
   constexpr size_t INT_SIZE = 1024;
   int shift_amount = constant - exponent;
   cpp::UInt<INT_SIZE> num(1);
@@ -234,7 +234,7 @@ class FloatToString {
   // constexpr void init_convert();
 
 public:
-  constexpr FloatToString(T init_float) : float_bits(init_float) {
+  LIBC_INLINE constexpr FloatToString(T init_float) : float_bits(init_float) {
     is_negative = float_bits.get_sign();
     exponent = float_bits.get_exponent();
     mantissa = float_bits.get_explicit_mantissa();
@@ -254,13 +254,15 @@ public:
     // init_convert();
   }
 
-  constexpr bool is_nan() { return float_bits.is_nan(); }
-  constexpr bool is_inf() { return float_bits.is_inf(); }
-  constexpr bool is_inf_or_nan() { return float_bits.is_inf_or_nan(); }
+  LIBC_INLINE constexpr bool is_nan() { return float_bits.is_nan(); }
+  LIBC_INLINE constexpr bool is_inf() { return float_bits.is_inf(); }
+  LIBC_INLINE constexpr bool is_inf_or_nan() {
+    return float_bits.is_inf_or_nan();
+  }
 
   // get_block returns an integer that represents the digits in the requested
   // block.
-  constexpr BlockInt get_positive_block(int block_index) {
+  LIBC_INLINE constexpr BlockInt get_positive_block(int block_index) {
     if (exponent >= -MANT_WIDTH) {
       // idx is ceil(exponent/16) or 0 if exponent is negative. This is used to
       // find the coarse section of the POW10_SPLIT table that will be used to
@@ -285,7 +287,8 @@ public:
       return 0;
     }
   }
-  constexpr BlockInt get_negative_block(int block_index) {
+
+  LIBC_INLINE constexpr BlockInt get_negative_block(int block_index) {
     if (exponent < 0) {
       const int32_t idx = -exponent / 16;
       uint32_t i = block_index;
@@ -312,7 +315,7 @@ public:
     }
   }
 
-  constexpr BlockInt get_block(int block_index) {
+  LIBC_INLINE constexpr BlockInt get_block(int block_index) {
     if (block_index >= 0) {
       return get_positive_block(block_index);
     } else {
@@ -320,7 +323,7 @@ public:
     }
   }
 
-  constexpr size_t get_positive_blocks() {
+  LIBC_INLINE constexpr size_t get_positive_blocks() {
     if (exponent >= -MANT_WIDTH) {
       const uint32_t idx =
           exponent < 0 ? 0 : static_cast<uint32_t>(exponent + 15) / 16;
@@ -333,14 +336,14 @@ public:
 
   // This takes the index of a block after the decimal point (a negative block)
   // and return if it's sure that all of the digits after it are zero.
-  constexpr bool is_lowest_block(size_t block_index) {
+  LIBC_INLINE constexpr bool is_lowest_block(size_t block_index) {
     const int32_t idx = -exponent / 16;
     const uint32_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
     // If the remaining digits are all 0, then this is the lowest block.
     return p >= POW10_OFFSET_2[idx + 1];
   }
 
-  constexpr size_t zero_blocks_after_point() {
+  LIBC_INLINE constexpr size_t zero_blocks_after_point() {
     return MIN_BLOCK_2[-exponent / 16];
   }
 };
@@ -355,17 +358,18 @@ public:
 // }
 
 template <>
-constexpr size_t FloatToString<long double>::zero_blocks_after_point() {
+LIBC_INLINE constexpr size_t
+FloatToString<long double>::zero_blocks_after_point() {
   return 0;
 }
 
 template <>
-constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
+LIBC_INLINE constexpr bool FloatToString<long double>::is_lowest_block(size_t) {
   return false;
 }
 
 template <>
-constexpr BlockInt
+LIBC_INLINE constexpr BlockInt
 FloatToString<long double>::get_positive_block(int block_index) {
   if (exponent >= -MANT_WIDTH) {
     const uint32_t pos_exp = (exponent < 0 ? 0 : exponent);
@@ -401,7 +405,7 @@ FloatToString<long double>::get_positive_block(int block_index) {
 }
 
 template <>
-constexpr BlockInt
+LIBC_INLINE constexpr BlockInt
 FloatToString<long double>::get_negative_block(int block_index) {
   if (exponent < 0) {
     const int32_t idx = -exponent / 16;
