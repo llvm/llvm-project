@@ -2,7 +2,7 @@
 // Historically StopTheWorld crashed because did not handle EINTR properly.
 // The test is somewhat convoluted, but that's what caused crashes previously.
 
-// RUN: %clangxx_asan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_lsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <stdlib.h>
