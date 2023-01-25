@@ -33,7 +33,7 @@ F:              ; preds = %0
 ;; value
 define internal { i32, i32 } @foo(i32 %A, i32 %B) {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[X:%.*]] = add nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[X:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = insertvalue { i32, i32 } undef, i32 [[A]], 0
 ; CHECK-NEXT:    [[Z:%.*]] = insertvalue { i32, i32 } [[Y]], i32 [[X]], 1
 ; CHECK-NEXT:    ret { i32, i32 } [[Z]]
@@ -54,7 +54,7 @@ define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    to label [[OK:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       OK:
 ; CHECK-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
-; CHECK-NEXT:    [[Z:%.*]] = add nuw i32 [[X1]], [[X2]]
+; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X1]], [[X2]]
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[W]], align 4
 ; CHECK-NEXT:    br label [[RET:%.*]]
 ; CHECK:       LPAD:
