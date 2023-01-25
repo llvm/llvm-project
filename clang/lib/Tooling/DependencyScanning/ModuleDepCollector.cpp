@@ -61,11 +61,6 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 
 void ModuleDepCollector::addOutputPaths(CompilerInvocation &CI,
                                         ModuleDeps &Deps) {
-  // These are technically *inputs* to the compilation, but we populate them
-  // here in order to make \c getModuleContextHash() independent of
-  // \c lookupModuleOutput().
-  addModuleFiles(CI, Deps.ClangModuleDeps);
-
   CI.getFrontendOpts().OutputFile =
       Consumer.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
@@ -167,6 +162,9 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
       CI.getFrontendOpts().ModuleCacheKeys.emplace_back(
           PrebuiltModule.PCMFile, *PrebuiltModule.ModuleCacheKey);
   }
+
+  // Add module file inputs from dependencies.
+  addModuleFiles(CI, Deps.ClangModuleDeps);
 
   // Remove any macro definitions that are explicitly ignored.
   if (!CI.getHeaderSearchOpts().ModulesIgnoreMacros.empty()) {
