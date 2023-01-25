@@ -41,6 +41,14 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
       MaxNumRangeExtensions);
 }
 
+static ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty,
+                                      bool UndefAllowed = true) {
+  assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
+  if (LV.isConstantRange(UndefAllowed))
+    return LV.getConstantRange();
+  return ConstantRange::getFull(Ty->getScalarSizeInBits());
+}
+
 namespace llvm {
 
 bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
@@ -115,6 +123,30 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   return true;
 }
 
+/// Try to use \p Inst's value range from \p Solver to infer the NUW flag.
+static bool refineInstruction(SCCPSolver &Solver, Instruction &Inst) {
+  if (Inst.getOpcode() != Instruction::Add ||
+      SCCPSolver::isConstant(Solver.getLatticeValueFor(&Inst)))
+    return false;
+
+  Value *OpA = Inst.getOperand(0);
+  Value *OpB = Inst.getOperand(1);
+  auto RangeA = getConstantRange(Solver.getLatticeValueFor(OpA), OpA->getType(),
+                                 /*UndefAllowed=*/false);
+  auto RangeB = getConstantRange(Solver.getLatticeValueFor(OpB), OpB->getType(),
+                                 /*UndefAllowed=*/false);
+  if (!Inst.hasNoUnsignedWrap()) {
+    auto NUWRange = ConstantRange::makeGuaranteedNoWrapRegion(
+        Instruction::Add, RangeB, OverflowingBinaryOperator::NoUnsignedWrap);
+    if (NUWRange.contains(RangeA)) {
+      Inst.setHasNoUnsignedWrap();
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Try to replace signed instructions with their unsigned equivalent.
 static bool replaceSignedInst(SCCPSolver &Solver,
                               SmallPtrSetImpl<Value *> &InsertedValues,
@@ -186,6 +218,13 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
   for (Instruction &Inst : make_early_inc_range(BB)) {
     if (Inst.getType()->isVoidTy())
       continue;
+    MadeChanges |= refineInstruction(*this, Inst);
+  }
+
+  for (Instruction &Inst : make_early_inc_range(BB)) {
+    if (Inst.getType()->isVoidTy())
+      continue;
+
     if (tryToReplaceWithConstant(&Inst)) {
       if (canRemoveInstruction(&Inst))
         Inst.eraseFromParent();
@@ -682,7 +721,6 @@ public:
   bool isStructLatticeConstant(Function *F, StructType *STy);
 
   Constant *getConstant(const ValueLatticeElement &LV) const;
-  ConstantRange getConstantRange(const ValueLatticeElement &LV, Type *Ty) const;
 
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions() {
     return TrackingIncomingArguments;
@@ -781,15 +819,6 @@ Constant *SCCPInstVisitor::getConstant(const ValueLatticeElement &LV) const {
       return ConstantInt::get(Ctx, *CR.getSingleElement());
   }
   return nullptr;
-}
-
-ConstantRange
-SCCPInstVisitor::getConstantRange(const ValueLatticeElement &LV,
-                                  Type *Ty) const {
-  assert(Ty->isIntOrIntVectorTy() && "Should be int or int vector");
-  if (LV.isConstantRange())
-    return LV.getConstantRange();
-  return ConstantRange::getFull(Ty->getScalarSizeInBits());
 }
 
 void SCCPInstVisitor::markArgInFuncSpecialization(
