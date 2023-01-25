@@ -41,8 +41,8 @@ public:
 
 private:
   const bool UseHeaderFileExtension;
-  const StringRef RawStringHeaderFileExtensions;
-  utils::FileExtensionsSet HeaderFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc

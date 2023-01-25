@@ -94,6 +94,10 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- New global configuration file options `HeaderFileExtensions` and
+  `ImplementationFileExtensions`, replacing the check-local options of the
+  same name.
+
 New checks
 ^^^^^^^^^^
 
@@ -129,6 +133,41 @@ New check aliases
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`bugprone-dynamic-static-initializers
+  <clang-tidy/checks/bugprone/dynamic-static-initializers>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions` and `ImplementationFileExtensions`
+  in :doc:`bugprone-suspicious-include
+  <clang-tidy/checks/bugprone/suspicious-include>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`google-build-namespaces
+  <clang-tidy/checks/google/build-namespaces>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`google-global-names-in-headers
+  <clang-tidy/checks/google/global-names-in-headers>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`llvm-header-guard
+  <clang-tidy/checks/llvm/header-guard>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`misc-definitions-in-headers
+  <clang-tidy/checks/misc/definitions-in-headers>` check.
+  Global options of the same name should be used instead.
+
+- Deprecated check-local options `HeaderFileExtensions`
+  in :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/misc-unused-using-decls>` check.
+  Global options of the same name should be used instead.
 
 Removed checks
 ^^^^^^^^^^^^^^
