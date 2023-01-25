@@ -10,10 +10,10 @@ static_assert(f2 == 1.0f, "");
 
 constexpr float f3 = 1.5;
 constexpr int i3 = f3;
-static_assert(i3 == 1);
+static_assert(i3 == 1, "");
 
 constexpr bool b3 = f3;
-static_assert(b3);
+static_assert(b3, "");
 
 
 static_assert(1.0f + 3u == 4, "");
