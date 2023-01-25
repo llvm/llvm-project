@@ -3,8 +3,8 @@
 bugprone-standalone-empty
 =========================
 
-Warns when `empty()` is used on a range and the result is ignored. Suggests 
-`clear()` if it is an existing member function.
+Warns when ``empty()`` is used on a range and the result is ignored. Suggests
+``clear()`` if it is an existing member function.
 
 The ``empty()`` method on several common ranges returns a Boolean indicating
 whether or not the range is empty, but is often mistakenly interpreted as
@@ -29,3 +29,8 @@ A call to ``clear()`` would appropriately clear the contents of the range:
   std::vector<int> v;
   ...
   v.clear();
+
+Limitations:
+- Doesn't warn if ``empty()`` is defined and used with the ignore result in the
+  class template definition (for example in the library implementation). These
+  error cases can be caught with ``[[nodiscard]]`` attribute.
