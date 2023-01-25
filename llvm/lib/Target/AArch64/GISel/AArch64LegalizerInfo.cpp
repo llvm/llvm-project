@@ -79,6 +79,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   const LLT &MinFPScalar = HasFP16 ? s16 : s32;
 
   const bool HasCSSC = ST.hasCSSC();
+  const bool HasRCPC3 = ST.hasRCPC3();
 
   getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
       .legalFor({p0, s8, s16, s32, s64})
@@ -310,6 +311,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_LOAD)
       .customIf([=](const LegalityQuery &Query) {
+        return HasRCPC3 && Query.Types[0] == s128 &&
+               Query.MMODescrs[0].Ordering == AtomicOrdering::Acquire;
+      })
+      .customIf([=](const LegalityQuery &Query) {
         return Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
       })
@@ -328,16 +333,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
                                  {v2s64, p0, s128, 8}})
       // These extends are also legal
       .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 8}})
-      .widenScalarToNextPow2(0, /* MinSize = */8)
+      .widenScalarToNextPow2(0, /* MinSize = */ 8)
       .lowerIfMemSizeNotByteSizePow2()
       .clampScalar(0, s8, s64)
-      .narrowScalarIf([=](const LegalityQuery &Query) {
-        // Clamp extending load results to 32-bits.
-        return Query.Types[0].isScalar() &&
-          Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
-          Query.Types[0].getSizeInBits() > 32;
-        },
-        changeTo(0, s32))
+      .narrowScalarIf(
+          [=](const LegalityQuery &Query) {
+            // Clamp extending load results to 32-bits.
+            return Query.Types[0].isScalar() &&
+                   Query.Types[0] != Query.MMODescrs[0].MemoryTy &&
+                   Query.Types[0].getSizeInBits() > 32;
+          },
+          changeTo(0, s32))
       .clampMaxNumElements(0, s8, 16)
       .clampMaxNumElements(0, s16, 8)
       .clampMaxNumElements(0, s32, 4)
@@ -348,30 +354,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_STORE)
       .customIf([=](const LegalityQuery &Query) {
+        return HasRCPC3 && Query.Types[0] == s128 &&
+               Query.MMODescrs[0].Ordering == AtomicOrdering::Release;
+      })
+      .customIf([=](const LegalityQuery &Query) {
         return Query.Types[0] == s128 &&
                Query.MMODescrs[0].Ordering != AtomicOrdering::NotAtomic;
       })
-      .legalForTypesWithMemDesc({{s8, p0, s8, 8},
-                                 {s16, p0, s8, 8}, // truncstorei8 from s16
-                                 {s32, p0, s8, 8}, // truncstorei8 from s32
-                                 {s64, p0, s8, 8}, // truncstorei8 from s64
-                                 {s16, p0, s16, 8},
-                                 {s32, p0, s16, 8}, // truncstorei16 from s32
-                                 {s64, p0, s16, 8}, // truncstorei16 from s64
-                                 {s32, p0, s8, 8},
-                                 {s32, p0, s16, 8},
-                                 {s32, p0, s32, 8},
-                                 {s64, p0, s64, 8},
-                                 {s64, p0, s32, 8}, // truncstorei32 from s64
-                                 {p0, p0, s64, 8},
-                                 {s128, p0, s128, 8},
-                                 {v16s8, p0, s128, 8},
-                                 {v8s8, p0, s64, 8},
-                                 {v4s16, p0, s64, 8},
-                                 {v8s16, p0, s128, 8},
-                                 {v2s32, p0, s64, 8},
-                                 {v4s32, p0, s128, 8},
-                                 {v2s64, p0, s128, 8}})
+      .legalForTypesWithMemDesc(
+          {{s8, p0, s8, 8},     {s16, p0, s8, 8},  // truncstorei8 from s16
+           {s32, p0, s8, 8},                       // truncstorei8 from s32
+           {s64, p0, s8, 8},                       // truncstorei8 from s64
+           {s16, p0, s16, 8},   {s32, p0, s16, 8}, // truncstorei16 from s32
+           {s64, p0, s16, 8},                      // truncstorei16 from s64
+           {s32, p0, s8, 8},    {s32, p0, s16, 8},    {s32, p0, s32, 8},
+           {s64, p0, s64, 8},   {s64, p0, s32, 8}, // truncstorei32 from s64
+           {p0, p0, s64, 8},    {s128, p0, s128, 8},  {v16s8, p0, s128, 8},
+           {v8s8, p0, s64, 8},  {v4s16, p0, s64, 8},  {v8s16, p0, s128, 8},
+           {v2s32, p0, s64, 8}, {v4s32, p0, s128, 8}, {v2s64, p0, s128, 8}})
       .clampScalar(0, s8, s64)
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
@@ -1188,27 +1188,49 @@ bool AArch64LegalizerInfo::legalizeLoadStore(
   const LLT ValTy = MRI.getType(ValReg);
 
   if (ValTy == LLT::scalar(128)) {
-    assert((*MI.memoperands_begin())->getSuccessOrdering() ==
-               AtomicOrdering::Monotonic ||
-           (*MI.memoperands_begin())->getSuccessOrdering() ==
-               AtomicOrdering::Unordered);
-    assert(ST->hasLSE2() && "ldp/stp not single copy atomic without +lse2");
+
+    AtomicOrdering Ordering = (*MI.memoperands_begin())->getSuccessOrdering();
+    bool IsLoad = MI.getOpcode() == TargetOpcode::G_LOAD;
+    bool IsLoadAcquire = IsLoad && Ordering == AtomicOrdering::Acquire;
+    bool IsStoreRelease = !IsLoad && Ordering == AtomicOrdering::Release;
+    bool IsRcpC3 =
+        ST->hasLSE2() && ST->hasRCPC3() && (IsLoadAcquire || IsStoreRelease);
+
     LLT s64 = LLT::scalar(64);
+
+    unsigned Opcode;
+    if (IsRcpC3) {
+      Opcode = IsLoad ? AArch64::LDIAPPX : AArch64::STILPX;
+    } else {
+      // For LSE2, loads/stores should have been converted to monotonic and had
+      // a fence inserted after them.
+      assert(Ordering == AtomicOrdering::Monotonic ||
+             Ordering == AtomicOrdering::Unordered);
+      assert(ST->hasLSE2() && "ldp/stp not single copy atomic without +lse2");
+
+      Opcode = IsLoad ? AArch64::LDPXi : AArch64::STPXi;
+    }
+
     MachineInstrBuilder NewI;
-    if (MI.getOpcode() == TargetOpcode::G_LOAD) {
-      NewI = MIRBuilder.buildInstr(AArch64::LDPXi, {s64, s64}, {});
+    if (IsLoad) {
+      NewI = MIRBuilder.buildInstr(Opcode, {s64, s64}, {});
       MIRBuilder.buildMergeLikeInstr(
           ValReg, {NewI->getOperand(0), NewI->getOperand(1)});
     } else {
       auto Split = MIRBuilder.buildUnmerge(s64, MI.getOperand(0));
       NewI = MIRBuilder.buildInstr(
-          AArch64::STPXi, {}, {Split->getOperand(0), Split->getOperand(1)});
+          Opcode, {}, {Split->getOperand(0), Split->getOperand(1)});
     }
-    Register Base;
-    int Offset;
-    matchLDPSTPAddrMode(MI.getOperand(1).getReg(), Base, Offset, MRI);
-    NewI.addUse(Base);
-    NewI.addImm(Offset / 8);
+
+    if (IsRcpC3) {
+      NewI.addUse(MI.getOperand(1).getReg());
+    } else {
+      Register Base;
+      int Offset;
+      matchLDPSTPAddrMode(MI.getOperand(1).getReg(), Base, Offset, MRI);
+      NewI.addUse(Base);
+      NewI.addImm(Offset / 8);
+    }
 
     NewI.cloneMemRefs(MI);
     constrainSelectedInstRegOperands(*NewI, *ST->getInstrInfo(),
