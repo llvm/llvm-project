@@ -559,7 +559,8 @@ ompt_device_callbacks_t::lookup(const char *interface_function_name) {
  * constructor
  *****************************************************************************/
 
-__attribute__((constructor(102))) static void ompt_init(void) {
+void ompt_init() {
+  DP("OMPT: Entering ompt_init\n");
   static library_ompt_connector_t libomp_connector("libomp");
   static ompt_start_tool_result_t ompt_result;
 

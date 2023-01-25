@@ -47,6 +47,10 @@ PluginManager *PM;
 
 static char *ProfileTraceFile = nullptr;
 
+#ifdef OMPT_SUPPORT
+extern void ompt_init();
+#endif
+
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
 
@@ -68,6 +72,11 @@ __attribute__((constructor(101))) void init() {
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
     timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+
+#ifdef OMPT_SUPPORT
+  // Initialize OMPT first
+  ompt_init();
+#endif
 
   PM->RTLs.loadRTLs();
   PM->registerDelayedLibraries();
