@@ -49,7 +49,10 @@ namespace IntegralCasts {
   static_assert(!nu, "");
 };
 
-
+constexpr int UninitI; // expected-error {{must be initialized by a constant expression}} \
+                       // ref-error {{must be initialized by a constant expression}}
+constexpr int *UninitPtr; // expected-error {{must be initialized by a constant expression}} \
+                          // ref-error {{must be initialized by a constant expression}}
 
 constexpr bool getTrue() { return true; }
 constexpr bool getFalse() { return false; }
