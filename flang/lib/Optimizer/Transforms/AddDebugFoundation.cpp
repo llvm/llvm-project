@@ -57,15 +57,32 @@ void AddDebugFoundationPass::runOnOperation() {
   if (auto fileLoc = module.getLoc().dyn_cast<mlir::FileLineColLoc>())
     inputFilePath = fileLoc.getFilename().getValue();
 
-  mlir::LLVM::DIFileAttr fileAttr = mlir::LLVM::DIFileAttr::get(
-      context, llvm::sys::path::filename(inputFilePath),
-      llvm::sys::path::parent_path(inputFilePath));
+  auto getFileAttr = [context](llvm::StringRef path) -> mlir::LLVM::DIFileAttr {
+    return mlir::LLVM::DIFileAttr::get(context, llvm::sys::path::filename(path),
+                                       llvm::sys::path::parent_path(path));
+  };
+
+  mlir::LLVM::DIFileAttr fileAttr = getFileAttr(inputFilePath);
   mlir::StringAttr producer = mlir::StringAttr::get(context, "Flang");
   mlir::LLVM::DICompileUnitAttr cuAttr = mlir::LLVM::DICompileUnitAttr::get(
       context, llvm::dwarf::getLanguage("DW_LANG_Fortran95"), fileAttr,
       producer, /*isOptimized=*/false,
       mlir::LLVM::DIEmissionKind::LineTablesOnly);
+
   module.walk([&](mlir::func::FuncOp funcOp) {
+    mlir::Location l = funcOp->getLoc();
+    // If fused location has already been created then nothing to do
+    // Otherwise, create a fused location.
+    if (l.dyn_cast<mlir::FusedLoc>())
+      return;
+
+    llvm::StringRef funcFilePath;
+    if (l.dyn_cast<mlir::FileLineColLoc>())
+      funcFilePath =
+          l.dyn_cast<mlir::FileLineColLoc>().getFilename().getValue();
+    else
+      funcFilePath = inputFilePath;
+
     mlir::StringAttr funcName =
         mlir::StringAttr::get(context, funcOp.getName());
     mlir::LLVM::DIBasicTypeAttr bT = mlir::LLVM::DIBasicTypeAttr::get(
@@ -75,8 +92,9 @@ void AddDebugFoundationPass::runOnOperation() {
         mlir::LLVM::DISubroutineTypeAttr::get(
             context, llvm::dwarf::getCallingConvention("DW_CC_normal"),
             {bT, bT});
+    mlir::LLVM::DIFileAttr funcFileAttr = getFileAttr(funcFilePath);
     mlir::LLVM::DISubprogramAttr spAttr = mlir::LLVM::DISubprogramAttr::get(
-        context, cuAttr, fileAttr, funcName, funcName, fileAttr, /*line=*/1,
+        context, cuAttr, fileAttr, funcName, funcName, funcFileAttr, /*line=*/1,
         /*scopeline=*/1, mlir::LLVM::DISubprogramFlags::Definition,
         subTypeAttr);
     funcOp->setLoc(builder.getFusedLoc({funcOp->getLoc()}, spAttr));
