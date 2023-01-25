@@ -5580,7 +5580,7 @@ private:
       // value. The value of the box is forwarded in the continuation.
       mlir::Type reduceTy = reduceRank(arrTy, slice);
       mlir::Type boxTy = fir::BoxType::get(reduceTy);
-      if (memref.getType().isa<fir::ClassType>())
+      if (memref.getType().isa<fir::ClassType>() && !components.hasComponents())
         boxTy = fir::ClassType::get(reduceTy);
       if (components.substring) {
         // Adjust char length to substring size.
