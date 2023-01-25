@@ -2753,7 +2753,9 @@ LoongArchTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   // Since floating-point operation requires a non-trivial set of data
   // operations, use CmpXChg to expand.
-  if (AI->isFloatingPointOperation())
+  if (AI->isFloatingPointOperation() ||
+      AI->getOperation() == AtomicRMWInst::UIncWrap ||
+      AI->getOperation() == AtomicRMWInst::UDecWrap)
     return AtomicExpansionKind::CmpXChg;
 
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();

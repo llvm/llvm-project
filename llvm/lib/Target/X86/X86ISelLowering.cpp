@@ -31845,8 +31845,6 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 
   AtomicRMWInst::BinOp Op = AI->getOperation();
   switch (Op) {
-  default:
-    llvm_unreachable("Unknown atomic operation");
   case AtomicRMWInst::Xchg:
     return AtomicExpansionKind::None;
   case AtomicRMWInst::Add:
@@ -31870,6 +31868,9 @@ X86TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   case AtomicRMWInst::FSub:
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+  default:
     // These always require a non-trivial set of data operations on x86. We must
     // use a cmpxchg loop.
     return AtomicExpansionKind::CmpXChg;
