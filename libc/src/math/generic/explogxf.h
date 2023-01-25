@@ -56,7 +56,7 @@ struct ExpBase {
       0x1.ffffffffe5bc8p-2, 0x1.555555555cd67p-3, 0x1.5555c2a9b48b4p-5,
       0x1.11112a0e34bdbp-7};
 
-  static double powb_lo(double dx) {
+  LIBC_INLINE static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     double c0 = 1.0 + dx;
@@ -150,7 +150,7 @@ struct exp_b_reduc_t {
 //   - EXP_2_MID   : look up table for bit fields of 2^mid
 // Return:
 //   { 2^(hi + mid), lo }
-template <class Base> static inline exp_b_reduc_t exp_b_range_reduc(float x) {
+template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   double xd = static_cast<double>(x);
   // kd = round((hi + mid) * log2(b) * 2^MID_BITS)
   double kd = fputil::nearest_integer(Base::LOG2_B * xd);
@@ -207,7 +207,7 @@ template <class Base> static inline exp_b_reduc_t exp_b_range_reduc(float x) {
 // The main point of these formulas is that the expensive part of calculating
 // the polynomials approximating lower parts of e^(x) and e^(-x) are shared
 // and only done once.
-template <bool is_sinh> static inline double exp_pm_eval(float x) {
+template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   double xd = static_cast<double>(x);
 
   // round(x * log2(e) * 2^5)
@@ -259,7 +259,7 @@ template <bool is_sinh> static inline double exp_pm_eval(float x) {
 }
 
 // x should be positive, normal finite value
-inline static double log2_eval(double x) {
+LIBC_INLINE static double log2_eval(double x) {
   using FPB = fputil::FPBits<double>;
   FPB bs(x);
 
@@ -287,7 +287,7 @@ inline static double log2_eval(double x) {
 }
 
 // x should be positive, normal finite value
-inline static double log_eval(double x) {
+LIBC_INLINE static double log_eval(double x) {
   // ln(x) = log[2,x] * ln(2)
   return log2_eval(x) * 0x1.62e42fefa39efp-1;
 }

@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Detects function calls where the return value is unused.
 ///
@@ -31,8 +29,6 @@ private:
   std::string CheckedFunctions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNUSEDRETURNVALUECHECK_H

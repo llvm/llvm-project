@@ -12,7 +12,7 @@ else()
 endif()
 
 macro(disable_blake3_x86_simd)
-  add_definitions(-DBLAKE3_NO_AVX512 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_SSE2)
+  add_compile_definitions(BLAKE3_NO_AVX512 BLAKE3_NO_AVX2 BLAKE3_NO_SSE41 BLAKE3_NO_SSE2)
 endmacro()
 
 # The BLAKE3 team recommends using the assembly versions, from the README:

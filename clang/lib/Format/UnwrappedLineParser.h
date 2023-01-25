@@ -153,7 +153,7 @@ private:
   void parseCaseLabel();
   void parseSwitch();
   void parseNamespace();
-  void parseModuleImport();
+  bool parseModuleImport();
   void parseNew();
   void parseAccessSpecifier();
   bool parseEnum();

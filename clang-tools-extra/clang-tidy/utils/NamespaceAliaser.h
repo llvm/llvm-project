@@ -18,9 +18,7 @@
 #include <map>
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 // This class creates function-level namespace aliases.
 class NamespaceAliaser {
@@ -45,8 +43,6 @@ private:
       AddedAliases;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_NAMESPACEALIASER_H

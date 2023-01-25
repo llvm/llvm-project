@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// This check finds C++ class methods than can be made static
 /// because they don't use the 'this' pointer.
@@ -29,8 +27,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONVERTMEMFUNCTOSTATIC_H

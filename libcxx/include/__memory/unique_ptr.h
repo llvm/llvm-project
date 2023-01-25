@@ -699,6 +699,25 @@ template<class _Tp, class... _Args>
 
 #endif // _LIBCPP_STD_VER > 11
 
+#if _LIBCPP_STD_VER >= 20
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_single
+make_unique_for_overwrite() {
+  return unique_ptr<_Tp>(new _Tp);
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __unique_if<_Tp>::__unique_array_unknown_bound
+make_unique_for_overwrite(size_t __n) {
+  return unique_ptr<_Tp>(new __remove_extent_t<_Tp>[__n]);
+}
+
+template<class _Tp, class... _Args>
+typename __unique_if<_Tp>::__unique_array_known_bound make_unique_for_overwrite(_Args&&...) = delete;
+
+#endif // _LIBCPP_STD_VER >= 20
+
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
 template <class _Tp, class _Dp>

@@ -114,5 +114,5 @@ function(tf_find_and_compile model default_url default_path test_model_generator
   set(GeneratedMLSources ${GeneratedMLSources} ${GENERATED_OBJS} ${GENERATED_HEADERS} PARENT_SCOPE)
   set(MLDeps ${MLDeps} tf_xla_runtime PARENT_SCOPE)
   set(MLLinkDeps ${MLLinkDeps} tf_xla_runtime PARENT_SCOPE)
-  add_definitions(-DLLVM_HAVE_TF_AOT_${fname_allcaps})
+  add_compile_definitions(LLVM_HAVE_TF_AOT_${fname_allcaps})
 endfunction()

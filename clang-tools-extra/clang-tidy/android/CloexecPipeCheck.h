@@ -11,9 +11,7 @@
 
 #include "CloexecCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 /// Suggests to replace calls to pipe() with calls to pipe2().
 ///
@@ -27,8 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_PIPE_H

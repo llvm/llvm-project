@@ -2718,7 +2718,7 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
   // We can't count on greater alignment than the word size.
   return DAG.getLoad(
       VT, DL, InChain, VAList, MachinePointerInfo(),
-      std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8);
+      Align(std::min(PtrVT.getFixedSizeInBits(), VT.getFixedSizeInBits()) / 8));
 }
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,

@@ -7,9 +7,8 @@
 
 define i16 @half_fptoui_i17_i16(half %x) {
 ; CHECK-LABEL: @half_fptoui_i17_i16(
-; CHECK-NEXT:    [[I:%.*]] = fptoui half [[X:%.*]] to i17
-; CHECK-NEXT:    [[R:%.*]] = trunc i17 [[I]] to i16
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui half [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[I]]
 ;
   %i = fptoui half %x to i17
   %r = trunc i17 %i to i16
@@ -33,9 +32,8 @@ define i15 @half_fptoui_i17_i15(half %x) {
 
 define i16 @half_fptoui_i32_i16(half %x) {
 ; CHECK-LABEL: @half_fptoui_i32_i16(
-; CHECK-NEXT:    [[I:%.*]] = fptoui half [[X:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[I]] to i16
-; CHECK-NEXT:    ret i16 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui half [[X:%.*]] to i16
+; CHECK-NEXT:    ret i16 [[I]]
 ;
   %i = fptoui half %x to i32
   %r = trunc i32 %i to i16
@@ -60,9 +58,8 @@ define i17 @half_fptoui_i32_i17(half %x) {
 
 define <4 x i16> @half_fptoui_4xi32_4xi16(<4 x half> %x) {
 ; CHECK-LABEL: @half_fptoui_4xi32_4xi16(
-; CHECK-NEXT:    [[I:%.*]] = fptoui <4 x half> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i32> [[I]] to <4 x i16>
-; CHECK-NEXT:    ret <4 x i16> [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui <4 x half> [[X:%.*]] to <4 x i16>
+; CHECK-NEXT:    ret <4 x i16> [[I]]
 ;
   %i = fptoui <4 x half> %x to <4 x i32>
   %r = trunc <4 x i32> %i to <4 x i16>
@@ -71,9 +68,8 @@ define <4 x i16> @half_fptoui_4xi32_4xi16(<4 x half> %x) {
 
 define i128 @bfloat_fptoui_i129_i128(bfloat %x) {
 ; CHECK-LABEL: @bfloat_fptoui_i129_i128(
-; CHECK-NEXT:    [[I:%.*]] = fptoui bfloat [[X:%.*]] to i129
-; CHECK-NEXT:    [[R:%.*]] = trunc i129 [[I]] to i128
-; CHECK-NEXT:    ret i128 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui bfloat [[X:%.*]] to i128
+; CHECK-NEXT:    ret i128 [[I]]
 ;
   %i = fptoui bfloat %x to i129
   %r = trunc i129 %i to i128
@@ -95,9 +91,8 @@ define i127 @bfloat_fptoui_i128_i127(bfloat %x) {
 
 define i128 @float_fptoui_i129_i128(float %x) {
 ; CHECK-LABEL: @float_fptoui_i129_i128(
-; CHECK-NEXT:    [[I:%.*]] = fptoui float [[X:%.*]] to i129
-; CHECK-NEXT:    [[R:%.*]] = trunc i129 [[I]] to i128
-; CHECK-NEXT:    ret i128 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui float [[X:%.*]] to i128
+; CHECK-NEXT:    ret i128 [[I]]
 ;
   %i = fptoui float %x to i129
   %r = trunc i129 %i to i128
@@ -134,9 +129,8 @@ define i127 @float_fptoui_i128_i127(float %x) {
 
 define i1024 @double_fptoui_i1025_i1024(double %x) {
 ; CHECK-LABEL: @double_fptoui_i1025_i1024(
-; CHECK-NEXT:    [[I:%.*]] = fptoui double [[X:%.*]] to i1025
-; CHECK-NEXT:    [[R:%.*]] = trunc i1025 [[I]] to i1024
-; CHECK-NEXT:    ret i1024 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptoui double [[X:%.*]] to i1024
+; CHECK-NEXT:    ret i1024 [[I]]
 ;
   %i = fptoui double %x to i1025
   %r = trunc i1025 %i to i1024
@@ -171,9 +165,8 @@ define i16 @half_fptosi_i17_i16(half %x) {
 
 define i17 @half_fptosi_i18_i17(half %x) {
 ; CHECK-LABEL: @half_fptosi_i18_i17(
-; CHECK-NEXT:    [[I:%.*]] = fptosi half [[X:%.*]] to i18
-; CHECK-NEXT:    [[R:%.*]] = trunc i18 [[I]] to i17
-; CHECK-NEXT:    ret i17 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptosi half [[X:%.*]] to i17
+; CHECK-NEXT:    ret i17 [[I]]
 ;
   %i = fptosi half %x to i18
   %r = trunc i18 %i to i17
@@ -212,9 +205,8 @@ define i18 @half_fptosi_i32_i18(half %x) {
 
 define <4 x i17> @half_fptosi_4xi32_4xi17(<4 x half> %x) {
 ; CHECK-LABEL: @half_fptosi_4xi32_4xi17(
-; CHECK-NEXT:    [[I:%.*]] = fptosi <4 x half> [[X:%.*]] to <4 x i32>
-; CHECK-NEXT:    [[R:%.*]] = trunc <4 x i32> [[I]] to <4 x i17>
-; CHECK-NEXT:    ret <4 x i17> [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptosi <4 x half> [[X:%.*]] to <4 x i17>
+; CHECK-NEXT:    ret <4 x i17> [[I]]
 ;
   %i = fptosi <4 x half> %x to <4 x i32>
   %r = trunc <4 x i32> %i to <4 x i17>
@@ -236,9 +228,8 @@ define i128 @bfloat_fptosi_i129_i128(bfloat %x) {
 
 define i129 @bfloat_fptosi_i130_i129(bfloat %x) {
 ; CHECK-LABEL: @bfloat_fptosi_i130_i129(
-; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[X:%.*]] to i130
-; CHECK-NEXT:    [[R:%.*]] = trunc i130 [[I]] to i129
-; CHECK-NEXT:    ret i129 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[X:%.*]] to i129
+; CHECK-NEXT:    ret i129 [[I]]
 ;
   %i = fptosi bfloat %x to i130
   %r = trunc i130 %i to i129
@@ -247,9 +238,8 @@ define i129 @bfloat_fptosi_i130_i129(bfloat %x) {
 
 define i129 @float_fptosi_i130_i129(float %x) {
 ; CHECK-LABEL: @float_fptosi_i130_i129(
-; CHECK-NEXT:    [[I:%.*]] = fptosi float [[X:%.*]] to i130
-; CHECK-NEXT:    [[R:%.*]] = trunc i130 [[I]] to i129
-; CHECK-NEXT:    ret i129 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptosi float [[X:%.*]] to i129
+; CHECK-NEXT:    ret i129 [[I]]
 ;
   %i = fptosi float %x to i130
   %r = trunc i130 %i to i129
@@ -271,9 +261,8 @@ define i128 @float_fptosi_i129_i128(float %x) {
 
 define i1025 @double_fptosi_i1026_i1025(double %x) {
 ; CHECK-LABEL: @double_fptosi_i1026_i1025(
-; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X:%.*]] to i1026
-; CHECK-NEXT:    [[R:%.*]] = trunc i1026 [[I]] to i1025
-; CHECK-NEXT:    ret i1025 [[R]]
+; CHECK-NEXT:    [[I:%.*]] = fptosi double [[X:%.*]] to i1025
+; CHECK-NEXT:    ret i1025 [[I]]
 ;
   %i = fptosi double %x to i1026
   %r = trunc i1026 %i to i1025

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
 
 #include "src/__support/architectures.h"
+#include "src/__support/common.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -20,7 +21,7 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] inline static void
+[[maybe_unused]] LIBC_INLINE static void
 inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
   LLVM_LIBC_LOOP_NOUNROLL
   for (size_t offset = 0; offset < count; ++offset)
@@ -29,8 +30,8 @@ inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
 
 #if defined(LLVM_LIBC_ARCH_X86)
 template <size_t MaxSize>
-[[maybe_unused]] inline static void inline_memset_x86(Ptr dst, uint8_t value,
-                                                      size_t count) {
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   if (count == 0)
     return;
   if (count == 1)
@@ -58,7 +59,7 @@ template <size_t MaxSize>
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
 template <size_t MaxSize>
-[[maybe_unused]] inline static void
+[[maybe_unused]] LIBC_INLINE static void
 inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
   if (count == 0)
     return;
@@ -94,7 +95,7 @@ inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
 }
 #endif // defined(LLVM_LIBC_ARCH_AARCH64)
 
-inline static void inline_memset(Ptr dst, uint8_t value, size_t count) {
+LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86)
   static constexpr size_t kMaxSize = x86::kAvx512F ? 64
                                      : x86::kAvx   ? 32
@@ -113,7 +114,7 @@ inline static void inline_memset(Ptr dst, uint8_t value, size_t count) {
 #endif
 }
 
-inline static void inline_memset(void *dst, uint8_t value, size_t count) {
+LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
   inline_memset(reinterpret_cast<Ptr>(dst), value, count);
 }
 

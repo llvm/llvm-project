@@ -366,6 +366,7 @@ def MultiTileSizesOp : Op<Transform_Dialect, "structured.multitile_sizes",
 //===----------------------------------------------------------------------===//
 // PackOp
 //===----------------------------------------------------------------------===//
+
 def PackOp : Op<Transform_Dialect, "structured.pack", [
                 DeclareOpInterfaceMethods<TransformOpInterface>,
                 DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,]> {
@@ -440,6 +441,11 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     attr-dict
     `:` functional-type($target, results)
   }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedPackedSizes)>
+  ];
 
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::OpFoldResult> getMixedPackedSizes();

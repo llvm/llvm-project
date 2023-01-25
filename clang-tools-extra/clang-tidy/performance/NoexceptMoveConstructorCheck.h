@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// The check flags user-defined move constructors and assignment operators not
 /// marked with `noexcept` or marked with `noexcept(expr)` where `expr`
@@ -33,8 +31,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTMOVECONSTRUCTORCHECK_H

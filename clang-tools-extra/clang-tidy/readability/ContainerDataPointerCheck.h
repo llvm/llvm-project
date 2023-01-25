@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 /// Checks whether a call to `operator[]` and `&` can be replaced with a call to
 /// `data()`.
 ///
@@ -38,8 +36,6 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 };
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_CONTAINERDATAPOINTERCHECK_H

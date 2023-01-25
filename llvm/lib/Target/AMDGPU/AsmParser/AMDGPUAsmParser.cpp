@@ -4717,14 +4717,22 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
   const unsigned TH = CPol & AMDGPU::CPol::TH;
   const unsigned Scope = CPol & AMDGPU::CPol::SCOPE;
 
-  if (TH == 0)
-    return true;
+  const unsigned Opcode = Inst.getOpcode();
+  const MCInstrDesc &TID = MII.get(Opcode);
 
   auto PrintError = [&](StringRef Msg) {
     SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
     Error(S, Msg);
     return false;
   };
+
+  if ((TID.TSFlags & SIInstrFlags::IsAtomicRet) &&
+      (TID.TSFlags & (SIInstrFlags::FLAT | SIInstrFlags::MUBUF)) &&
+      (!(TH & AMDGPU::CPol::TH_ATOMIC_RETURN)))
+    return PrintError("instruction must use th:TH_ATOMIC_RETURN");
+
+  if (TH == 0)
+    return true;
 
   if (TH == AMDGPU::CPol::TH_BYPASS) {
     if ((Scope != AMDGPU::CPol::SCOPE_SYS &&
@@ -4734,8 +4742,6 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
       return PrintError("scope and th combination is not valid");
   }
 
-  const unsigned Opcode = Inst.getOpcode();
-  const MCInstrDesc &TID = MII.get(Opcode);
 
   bool IsStore = TID.mayStore();
   bool IsAtomic =

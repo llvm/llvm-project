@@ -699,6 +699,7 @@ libc_support_library(
         "src/math/generic/range_reduction_fma.h",
     ],
     deps = [
+        ":__support_common",
         ":__support_fputil_fma",
         ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",

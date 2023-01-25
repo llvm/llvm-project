@@ -16,9 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Base class for MakeSharedCheck and MakeUniqueCheck.
 class MakeSmartPtrCheck : public ClangTidyCheck {
@@ -64,8 +62,6 @@ private:
   void insertHeader(DiagnosticBuilder &Diag, FileID FD);
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_MAKE_SMART_PTR_H

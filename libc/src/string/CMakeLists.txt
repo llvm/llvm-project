@@ -7,6 +7,7 @@ add_header_library(
   DEPENDS
     libc.include.stdlib
     libc.src.__support.CPP.bitset
+    libc.src.__support.common
     .memory_utils.memcpy_implementation
     .memory_utils.bzero_implementation
 )

@@ -508,8 +508,7 @@ foreach (NATIVE_KEYWORD host Native)
   endif()
 endforeach()
 
-list(FIND LLVM_TARGETS_TO_BUILD ${LLVM_NATIVE_ARCH} NATIVE_ARCH_IDX)
-if (NATIVE_ARCH_IDX EQUAL -1)
+if (NOT ${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
   message(STATUS
     "Native target ${LLVM_NATIVE_ARCH} is not selected; lli will not JIT code")
 else ()

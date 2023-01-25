@@ -245,6 +245,7 @@ enum NodeType : unsigned {
   VFCVT_RM_XU_F_VL, // Has a rounding mode operand.
   SINT_TO_FP_VL,
   UINT_TO_FP_VL,
+  VFCVT_RM_F_X_VL, // Has a rounding mode operand.
   VFCVT_RM_F_XU_VL, // Has a rounding mode operand.
   FP_ROUND_VL,
   FP_EXTEND_VL,

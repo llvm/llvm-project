@@ -138,20 +138,6 @@ createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   return createModuleFromMemoryBuffer(MB, Context);
 }
 
-CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
-  switch (OptLevel) {
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default;
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-  llvm_unreachable("Invalid optimization level");
-}
-
 OptimizationLevel getOptLevel(unsigned OptLevel) {
   switch (OptLevel) {
   case 0:
@@ -169,7 +155,10 @@ OptimizationLevel getOptLevel(unsigned OptLevel) {
 Expected<std::unique_ptr<TargetMachine>>
 createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
   Triple TT(M.getTargetTriple());
-  CodeGenOpt::Level CGOptLevel = getCGOptLevel(OptLevel);
+  std::optional<CodeGenOpt::Level> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(OptLevel);
+  assert(CGOptLevelOrNone && "Invalid optimization level");
+  CodeGenOpt::Level CGOptLevel = *CGOptLevelOrNone;
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);

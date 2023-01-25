@@ -1983,6 +1983,13 @@ public:
     return false;
   }
 
+  /// Whether AtomicExpandPass should automatically insert a trailing fence
+  /// without reducing the ordering for this atomic. Defaults to false.
+  virtual bool
+  shouldInsertTrailingFenceForAtomicStore(const Instruction *I) const {
+    return false;
+  }
+
   /// Perform a load-linked operation on Addr, returning a "Value *" with the
   /// corresponding pointee type. This may entail some non-trivial operations to
   /// truncate or reconstruct types that will be illegal in the backend. See

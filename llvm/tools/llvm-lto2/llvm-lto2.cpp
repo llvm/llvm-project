@@ -306,20 +306,9 @@ static int run(int argc, char **argv) {
   Conf.Freestanding = EnableFreestanding;
   for (auto &PluginFN : PassPlugins)
     Conf.PassPlugins.push_back(PluginFN);
-  switch (CGOptLevel) {
-  case '0':
-    Conf.CGOptLevel = CodeGenOpt::None;
-    break;
-  case '1':
-    Conf.CGOptLevel = CodeGenOpt::Less;
-    break;
-  case '2':
-    Conf.CGOptLevel = CodeGenOpt::Default;
-    break;
-  case '3':
-    Conf.CGOptLevel = CodeGenOpt::Aggressive;
-    break;
-  default:
+  if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
+    Conf.CGOptLevel = *Level;
+  } else {
     llvm::errs() << "invalid cg optimization level: " << CGOptLevel << '\n';
     return 1;
   }

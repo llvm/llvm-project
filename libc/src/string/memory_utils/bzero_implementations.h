@@ -9,17 +9,18 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
 
+#include "src/__support/common.h"
 #include "src/string/memory_utils/memset_implementations.h"
 
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
 
-inline static void inline_bzero(Ptr dst, size_t count) {
+LIBC_INLINE static void inline_bzero(Ptr dst, size_t count) {
   inline_memset(dst, 0, count);
 }
 
-inline static void inline_bzero(void *dst, size_t count) {
+LIBC_INLINE static void inline_bzero(void *dst, size_t count) {
   inline_bzero(reinterpret_cast<Ptr>(dst), count);
 }
 
