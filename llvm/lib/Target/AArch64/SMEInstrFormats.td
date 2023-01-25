@@ -24,6 +24,12 @@ def tileslice128 : ComplexPattern<i32 , 2, "SelectSMETileSlice<0,  1>", []>; // 
 
 def tileslicerange3s2 : ComplexPattern<i32, 2, "SelectSMETileSlice<14, 2>", []>;
 def tileslicerange2s2 : ComplexPattern<i32, 2, "SelectSMETileSlice<6,  2>", []>;
+def tileslicerange1s2 : ComplexPattern<i32, 2, "SelectSMETileSlice<2,  2>", []>;
+def tileslicerange0s2 : ComplexPattern<i32, 2, "SelectSMETileSlice<0,  2>", []>;
+
+def tileslicerange2s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<12, 4>", []>;
+def tileslicerange1s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<4,  4>", []>;
+def tileslicerange0s4 : ComplexPattern<i32, 2, "SelectSMETileSlice<0,  4>", []>;
 
 def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>", [], [SDNPWantRoot]>;
 
@@ -80,6 +86,13 @@ class sme2_za_array_2op_multi_index_pseudo<string name, Operand index_ty, Regist
 class sme2_move_to_za_pseudo<string name, Operand imm_ty, RegisterOperand multi_vector_ty, SMEMatrixTypeEnum za_flag>
     : SMEPseudo2Instr<name, 0>,
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, imm_ty:$imm, multi_vector_ty:$Zn), []> {
+  let SMEMatrixType = za_flag;
+  let usesCustomInserter = 1;
+}
+
+class sme2_move_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, RegisterOperand multi_vector_ty, SMEMatrixTypeEnum za_flag>
+    : SMEPseudo2Instr<name, 0>,
+      Pseudo<(outs), (ins tile_imm:$tile, MatrixIndexGPR32Op12_15:$Rs, imm_ty:$imm, multi_vector_ty:$Zn), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
 }
@@ -151,6 +164,14 @@ class SME2_ZA_VG1x2_Multi_Pat<string name, SDPatternOperator intrinsic, ValueTyp
 class SME2_ZA_VG1x4_Multi_Pat<string name, SDPatternOperator intrinsic, ValueType vt, Operand index_ty, ComplexPattern tileslice>
     : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
           (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
+
+class SME2_Tile_VG2_Multi_Pat<string name, SDPatternOperator intrinsic, Operand tile_imm, ValueType vt, Operand index_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2),
+          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1))>;
+
+class SME2_Tile_VG4_Multi_Pat<string name, SDPatternOperator intrinsic, Operand tile_imm, ValueType vt, Operand index_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic tile_imm:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
+          (!cast<Instruction>(name # _PSEUDO) $tile, $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
 
 //===----------------------------------------------------------------------===//
 // SME Outer Products
@@ -811,15 +832,10 @@ multiclass sme_vector_to_tile_patterns<Instruction inst, ValueType zpr_vt,
                                        Operand offset_ty,
                                        SDPatternOperator op,
                                        ComplexPattern tileslice> {
-  def : Pat<(op imm_ty:$tile, MatrixIndexGPR32Op12_15:$idx,
+  def : Pat<(op imm_ty:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$idx,
+                                              offset_ty:$imm)),
                 (ppr_vt PPR3bAny:$pg), (zpr_vt ZPRAny:$zn)),
-            (inst imm_ty:$tile, $idx, 0, $pg, $zn)>;
-  let AddedComplexity = 1 in {
-    def : Pat<(op imm_ty:$tile, (i32 (tileslice MatrixIndexGPR32Op12_15:$idx,
-                                                offset_ty:$imm)),
-                  (ppr_vt PPR3bAny:$pg), (zpr_vt ZPRAny:$zn)),
-              (inst imm_ty:$tile, $idx, $imm, $pg, $zn)>;
-  }
+            (inst imm_ty:$tile, $idx, $imm, $pg, $zn)>;
 }
 
 class sme_mova_insert_pseudo<SMEMatrixTypeEnum za_flag>
@@ -3052,13 +3068,13 @@ multiclass sme2_mova_vec_to_tile_or_array_aliases<int prefer, Instruction inst,
 }
 
 // SME2 move vector to tile, two registers
-multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
+multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic, SDPatternOperator intrinsic> {
 
   def _B : sme2_mova_vec_to_tile_vg2_multi_base<0b00, v,
                                                 !if(v, TileVectorOpV8,
                                                        TileVectorOpH8),
                                                 uimm3s2range,  ZZ_b_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _B, 1> {
     bits<3> imm;
     let Inst{2-0} = imm;
   }
@@ -3067,7 +3083,7 @@ multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV16,
                                                        TileVectorOpH16),
                                                 uimm2s2range, ZZ_h_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _H, 1> {
     bits<1> ZAd;
     bits<2> imm;
     let Inst{2}   = ZAd;
@@ -3078,7 +3094,7 @@ multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV32,
                                                        TileVectorOpH32),
                                                  uimm1s2range, ZZ_s_mul_r,
-                                                 mnemonic> {
+                                                 mnemonic>, SMEPseudo2Instr<NAME # _S, 1> {
     bits<2> ZAd;
     bits<1> imm;
     let Inst{2-1} = ZAd;
@@ -3089,10 +3105,24 @@ multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV64,
                                                        TileVectorOpH64),
                                                 uimm0s2range, ZZ_d_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _D, 1> {
     bits<3> ZAd;
     let Inst{2-0} = ZAd;
    }
+
+  def NAME # _B_PSEUDO : sme2_move_to_tile_pseudo<NAME # _B, sme_elm_idx0_0, uimm3s2range, ZZ_b_mul_r, SMEMatrixTileB>;
+  def NAME # _H_PSEUDO : sme2_move_to_tile_pseudo<NAME # _H, sme_elm_idx0_1, uimm2s2range, ZZ_h_mul_r, SMEMatrixTileH>;
+  def NAME # _S_PSEUDO : sme2_move_to_tile_pseudo<NAME # _S, sme_elm_idx0_3, uimm1s2range, ZZ_s_mul_r, SMEMatrixTileS>;
+  def NAME # _D_PSEUDO : sme2_move_to_tile_pseudo<NAME # _D, sme_elm_idx0_7, uimm0s2range, ZZ_d_mul_r, SMEMatrixTileD>;
+
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _B, intrinsic, sme_elm_idx0_0, nxv16i8, uimm3s2range, tileslicerange3s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8i16, uimm2s2range, tileslicerange2s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8f16, uimm2s2range, tileslicerange2s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8bf16, uimm2s2range, tileslicerange2s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _S, intrinsic, sme_elm_idx0_3, nxv4i32, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _S, intrinsic, sme_elm_idx0_3, nxv4f32, uimm1s2range, tileslicerange1s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _D, intrinsic, sme_elm_idx0_7, nxv2i64, uimm0s2range, tileslicerange0s2>;
+  def : SME2_Tile_VG2_Multi_Pat<NAME # _D, intrinsic, sme_elm_idx0_7, nxv2f64, uimm0s2range, tileslicerange0s2>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _B),
                                                 !if(v, TileVectorOpV8,
@@ -3170,9 +3200,10 @@ multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
                                                 "mova">;
 }
 
-multiclass sme2_mova_vec_to_tile_vg2_multi<string mnemonic>{
- defm _H : sme2_mova_vec_to_tile_vg2_multi_base<0b0, mnemonic>;
- defm _V : sme2_mova_vec_to_tile_vg2_multi_base<0b1, mnemonic>;
+multiclass sme2_mova_vec_to_tile_vg2_multi<string mnemonic,
+                                           SDPatternOperator int_h, SDPatternOperator int_v>{
+ defm _H : sme2_mova_vec_to_tile_vg2_multi_base<0b0, mnemonic, int_h>;
+ defm _V : sme2_mova_vec_to_tile_vg2_multi_base<0b1, mnemonic, int_v>;
 }
 
 class sme2_mova_vec_to_tile_vg4_multi_base<bits<2> sz, bit v, bits<3> op,
@@ -3201,13 +3232,13 @@ class sme2_mova_vec_to_tile_vg4_multi_base<bits<2> sz, bit v, bits<3> op,
 }
 
 // SME2 move vector to tile, four registers
-multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
+multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic, SDPatternOperator intrinsic> {
 
   def _B : sme2_mova_vec_to_tile_vg4_multi_base<0b00, v, {0,?,?},
                                                 !if(v, TileVectorOpV8,
                                                        TileVectorOpH8),
                                                 uimm2s4range, ZZZZ_b_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _B, 1> {
     bits<2> imm;
     let Inst{1-0} = imm;
   }
@@ -3216,7 +3247,7 @@ multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV16,
                                                        TileVectorOpH16),
                                                 uimm1s4range, ZZZZ_h_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _H, 1> {
     bits<1> ZAd;
     bits<1> imm;
     let Inst{1}   = ZAd;
@@ -3227,7 +3258,7 @@ multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV32,
                                                        TileVectorOpH32),
                                                  uimm0s4range, ZZZZ_s_mul_r,
-                                                 mnemonic> {
+                                                 mnemonic>, SMEPseudo2Instr<NAME # _S, 1> {
     bits<2> ZAd;
     let Inst{1-0} = ZAd;
   }
@@ -3236,10 +3267,24 @@ multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
                                                 !if(v, TileVectorOpV64,
                                                        TileVectorOpH64),
                                                 uimm0s4range, ZZZZ_d_mul_r,
-                                                mnemonic> {
+                                                mnemonic>, SMEPseudo2Instr<NAME # _D, 1> {
     bits<3> ZAd;
     let Inst{2-0} = ZAd;
   }
+
+  def NAME # _B_PSEUDO : sme2_move_to_tile_pseudo<NAME # _B, sme_elm_idx0_0, uimm2s4range, ZZZZ_b_mul_r, SMEMatrixTileB>;
+  def NAME # _H_PSEUDO : sme2_move_to_tile_pseudo<NAME # _H, sme_elm_idx0_1, uimm1s4range, ZZZZ_h_mul_r, SMEMatrixTileH>;
+  def NAME # _S_PSEUDO : sme2_move_to_tile_pseudo<NAME # _S, sme_elm_idx0_3, uimm0s4range, ZZZZ_s_mul_r, SMEMatrixTileS>;
+  def NAME # _D_PSEUDO : sme2_move_to_tile_pseudo<NAME # _D, sme_elm_idx0_7, uimm0s4range, ZZZZ_d_mul_r, SMEMatrixTileD>;
+
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _B, intrinsic, sme_elm_idx0_0, nxv16i8, uimm2s4range, tileslicerange2s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8i16, uimm1s4range, tileslicerange1s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8f16, uimm1s4range, tileslicerange1s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _H, intrinsic, sme_elm_idx0_1, nxv8bf16, uimm1s4range, tileslicerange1s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _S, intrinsic, sme_elm_idx0_3, nxv4i32, uimm0s4range, tileslicerange0s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _S, intrinsic, sme_elm_idx0_3, nxv4f32, uimm0s4range, tileslicerange0s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _D, intrinsic, sme_elm_idx0_7, nxv2i64, uimm0s4range, tileslicerange0s4>;
+  def : SME2_Tile_VG4_Multi_Pat<NAME # _D, intrinsic, sme_elm_idx0_7, nxv2f64, uimm0s4range, tileslicerange0s4>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _B),
                                                 !if(v, TileVectorOpV8,
@@ -3293,9 +3338,10 @@ multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
 
 }
 
-multiclass sme2_mova_vec_to_tile_vg4_multi<string mnemonic>{
- defm _H : sme2_mova_vec_to_tile_vg4_multi_base<0b0, mnemonic>;
- defm _V : sme2_mova_vec_to_tile_vg4_multi_base<0b1, mnemonic>;
+multiclass sme2_mova_vec_to_tile_vg4_multi<string mnemonic,
+                                           SDPatternOperator int_h, SDPatternOperator int_v>{
+ defm _H : sme2_mova_vec_to_tile_vg4_multi_base<0b0, mnemonic, int_h>;
+ defm _V : sme2_mova_vec_to_tile_vg4_multi_base<0b1, mnemonic, int_v>;
 }
 
 // SME Move into Array
@@ -3321,12 +3367,17 @@ class sme2_mova_vec_to_array_vg24_multi< bits<5> op, RegisterOperand array_ty,
 }
 
 // MOVA (vector to array, two registers)
-multiclass sme2_mova_vec_to_array_vg2_multi<string mnemonic> {
+multiclass sme2_mova_vec_to_array_vg2_multi<string mnemonic, SDPatternOperator intrinsic> {
   def NAME : sme2_mova_vec_to_array_vg24_multi<{0,?,?,?,?}, MatrixOp64,
-                                               ZZ_d_mul_r, mnemonic, "vgx2">{
+                                               ZZ_d_mul_r, mnemonic, "vgx2">, SMEPseudo2Instr<NAME, 1> {
    bits<4> Zn;
    let Inst{9-6} = Zn;
   }
+
+  def NAME # _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, ZZ_d_mul_r, SMEMatrixArray>;
+
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2i64, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, nxv2f64, sme_elm_idx0_7, tileslice16>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
                                                 MatrixOp8,
@@ -3409,12 +3460,17 @@ multiclass sme2_mova_vec_to_array_vg2_multi<string mnemonic> {
 }
 
 // MOVA (vector to array, four registers)
-multiclass sme2_mova_vec_to_array_vg4_multi<string mnemonic> {
+multiclass sme2_mova_vec_to_array_vg4_multi<string mnemonic, SDPatternOperator intrinsic> {
   def NAME : sme2_mova_vec_to_array_vg24_multi<{1,?,?,?,0}, MatrixOp64,
-                                               ZZZZ_d_mul_r, mnemonic, "vgx4"> {
+                                               ZZZZ_d_mul_r, mnemonic, "vgx4">, SMEPseudo2Instr<NAME, 1> {
     bits<3> Zn;
     let Inst{9-7} = Zn;
   }
+
+  def NAME # _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, ZZZZ_d_mul_r, SMEMatrixArray>;
+
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2i64, sme_elm_idx0_7, tileslice16>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, nxv2f64, sme_elm_idx0_7, tileslice16>;
 
   defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
                                                 MatrixOp8,

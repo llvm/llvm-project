@@ -364,6 +364,10 @@ public:
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
 
+  template <unsigned MaxIdx, unsigned Scale>
+  void SelectMultiVectorMove(SDNode *N, unsigned NumVecs, unsigned BaseReg,
+                             unsigned Op);
+
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
   /// SVE Reg+Imm addressing mode.
   template <int64_t Min, int64_t Max>
@@ -1845,6 +1849,68 @@ void AArch64DAGToDAGISel::SelectClamp(SDNode *N, unsigned NumVecs,
 
   CurDAG->RemoveDeadNode(N);
   return;
+}
+
+bool SelectSMETile(unsigned &BaseReg, unsigned TileNum) {
+  switch (BaseReg) {
+  default:
+    return false;
+  case AArch64::ZA:
+  case AArch64::ZAB0:
+    if (TileNum == 0)
+      break;
+    return false;
+  case AArch64::ZAH0:
+    if (TileNum <= 1)
+      break;
+    return false;
+  case AArch64::ZAS0:
+    if (TileNum <= 3)
+      break;
+    return false;
+  case AArch64::ZAD0:
+    if (TileNum <= 7)
+      break;
+    return false;
+  }
+
+  BaseReg += TileNum;
+  return true;
+}
+
+template <unsigned MaxIdx, unsigned Scale>
+void AArch64DAGToDAGISel::SelectMultiVectorMove(SDNode *N, unsigned NumVecs,
+                                                unsigned BaseReg, unsigned Op) {
+  unsigned TileNum = 0;
+  if (BaseReg != AArch64::ZA)
+    TileNum = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+
+  if (!SelectSMETile(BaseReg, TileNum))
+    return;
+
+  SDValue SliceBase, Base, Offset;
+  if (BaseReg == AArch64::ZA)
+    SliceBase = N->getOperand(2);
+  else
+    SliceBase = N->getOperand(3);
+
+  if (!SelectSMETileSlice(SliceBase, MaxIdx, Base, Offset, Scale))
+    return;
+
+  SDLoc DL(N);
+  SDValue SubReg = CurDAG->getRegister(BaseReg, MVT::Other);
+  SDValue Ops[] = {SubReg, Base, Offset, /*Chain*/ N->getOperand(0)};
+  SDNode *Mov = CurDAG->getMachineNode(Op, DL, {MVT::Untyped, MVT::Other}, Ops);
+
+  EVT VT = N->getValueType(0);
+  for (unsigned I = 0; I < NumVecs; ++I)
+    ReplaceUses(SDValue(N, I),
+                CurDAG->getTargetExtractSubreg(AArch64::zsub0 + I, DL, VT,
+                                               SDValue(Mov, 0)));
+  // Copy chain
+  unsigned ChainIdx = NumVecs;
+  ReplaceUses(SDValue(N, ChainIdx), SDValue(Mov, 1));
+  CurDAG->RemoveDeadNode(N);
 }
 
 void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
@@ -4679,6 +4745,100 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
         return;
       }
       break;
+    }
+    case Intrinsic::aarch64_sme_read_hor_vg2: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMove<14, 2>(Node, 2, AArch64::ZAB0,
+                                     AArch64::MOVA_2ZMXI_H_B);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMove<6, 2>(Node, 2, AArch64::ZAH0,
+                                    AArch64::MOVA_2ZMXI_H_H);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMove<2, 2>(Node, 2, AArch64::ZAS0,
+                                    AArch64::MOVA_2ZMXI_H_S);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMove<0, 2>(Node, 2, AArch64::ZAD0,
+                                    AArch64::MOVA_2ZMXI_H_D);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_read_ver_vg2: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMove<14, 2>(Node, 2, AArch64::ZAB0,
+                                     AArch64::MOVA_2ZMXI_V_B);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMove<6, 2>(Node, 2, AArch64::ZAH0,
+                                    AArch64::MOVA_2ZMXI_V_H);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMove<2, 2>(Node, 2, AArch64::ZAS0,
+                                    AArch64::MOVA_2ZMXI_V_S);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMove<0, 2>(Node, 2, AArch64::ZAD0,
+                                    AArch64::MOVA_2ZMXI_V_D);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_read_hor_vg4: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMove<12, 4>(Node, 4, AArch64::ZAB0,
+                                     AArch64::MOVA_4ZMXI_H_B);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMove<4, 4>(Node, 4, AArch64::ZAH0,
+                                    AArch64::MOVA_4ZMXI_H_H);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMove<0, 2>(Node, 4, AArch64::ZAS0,
+                                    AArch64::MOVA_4ZMXI_H_S);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMove<0, 2>(Node, 4, AArch64::ZAD0,
+                                    AArch64::MOVA_4ZMXI_H_D);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_read_ver_vg4: {
+      if (VT == MVT::nxv16i8) {
+        SelectMultiVectorMove<12, 4>(Node, 4, AArch64::ZAB0,
+                                     AArch64::MOVA_4ZMXI_V_B);
+        return;
+      } else if (VT == MVT::nxv8i16 || VT == MVT::nxv8f16 ||
+                 VT == MVT::nxv8bf16) {
+        SelectMultiVectorMove<4, 4>(Node, 4, AArch64::ZAH0,
+                                    AArch64::MOVA_4ZMXI_V_H);
+        return;
+      } else if (VT == MVT::nxv4i32 || VT == MVT::nxv4f32) {
+        SelectMultiVectorMove<0, 4>(Node, 4, AArch64::ZAS0,
+                                    AArch64::MOVA_4ZMXI_V_S);
+        return;
+      } else if (VT == MVT::nxv2i64 || VT == MVT::nxv2f64) {
+        SelectMultiVectorMove<0, 4>(Node, 4, AArch64::ZAD0,
+                                    AArch64::MOVA_4ZMXI_V_D);
+        return;
+      }
+      break;
+    }
+    case Intrinsic::aarch64_sme_read_vg1x2: {
+      SelectMultiVectorMove<7, 1>(Node, 2, AArch64::ZA,
+                                  AArch64::MOVA_VG2_2ZMXI);
+      return;
+    }
+    case Intrinsic::aarch64_sme_read_vg1x4: {
+      SelectMultiVectorMove<7, 1>(Node, 4, AArch64::ZA,
+                                  AArch64::MOVA_VG4_4ZMXI);
+      return;
     }
     case Intrinsic::swift_async_context_addr: {
       SDLoc DL(Node);
