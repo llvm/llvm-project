@@ -128,5 +128,5 @@ int bar() { return weak; }
 // RUN: | FileCheck %s --check-prefix=LIBRARY-GLOBAL-DEFINED
 
 // LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=amdgcn-amd-amdhsa -mcpu=gfx1030 {{.*}}.o {{.*}}.o
-// LIBRARY-GLOBAL-DEFINED-NOT: {{.*}}.o
+// LIBRARY-GLOBAL-DEFINED-NOT: {{.*}}gfx1030{{.*}}.o
 // LIBRARY-GLOBAL-DEFINED: clang{{.*}} -o {{.*}}.img --target=nvptx64-nvidia-cuda -march=sm_70 {{.*}}.s {{.*}}.o
