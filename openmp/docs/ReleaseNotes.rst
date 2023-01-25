@@ -57,3 +57,14 @@ Non-comprehensive list of changes in this release
 
 * Fixed a number of bugs and regressions.
 
+* Improved host thread utilization on target nowait regions. Target tasks are
+  now continuously re-enqueued by the OpenMP runtime until their device-side
+  operations are completed, unblocking the host thread to execute other tasks.
+
+* Target tasks re-enqueue can be controlled on a per-thread basis based on
+  exponential backoff counting. ``OMPTARGET_QUERY_COUNT_THRESHOLD`` defines how
+  many target tasks must be re-enqueued before the thread starts blocking on the
+  device operations (defaults to 10). ``OMPTARGET_QUERY_COUNT_MAX`` defines the
+  maximum value for the per-thread re-enqueue counter (defaults to 5).
+  ``OMPTARGET_QUERY_COUNT_BACKOFF_FACTOR`` defines the decrement factor applied
+  to the counter when a target task is completed (defaults to 0.5).
