@@ -128,6 +128,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strcasestr
+  SRCS
+    strcasestr.cpp
+  HDRS
+    strcasestr.h
+  DEPENDS
+    .memory_utils.strstr_implementation
+    libc.src.__support.ctype_utils
+)
+
+add_entrypoint_object(
   strcoll
   SRCS
     strcoll.cpp
