@@ -289,7 +289,7 @@ public:
   }
 
   llvm::Optional<unsigned> GetNumChildren(CompilerType type,
-                                          ValueObject *valobj) {
+                                          ExecutionContextScope *exe_scopej) {
     STUB_LOG();
     return {};
   }
@@ -2309,8 +2309,9 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetMemberVariableOffset(
 }
 
 llvm::Optional<unsigned>
-SwiftLanguageRuntime::GetNumChildren(CompilerType type, ValueObject *valobj) {
-  FORWARD(GetNumChildren, type, valobj);
+SwiftLanguageRuntime::GetNumChildren(CompilerType type,
+                                     ExecutionContextScope *exe_scope) {
+  FORWARD(GetNumChildren, type, exe_scope);
 }
 
 llvm::Optional<std::string> SwiftLanguageRuntime::GetEnumCaseName(

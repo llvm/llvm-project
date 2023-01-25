@@ -123,7 +123,7 @@ public:
                                                    Status *error);
 
   llvm::Optional<unsigned> GetNumChildren(CompilerType type,
-                                          ValueObject *valobj);
+                                          ExecutionContextScope *exe_scope);
 
   llvm::Optional<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
