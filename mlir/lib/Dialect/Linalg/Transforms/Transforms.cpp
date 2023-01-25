@@ -1161,3 +1161,147 @@ FailureOr<linalg::LinalgOp> linalg::pack(RewriterBase &rewriter,
   // Return packedLinalgOp.
   return cast<linalg::LinalgOp>(packedLinalgOp.getOperation());
 }
+
+//===----------------------------------------------------------------------===//
+// packTranspose transformation.
+//===----------------------------------------------------------------------===//
+
+/// Return a copy of `tensorType` after permutation by `permutationVector`.
+// Note: Should be a new method in of MemRef/RankedTensor/VectorType::Builder
+// but this would introduce a dependence on Dialect in IR.
+// TODO: Restructure.
+static RankedTensorType permuteShape(RankedTensorType tensorType,
+                                     ArrayRef<int64_t> permutationVector) {
+  SmallVector<int64_t> shape(tensorType.getShape());
+  applyPermutationToVector(shape, permutationVector);
+  return RankedTensorType::Builder(tensorType).setShape(shape);
+}
+
+/// Return a new GenericOp obtained by transposing opOperand by the permutation
+/// vector:
+///   - the corresponding indexing map is transposed by `permutation`
+///   - the corresponding operand value is replaced by `transposedValue`
+/// `linalgOp` is replaced by the return op in the process.
+/// Asserts that `transposedValue` is of the proper transposed ShapedType.
+static LinalgOp transposeOneLinalgOperandAndReplace(
+    RewriterBase &rewriter, LinalgOp linalgOp, OpOperand &opOperand,
+    ArrayRef<int64_t> permutation, Value transposedValue) {
+  // Sanity check the operand.
+  assert(linalgOp == opOperand.getOwner() && "linalg op must own the operand");
+
+  // Sanity check of the expected transposed tensor type.
+  auto tensorType = permuteShape(
+      opOperand.get().getType().cast<RankedTensorType>(), permutation);
+  (void)tensorType;
+  assert(tensorType == transposedValue.getType() &&
+         "expected tensor type mismatch");
+
+  // Compute the transposed indexing map.
+  // Sigh unsigned pollution.
+  SmallVector<unsigned> tmpTransposition = llvm::to_vector(
+      llvm::map_range(permutation, [](int64_t i) -> unsigned { return i; }));
+  AffineMap permutationMap =
+      AffineMap::getPermutationMap(tmpTransposition, rewriter.getContext());
+  AffineMap transposedMap =
+      permutationMap.compose(linalgOp.getMatchingIndexingMap(&opOperand));
+
+  // Set the transposed indexing map in the proper position.
+  SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+  indexingMaps[linalgOp.getIndexingMapIndex(&opOperand)] = transposedMap;
+  // Set the transposedValue in the proper operand position.
+  SmallVector<Value> operands = linalgOp->getOperands();
+  operands[opOperand.getOperandNumber()] = transposedValue;
+
+  ValueRange operandsRef(operands);
+  auto transposedGenericOp = rewriter.create<linalg::GenericOp>(
+      /*location=*/linalgOp->getLoc(),
+      /*resultTensorTypes=*/
+      operandsRef.drop_front(linalgOp.getNumDpsInputs()).getTypes(),
+      /*inputs=*/operandsRef.take_front(linalgOp.getNumDpsInputs()),
+      /*outputs=*/operandsRef.drop_front(linalgOp.getNumDpsInputs()),
+      /*indexingMaps=*/indexingMaps,
+      /*iteratorTypes=*/linalgOp.getIteratorTypesArray());
+  transposedGenericOp.getRegion().takeBody(linalgOp->getRegion(0));
+  rewriter.replaceOp(linalgOp, transposedGenericOp->getResults());
+
+  return cast<linalg::LinalgOp>(transposedGenericOp.getOperation());
+}
+
+FailureOr<PackTransposeResult>
+linalg::packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
+                      linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
+                      ArrayRef<int64_t> outerPerm,
+                      ArrayRef<int64_t> innerPerm) {
+  Location loc = linalgOp.getLoc();
+
+  // Step 1. Transpose packOp.
+  rewriter.setInsertionPoint(packOp);
+  tensor::PackOp transposedPackOp =
+      packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
+
+  if (!packOp.getResult().hasOneUse())
+    return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
+
+  OpOperand &packUse = *packOp->getUses().begin();
+  if (packUse.getOwner() != linalgOp) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "not a single use by the LinalgOp target");
+  }
+  if (maybeUnPackOp &&
+      (!linalgOp.isDpsInit(&packUse) ||
+       maybeUnPackOp.getSource() != linalgOp.getTiedOpResult(&packUse))) {
+    return rewriter.notifyMatchFailure(linalgOp,
+                                       "not produced by the LinalgOp target");
+  }
+
+  // Step 2. Transpose linalgOp.
+  // transposedPackOp.getOuterDimsPerm() may be empty, in which case it is the
+  // identity. Don't rely on it.
+  int64_t numLeadingDims = packOp.getSourceRank();
+  int64_t numTrailingDims = packOp.getInnerDimsPos().size();
+  // Step 2.a. Compute the permutation on the whole operand.
+  // Leading part just reuse the outerPerm.
+  SmallVector<int64_t> permutation(outerPerm);
+  if (permutation.empty())
+    llvm::append_range(permutation, llvm::seq<int64_t>(0, numLeadingDims));
+  // Trailing part needs to reindex positions by `numLeadingDims`.
+  if (innerPerm.empty()) {
+    llvm::append_range(
+        permutation,
+        llvm::seq<int64_t>(numLeadingDims, numLeadingDims + numTrailingDims));
+  } else {
+    llvm::append_range(permutation,
+                       llvm::map_range(innerPerm, [&](int64_t pos) {
+                         return numLeadingDims + pos;
+                       }));
+  }
+  if (!isPermutationVector(permutation))
+    return rewriter.notifyMatchFailure(linalgOp, "invalid permutation");
+
+  // Step 2.b. Save the transposedPackUse operand number in case we need to
+  // get the tied OpResult after `linalgOp` has been replaced.
+  int64_t packUseOperandNumber = packUse.getOperandNumber();
+  // Step 2.c. Actually perform the transposition.
+  rewriter.setInsertionPoint(linalgOp);
+  linalg::LinalgOp transposedLinalgOp = transposeOneLinalgOperandAndReplace(
+      rewriter, linalgOp, packUse, permutation, transposedPackOp.getResult());
+
+  // Step 3. Maybe transpose unPackOp.
+  tensor::UnPackOp transposedUnPackOp;
+  if (maybeUnPackOp) {
+    OpOperand &opOperand =
+        transposedLinalgOp->getOpOperand(packUseOperandNumber);
+    OpResult transposedResult = transposedLinalgOp.getTiedOpResult(&opOperand);
+    rewriter.setInsertionPoint(maybeUnPackOp);
+    transposedUnPackOp = maybeUnPackOp.createTransposedClone(
+        rewriter, loc, transposedResult, innerPerm, outerPerm);
+
+    rewriter.replaceOp(maybeUnPackOp, transposedUnPackOp->getResults());
+  }
+
+  // Step 4. Finally, replace packOp now that we don't need it anymore.
+  rewriter.replaceOp(packOp, transposedPackOp->getResults());
+
+  return PackTransposeResult{transposedPackOp, transposedLinalgOp,
+                             transposedUnPackOp};
+}
