@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Add ``[[nodiscard]]`` to non-void const-member functions with no
 /// arguments or pass-by-value or pass by const-reference arguments.
@@ -43,8 +41,6 @@ private:
   const StringRef NoDiscardMacro;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USENODISCARDCHECK_H

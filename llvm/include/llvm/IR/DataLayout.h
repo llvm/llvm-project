@@ -547,6 +547,7 @@ public:
   ///
   /// This is always at least as good as the ABI alignment.
   /// FIXME: Deprecate this function once migration to Align is over.
+  LLVM_DEPRECATED("use getPrefTypeAlign instead", "getPrefTypeAlign")
   uint64_t getPrefTypeAlignment(Type *Ty) const;
 
   /// Returns the preferred stack/global alignment for the specified

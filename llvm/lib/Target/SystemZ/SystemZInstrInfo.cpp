@@ -1711,20 +1711,6 @@ unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   }
 }
 
-// Return true if Mask matches the regexp 0*1+0*, given that zero masks
-// have already been filtered out.  Store the first set bit in LSB and
-// the number of set bits in Length if so.
-static bool isStringOfOnes(uint64_t Mask, unsigned &LSB, unsigned &Length) {
-  unsigned First = findFirstSet(Mask);
-  uint64_t Top = (Mask >> First) + 1;
-  if ((Top & -Top) == Top) {
-    LSB = First;
-    Length = findFirstSet(Top);
-    return true;
-  }
-  return false;
-}
-
 bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
                                    unsigned &Start, unsigned &End) const {
   // Reject trivial all-zero masks.
@@ -1735,7 +1721,7 @@ bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
   // Handle the 1+0+ or 0+1+0* cases.  Start then specifies the index of
   // the msb and End specifies the index of the lsb.
   unsigned LSB, Length;
-  if (isStringOfOnes(Mask, LSB, Length)) {
+  if (isShiftedMask_64(Mask, LSB, Length)) {
     Start = 63 - (LSB + Length - 1);
     End = 63 - LSB;
     return true;
@@ -1743,7 +1729,7 @@ bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
 
   // Handle the wrap-around 1+0+1+ cases.  Start then specifies the msb
   // of the low 1s and End specifies the lsb of the high 1s.
-  if (isStringOfOnes(Mask ^ allOnes(BitSize), LSB, Length)) {
+  if (isShiftedMask_64(Mask ^ allOnes(BitSize), LSB, Length)) {
     assert(LSB > 0 && "Bottom bit must be set");
     assert(LSB + Length < BitSize && "Top bit must be set");
     Start = 63 - (LSB - 1);

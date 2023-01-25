@@ -18,9 +18,7 @@ namespace clang {
 
 class Stmt;
 
-namespace tidy {
-namespace utils {
-namespace lexer {
+namespace tidy::utils::lexer {
 
 /// Returns previous token or ``tok::unknown`` if not found.
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
@@ -114,9 +112,7 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
 SourceLocation getUnifiedEndLoc(const Stmt &S, const SourceManager &SM,
                                 const LangOptions &LangOpts);
 
-} // namespace lexer
-} // namespace utils
-} // namespace tidy
+} // namespace tidy::utils::lexer
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_LEXER_UTILS_H

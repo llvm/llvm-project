@@ -773,6 +773,10 @@ public:
   }
 
   bool defaultsToAIXPowerAlignment() const override { return true; }
+
+  bool areDefaultedSMFStillPOD(const LangOptions &) const override {
+    return false;
+  }
 };
 
 // z/OS target
@@ -830,6 +834,10 @@ public:
     this->UseZeroLengthBitfieldAlignment = true;
     this->UseLeadingZeroLengthBitfield = false;
     this->ZeroLengthBitfieldBoundary = 32;
+  }
+
+  bool areDefaultedSMFStillPOD(const LangOptions &) const override {
+    return false;
   }
 };
 

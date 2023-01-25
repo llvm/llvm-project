@@ -559,6 +559,7 @@ END-SCRIPT
 #include <__ranges/reverse_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/reverse_view.h'}}
 #include <__ranges/single_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/single_view.h'}}
 #include <__ranges/size.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/size.h'}}
+#include <__ranges/split_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/split_view.h'}}
 #include <__ranges/subrange.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/subrange.h'}}
 #include <__ranges/take_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/take_view.h'}}
 #include <__ranges/take_while_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/take_while_view.h'}}

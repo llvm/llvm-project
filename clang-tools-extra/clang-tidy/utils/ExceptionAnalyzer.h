@@ -14,9 +14,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 /// This class analysis if a `FunctionDecl` can in principle throw an
 /// exception, either directly or indirectly. It can be configured to ignore
@@ -149,8 +147,6 @@ private:
   std::map<const FunctionDecl *, ExceptionInfo> FunctionCache;
 };
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_EXCEPTION_ANALYZER_H

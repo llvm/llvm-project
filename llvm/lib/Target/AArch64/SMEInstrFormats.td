@@ -133,10 +133,6 @@ class SME2_ZA_TwoOp_VG4_Multi_Index_Pat<string name, SDPatternOperator intrinsic
                                               (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3),
                                               zpr_ty:$Zm, imm_ty:$i)>;
 
-class SME2_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
-    : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
-                  (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
-
 class SME2_Cvt_VG4_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR4Mul4, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1, in_vt:$Zn3, zsub2, in_vt:$Zn4, zsub3))>;
@@ -2087,7 +2083,7 @@ class sme2_cvt_vg2_single<string mnemonic, bits<4> op>
 multiclass sme2_cvt_vg2_single<string mnemonic, bits<4> op, ValueType out_vt,
                                ValueType in_vt, SDPatternOperator intrinsic> {
   def NAME :  sme2_cvt_vg2_single<mnemonic, op>;
-  def : SME2_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
+  def : SVE2p1_Cvt_VG2_Pat<NAME, intrinsic, out_vt, in_vt>;
 }
 
 class sme2_cvt_unpk_vector_vg2<bits<2>sz, bits<3> op, bit u, RegisterOperand first_ty,

@@ -608,8 +608,6 @@ clang/tools/clang-fuzzer/ExampleClangLoopProtoFuzzer.cpp
 clang/tools/clang-fuzzer/handle-llvm/handle_llvm.h
 clang/tools/clang-linker-wrapper/ClangLinkerWrapper.cpp
 clang/tools/clang-linker-wrapper/OffloadWrapper.cpp
-clang/tools/clang-nvlink-wrapper/ClangNvlinkWrapper.cpp
-clang/tools/clang-offload-wrapper/ClangOffloadWrapper.cpp
 clang/tools/clang-pseudo/ClangPseudo.cpp
 clang/tools/clang-refactor/ClangRefactor.cpp
 clang/tools/clang-refactor/TestSupport.cpp

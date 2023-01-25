@@ -354,9 +354,19 @@ protected:
         }
         auto mapping = result.getInputMapping(i);
         assert(mapping && "unexpected deletion of function argument");
+        // Only attach the new argument attributes if there is a one-to-one
+        // mapping from old to new types. Otherwise, attributes might be
+        // attached to types that they do not support.
+        if (mapping->size == 1) {
+          newArgAttrs[mapping->inputNo] =
+              DictionaryAttr::get(rewriter.getContext(), convertedAttrs);
+          continue;
+        }
+        // TODO: Implement custom handling for types that expand to multiple
+        // function arguments.
         for (size_t j = 0; j < mapping->size; ++j)
           newArgAttrs[mapping->inputNo + j] =
-              DictionaryAttr::get(rewriter.getContext(), convertedAttrs);
+              DictionaryAttr::get(rewriter.getContext(), {});
       }
       attributes.push_back(rewriter.getNamedAttr(
           funcOp.getArgAttrsAttrName(), rewriter.getArrayAttr(newArgAttrs)));

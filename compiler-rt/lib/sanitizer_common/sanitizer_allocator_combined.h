@@ -134,7 +134,7 @@ class CombinedAllocator {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(void *p) {
+  void *GetBlockBeginFastLocked(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
     return secondary_.GetBlockBeginFastLocked(p);

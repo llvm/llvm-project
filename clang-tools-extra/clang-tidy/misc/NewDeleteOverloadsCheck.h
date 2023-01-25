@@ -13,9 +13,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include <map>
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 class NewDeleteOverloadsCheck : public ClangTidyCheck {
   std::map<const clang::CXXRecordDecl *,
@@ -33,8 +31,6 @@ public:
   void onEndOfTranslationUnit() override;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_NEWDELETEOVERLOADS_H

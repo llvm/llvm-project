@@ -3435,6 +3435,18 @@ multiclass VPseudoVWCVTI_V {
   }
 }
 
+multiclass VPseudoVWCVTI_RM_V {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListFW in {
+    defvar mx = m.MX;
+    defvar WriteVFWCvtFToIV_MX = !cast<SchedWrite>("WriteVFWCvtFToIV_" # mx);
+    defvar ReadVFWCvtFToIV_MX = !cast<SchedRead>("ReadVFWCvtFToIV_" # mx);
+
+    defm _V : VPseudoConversionRM<m.wvrclass, m.vrclass, m, constraint>,
+              Sched<[WriteVFWCvtFToIV_MX, ReadVFWCvtFToIV_MX, ReadVMask]>;
+  }
+}
+
 multiclass VPseudoVWCVTF_V {
   defvar constraint = "@earlyclobber $rd";
   foreach m = MxListW in {
@@ -3443,6 +3455,18 @@ multiclass VPseudoVWCVTF_V {
     defvar ReadVFWCvtIToFV_MX = !cast<SchedRead>("ReadVFWCvtIToFV_" # mx);
 
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
+              Sched<[WriteVFWCvtIToFV_MX, ReadVFWCvtIToFV_MX, ReadVMask]>;
+  }
+}
+
+multiclass VPseudoVWCVTF_RM_V {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListW in {
+    defvar mx = m.MX;
+    defvar WriteVFWCvtIToFV_MX = !cast<SchedWrite>("WriteVFWCvtIToFV_" # mx);
+    defvar ReadVFWCvtIToFV_MX = !cast<SchedRead>("ReadVFWCvtIToFV_" # mx);
+
+    defm _V : VPseudoConversionRM<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtIToFV_MX, ReadVFWCvtIToFV_MX, ReadVMask]>;
   }
 }
@@ -3467,6 +3491,18 @@ multiclass VPseudoVNCVTI_W {
     defvar ReadVFNCvtFToIV_MX = !cast<SchedRead>("ReadVFNCvtFToIV_" # mx);
 
     defm _W : VPseudoConversion<m.vrclass, m.wvrclass, m, constraint>,
+              Sched<[WriteVFNCvtFToIV_MX, ReadVFNCvtFToIV_MX, ReadVMask]>;
+  }
+}
+
+multiclass VPseudoVNCVTI_RM_W {
+  defvar constraint = "@earlyclobber $rd";
+  foreach m = MxListW in {
+    defvar mx = m.MX;
+    defvar WriteVFNCvtFToIV_MX = !cast<SchedWrite>("WriteVFNCvtFToIV_" # mx);
+    defvar ReadVFNCvtFToIV_MX = !cast<SchedRead>("ReadVFNCvtFToIV_" # mx);
+
+    defm _W : VPseudoConversionRM<m.vrclass, m.wvrclass, m, constraint>,
               Sched<[WriteVFNCvtFToIV_MX, ReadVFNCvtFToIV_MX, ReadVMask]>;
   }
 }
@@ -5510,16 +5546,20 @@ let Uses = [FRM] in {
 defm PseudoVFCVT_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_X_F : VPseudoVCVTI_V;
 }
-defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
-defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
+
 defm PseudoVFCVT_RM_XU_F : VPseudoVCVTI_RM_V;
 defm PseudoVFCVT_RM_X_F : VPseudoVCVTI_RM_V;
+
+defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
+defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
+
 defm PseudoVFROUND_NOEXCEPT : VPseudoVFROUND_NOEXCEPT_V;
 let Uses = [FRM] in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V;
 }
 defm PseudoVFCVT_RM_F_XU : VPseudoVCVTF_RM_V;
+defm PseudoVFCVT_RM_F_X  : VPseudoVCVTF_RM_V;
 } // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
@@ -5530,10 +5570,19 @@ let Uses = [FRM] in {
 defm PseudoVFWCVT_XU_F     : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_X_F      : VPseudoVWCVTI_V;
 }
+defm PseudoVFWCVT_RM_XU_F  : VPseudoVWCVTI_RM_V;
+defm PseudoVFWCVT_RM_X_F   : VPseudoVWCVTI_RM_V;
+
 defm PseudoVFWCVT_RTZ_XU_F : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_RTZ_X_F  : VPseudoVWCVTI_V;
+
+let Uses = [FRM] in {
 defm PseudoVFWCVT_F_XU     : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_X      : VPseudoVWCVTF_V;
+}
+defm PseudoVFWCVT_RM_F_XU  : VPseudoVWCVTF_RM_V;
+defm PseudoVFWCVT_RM_F_X   : VPseudoVWCVTF_RM_V;
+
 defm PseudoVFWCVT_F_F      : VPseudoVWCVTD_V;
 } // mayRaiseFPException = true
 
@@ -5545,15 +5594,23 @@ let Uses = [FRM] in {
 defm PseudoVFNCVT_XU_F     : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_X_F      : VPseudoVNCVTI_W;
 }
+defm PseudoVFNCVT_RM_XU_F  : VPseudoVNCVTI_RM_W;
+defm PseudoVFNCVT_RM_X_F   : VPseudoVNCVTI_RM_W;
+
 defm PseudoVFNCVT_RTZ_XU_F : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_RTZ_X_F  : VPseudoVNCVTI_W;
+
 let Uses = [FRM] in {
 defm PseudoVFNCVT_F_XU     : VPseudoVNCVTF_W;
 defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W;
-defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W;
 }
-defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 defm PseudoVFNCVT_RM_F_XU  : VPseudoVNCVTF_RM_W;
+defm PseudoVFNCVT_RM_F_X   : VPseudoVNCVTF_RM_W;
+
+let Uses = [FRM] in
+defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W;
+
+defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 } // mayRaiseFPException = true
 } // Predicates = [HasVInstructionsAnyF]
 

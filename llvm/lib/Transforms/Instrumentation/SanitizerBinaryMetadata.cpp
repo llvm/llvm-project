@@ -85,6 +85,11 @@ using MetadataInfoSet = SetVector<const MetadataInfo *>;
 
 //===--- Command-line options ---------------------------------------------===//
 
+cl::opt<bool> ClWeakCallbacks(
+    "sanitizer-metadata-weak-callbacks",
+    cl::desc("Declare callbacks extern weak, and only call if non-null."),
+    cl::Hidden, cl::init(true));
+
 cl::opt<bool> ClEmitCovered("sanitizer-metadata-covered",
                             cl::desc("Emit PCs for covered functions."),
                             cl::Hidden, cl::init(false));
@@ -197,15 +202,21 @@ bool SanitizerBinaryMetadata::run() {
         getSectionMarker(getSectionStart(MI->SectionSuffix), Int8PtrTy),
         getSectionMarker(getSectionEnd(MI->SectionSuffix), Int8PtrTy),
     };
+    // We declare the _add and _del functions as weak, and only call them if
+    // there is a valid symbol linked. This allows building binaries with
+    // semantic metadata, but without having callbacks. When a tool that wants
+    // the metadata is linked which provides the callbacks, they will be called.
     Function *Ctor =
         createSanitizerCtorAndInitFunctions(
             Mod, (MI->FunctionPrefix + ".module_ctor").str(),
-            (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs)
+            (MI->FunctionPrefix + "_add").str(), InitTypes, InitArgs,
+            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
     Function *Dtor =
         createSanitizerCtorAndInitFunctions(
             Mod, (MI->FunctionPrefix + ".module_dtor").str(),
-            (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs)
+            (MI->FunctionPrefix + "_del").str(), InitTypes, InitArgs,
+            /*VersionCheckName=*/StringRef(), /*Weak=*/ClWeakCallbacks)
             .first;
     Constant *CtorData = nullptr;
     Constant *DtorData = nullptr;
