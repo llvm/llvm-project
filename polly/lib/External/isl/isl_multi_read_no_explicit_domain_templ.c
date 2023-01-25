@@ -79,16 +79,6 @@ error:
 	return NULL;
 }
 
-/* Read a multi expression from "str".
- */
-__isl_give MULTI(BASE) *FN(MULTI(BASE),read_from_str)(isl_ctx *ctx,
-	const char *str)
-{
-	MULTI(BASE) *multi;
-	isl_stream *s = isl_stream_new_str(ctx, str);
-	if (!s)
-		return NULL;
-	multi = FN(isl_stream_read_multi,BASE)(s);
-	isl_stream_free(s);
-	return multi;
-}
+#undef TYPE_BASE
+#define TYPE_BASE	CAT(multi_,BASE)
+#include "isl_read_from_str_templ.c"

@@ -12,6 +12,7 @@
 
 #include <isl/ctx.h>
 #include <isl/hash.h>
+#include <isl/stream.h>
 
 #define ISL_xCAT(A,B) A ## B
 #define ISL_CAT(A,B) ISL_xCAT(A,B)
@@ -322,7 +323,7 @@ error:
 	return ISL_FN(ISL_HMAP,free)(hmap);
 }
 
-/* Internal data structure for isl_map_to_basic_set_foreach.
+/* Internal data structure for isl_*_to_*_foreach.
  *
  * fn is the function that should be called on each entry.
  * user is the user-specified final argument to fn.
@@ -359,6 +360,83 @@ isl_stat ISL_FN(ISL_HMAP,foreach)(__isl_keep ISL_HMAP *hmap,
 	return isl_hash_table_foreach(hmap->ctx, &hmap->table,
 				      &call_on_copy, &data);
 }
+
+/* Internal data structure for isl_*_to_*_every.
+ *
+ * "test" is the function that should be called on each entry,
+ * until any invocation returns isl_bool_false.
+ * "test_user" is the user-specified final argument to "test".
+ */
+ISL_S(every_data) {
+	isl_bool (*test)(__isl_keep ISL_KEY *key, __isl_keep ISL_VAL *val,
+		void *user);
+	void *test_user;
+};
+
+/* Call data->test on the key and value in *entry.
+ */
+static isl_bool call_on_pair(void **entry, void *user)
+{
+	ISL_S(pair) *pair = *entry;
+	ISL_S(every_data) *data = (ISL_S(every_data) *) user;
+
+	return data->test(pair->key, pair->val, data->test_user);
+}
+
+/* Does "test" succeed on every entry of "hmap"?
+ */
+isl_bool ISL_FN(ISL_HMAP,every)(__isl_keep ISL_HMAP *hmap,
+	isl_bool (*test)(__isl_keep ISL_KEY *key, __isl_keep ISL_VAL *val,
+		void *user),
+	void *user)
+{
+	ISL_S(every_data) data = { test, user };
+
+	if (!hmap)
+		return isl_bool_error;
+
+	return isl_hash_table_every(hmap->ctx, &hmap->table,
+				      &call_on_pair, &data);
+}
+
+#ifdef ISL_HMAP_IS_EQUAL
+
+/* Does "hmap" have an entry with key "key" and value "val"?
+ */
+static isl_bool has_entry(__isl_keep ISL_KEY *key, __isl_keep ISL_VAL *val,
+	void *user)
+{
+	ISL_HMAP *hmap = user;
+	ISL_MAYBE(ISL_VAL) maybe_val;
+	isl_bool equal;
+
+	maybe_val = ISL_FN(ISL_HMAP,try_get)(hmap, key);
+	if (maybe_val.valid < 0 || !maybe_val.valid)
+		return maybe_val.valid;
+	equal = ISL_VAL_IS_EQUAL(maybe_val.value, val);
+	ISL_FN(ISL_VAL,free)(maybe_val.value);
+	return equal;
+}
+
+/* Is "hmap1" (obviously) equal to "hmap2"?
+ *
+ * In particular, do the two associative arrays have
+ * the same number of entries and does every entry of the first
+ * also appear in the second?
+ */
+isl_bool ISL_HMAP_IS_EQUAL(__isl_keep ISL_HMAP *hmap1,
+	__isl_keep ISL_HMAP *hmap2)
+{
+	if (!hmap1 || !hmap2)
+		return isl_bool_error;
+	if (hmap1 == hmap2)
+		return isl_bool_true;
+	if (hmap1->table.n != hmap2->table.n)
+		return isl_bool_false;
+	return ISL_FN(ISL_HMAP,every)(hmap1, &has_entry, hmap2);
+}
+
+#endif
 
 /* Internal data structure for print_pair.
  *
@@ -423,3 +501,83 @@ void ISL_FN(ISL_HMAP,dump)(__isl_keep ISL_HMAP *hmap)
 
 	isl_printer_free(printer);
 }
+
+/* Return a string representation of "hmap".
+ */
+__isl_give char *ISL_FN(ISL_HMAP,to_str)(__isl_keep ISL_HMAP *hmap)
+{
+	isl_printer *p;
+	char *s;
+
+	if (!hmap)
+		return NULL;
+	p = isl_printer_to_str(ISL_FN(ISL_HMAP,get_ctx)(hmap));
+	p = ISL_FN(isl_printer_print,ISL_HMAP_SUFFIX)(p, hmap);
+	s = isl_printer_get_str(p);
+	isl_printer_free(p);
+
+	return s;
+}
+
+#ifdef ISL_HMAP_HAVE_READ_FROM_STR
+
+/* Read an associative array from "s".
+ * The input format corresponds to the way associative arrays are printed
+ * by isl_printer_print_*_to_*.
+ * In particular, each key-value pair is separated by a colon,
+ * the key-value pairs are separated by a comma and
+ * the entire associative array is surrounded by braces.
+ */
+__isl_give ISL_HMAP *ISL_FN(isl_stream_read,ISL_HMAP_SUFFIX)(isl_stream *s)
+{
+	isl_ctx *ctx;
+	ISL_HMAP *hmap;
+
+	if (!s)
+		return NULL;
+	ctx = isl_stream_get_ctx(s);
+	hmap = ISL_FN(ISL_HMAP,alloc)(ctx, 0);
+	if (!hmap)
+		return NULL;
+	if (isl_stream_eat(s, '{') < 0)
+		return ISL_FN(ISL_HMAP,free)(hmap);
+	if (isl_stream_eat_if_available(s, '}'))
+		return hmap;
+	do {
+		ISL_KEY *key;
+		ISL_VAL *val = NULL;
+
+		key = ISL_KEY_READ(s);
+		if (isl_stream_eat(s, ':') >= 0)
+			val = ISL_VAL_READ(s);
+		hmap = ISL_FN(ISL_HMAP,set)(hmap, key, val);
+		if (!hmap)
+			return NULL;
+	} while (isl_stream_eat_if_available(s, ','));
+	if (isl_stream_eat(s, '}') < 0)
+		return ISL_FN(ISL_HMAP,free)(hmap);
+	return hmap;
+}
+
+/* Read an associative array from the string "str".
+ * The input format corresponds to the way associative arrays are printed
+ * by isl_printer_print_*_to_*.
+ * In particular, each key-value pair is separated by a colon,
+ * the key-value pairs are separated by a comma and
+ * the entire associative array is surrounded by braces.
+ */
+__isl_give ISL_HMAP *ISL_FN(ISL_HMAP,read_from_str)(isl_ctx *ctx,
+	const char *str)
+{
+	ISL_HMAP *hmap;
+	isl_stream *s;
+
+	s = isl_stream_new_str(ctx, str);
+	if (!s)
+		return NULL;
+	hmap = ISL_FN(isl_stream_read,ISL_HMAP_SUFFIX)(s);
+	isl_stream_free(s);
+	return hmap;
+}
+
+#endif
