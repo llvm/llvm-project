@@ -49,7 +49,6 @@ class TestSwiftDynamicSelf(lldbtest.TestBase):
 
         lldbutil.continue_to_breakpoint(process, bkpt) # Stop in Child.show.
         frame = thread.frames[0]
-        # When stopped in Child.show(), 'self' doesn't have a child.
-        self.assertEqual(frame.FindVariable("self", lldb.eNoDynamicValues).GetNumChildren(), 0)
+        self.assertEqual(frame.FindVariable("self", lldb.eNoDynamicValues).GetNumChildren(), 1)
         self.check_members(self.get_self_as_Base_from_Child_method(frame),
                 "100", "220")

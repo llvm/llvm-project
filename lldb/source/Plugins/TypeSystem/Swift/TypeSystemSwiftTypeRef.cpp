@@ -2681,7 +2681,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
       if (auto *exe_scope = exe_ctx->GetBestExecutionContextScope())
         if (auto *runtime =
                 SwiftLanguageRuntime::Get(exe_scope->CalculateProcess()))
-          return runtime->GetNumChildren(GetCanonicalType(type), nullptr);
+          return runtime->GetNumChildren(GetCanonicalType(type), exe_scope);
 
     if (CompilerType clang_type = GetAsClangTypeOrNull(type)) {
       bool is_signed;
@@ -2845,7 +2845,7 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
             return GetTypeFromMangledTypename(ConstString("$sSo8NSStringCD"));
           if (result.GetMangledTypeName().GetStringRef().count('$') > 1 &&
               get_ast_num_children() ==
-                  runtime->GetNumChildren({weak_from_this(), type}, valobj))
+                  runtime->GetNumChildren({weak_from_this(), type}, exe_scope))
             // If available, prefer the AST for private types. Private
             // identifiers are not ABI; the runtime returns anonymous private
             // identifiers (using a '$' prefix) which cannot match identifiers
@@ -2951,7 +2951,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   // can't mix&match between the two typesystems if there is such a
   // divergence. We'll need to replace all calls at once.
   if (get_ast_num_children() <
-      runtime->GetNumChildren({weak_from_this(), type}, valobj).getValueOr(0))
+      runtime->GetNumChildren({weak_from_this(), type}, exe_scope)
+          .getValueOr(0))
     return impl();
   if (ShouldSkipValidation(type))
     return impl();
@@ -3555,6 +3556,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
                                bitfield_bit_size, bitfield_bit_offset,
                                exe_scope);
     }
+    case Node::Kind::DynamicSelf:
     case Node::Kind::Unmanaged:
     case Node::Kind::Unowned:
     case Node::Kind::Weak: {
