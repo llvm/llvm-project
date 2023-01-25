@@ -39,6 +39,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['windows'])
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104670979')
     def test_dwarf_importer(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
@@ -66,6 +67,7 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
     @swiftTest
     # This test needs a working Remote Mirrors implementation.
     @skipIf(oslist=['windows'])
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104670979')
     def test_dwarf_importer_exprs(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
