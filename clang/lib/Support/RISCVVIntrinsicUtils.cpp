@@ -1020,16 +1020,11 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
     PolicyAttrs.IsUnspecified = false;
     if (IsMasked) {
       Name += "_m";
-      // FIXME: Currently _m default policy implementation is different with
-      // RVV intrinsic spec (TUMA)
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Undisturbed;
-      PolicyAttrs.MaskPolicy = Policy::PolicyType::Undisturbed;
       if (HasPolicy)
-        BuiltinName += "_tumu";
+        BuiltinName += "_tama";
       else
         BuiltinName += "_m";
     } else {
-      PolicyAttrs.TailPolicy = Policy::PolicyType::Agnostic;
       if (HasPolicy)
         BuiltinName += "_ta";
     }
