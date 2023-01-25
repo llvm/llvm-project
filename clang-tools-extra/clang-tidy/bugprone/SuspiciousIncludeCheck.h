@@ -40,12 +40,12 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  utils::FileExtensionsSet HeaderFileExtensions;
-  utils::FileExtensionsSet ImplementationFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet ImplementationFileExtensions;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  const StringRef RawStringImplementationFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  StringRef RawStringImplementationFileExtensions;
 };
 
 } // namespace clang::tidy::bugprone
