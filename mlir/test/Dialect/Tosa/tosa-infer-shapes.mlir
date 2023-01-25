@@ -1189,3 +1189,30 @@ func.func @while_test(%arg0 : tensor<i32>, %arg1 : tensor<1xi32>) -> () {
   }) : (tensor<i32>, tensor<1xi32>) -> (tensor<*xi32>, tensor<*xi32>)
   return
 }
+
+// -----
+
+// CHECK-LABEL: @test_static_rfft2d
+func.func @test_static_rfft2d(%arg0: tensor<5x2x8xf32>) -> () {
+  // CHECK: -> (tensor<5x2x5xf32>, tensor<5x2x5xf32>)
+  %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<5x2x8xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_batch_rfft2d
+func.func @test_dynamic_batch_rfft2d(%arg0 : tensor<?x2x4xf32>) -> () {
+  // CHECK: -> (tensor<?x2x3xf32>, tensor<?x2x3xf32>)
+  %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<?x2x4xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @test_dynamic_width_rfft2d
+func.func @test_dynamic_width_rfft2d(%arg0 : tensor<5x2x?xf32>) -> () {
+  // CHECK: -> (tensor<5x2x?xf32>, tensor<5x2x?xf32>)
+  %output_real, %output_imag = "tosa.rfft2d"(%arg0) {} : (tensor<5x2x?xf32>) -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+  return
+}
