@@ -978,17 +978,15 @@ static CompilerType GetWeakReferent(TypeSystemSwiftTypeRef &ts,
 
 llvm::Optional<unsigned>
 SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
-                                         ValueObject *valobj) {
+                                         ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
   auto ts = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
   if (!ts)
     return {};
 
   // Try the static type metadata.
-  auto frame =
-      valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
   const swift::reflection::TypeRef *tr = nullptr;
-  auto *ti = GetSwiftRuntimeTypeInfo(type, frame, &tr);
+  auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
   if (!ti) {
     LLDB_LOG(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for {0}",
              type.GetMangledTypeName());
@@ -1074,7 +1072,8 @@ SwiftLanguageRuntimeImpl::GetNumFields(CompilerType type,
   using namespace swift::reflection;
   // Try the static type metadata.
   const TypeRef *tr = nullptr;
-  auto *ti = GetSwiftRuntimeTypeInfo(type, exe_ctx->GetFramePtr(), &tr);
+  auto *ti = GetSwiftRuntimeTypeInfo(
+      type, exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr, &tr);
   if (!ti)
     return {};
   // Structs and Tuples.
@@ -1335,9 +1334,12 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
-  auto frame =
-      valobj ? valobj->GetExecutionContextRef().GetFrameSP().get() : nullptr;
-  auto *ti = GetSwiftRuntimeTypeInfo(type, frame);
+  ExecutionContext exe_ctx;
+  if (valobj)
+    exe_ctx = valobj->GetExecutionContextRef();
+
+  auto *ti =
+      GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
   if (!ti)
     return {};
   // Structs and Tuples.
