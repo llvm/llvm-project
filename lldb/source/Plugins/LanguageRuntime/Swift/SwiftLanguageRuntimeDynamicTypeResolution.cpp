@@ -1034,8 +1034,8 @@ SwiftLanguageRuntimeImpl::GetNumChildren(CompilerType type,
   const swift::reflection::TypeRef *tr = nullptr;
   auto *ti = GetSwiftRuntimeTypeInfo(type, exe_scope, &tr);
   if (!ti) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for %s",
-              type.GetMangledTypeName().GetCString());
+    LLDB_LOG(GetLog(LLDBLog::Types), "GetSwiftRuntimeTypeInfo() failed for {0}",
+             type.GetMangledTypeName());
     return {};
   }
   // Structs and Tuples.
@@ -1401,6 +1401,10 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
+  ExecutionContext exe_ctx;
+  if (valobj)
+    exe_ctx = valobj->GetExecutionContextRef();
+
   auto *ti =
       GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
   if (!ti)
