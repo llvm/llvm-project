@@ -21,6 +21,17 @@
 
 #pragma omp begin declare target device_type(nohost)
 
+namespace ompx {
+namespace synchronize {
+bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
+
+bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
+#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
+
+} // namespace synchronize
+} // namespace ompx
+
 using namespace ompx;
 
 namespace impl {
@@ -325,12 +336,6 @@ float unsafeAtomicAdd(float *addr, float value) {
       (const __attribute__((address_space(1))) float *)addr, value);
 }
 #endif // if defined(gfx90a) &&
-
-bool volatile omptarget_workers_done [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_workers_done) allocator(omp_pteam_mem_alloc)
-
-bool volatile omptarget_master_ready [[clang::loader_uninitialized]];
-#pragma omp allocate(omptarget_master_ready) allocator(omp_pteam_mem_alloc)
 
 void workersStartBarrier() {
 #ifdef __AMDGCN__
