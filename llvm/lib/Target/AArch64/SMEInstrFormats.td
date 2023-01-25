@@ -77,6 +77,13 @@ class sme2_za_array_2op_multi_index_pseudo<string name, Operand index_ty, Regist
   let usesCustomInserter = 1;
 }
 
+class sme2_move_to_za_pseudo<string name, Operand imm_ty, RegisterOperand multi_vector_ty, SMEMatrixTypeEnum za_flag>
+    : SMEPseudo2Instr<name, 0>,
+      Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, imm_ty:$imm, multi_vector_ty:$Zn), []> {
+  let SMEMatrixType = za_flag;
+  let usesCustomInserter = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // SME pattern match helpers.
 //===----------------------------------------------------------------------===//
@@ -136,6 +143,14 @@ class SME2_ZA_TwoOp_VG4_Multi_Index_Pat<string name, SDPatternOperator intrinsic
 class SME2_Cvt_VG4_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2, in_vt:$Zn3, in_vt:$Zn4)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR4Mul4, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1, in_vt:$Zn3, zsub2, in_vt:$Zn4, zsub3))>;
+
+class SME2_ZA_VG1x2_Multi_Pat<string name, SDPatternOperator intrinsic, ValueType vt, Operand index_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2),
+          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1))>;
+
+class SME2_ZA_VG1x4_Multi_Pat<string name, SDPatternOperator intrinsic, ValueType vt, Operand index_ty, ComplexPattern tileslice>
+    : Pat<(intrinsic (i32 (tileslice MatrixIndexGPR32Op8_11:$base, index_ty:$offset)), vt:$Zn1, vt:$Zn2, vt:$Zn3, vt:$Zn4),
+          (!cast<Instruction>(name # _PSEUDO) $base, $offset, (REG_SEQUENCE ZPR4Mul4, vt:$Zn1, zsub0, vt:$Zn2, zsub1, vt:$Zn3, zsub2, vt:$Zn4, zsub3))>;
 
 //===----------------------------------------------------------------------===//
 // SME Outer Products
@@ -1510,11 +1525,16 @@ class sme2_multivec_accum_add_sub_vg2<string mnemonic, bit sz, bits<3> op,
 
 multiclass sme2_multivec_accum_add_sub_vg2<string mnemonic, bits<4> op,
                                            MatrixOperand matrix_ty,
-                                           RegisterOperand vector_ty> {
-  def NAME : sme2_multivec_accum_add_sub_vg2<mnemonic, op{3}, op{2-0}, matrix_ty, vector_ty>;
-
+                                           RegisterOperand vector_ty,
+                                           ValueType vty,
+                                           SDPatternOperator intrinsic> {
+  def NAME : sme2_multivec_accum_add_sub_vg2<mnemonic, op{3}, op{2-0}, matrix_ty, vector_ty>,
+                                             SMEPseudo2Instr<NAME, 1>;
   def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
   (!cast<Instruction>(NAME) matrix_ty:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, vector_ty:$Zm), 0>;
+
+  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>;
+  def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, vty, sme_elm_idx0_7, tileslice16>;
 }
 
 class sme2_multivec_accum_add_sub_vg4<string mnemonic, bit sz, bits<3> op,
@@ -1528,11 +1548,16 @@ class sme2_multivec_accum_add_sub_vg4<string mnemonic, bit sz, bits<3> op,
 
 multiclass sme2_multivec_accum_add_sub_vg4<string mnemonic, bits<4> op,
                                            MatrixOperand matrix_ty,
-                                           RegisterOperand vector_ty> {
-  def NAME : sme2_multivec_accum_add_sub_vg4<mnemonic, op{3}, op{2-0}, matrix_ty, vector_ty>;
-
+                                           RegisterOperand vector_ty,
+                                           ValueType vty,
+                                           SDPatternOperator intrinsic> {
+  def NAME : sme2_multivec_accum_add_sub_vg4<mnemonic, op{3}, op{2-0}, matrix_ty, vector_ty>,
+                                             SMEPseudo2Instr<NAME, 1>;
   def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
   (!cast<Instruction>(NAME) matrix_ty:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, vector_ty:$Zm), 0>;
+
+  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>;
+  def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, vty, sme_elm_idx0_7, tileslice16>;
 }
 
 //===----------------------------------------------------------------------===//
