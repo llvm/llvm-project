@@ -26,6 +26,12 @@ extern "C" {
 MLIR_CAPI_EXPORTED MlirAttribute mlirAttributeGetNull(void);
 
 //===----------------------------------------------------------------------===//
+// Location attribute.
+//===----------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirAttributeIsALocation(MlirAttribute attr);
+
+//===----------------------------------------------------------------------===//
 // Affine map attribute.
 //===----------------------------------------------------------------------===//
 
