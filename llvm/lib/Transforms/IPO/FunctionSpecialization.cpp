@@ -623,6 +623,8 @@ FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
     auto *CS = cast<CallBase>(U);
     if (CS->getCalledOperand() != A)
       continue;
+    if (CS->getFunctionType() != CalledFunction->getFunctionType())
+      continue;
 
     // Get the cost of inlining the called function at this call site. Note
     // that this is only an estimate. The called function may eventually
