@@ -308,13 +308,13 @@ Suppressing Undesired Diagnostics
 adhere to a coding standard, or is otherwise problematic in some way. However,
 if the code is known to be correct, it may be useful to silence the warning.
 Some clang-tidy checks provide a check-specific way to silence the diagnostics,
-e.g. `bugprone-use-after-move <checks/bugprone-use-after-move.html>`_ can be
+e.g. `bugprone-use-after-move <checks/bugprone/use-after-move.html>`_ can be
 silenced by re-initializing the variable after it has been moved out,
 `bugprone-string-integer-assignment
-<checks/bugprone-string-integer-assignment.html>`_ can be suppressed by
+<checks/bugprone/string-integer-assignment.html>`_ can be suppressed by
 explicitly casting the integer to ``char``,
 `readability-implicit-bool-conversion
-<checks/readability-implicit-bool-conversion.html>`_ can also be suppressed by
+<checks/readability/implicit-bool-conversion.html>`_ can also be suppressed by
 using explicit casts, etc.
 
 If a specific suppression mechanism is not available for a certain warning, or
