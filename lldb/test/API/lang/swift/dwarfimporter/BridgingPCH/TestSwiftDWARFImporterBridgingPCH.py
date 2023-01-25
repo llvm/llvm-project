@@ -41,6 +41,7 @@ class TestSwiftDWARFImporterBridgingHeader(lldbtest.TestBase):
     @skipIf(oslist=['windows'])
     # We delete the pch that would contains the debug info as part of the setup.
     #@skipIf(debug_info=no_match(["dsym"]))
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104670979')
     @swiftTest
     def test_dwarf_importer(self):
         lldb.SBDebugger.MemoryPressureDetected()
