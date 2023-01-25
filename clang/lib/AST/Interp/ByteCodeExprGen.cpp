@@ -1022,8 +1022,6 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     for (const Expr *Init : InitList->inits()) {
       if (std::optional<PrimType> T = classify(Init->getType())) {
         // Visit the primitive element like normal.
-        if (!this->emitDupPtr(Init))
-          return false;
         if (!this->visit(Init))
           return false;
         if (!this->emitInitElem(*T, ElementIndex, Init))
@@ -1042,9 +1040,9 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
 
         if (!visitInitializer(Init))
           return false;
-      }
         if (!this->emitPopPtr(Init))
           return false;
+      }
 
       ++ElementIndex;
     }
