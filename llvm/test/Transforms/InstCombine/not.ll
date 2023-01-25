@@ -634,3 +634,85 @@ define i1 @not_logicalOr_not_op0_use2(i1 %x, i1 %y) {
   %notor = xor i1 %or, true
   ret i1 %notor
 }
+
+define <2 x i64> @bitcast_to_wide_elts_sext_bool(<4 x i1> %b) {
+; CHECK-LABEL: @bitcast_to_wide_elts_sext_bool(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i64> [[BC]], <i64 -1, i64 -1>
+; CHECK-NEXT:    ret <2 x i64> [[NOT]]
+;
+  %sext = sext <4 x i1> %b to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <2 x i64>
+  %not = xor <2 x i64> %bc, <i64 -1, i64 -1>
+  ret <2 x i64> %not
+}
+
+define <8 x i16> @bitcast_to_narrow_elts_sext_bool(<4 x i1> %b) {
+; CHECK-LABEL: @bitcast_to_narrow_elts_sext_bool(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to <8 x i16>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <8 x i16> [[BC]], <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+; CHECK-NEXT:    ret <8 x i16> [[NOT]]
+;
+  %sext = sext <4 x i1> %b to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to <8 x i16>
+  %not = xor <8 x i16> %bc, <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
+  ret <8 x i16> %not
+}
+
+define <2 x i16> @bitcast_to_vec_sext_bool(i1 %b) {
+; CHECK-LABEL: @bitcast_to_vec_sext_bool(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i32 [[SEXT]] to <2 x i16>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i16> [[BC]], <i16 -1, i16 -1>
+; CHECK-NEXT:    ret <2 x i16> [[NOT]]
+;
+  %sext = sext i1 %b to i32
+  %bc = bitcast i32 %sext to <2 x i16>
+  %not = xor <2 x i16> %bc, <i16 -1, i16 -1>
+  ret <2 x i16> %not
+}
+
+define i128 @bitcast_to_scalar_sext_bool(<4 x i1> %b) {
+; CHECK-LABEL: @bitcast_to_scalar_sext_bool(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[B:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[SEXT]] to i128
+; CHECK-NEXT:    [[NOT:%.*]] = xor i128 [[BC]], -1
+; CHECK-NEXT:    ret i128 [[NOT]]
+;
+  %sext = sext <4 x i1> %b to <4 x i32>
+  %bc = bitcast <4 x i32> %sext to i128
+  %not = xor i128 %bc, -1
+  ret i128 %not
+}
+
+define <2 x i4> @bitcast_to_vec_sext_bool_use1(i1 %b) {
+; CHECK-LABEL: @bitcast_to_vec_sext_bool_use1(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[B:%.*]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[SEXT]])
+; CHECK-NEXT:    [[BC:%.*]] = bitcast i8 [[SEXT]] to <2 x i4>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i4> [[BC]], <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> [[NOT]]
+;
+  %sext = sext i1 %b to i8
+  call void @use8(i8 %sext)
+  %bc = bitcast i8 %sext to <2 x i4>
+  %not = xor <2 x i4> %bc, <i4 -1, i4 -1>
+  ret <2 x i4> %not
+}
+
+define i8 @bitcast_to_scalar_sext_bool_use2(<4 x i1> %b) {
+; CHECK-LABEL: @bitcast_to_scalar_sext_bool_use2(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[B:%.*]] to <4 x i2>
+; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i2> [[SEXT]] to i8
+; CHECK-NEXT:    call void @use8(i8 [[BC]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[BC]], -1
+; CHECK-NEXT:    ret i8 [[NOT]]
+;
+  %sext = sext <4 x i1> %b to <4 x i2>
+  %bc = bitcast <4 x i2> %sext to i8
+  call void @use8(i8 %bc)
+  %not = xor i8 %bc, -1
+  ret i8 %not
+}
