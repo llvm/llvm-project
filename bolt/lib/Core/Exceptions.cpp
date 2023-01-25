@@ -626,18 +626,25 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
         errs() << "BOLT-WARNING: DW_CFA_MIPS_advance_loc unimplemented\n";
       return false;
     case DW_CFA_GNU_window_save:
+      // DW_CFA_GNU_window_save and DW_CFA_GNU_NegateRAState just use the same
+      // id but mean different things. The latter is used in AArch64.
+      if (Function.getBinaryContext().isAArch64()) {
+        Function.addCFIInstruction(
+            Offset, MCCFIInstruction::createNegateRAState(nullptr));
+        break;
+      }
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: DW_CFA_GNU_window_save unimplemented\n";
+      return false;
     case DW_CFA_lo_user:
     case DW_CFA_hi_user:
-      if (opts::Verbosity >= 1) {
-        errs() << "BOLT-WARNING: DW_CFA_GNU_* and DW_CFA_*_user "
-                  "unimplemented\n";
-      }
+      if (opts::Verbosity >= 1)
+        errs() << "BOLT-WARNING: DW_CFA_*_user unimplemented\n";
       return false;
     default:
-      if (opts::Verbosity >= 1) {
+      if (opts::Verbosity >= 1)
         errs() << "BOLT-WARNING: Unrecognized CFI instruction: " << Instr.Opcode
                << '\n';
-      }
       return false;
     }
 
