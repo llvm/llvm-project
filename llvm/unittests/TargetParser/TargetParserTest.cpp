@@ -1340,6 +1340,16 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_SB | AArch64::AEK_RAND,
             "8.6-A"),
         ARMCPUTestParams(
+            "ampere1a", "armv8.6-a", "crypto-neon-fp-armv8",
+            AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_FP16 |
+                AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_SM4 | AArch64::AEK_SHA3 | AArch64::AEK_BF16 |
+                AArch64::AEK_SHA2 | AArch64::AEK_AES | AArch64::AEK_I8MM |
+                AArch64::AEK_SSBS | AArch64::AEK_SB | AArch64::AEK_RAND |
+                AArch64::AEK_MTE,
+            "8.6-A"),
+        ARMCPUTestParams(
             "neoverse-512tvb", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
                 AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
@@ -1399,7 +1409,7 @@ INSTANTIATE_TEST_SUITE_P(
                          "8.2-A")));
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 61;
+static constexpr unsigned NumAArch64CPUArchs = 62;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
