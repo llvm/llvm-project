@@ -414,7 +414,7 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     Operation *callableOp = call.resolveCallable(&symbolTable);
     if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
       Region *region = callable.getCallableRegion();
-      if (!region->empty()) {
+      if (region && !region->empty()) {
         Block &block = region->front();
         for (auto [blockArg, operand] :
              llvm::zip(block.getArguments(), operandLattices)) {
