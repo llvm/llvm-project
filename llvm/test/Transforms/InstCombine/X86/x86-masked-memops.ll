@@ -19,8 +19,8 @@ define <4 x float> @mload(ptr %f, <4 x i32> %mask) {
 define <4 x float> @mload_v4f32_cmp(ptr %f, <4 x i32> %src) {
 ; CHECK-LABEL: @mload_v4f32_cmp(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne <4 x i32> [[SRC:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[F:%.*]], i32 1, <4 x i1> [[ICMP]], <4 x float> zeroinitializer)
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[F:%.*]], i32 1, <4 x i1> [[ICMP]], <4 x float> zeroinitializer)
+; CHECK-NEXT:    ret <4 x float> [[LD]]
 ;
   %icmp = icmp ne <4 x i32> %src, zeroinitializer
   %mask = sext <4 x i1> %icmp to <4 x i32>
@@ -63,8 +63,8 @@ define <4 x float> @mload_real_ones(ptr %f) {
 
 define <4 x float> @mload_one_one(ptr %f) {
 ; CHECK-LABEL: @mload_one_one(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>)
-; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>)
+; CHECK-NEXT:    ret <4 x float> [[LD]]
 ;
   %ld = tail call <4 x float> @llvm.x86.avx.maskload.ps(ptr %f, <4 x i32> <i32 0, i32 0, i32 0, i32 -1>)
   ret <4 x float> %ld
@@ -74,8 +74,8 @@ define <4 x float> @mload_one_one(ptr %f) {
 
 define <2 x double> @mload_one_one_double(ptr %f) {
 ; CHECK-LABEL: @mload_one_one_double(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0(ptr [[F:%.*]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> <double poison, double 0.000000e+00>)
-; CHECK-NEXT:    ret <2 x double> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <2 x double> @llvm.masked.load.v2f64.p0(ptr [[F:%.*]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x double> <double poison, double 0.000000e+00>)
+; CHECK-NEXT:    ret <2 x double> [[LD]]
 ;
   %ld = tail call <2 x double> @llvm.x86.avx.maskload.pd(ptr %f, <2 x i64> <i64 -1, i64 0>)
   ret <2 x double> %ld
@@ -85,8 +85,8 @@ define <2 x double> @mload_one_one_double(ptr %f) {
 
 define <8 x float> @mload_v8f32(ptr %f) {
 ; CHECK-LABEL: @mload_v8f32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[F:%.*]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
-; CHECK-NEXT:    ret <8 x float> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[F:%.*]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>)
+; CHECK-NEXT:    ret <8 x float> [[LD]]
 ;
   %ld = tail call <8 x float> @llvm.x86.avx.maskload.ps.256(ptr %f, <8 x i32> <i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 0>)
   ret <8 x float> %ld
@@ -97,8 +97,8 @@ define <8 x float> @mload_v8f32_cmp(ptr %f, <8 x float> %src0, <8 x float> %src1
 ; CHECK-NEXT:    [[ICMP0:%.*]] = fcmp one <8 x float> [[SRC0:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[ICMP1:%.*]] = fcmp one <8 x float> [[SRC1:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[MASK1:%.*]] = and <8 x i1> [[ICMP0]], [[ICMP1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[F:%.*]], i32 1, <8 x i1> [[MASK1]], <8 x float> zeroinitializer)
-; CHECK-NEXT:    ret <8 x float> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[F:%.*]], i32 1, <8 x i1> [[MASK1]], <8 x float> zeroinitializer)
+; CHECK-NEXT:    ret <8 x float> [[LD]]
 ;
   %icmp0 = fcmp one <8 x float> %src0, zeroinitializer
   %icmp1 = fcmp one <8 x float> %src1, zeroinitializer
@@ -111,8 +111,8 @@ define <8 x float> @mload_v8f32_cmp(ptr %f, <8 x float> %src0, <8 x float> %src1
 
 define <4 x double> @mload_v4f64(ptr %f) {
 ; CHECK-LABEL: @mload_v4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>)
-; CHECK-NEXT:    ret <4 x double> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <4 x double> @llvm.masked.load.v4f64.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>)
+; CHECK-NEXT:    ret <4 x double> [[LD]]
 ;
   %ld = tail call <4 x double> @llvm.x86.avx.maskload.pd.256(ptr %f, <4 x i64> <i64 -1, i64 0, i64 0, i64 0>)
   ret <4 x double> %ld
@@ -122,8 +122,8 @@ define <4 x double> @mload_v4f64(ptr %f) {
 
 define <4 x i32> @mload_v4i32(ptr %f) {
 ; CHECK-LABEL: @mload_v4i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> <i32 0, i32 0, i32 0, i32 poison>)
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x i32> <i32 0, i32 0, i32 0, i32 poison>)
+; CHECK-NEXT:    ret <4 x i32> [[LD]]
 ;
   %ld = tail call <4 x i32> @llvm.x86.avx2.maskload.d(ptr %f, <4 x i32> <i32 0, i32 0, i32 0, i32 -1>)
   ret <4 x i32> %ld
@@ -131,8 +131,8 @@ define <4 x i32> @mload_v4i32(ptr %f) {
 
 define <2 x i64> @mload_v2i64(ptr %f) {
 ; CHECK-LABEL: @mload_v2i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[F:%.*]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> <i64 poison, i64 0>)
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr [[F:%.*]], i32 1, <2 x i1> <i1 true, i1 false>, <2 x i64> <i64 poison, i64 0>)
+; CHECK-NEXT:    ret <2 x i64> [[LD]]
 ;
   %ld = tail call <2 x i64> @llvm.x86.avx2.maskload.q(ptr %f, <2 x i64> <i64 -1, i64 0>)
   ret <2 x i64> %ld
@@ -140,8 +140,8 @@ define <2 x i64> @mload_v2i64(ptr %f) {
 
 define <8 x i32> @mload_v8i32(ptr %f) {
 ; CHECK-LABEL: @mload_v8i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[F:%.*]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> <i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0>)
-; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[F:%.*]], i32 1, <8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> <i32 0, i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0>)
+; CHECK-NEXT:    ret <8 x i32> [[LD]]
 ;
   %ld = tail call <8 x i32> @llvm.x86.avx2.maskload.d.256(ptr %f, <8 x i32> <i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0, i32 0, i32 0>)
   ret <8 x i32> %ld
@@ -149,8 +149,8 @@ define <8 x i32> @mload_v8i32(ptr %f) {
 
 define <4 x i64> @mload_v4i64(ptr %f) {
 ; CHECK-LABEL: @mload_v4i64(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> <i64 poison, i64 0, i64 0, i64 0>)
-; CHECK-NEXT:    ret <4 x i64> [[TMP1]]
+; CHECK-NEXT:    [[LD:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr [[F:%.*]], i32 1, <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i64> <i64 poison, i64 0, i64 0, i64 0>)
+; CHECK-NEXT:    ret <4 x i64> [[LD]]
 ;
   %ld = tail call <4 x i64> @llvm.x86.avx2.maskload.q.256(ptr %f, <4 x i64> <i64 -1, i64 0, i64 0, i64 0>)
   ret <4 x i64> %ld
