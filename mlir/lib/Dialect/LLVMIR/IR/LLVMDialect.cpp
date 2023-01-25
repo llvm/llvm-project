@@ -3120,14 +3120,116 @@ LogicalResult LLVMDialect::verifyStructAttr(Operation *op, Attribute attr,
   return success();
 }
 
-static LogicalResult verifyFuncOpInterfaceStructAttr(
-    Operation *op, Attribute attr,
-    const std::function<Type(FunctionOpInterface)> &getAnnotatedType) {
-  if (auto funcOp = dyn_cast<FunctionOpInterface>(op))
-    return LLVMDialect::verifyStructAttr(op, attr, getAnnotatedType(funcOp));
+static LogicalResult verifyFuncOpInterfaceStructAttr(Operation *op,
+                                                     Attribute attr,
+                                                     Type annotatedType) {
+  if (isa<FunctionOpInterface>(op))
+    return LLVMDialect::verifyStructAttr(op, attr, annotatedType);
   return op->emitError() << "expected '"
                          << LLVMDialect::getStructAttrsAttrName()
                          << "' to be used on function-like operations";
+}
+
+LogicalResult LLVMDialect::verifyParameterAttribute(Operation *op,
+                                                    Type paramType,
+                                                    NamedAttribute paramAttr) {
+  // LLVM attribute may be attached to a result of operation that has not been
+  // converted to LLVM dialect yet, so the result may have a type with unknown
+  // representation in LLVM dialect type space. In this case we cannot verify
+  // whether the attribute may be
+  bool verifyValueType = isCompatibleType(paramType);
+  StringAttr name = paramAttr.getName();
+
+  auto checkUnitAttrType = [&]() -> LogicalResult {
+    if (!paramAttr.getValue().isa<UnitAttr>())
+      return op->emitError() << name << " should be a unit attribute";
+    return success();
+  };
+  auto checkTypeAttrType = [&]() -> LogicalResult {
+    if (!paramAttr.getValue().isa<TypeAttr>())
+      return op->emitError() << name << " should be a type attribute";
+    return success();
+  };
+  auto checkIntegerAttrType = [&]() -> LogicalResult {
+    if (!paramAttr.getValue().isa<IntegerAttr>())
+      return op->emitError() << name << " should be an integer attribute";
+    return success();
+  };
+  auto checkPointerType = [&]() -> LogicalResult {
+    if (!paramType.isa<LLVMPointerType>())
+      return op->emitError()
+             << name << " attribute attached to non-pointer LLVM type";
+    return success();
+  };
+  auto checkIntegerType = [&]() -> LogicalResult {
+    if (!paramType.isa<IntegerType>())
+      return op->emitError()
+             << name << " attribute attached to non-integer LLVM type";
+    return success();
+  };
+  auto checkPointerTypeMatches = [&]() -> LogicalResult {
+    if (failed(checkPointerType()))
+      return failure();
+    auto ptrType = paramType.cast<LLVMPointerType>();
+    auto typeAttr = paramAttr.getValue().cast<TypeAttr>();
+
+    if (!ptrType.isOpaque() && ptrType.getElementType() != typeAttr.getValue())
+      return op->emitError()
+             << name
+             << " attribute attached to LLVM pointer argument of "
+                "different type";
+    return success();
+  };
+
+  // Note: The struct parameter attributes are not lowered to LLVM IR.
+  if (name == LLVMDialect::getStructAttrsAttrName())
+    return verifyFuncOpInterfaceStructAttr(op, paramAttr.getValue(), paramType);
+
+  // Check a unit attribute that is attached to a pointer value.
+  if (name == LLVMDialect::getNoAliasAttrName() ||
+      name == LLVMDialect::getReadonlyAttrName() ||
+      name == LLVMDialect::getNestAttrName()) {
+    if (failed(checkUnitAttrType()))
+      return failure();
+    if (verifyValueType && failed(checkPointerType()))
+      return failure();
+    return success();
+  }
+
+  // Check a type attribute that is attached to a pointer value.
+  if (name == LLVMDialect::getStructRetAttrName() ||
+      name == LLVMDialect::getByValAttrName() ||
+      name == LLVMDialect::getByRefAttrName() ||
+      name == LLVMDialect::getInAllocaAttrName()) {
+    if (failed(checkTypeAttrType()))
+      return failure();
+    if (verifyValueType && failed(checkPointerTypeMatches()))
+      return failure();
+    return success();
+  }
+
+  // Check a unit attribute that is attached to an integer value.
+  if (name == LLVMDialect::getSExtAttrName() ||
+      name == LLVMDialect::getZExtAttrName()) {
+    if (failed(checkUnitAttrType()))
+      return failure();
+    if (verifyValueType && failed(checkIntegerType()))
+      return failure();
+    return success();
+  }
+
+  // Check an integer attribute that is attached to a pointer value.
+  if (name == LLVMDialect::getAlignAttrName()) {
+    if (failed(checkIntegerAttrType()))
+      return failure();
+    if (verifyValueType && failed(checkPointerType()))
+      return failure();
+    return success();
+  }
+
+  if (name == LLVMDialect::getNoUndefAttrName())
+    return checkUnitAttrType();
+  return success();
 }
 
 /// Verify LLVMIR function argument attributes.
@@ -3135,108 +3237,40 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
                                                     unsigned regionIdx,
                                                     unsigned argIdx,
                                                     NamedAttribute argAttr) {
-  // Check that llvm.noalias is a unit attribute.
-  if (argAttr.getName() == LLVMDialect::getNoAliasAttrName() &&
-      !argAttr.getValue().isa<UnitAttr>())
-    return op->emitError()
-           << "expected llvm.noalias argument attribute to be a unit attribute";
-  // Check that llvm.align is an integer attribute.
-  if (argAttr.getName() == LLVMDialect::getAlignAttrName() &&
-      !argAttr.getValue().isa<IntegerAttr>())
-    return op->emitError()
-           << "llvm.align argument attribute of non integer type";
-  if (argAttr.getName() == LLVMDialect::getStructAttrsAttrName()) {
-    return verifyFuncOpInterfaceStructAttr(
-        op, argAttr.getValue(), [argIdx](FunctionOpInterface funcOp) {
-          return funcOp.getArgumentTypes()[argIdx];
-        });
-  }
-  return success();
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return success();
+  Type argType = funcOp.getArgumentTypes()[argIdx];
+
+  return verifyParameterAttribute(op, argType, argAttr);
 }
 
 LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
                                                        unsigned regionIdx,
                                                        unsigned resIdx,
                                                        NamedAttribute resAttr) {
-  StringAttr name = resAttr.getName();
-  if (name == LLVMDialect::getStructAttrsAttrName()) {
-    return verifyFuncOpInterfaceStructAttr(
-        op, resAttr.getValue(), [resIdx](FunctionOpInterface funcOp) {
-          return funcOp.getResultTypes()[resIdx];
-        });
-  }
-  if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-    mlir::Type resTy = funcOp.getResultTypes()[resIdx];
+  auto funcOp = dyn_cast<FunctionOpInterface>(op);
+  if (!funcOp)
+    return success();
+  Type resType = funcOp.getResultTypes()[resIdx];
 
-    // Check to see if this function has a void return with a result attribute
-    // to it. It isn't clear what semantics we would assign to that.
-    if (resTy.isa<LLVMVoidType>())
-      return op->emitError() << "cannot attach result attributes to functions "
-                                "with a void return";
+  // Check to see if this function has a void return with a result attribute
+  // to it. It isn't clear what semantics we would assign to that.
+  if (resType.isa<LLVMVoidType>())
+    return op->emitError() << "cannot attach result attributes to functions "
+                              "with a void return";
 
-    // LLVM attribute may be attached to a result of operation
-    // that has not been converted to LLVM dialect yet, so the result
-    // may have a type with unknown representation in LLVM dialect type
-    // space. In this case we cannot verify whether the attribute may be
-    // attached to a result of such type.
-    bool verifyValueType = isCompatibleType(resTy);
-    Attribute attrValue = resAttr.getValue();
-
-    // TODO: get rid of code duplication here and in verifyRegionArgAttribute().
-    if (name == LLVMDialect::getAlignAttrName()) {
-      if (!attrValue.isa<IntegerAttr>())
-        return op->emitError() << "expected llvm.align result attribute to be "
-                                  "an integer attribute";
-      if (verifyValueType && !resTy.isa<LLVMPointerType>())
-        return op->emitError()
-               << "llvm.align attribute attached to non-pointer result";
-      return success();
-    }
-    if (name == LLVMDialect::getNoAliasAttrName()) {
-      if (!attrValue.isa<UnitAttr>())
-        return op->emitError() << "expected llvm.noalias result attribute to "
-                                  "be a unit attribute";
-      if (verifyValueType && !resTy.isa<LLVMPointerType>())
-        return op->emitError()
-               << "llvm.noalias attribute attached to non-pointer result";
-      return success();
-    }
-    if (name == LLVMDialect::getReadonlyAttrName()) {
-      if (!attrValue.isa<UnitAttr>())
-        return op->emitError() << "expected llvm.readonly result attribute to "
-                                  "be a unit attribute";
-      if (verifyValueType && !resTy.isa<LLVMPointerType>())
-        return op->emitError()
-               << "llvm.readonly attribute attached to non-pointer result";
-      return success();
-    }
-    if (name == LLVMDialect::getNoUndefAttrName()) {
-      if (!attrValue.isa<UnitAttr>())
-        return op->emitError() << "expected llvm.noundef result attribute to "
-                                  "be a unit attribute";
-      return success();
-    }
-    if (name == LLVMDialect::getSExtAttrName()) {
-      if (!attrValue.isa<UnitAttr>())
-        return op->emitError() << "expected llvm.signext result attribute to "
-                                  "be a unit attribute";
-      if (verifyValueType && !resTy.isa<mlir::IntegerType>())
-        return op->emitError()
-               << "llvm.signext attribute attached to non-integer result";
-      return success();
-    }
-    if (name == LLVMDialect::getZExtAttrName()) {
-      if (!attrValue.isa<UnitAttr>())
-        return op->emitError() << "expected llvm.zeroext result attribute to "
-                                  "be a unit attribute";
-      if (verifyValueType && !resTy.isa<mlir::IntegerType>())
-        return op->emitError()
-               << "llvm.zeroext attribute attached to non-integer result";
-      return success();
-    }
-  }
-
-  return success();
+  // Check to see if this attribute is allowed as a result attribute. Only
+  // explicitly forbidden LLVM attributes will cause an error.
+  auto name = resAttr.getName();
+  if (name == LLVMDialect::getReadonlyAttrName() ||
+      name == LLVMDialect::getNestAttrName() ||
+      name == LLVMDialect::getStructRetAttrName() ||
+      name == LLVMDialect::getByValAttrName() ||
+      name == LLVMDialect::getByRefAttrName() ||
+      name == LLVMDialect::getInAllocaAttrName())
+    return op->emitError() << name << " is not a valid result attribute";
+  return verifyParameterAttribute(op, resType, resAttr);
 }
 
 //===----------------------------------------------------------------------===//
