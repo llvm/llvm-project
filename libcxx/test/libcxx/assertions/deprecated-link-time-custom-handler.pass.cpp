@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that we can set a custom verbose termination function.
+// Make sure that we still support _LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED for folks
+// who customize the verbose termination function at link-time in back-deployment environments.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED
 
-// We flag uses of the verbose termination function in older dylibs at compile-time to avoid runtime
-// failures when back-deploying.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
+// We emit a #warning about the deprecation of this setting, so make sure we don't turn that into an error.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-error
 
 #include <cstdlib>
 

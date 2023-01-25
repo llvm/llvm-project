@@ -172,12 +172,19 @@ library provides a default function that prints an error message and calls ``std
 that this function is provided by the static or shared library, so it is only available when deploying
 to a platform where the compiled library is sufficiently recent. On older platforms, the program will
 terminate in an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
-However, users can also override that function with their own, which can be useful to either provide
-custom behavior or when deploying to an older platform where the default function isn't available.
+However, users can also override that mechanism at two different levels. First, the mechanism can be
+overriden at compile-time by defining the ``_LIBCPP_VERBOSE_ABORT(format, args...)`` variadic macro.
+When that macro is defined, it will be called with a format string as the first argument, followed by
+a series of arguments to format using printf-style formatting. Compile-time customization may be
+interesting to get precise control over code generation, however it is also inconvenient to use in
+some cases. Indeed, compile-time customization of the verbose termination function requires that all
+translation units be compiled with a consistent definition for ``_LIBCPP_VERBOSE_ABORT`` to avoid ODR
+violations, which can add complexity in the build system of users.
 
-Replacing the default verbose termination function is done by defining the
-``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro in all translation units of your program
-and defining the following function in exactly one translation unit:
+Otherwise, if compile-time customization is not necessary, link-time customization of the handler is also
+possible, similarly to how replacing ``operator new`` works. This mechanism trades off fine-grained control
+over the call site where the termination is initiated in exchange for more ergonomics. Link-time customization
+is done by simply defining the following function in exactly one translation unit of your program:
 
 .. code-block:: cpp
 
