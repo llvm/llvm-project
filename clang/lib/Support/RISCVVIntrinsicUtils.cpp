@@ -1017,6 +1017,7 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
   };
 
   if (PolicyAttrs.isUnspecified()) {
+    PolicyAttrs.IsUnspecified = false;
     if (IsMasked) {
       Name += "_m";
       if (HasPolicy)
