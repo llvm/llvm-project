@@ -1355,7 +1355,8 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class SVE2_CONFLICT_DETECT_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [LLVMAnyPointerType<llvm_any_ty>,
-                 LLVMMatchType<1>]>;
+                 LLVMMatchType<1>],
+                [IntrNoMem]>;
 
   class SVE2_3VectorArg_Indexed_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],

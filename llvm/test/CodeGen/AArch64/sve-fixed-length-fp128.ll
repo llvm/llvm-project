@@ -21,8 +21,8 @@ define void @fcvt_v4f64_v4f128(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    bl __extenddftf2
 ; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    str q0, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr z1, [x8] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl __extenddftf2
@@ -32,8 +32,8 @@ define void @fcvt_v4f64_v4f128(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    bl __extenddftf2
 ; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    ldr z1, [x8, #1, mul vl] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov d1, v1.d[1]
 ; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    bl __extenddftf2
