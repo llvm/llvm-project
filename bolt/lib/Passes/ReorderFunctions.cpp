@@ -12,6 +12,8 @@
 
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Passes/HFSort.h"
+#include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include <fstream>
 
@@ -332,6 +334,13 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
     break;
   case RT_USER:
     {
+      // Build LTOCommonNameMap
+      StringMap<std::vector<uint64_t>> LTOCommonNameMap;
+      for (const BinaryFunction &BF : llvm::make_second_range(BFs))
+        for (StringRef Name : BF.getNames())
+          if (std::optional<StringRef> LTOCommonName = getLTOCommonName(Name))
+            LTOCommonNameMap[*LTOCommonName].push_back(BF.getAddress());
+
       uint32_t Index = 0;
       uint32_t InvalidEntries = 0;
       for (const std::string &Function : readFunctionOrderFile()) {
@@ -339,9 +348,9 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
 
         BinaryData *BD = BC.getBinaryDataByName(Function);
         if (!BD) {
+          // If we can't find the main symbol name, look for alternates.
           uint32_t LocalID = 1;
           while (true) {
-            // If we can't find the main symbol name, look for alternates.
             const std::string FuncName =
                 Function + "/" + std::to_string(LocalID);
             BD = BC.getBinaryDataByName(FuncName);
@@ -351,6 +360,10 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
               break;
             LocalID++;
           }
+          // Strip LTO suffixes
+          if (std::optional<StringRef> CommonName = getLTOCommonName(Function))
+            if (LTOCommonNameMap.find(*CommonName) != LTOCommonNameMap.end())
+              llvm::append_range(FuncAddrs, LTOCommonNameMap[*CommonName]);
         } else {
           FuncAddrs.push_back(BD->getAddress());
         }
