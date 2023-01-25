@@ -24,7 +24,71 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
+// Implements backtracking to traverse indices of the output buffer while
+// iterating over op.elements().
+static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
+                           Value destination, ArrayRef<int64_t> shape,
+                           ArrayRef<Value> constants,
+                           OperandRange::iterator &elementIt,
+                           SmallVectorImpl<Value> &indices) {
+  if (dim == static_cast<int>(shape.size()) - 1) {
+    for (int i = 0; i < shape.back(); ++i) {
+      indices.back() = constants[i];
+      destination = rewriter.create<tensor::InsertOp>(loc, *elementIt,
+                                                      destination, indices);
+      ++elementIt;
+    }
+    return destination;
+  }
+  for (int i = 0; i < shape[dim]; ++i) {
+    indices[dim] = constants[i];
+    destination = createInserts(rewriter, loc, dim + 1, destination, shape,
+                                constants, elementIt, indices);
+  }
+  return destination;
+}
+
 namespace {
+
+/// Lower tensor.from_elements to a sequence of chained tensor.insert.
+struct FromElementsOpConverter : public OpRewritePattern<FromElementsOp> {
+  using OpRewritePattern<FromElementsOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FromElementsOp elementsOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = elementsOp.getLoc();
+    RankedTensorType tensorType = elementsOp.getType().cast<RankedTensorType>();
+    auto shape = tensorType.getShape();
+
+    // Create tensor.empty.
+    auto emptyOp = rewriter.create<EmptyOp>(loc, tensorType, ValueRange());
+
+    // Case: tensor<elem_type>.
+    if (shape.empty()) {
+      rewriter.replaceOpWithNewOp<tensor::InsertOp>(
+          elementsOp, elementsOp.getElements().front(), emptyOp.getResult(),
+          ValueRange());
+      return success();
+    }
+
+    // Create constants for the range of possible indices [0, max{shape_i}).
+    auto maxDim = *std::max_element(shape.begin(), shape.end());
+    SmallVector<Value, 2> constants;
+    constants.reserve(maxDim);
+    for (int i = 0; i < maxDim; ++i)
+      constants.push_back(rewriter.create<arith::ConstantIndexOp>(loc, i));
+
+    // Traverse all elements and create tensor.insert ops.
+    auto elementIt = elementsOp.getElements().begin();
+    SmallVector<Value, 2> indices(tensorType.getRank(), constants[0]);
+    Value result = createInserts(rewriter, loc, /*dim=*/0, emptyOp.getResult(),
+                                 shape, constants, elementIt, indices);
+
+    // Replace tensor.from_elements.
+    rewriter.replaceOp(elementsOp, result);
+    return success();
+  }
+};
 
 /// Lower tensor.generate to linalg.generic.
 struct GenerateOpConverter : public OpRewritePattern<GenerateOp> {
@@ -172,5 +236,6 @@ struct PadOpConverter : public OpRewritePattern<PadOp> {
 
 void linalg::populateConvertToDestinationStylePatterns(
     RewritePatternSet &patterns) {
-  patterns.insert<GenerateOpConverter, PadOpConverter>(patterns.getContext());
+  patterns.insert<FromElementsOpConverter, GenerateOpConverter, PadOpConverter>(
+      patterns.getContext());
 }
