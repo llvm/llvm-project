@@ -341,6 +341,11 @@
 
 // CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
 
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 \
+// RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LTO-LIBRARY %s
+
+// CHECK-NO-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
+
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 -nogpulib \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-NO-LIBRARY %s
 
