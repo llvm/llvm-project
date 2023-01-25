@@ -25,7 +25,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -33,98 +33,19 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <deque>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "detect-dead-lanes"
 
-namespace {
-
-/// Contains a bitmask of which lanes of a given virtual register are
-/// defined and which ones are actually used.
-struct VRegInfo {
-  LaneBitmask UsedLanes;
-  LaneBitmask DefinedLanes;
-};
-
-class DetectDeadLanes : public MachineFunctionPass {
-public:
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  static char ID;
-  DetectDeadLanes() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "Detect Dead Lanes"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-private:
-  /// Add used lane bits on the register used by operand \p MO. This translates
-  /// the bitmask based on the operands subregister, and puts the register into
-  /// the worklist if any new bits were added.
-  void addUsedLanesOnOperand(const MachineOperand &MO, LaneBitmask UsedLanes);
-
-  /// Given a bitmask \p UsedLanes for the used lanes on a def output of a
-  /// COPY-like instruction determine the lanes used on the use operands
-  /// and call addUsedLanesOnOperand() for them.
-  void transferUsedLanesStep(const MachineInstr &MI, LaneBitmask UsedLanes);
-
-  /// Given a use regiser operand \p Use and a mask of defined lanes, check
-  /// if the operand belongs to a lowersToCopies() instruction, transfer the
-  /// mask to the def and put the instruction into the worklist.
-  void transferDefinedLanesStep(const MachineOperand &Use,
-                                LaneBitmask DefinedLanes);
-
-  /// Given a mask \p DefinedLanes of lanes defined at operand \p OpNum
-  /// of COPY-like instruction, determine which lanes are defined at the output
-  /// operand \p Def.
-  LaneBitmask transferDefinedLanes(const MachineOperand &Def, unsigned OpNum,
-                                   LaneBitmask DefinedLanes) const;
-
-  /// Given a mask \p UsedLanes used from the output of instruction \p MI
-  /// determine which lanes are used from operand \p MO of this instruction.
-  LaneBitmask transferUsedLanes(const MachineInstr &MI, LaneBitmask UsedLanes,
-                                const MachineOperand &MO) const;
-
-  std::pair<bool, bool> runOnce(MachineFunction &MF);
-
-  LaneBitmask determineInitialDefinedLanes(unsigned Reg);
-  LaneBitmask determineInitialUsedLanes(unsigned Reg);
-
-  bool isUndefRegAtInput(const MachineOperand &MO,
-                         const VRegInfo &RegInfo) const;
-
-  bool isUndefInput(const MachineOperand &MO, bool *CrossCopy) const;
-
-  const MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
-
-  void PutInWorklist(unsigned RegIdx) {
-    if (WorklistMembers.test(RegIdx))
-      return;
-    WorklistMembers.set(RegIdx);
-    Worklist.push_back(RegIdx);
-  }
-
-  VRegInfo *VRegInfos;
-  /// Worklist containing virtreg indexes.
-  std::deque<unsigned> Worklist;
-  BitVector WorklistMembers;
-  /// This bitvector is set for each vreg index where the vreg is defined
-  /// by an instruction where lowersToCopies()==true.
-  BitVector DefinedByCopy;
-};
-
-} // end anonymous namespace
-
-char DetectDeadLanes::ID = 0;
-char &llvm::DetectDeadLanesID = DetectDeadLanes::ID;
-
-INITIALIZE_PASS(DetectDeadLanes, DEBUG_TYPE, "Detect Dead Lanes", false, false)
+DeadLaneDetector::DeadLaneDetector(const MachineRegisterInfo *MRI,
+                                   const TargetRegisterInfo *TRI)
+    : MRI(MRI), TRI(TRI) {
+  unsigned NumVirtRegs = MRI->getNumVirtRegs();
+  VRegInfos = std::unique_ptr<VRegInfo[]>(new VRegInfo[NumVirtRegs]);
+  WorklistMembers.resize(NumVirtRegs);
+  DefinedByCopy.resize(NumVirtRegs);
+}
 
 /// Returns true if \p MI will get lowered to a series of COPY instructions.
 /// We call this a COPY-like instruction.
@@ -184,8 +105,8 @@ static bool isCrossCopy(const MachineRegisterInfo &MRI,
   return !TRI.getCommonSubClass(SrcRC, DstRC);
 }
 
-void DetectDeadLanes::addUsedLanesOnOperand(const MachineOperand &MO,
-                                            LaneBitmask UsedLanes) {
+void DeadLaneDetector::addUsedLanesOnOperand(const MachineOperand &MO,
+                                             LaneBitmask UsedLanes) {
   if (!MO.readsReg())
     return;
   Register MOReg = MO.getReg();
@@ -198,7 +119,7 @@ void DetectDeadLanes::addUsedLanesOnOperand(const MachineOperand &MO,
   UsedLanes &= MRI->getMaxLaneMaskForVReg(MOReg);
 
   unsigned MORegIdx = Register::virtReg2Index(MOReg);
-  VRegInfo &MORegInfo = VRegInfos[MORegIdx];
+  DeadLaneDetector::VRegInfo &MORegInfo = VRegInfos[MORegIdx];
   LaneBitmask PrevUsedLanes = MORegInfo.UsedLanes;
   // Any change at all?
   if ((UsedLanes & ~PrevUsedLanes).none())
@@ -210,8 +131,8 @@ void DetectDeadLanes::addUsedLanesOnOperand(const MachineOperand &MO,
     PutInWorklist(MORegIdx);
 }
 
-void DetectDeadLanes::transferUsedLanesStep(const MachineInstr &MI,
-                                            LaneBitmask UsedLanes) {
+void DeadLaneDetector::transferUsedLanesStep(const MachineInstr &MI,
+                                             LaneBitmask UsedLanes) {
   for (const MachineOperand &MO : MI.uses()) {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
@@ -220,9 +141,10 @@ void DetectDeadLanes::transferUsedLanesStep(const MachineInstr &MI,
   }
 }
 
-LaneBitmask DetectDeadLanes::transferUsedLanes(const MachineInstr &MI,
-                                               LaneBitmask UsedLanes,
-                                               const MachineOperand &MO) const {
+LaneBitmask
+DeadLaneDetector::transferUsedLanes(const MachineInstr &MI,
+                                    LaneBitmask UsedLanes,
+                                    const MachineOperand &MO) const {
   unsigned OpNum = MI.getOperandNo(&MO);
   assert(lowersToCopies(MI) &&
          DefinedByCopy[Register::virtReg2Index(MI.getOperand(0).getReg())]);
@@ -265,8 +187,8 @@ LaneBitmask DetectDeadLanes::transferUsedLanes(const MachineInstr &MI,
   }
 }
 
-void DetectDeadLanes::transferDefinedLanesStep(const MachineOperand &Use,
-                                               LaneBitmask DefinedLanes) {
+void DeadLaneDetector::transferDefinedLanesStep(const MachineOperand &Use,
+                                                LaneBitmask DefinedLanes) {
   if (!Use.readsReg())
     return;
   // Check whether the operand writes a vreg and is part of a COPY-like
@@ -301,8 +223,8 @@ void DetectDeadLanes::transferDefinedLanesStep(const MachineOperand &Use,
   PutInWorklist(DefRegIdx);
 }
 
-LaneBitmask DetectDeadLanes::transferDefinedLanes(const MachineOperand &Def,
-    unsigned OpNum, LaneBitmask DefinedLanes) const {
+LaneBitmask DeadLaneDetector::transferDefinedLanes(
+    const MachineOperand &Def, unsigned OpNum, LaneBitmask DefinedLanes) const {
   const MachineInstr &MI = *Def.getParent();
   // Translate DefinedLanes if necessary.
   switch (MI.getOpcode()) {
@@ -343,7 +265,7 @@ LaneBitmask DetectDeadLanes::transferDefinedLanes(const MachineOperand &Def,
   return DefinedLanes;
 }
 
-LaneBitmask DetectDeadLanes::determineInitialDefinedLanes(unsigned Reg) {
+LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
   // Live-In or unused registers have no definition but are considered fully
   // defined.
   if (!MRI->hasOneDef(Reg))
@@ -408,7 +330,7 @@ LaneBitmask DetectDeadLanes::determineInitialDefinedLanes(unsigned Reg) {
   return MRI->getMaxLaneMaskForVReg(Reg);
 }
 
-LaneBitmask DetectDeadLanes::determineInitialUsedLanes(unsigned Reg) {
+LaneBitmask DeadLaneDetector::determineInitialUsedLanes(unsigned Reg) {
   LaneBitmask UsedLanes = LaneBitmask::getNone();
   for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
     if (!MO.readsReg())
@@ -449,14 +371,58 @@ LaneBitmask DetectDeadLanes::determineInitialUsedLanes(unsigned Reg) {
   return UsedLanes;
 }
 
-bool DetectDeadLanes::isUndefRegAtInput(const MachineOperand &MO,
-                                        const VRegInfo &RegInfo) const {
+namespace {
+
+class DetectDeadLanes : public MachineFunctionPass {
+public:
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
+  DetectDeadLanes() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "Detect Dead Lanes"; }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+private:
+  /// update the operand status.
+  /// The first return value shows whether MF been changed.
+  /// The second return value indicates we need to call
+  /// DeadLaneDetector::computeSubRegisterLaneBitInfo and this function again
+  /// to propagate changes.
+  std::pair<bool, bool>
+  modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
+                                 MachineFunction &MF);
+
+  bool isUndefRegAtInput(const MachineOperand &MO,
+                         const DeadLaneDetector::VRegInfo &RegInfo) const;
+
+  bool isUndefInput(const DeadLaneDetector &DLD, const MachineOperand &MO,
+                    bool *CrossCopy) const;
+
+  const MachineRegisterInfo *MRI;
+  const TargetRegisterInfo *TRI;
+};
+
+} // end anonymous namespace
+
+char DetectDeadLanes::ID = 0;
+char &llvm::DetectDeadLanesID = DetectDeadLanes::ID;
+
+INITIALIZE_PASS(DetectDeadLanes, DEBUG_TYPE, "Detect Dead Lanes", false, false)
+
+bool DetectDeadLanes::isUndefRegAtInput(
+    const MachineOperand &MO, const DeadLaneDetector::VRegInfo &RegInfo) const {
   unsigned SubReg = MO.getSubReg();
   LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
   return (RegInfo.DefinedLanes & RegInfo.UsedLanes & Mask).none();
 }
 
-bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
+bool DetectDeadLanes::isUndefInput(const DeadLaneDetector &DLD,
+                                   const MachineOperand &MO,
                                    bool *CrossCopy) const {
   if (!MO.isUse())
     return false;
@@ -468,11 +434,11 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
   if (!DefReg.isVirtual())
     return false;
   unsigned DefRegIdx = Register::virtReg2Index(DefReg);
-  if (!DefinedByCopy.test(DefRegIdx))
+  if (!DLD.isDefinedByCopy(DefRegIdx))
     return false;
 
-  const VRegInfo &DefRegInfo = VRegInfos[DefRegIdx];
-  LaneBitmask UsedLanes = transferUsedLanes(MI, DefRegInfo.UsedLanes, MO);
+  const DeadLaneDetector::VRegInfo &DefRegInfo = DLD.getVRegInfo(DefRegIdx);
+  LaneBitmask UsedLanes = DLD.transferUsedLanes(MI, DefRegInfo.UsedLanes, MO);
   if (UsedLanes.any())
     return false;
 
@@ -484,7 +450,7 @@ bool DetectDeadLanes::isUndefInput(const MachineOperand &MO,
   return true;
 }
 
-std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
+void DeadLaneDetector::computeSubRegisterLaneBitInfo() {
   // First pass: Populate defs/uses of vregs with initial values
   unsigned NumVirtRegs = MRI->getNumVirtRegs();
   for (unsigned RegIdx = 0; RegIdx < NumVirtRegs; ++RegIdx) {
@@ -524,7 +490,11 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
     }
     dbgs() << "\n";
   });
+}
 
+std::pair<bool, bool>
+DetectDeadLanes::modifySubRegisterOperandStatus(const DeadLaneDetector &DLD,
+                                                MachineFunction &MF) {
   bool Changed = false;
   bool Again = false;
   // Mark operands as dead/unused.
@@ -537,7 +507,7 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
         if (!Reg.isVirtual())
           continue;
         unsigned RegIdx = Register::virtReg2Index(Reg);
-        const VRegInfo &RegInfo = VRegInfos[RegIdx];
+        const DeadLaneDetector::VRegInfo &RegInfo = DLD.getVRegInfo(RegIdx);
         if (MO.isDef() && !MO.isDead() && RegInfo.UsedLanes.none()) {
           LLVM_DEBUG(dbgs()
                      << "Marking operand '" << MO << "' as dead in " << MI);
@@ -551,7 +521,7 @@ std::pair<bool, bool> DetectDeadLanes::runOnce(MachineFunction &MF) {
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
             Changed = true;
-          } else if (isUndefInput(MO, &CrossCopy)) {
+          } else if (isUndefInput(DLD, MO, &CrossCopy)) {
             LLVM_DEBUG(dbgs()
                        << "Marking operand '" << MO << "' as undef in " << MI);
             MO.setIsUndef();
@@ -581,21 +551,16 @@ bool DetectDeadLanes::runOnMachineFunction(MachineFunction &MF) {
 
   TRI = MRI->getTargetRegisterInfo();
 
-  unsigned NumVirtRegs = MRI->getNumVirtRegs();
-  VRegInfos = new VRegInfo[NumVirtRegs];
-  WorklistMembers.resize(NumVirtRegs);
-  DefinedByCopy.resize(NumVirtRegs);
+  DeadLaneDetector DLD(MRI, TRI);
 
   bool Changed = false;
   bool Again;
   do {
+    DLD.computeSubRegisterLaneBitInfo();
     bool LocalChanged;
-    std::tie(LocalChanged, Again) = runOnce(MF);
+    std::tie(LocalChanged, Again) = modifySubRegisterOperandStatus(DLD, MF);
     Changed |= LocalChanged;
-  } while(Again);
+  } while (Again);
 
-  DefinedByCopy.clear();
-  WorklistMembers.clear();
-  delete[] VRegInfos;
   return Changed;
 }
