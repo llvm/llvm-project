@@ -31,6 +31,7 @@ A call to ``clear()`` would appropriately clear the contents of the range:
   v.clear();
 
 Limitations:
-- Doesn't warn if ``empty()`` is defined and used with the ignore result in the
+
+* Doesn't warn if ``empty()`` is defined and used with the ignore result in the
   class template definition (for example in the library implementation). These
   error cases can be caught with ``[[nodiscard]]`` attribute.
