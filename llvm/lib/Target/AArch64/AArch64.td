@@ -1294,7 +1294,8 @@ def ProcessorFeatures {
                                    FeatureNEON, FeaturePerfMon, FeatureSPE,
                                    FeatureFullFP16, FeatureFP16FML, FeatureDotProd];
   list<SubtargetFeature> Ampere1 = [HasV8_6aOps, FeatureNEON, FeaturePerfMon,
-                                    FeatureMTE, FeatureSSBS];
+                                    FeatureSSBS, FeatureRandGen, FeatureSB,
+                                    FeatureSHA2, FeatureSHA3, FeatureAES];
 
   // ETE and TRBE are future architecture extensions. We temporarily enable them
   // by default for users targeting generic AArch64. The extensions do not
