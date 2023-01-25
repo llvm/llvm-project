@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
-// RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -std=c++17 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref %s
 
 constexpr bool isEven(int a) {
   bool v = false;
