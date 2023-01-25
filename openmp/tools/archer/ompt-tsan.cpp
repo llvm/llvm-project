@@ -29,7 +29,10 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+
+#if (defined __APPLE__ && defined __MACH__)
 #include <dlfcn.h>
+#endif
 
 #include "omp-tools.h"
 
@@ -50,6 +53,7 @@
 #define KMP_FALLTHROUGH() ((void)0)
 #endif
 
+static int runOnTsan;
 static int hasReductionCallback;
 
 namespace {
@@ -144,6 +148,7 @@ static ArcherFlags *archer_flags;
 // See http://code.google.com/p/data-race-test/wiki/DynamicAnnotations .
 // tsan detects these exact functions by name.
 extern "C" {
+#if (defined __APPLE__ && defined __MACH__)
 static void (*AnnotateHappensAfter)(const char *, int, const volatile void *);
 static void (*AnnotateHappensBefore)(const char *, int, const volatile void *);
 static void (*AnnotateIgnoreWritesBegin)(const char *, int);
@@ -152,7 +157,37 @@ static void (*AnnotateNewMemory)(const char *, int, const volatile void *,
                                  size_t);
 static void (*__tsan_func_entry)(const void *);
 static void (*__tsan_func_exit)(void);
-static int (*RunningOnValgrind)(void);
+
+static int RunningOnValgrind() {
+  int (*fptr)();
+
+  fptr = (int (*)())dlsym(RTLD_DEFAULT, "RunningOnValgrind");
+  // If we found RunningOnValgrind other than this function, we assume
+  // Annotation functions present in this execution and leave runOnTsan=1
+  // otherwise we change to runOnTsan=0
+  if (!fptr || fptr == RunningOnValgrind)
+    runOnTsan = 0;
+  return 0;
+}
+#else
+void __attribute__((weak))
+AnnotateHappensAfter(const char *file, int line, const volatile void *cv) {}
+void __attribute__((weak))
+AnnotateHappensBefore(const char *file, int line, const volatile void *cv) {}
+void __attribute__((weak))
+AnnotateIgnoreWritesBegin(const char *file, int line) {}
+void __attribute__((weak)) AnnotateIgnoreWritesEnd(const char *file, int line) {
+}
+void __attribute__((weak))
+AnnotateNewMemory(const char *file, int line, const volatile void *cv,
+                  size_t size) {}
+int __attribute__((weak)) RunningOnValgrind() {
+  runOnTsan = 0;
+  return 0;
+}
+void __attribute__((weak)) __tsan_func_entry(const void *call_pc) {}
+void __attribute__((weak)) __tsan_func_exit(void) {}
+#endif
 }
 
 // This marker is used to define a happens-before arc. The race detector will
@@ -1043,14 +1078,6 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind, ompt_wait_id_t wait_id,
 
 #define SET_CALLBACK(event) SET_CALLBACK_T(event, event)
 
-#define findTsanFunction(f, fSig)                                              \
-  do {                                                                         \
-    if (NULL == (f = fSig dlsym(RTLD_DEFAULT, #f)))                            \
-      printf("Unable to find TSan function " #f ".\n");                        \
-  } while (0)
-
-#define findTsanFunctionSilent(f, fSig) f = fSig dlsym(RTLD_DEFAULT, #f)
-
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
                                 ompt_data_t *tool_data) {
   const char *options = getenv("TSAN_OPTIONS");
@@ -1072,6 +1099,13 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
     exit(1);
   }
 
+#if (defined __APPLE__ && defined __MACH__)
+#define findTsanFunction(f, fSig)                                              \
+  do {                                                                         \
+    if (NULL == (f = fSig dlsym(RTLD_DEFAULT, #f)))                            \
+      printf("Unable to find TSan function " #f ".\n");                        \
+  } while (0)
+
   findTsanFunction(AnnotateHappensAfter,
                    (void (*)(const char *, int, const volatile void *)));
   findTsanFunction(AnnotateHappensBefore,
@@ -1083,6 +1117,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
       (void (*)(const char *, int, const volatile void *, size_t)));
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
+#endif
 
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
@@ -1146,9 +1181,10 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
   // an implementation of the Annotation interface is available in the
   // execution or disable the tool (by returning NULL).
 
-  findTsanFunctionSilent(RunningOnValgrind, (int (*)(void)));
-  if (!RunningOnValgrind) // if we are not running on TSAN, give a different
-                          // tool the chance to be loaded
+  runOnTsan = 1;
+  RunningOnValgrind();
+  if (!runOnTsan) // if we are not running on TSAN, give a different tool the
+                  // chance to be loaded
   {
     if (archer_flags->verbose)
       std::cout << "Archer detected OpenMP application without TSan "
