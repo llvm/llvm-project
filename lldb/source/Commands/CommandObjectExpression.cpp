@@ -149,6 +149,17 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
     break;
   }
 
+  // BEGIN SWIFT
+  case '\x01': {
+    int32_t result;
+    result = OptionArgParser::ToOptionEnum(option_arg, BindGenTypeParamValue(),
+                                           0, error);
+    if (error.Success())
+      bind_generic_types = (BindGenericTypes)result;
+    break;
+  }
+  // END SWIFT
+
   default:
     llvm_unreachable("Unimplemented option");
   }
@@ -177,6 +188,9 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   auto_apply_fixits = eLazyBoolCalculate;
   top_level = false;
   allow_jit = true;
+  // BEGIN SWIFT
+  bind_generic_types = eBindAuto;
+  // END SWIFT
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -360,7 +374,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
   options.SetDebug(m_command_options.debug);
 
   // BEGIN SWIFT
-  options.SetBindGenericTypes(m_varobj_options.bind_generic_types);
+  options.SetBindGenericTypes(m_command_options.bind_generic_types);
   // If the language was not specified in the expression command,
   // set it to the language in the target's properties if
   // specified, else default to the language for the frame.
