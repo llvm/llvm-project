@@ -270,16 +270,13 @@ define amdgpu_ps float @v_s_s_bfi_sha256_ch(i32 %x, i32 inreg %y, i32 inreg %z) 
 ;
 ; GFX8-GISEL-LABEL: v_s_s_bfi_sha256_ch:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    s_xor_b32 s0, s0, s1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s0
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, s1
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_s_s_bfi_sha256_ch:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
-; GFX10-GISEL-NEXT:    s_xor_b32 s0, s0, s1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, s0, s1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 entry:
   %xor0 = xor i32 %y, %z
@@ -309,16 +306,13 @@ define amdgpu_ps float @s_v_s_bfi_sha256_ch(i32 inreg %x, i32 %y, i32 inreg %z) 
 ;
 ; GFX8-GISEL-LABEL: s_v_s_bfi_sha256_ch:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GFX8-GISEL-NEXT:    v_mov_b32_e32 v1, s1
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: s_v_s_bfi_sha256_ch:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, s1, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, s0, v0, s1
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 entry:
   %xor0 = xor i32 %y, %z
@@ -448,16 +442,12 @@ define amdgpu_ps float @v_v_s_bfi_sha256_ch(i32 %x, i32 %y, i32 inreg %z) {
 ;
 ; GFX8-GISEL-LABEL: v_v_s_bfi_sha256_ch:
 ; GFX8-GISEL:       ; %bb.0: ; %entry
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v1, s0, v1
-; GFX8-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX8-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, s0
 ; GFX8-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-GISEL-LABEL: v_v_s_bfi_sha256_ch:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v1, s0, v1
-; GFX10-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
-; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, s0, v0
+; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, s0
 ; GFX10-GISEL-NEXT:    ; return to shader part epilog
 entry:
   %xor0 = xor i32 %y, %z

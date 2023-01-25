@@ -665,6 +665,10 @@ class TreePatternNode {
 
   std::vector<TreePatternNodePtr> Children;
 
+  /// If this was instantiated from a PatFrag node, and the PatFrag was derived
+  /// from "GISelFlags": the original Record derived from GISelFlags.
+  const Record *GISelFlags = nullptr;
+
 public:
   TreePatternNode(Record *Op, std::vector<TreePatternNodePtr> Ch,
                   unsigned NumResults)
@@ -793,6 +797,9 @@ public:
   /// isCommutativeIntrinsic - Return true if the node is an intrinsic which is
   /// marked isCommutative.
   bool isCommutativeIntrinsic(const CodeGenDAGPatterns &CDP) const;
+
+  void setGISelFlagsRecord(const Record *R) { GISelFlags = R; }
+  const Record *getGISelFlagsRecord() const { return GISelFlags; }
 
   void print(raw_ostream &OS) const;
   void dump() const;

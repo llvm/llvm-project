@@ -2051,52 +2051,53 @@ def BFIImm32 : PatFrag<
   }]
 >;
 
+
 // Definition from ISA doc:
 // (y & x) | (z & ~x)
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i32:$y, i32:$x), (and i32:$z, (not i32:$x))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
-                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
-                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // (y & C) | (z & ~C)
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (BFIImm32 i32:$x, i32:$y, i32:$z),
   (V_BFI_B32_e64 VSrc_b32:$x, VSrc_b32:$y, VSrc_b32:$z)
 >;
 
 // 64-bit version
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
 // SHA-256 Ch function
 // z ^ (x & (y ^ z))
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<xor> i32:$z, (and i32:$x, (xor i32:$y, i32:$z))),
   (V_BFI_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
-                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
-                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32))
 >;
 
 // 64-bit version
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<xor> i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0))), sub0,
     (V_BFI_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1))), sub1)
 >;
 
 def : AMDGPUPat <
@@ -3197,27 +3198,27 @@ def : AMDGPUPat <
 // SHA-256 Ma patterns
 
 // ((x & z) | (y & (x | z))) -> BFI (XOR x, y), z, y
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i32:$x, i32:$z),
                         (and i32:$y, (or i32:$x, i32:$z))),
   (V_BFI_B32_e64 (V_XOR_B32_e64 (COPY_TO_REGCLASS VSrc_b32:$x, VGPR_32),
                                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32)),
-                 (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32),
-                 (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
+                (COPY_TO_REGCLASS VSrc_b32:$z, VGPR_32),
+                (COPY_TO_REGCLASS VSrc_b32:$y, VGPR_32))
 >;
 
-def : AMDGPUPat <
+def : AMDGPUPatIgnoreCopies <
   (DivergentBinFrag<or> (and i64:$x, i64:$z),
                         (and i64:$y, (or i64:$x, i64:$z))),
   (REG_SEQUENCE VReg_64,
     (V_BFI_B32_e64 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub0)),
                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub0)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))), sub0,
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub0))), sub0,
     (V_BFI_B32_e64 (V_XOR_B32_e64 (i32 (EXTRACT_SUBREG VReg_64:$x, sub1)),
                     (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))),
-               (i32 (EXTRACT_SUBREG VReg_64:$z, sub1)),
-               (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))), sub1)
+              (i32 (EXTRACT_SUBREG VReg_64:$z, sub1)),
+              (i32 (EXTRACT_SUBREG VReg_64:$y, sub1))), sub1)
 >;
 
 multiclass IntMed3Pat<Instruction med3Inst,
