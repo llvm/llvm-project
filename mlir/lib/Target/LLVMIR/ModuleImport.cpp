@@ -1482,6 +1482,61 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
   processPassthroughAttrs(func, funcOp);
 }
 
+DictionaryAttr
+ModuleImport::convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
+                                        OpBuilder &builder) {
+  using ElemTy = std::pair<llvm::Attribute::AttrKind, StringRef>;
+  // Mapping from llvm attribute kinds to their corresponding MLIR name.
+  static const SmallVector<ElemTy> kindNamePairs = {
+      {llvm::Attribute::AttrKind::NoAlias, LLVMDialect::getNoAliasAttrName()},
+      {llvm::Attribute::AttrKind::ReadOnly, LLVMDialect::getReadonlyAttrName()},
+      {llvm::Attribute::AttrKind::Nest, LLVMDialect::getNestAttrName()},
+      {llvm::Attribute::AttrKind::SExt, LLVMDialect::getSExtAttrName()},
+      {llvm::Attribute::AttrKind::ZExt, LLVMDialect::getZExtAttrName()},
+      {llvm::Attribute::AttrKind::NoUndef, LLVMDialect::getNoUndefAttrName()},
+      {llvm::Attribute::AttrKind::StructRet,
+       LLVMDialect::getStructRetAttrName()},
+      {llvm::Attribute::AttrKind::ByVal, LLVMDialect::getByValAttrName()},
+      {llvm::Attribute::AttrKind::ByRef, LLVMDialect::getByRefAttrName()},
+      {llvm::Attribute::AttrKind::InAlloca, LLVMDialect::getInAllocaAttrName()},
+      {llvm::Attribute::AttrKind::Alignment, LLVMDialect::getAlignAttrName()}};
+
+  SmallVector<NamedAttribute> paramAttrs;
+  for (auto [llvmKind, mlirName] : kindNamePairs) {
+    auto llvmAttr = llvmParamAttrs.getAttribute(llvmKind);
+    // Skip attributes that are not attached.
+    if (!llvmAttr.isValid())
+      continue;
+    Attribute mlirAttr;
+    if (llvmAttr.isTypeAttribute())
+      mlirAttr = TypeAttr::get(convertType(llvmAttr.getValueAsType()));
+    else if (llvmAttr.isIntAttribute())
+      mlirAttr = builder.getI64IntegerAttr(llvmAttr.getValueAsInt());
+    else if (llvmAttr.isEnumAttribute())
+      mlirAttr = builder.getUnitAttr();
+    else
+      llvm_unreachable("unexpected parameter attribute kind");
+    paramAttrs.push_back(builder.getNamedAttr(mlirName, mlirAttr));
+  }
+
+  return builder.getDictionaryAttr(paramAttrs);
+}
+
+void ModuleImport::convertParameterAttributes(llvm::Function *func,
+                                              LLVMFuncOp funcOp,
+                                              OpBuilder &builder) {
+  auto llvmAttrs = func->getAttributes();
+  for (size_t i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+    llvm::AttributeSet llvmArgAttrs = llvmAttrs.getParamAttrs(i);
+    funcOp.setArgAttrs(i, convertParameterAttribute(llvmArgAttrs, builder));
+  }
+  // Convert the result attributes and attach them wrapped in an ArrayAttribute
+  // to the funcOp.
+  llvm::AttributeSet llvmResAttr = llvmAttrs.getRetAttrs();
+  funcOp.setResAttrsAttr(
+      builder.getArrayAttr(convertParameterAttribute(llvmResAttr, builder)));
+}
+
 LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   clearBlockAndValueMapping();
 
@@ -1505,35 +1560,7 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Set the function debug information if available.
   debugImporter->translate(func, funcOp);
 
-  for (const auto &it : llvm::enumerate(functionType.getParams())) {
-    llvm::SmallVector<NamedAttribute, 1> argAttrs;
-    if (auto *type = func->getParamByValType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(
-          NamedAttribute(builder.getStringAttr(LLVMDialect::getByValAttrName()),
-                         TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamByRefType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(
-          NamedAttribute(builder.getStringAttr(LLVMDialect::getByRefAttrName()),
-                         TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamStructRetType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(NamedAttribute(
-          builder.getStringAttr(LLVMDialect::getStructRetAttrName()),
-          TypeAttr::get(mlirType)));
-    }
-    if (auto *type = func->getParamInAllocaType(it.index())) {
-      Type mlirType = convertType(type);
-      argAttrs.push_back(NamedAttribute(
-          builder.getStringAttr(LLVMDialect::getInAllocaAttrName()),
-          TypeAttr::get(mlirType)));
-    }
-
-    funcOp.setArgAttrs(it.index(), argAttrs);
-  }
+  convertParameterAttributes(func, funcOp, builder);
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(func))
     funcOp.setPersonalityAttr(personality);
