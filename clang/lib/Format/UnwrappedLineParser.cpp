@@ -1906,7 +1906,9 @@ void UnwrappedLineParser::parseStructuralElement(
       // declaration.
       if (!IsTopLevel || !Style.isCpp() || !Previous || eof())
         break;
-      if (isC78ParameterDecl(FormatTok, Tokens->peekNextToken(), Previous)) {
+      if (isC78ParameterDecl(FormatTok,
+                             Tokens->peekNextToken(/*SkipComment=*/true),
+                             Previous)) {
         addUnwrappedLine();
         return;
       }
@@ -2376,7 +2378,7 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   if (FormatTok->is(tok::l_square))
     return false;
   if (FormatTok->is(tok::r_square)) {
-    const FormatToken *Next = Tokens->peekNextToken();
+    const FormatToken *Next = Tokens->peekNextToken(/*SkipComment=*/true);
     if (Next->is(tok::greater))
       return false;
   }
