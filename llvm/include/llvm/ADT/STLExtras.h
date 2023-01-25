@@ -26,7 +26,6 @@
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
-#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -787,9 +786,8 @@ protected:
   template <size_t... Ns>
   bool test_all_equals(const zip_common &other,
             std::index_sequence<Ns...>) const {
-    return all_of(std::initializer_list<bool>{std::get<Ns>(this->iterators) ==
-                                              std::get<Ns>(other.iterators)...},
-                  identity<bool>{});
+    return ((std::get<Ns>(this->iterators) == std::get<Ns>(other.iterators)) &&
+            ...);
   }
 
 public:
@@ -833,10 +831,8 @@ class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
   template <size_t... Ns>
   bool test(const zip_shortest<Iters...> &other,
             std::index_sequence<Ns...>) const {
-    return all_of(
-        std::array<bool, sizeof...(Ns)>({std::get<Ns>(this->iterators) !=
-                                         std::get<Ns>(other.iterators)...}),
-        identity<bool>{});
+    return ((std::get<Ns>(this->iterators) != std::get<Ns>(other.iterators)) &&
+            ...);
   }
 
 public:
@@ -966,10 +962,8 @@ private:
   template <size_t... Ns>
   bool test(const zip_longest_iterator<Iters...> &other,
             std::index_sequence<Ns...>) const {
-    return llvm::any_of(
-        std::initializer_list<bool>{std::get<Ns>(this->iterators) !=
-                                    std::get<Ns>(other.iterators)...},
-        identity<bool>{});
+    return ((std::get<Ns>(this->iterators) != std::get<Ns>(other.iterators)) ||
+            ...);
   }
 
   template <size_t... Ns> value_type deref(std::index_sequence<Ns...>) const {
