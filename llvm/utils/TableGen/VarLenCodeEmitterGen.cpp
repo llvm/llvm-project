@@ -83,8 +83,34 @@ public:
 
   void run(raw_ostream &OS);
 };
-
 } // end anonymous namespace
+
+// Get the name of custom encoder or decoder, if there is any.
+// Returns `{encoder name, decoder name}`.
+static std::pair<StringRef, StringRef> getCustomCoders(ArrayRef<Init *> Args) {
+  std::pair<StringRef, StringRef> Result;
+  for (const auto *Arg : Args) {
+    const auto *DI = dyn_cast<DagInit>(Arg);
+    if (!DI)
+      continue;
+    const Init *Op = DI->getOperator();
+    if (!isa<DefInit>(Op))
+      continue;
+    // syntax: `(<encoder | decoder> "function name")`
+    StringRef OpName = cast<DefInit>(Op)->getDef()->getName();
+    if (OpName != "encoder" && OpName != "decoder")
+      continue;
+    if (!DI->getNumArgs() || !isa<StringInit>(DI->getArg(0)))
+      PrintFatalError("expected '" + OpName +
+                      "' directive to be followed by a custom function name.");
+    StringRef FuncName = cast<StringInit>(DI->getArg(0))->getValue();
+    if (OpName == "encoder")
+      Result.first = FuncName;
+    else
+      Result.second = FuncName;
+  }
+  return Result;
+}
 
 VarLenInst::VarLenInst(const DagInit *DI, const RecordVal *TheDef)
     : TheDef(TheDef), NumBits(0U) {
@@ -123,7 +149,8 @@ void VarLenInst::buildRec(const DagInit *DI) {
       }
     }
   } else if (Op == "operand") {
-    // (operand <operand name>, <# of bits>, [(encoder <custom encoder>)])
+    // (operand <operand name>, <# of bits>,
+    //          [(encoder <custom encoder>)][, (decoder <custom decoder>)])
     if (DI->getNumArgs() < 2)
       PrintFatalError(TheDef->getLoc(),
                       "Expecting at least 2 arguments for `operand`");
@@ -136,14 +163,13 @@ void VarLenInst::buildRec(const DagInit *DI) {
     if (NumBitsVal <= 0)
       PrintFatalError(TheDef->getLoc(), "Invalid number of bits for `operand`");
 
-    StringRef CustomEncoder;
-    if (DI->getNumArgs() >= 3)
-      CustomEncoder = getCustomEncoderName(DI->getArg(2));
-    Segments.push_back(
-        {static_cast<unsigned>(NumBitsVal), OperandName, CustomEncoder});
+    auto [CustomEncoder, CustomDecoder] =
+        getCustomCoders(DI->getArgs().slice(2));
+    Segments.push_back({static_cast<unsigned>(NumBitsVal), OperandName,
+                        CustomEncoder, CustomDecoder});
   } else if (Op == "slice") {
     // (slice <operand name>, <high / low bit>, <low / high bit>,
-    //        [(encoder <custom encoder>)])
+    //        [(encoder <custom encoder>)][, (decoder <custom decoder>)])
     if (DI->getNumArgs() < 3)
       PrintFatalError(TheDef->getLoc(),
                       "Expecting at least 3 arguments for `slice`");
@@ -167,18 +193,17 @@ void VarLenInst::buildRec(const DagInit *DI) {
       NumBits = static_cast<unsigned>(HiBitVal - LoBitVal + 1);
     }
 
-    StringRef CustomEncoder;
-    if (DI->getNumArgs() >= 4)
-      CustomEncoder = getCustomEncoderName(DI->getArg(3));
+    auto [CustomEncoder, CustomDecoder] =
+        getCustomCoders(DI->getArgs().slice(3));
 
     if (NeedSwap) {
       // Normalization: Hi bit should always be the second argument.
       Init *const NewArgs[] = {OperandName, LoBit, HiBit};
       Segments.push_back({NumBits,
                           DagInit::get(DI->getOperator(), nullptr, NewArgs, {}),
-                          CustomEncoder});
+                          CustomEncoder, CustomDecoder});
     } else {
-      Segments.push_back({NumBits, DI, CustomEncoder});
+      Segments.push_back({NumBits, DI, CustomEncoder, CustomDecoder});
     }
   }
 }
