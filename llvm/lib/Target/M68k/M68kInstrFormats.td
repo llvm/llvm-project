@@ -346,7 +346,8 @@ class MxEncAddrMode_abs<string opnd_name, bit size_w_l = false> : MxEncMemOp {
   // Absolute address
   let Supplement = !if(size_w_l,
     // abs.L
-    (operand "$"#opnd_name, 32, (encoder "encodeRelocImm<32>")),
+    (operand "$"#opnd_name, 32, (encoder "encodeRelocImm<32>"),
+                                (decoder "DecodeImm32")),
     // abs.W
     (operand "$"#opnd_name, 16, (encoder "encodeRelocImm<16>"))
   );
