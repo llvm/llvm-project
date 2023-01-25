@@ -19,10 +19,6 @@ Options
 -------
 .. option:: HeaderFileExtensions
 
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
-   version 18. Please use the global configuration option
-   `HeaderFileExtensions`.
-
    Default value: ``";h;hh;hpp;hxx"``
    A semicolon-separated list of filename extensions of header files (the
    filename extensions should not contain a "." prefix). For extension-less
@@ -30,10 +26,6 @@ Options
    if there are other filename extensions.
 
 .. option:: ImplementationFileExtensions
-
-   Note: this option is deprecated, it will be removed in :program:`clang-tidy`.
-   version 18. Please use the global configuration option
-   `ImplementationFileExtensions`.
 
    Default value: ``"c;cc;cpp;cxx"``
    Likewise, a semicolon-separated list of filename extensions of
