@@ -269,20 +269,27 @@ class PinnedAllocationMapTy {
     /// The size of the pinned allocation.
     size_t Size;
 
+    /// Indicate whether the allocation was locked from outside the plugin, for
+    /// instance, from the application. The externally locked allocations are
+    /// not unlocked by the plugin when unregistering the last user.
+    bool ExternallyLocked;
+
     /// The number of references to the pinned allocation. The allocation should
     /// remain pinned and registered to the map until the number of references
     /// becomes zero.
     mutable size_t References;
 
-    /// Create an entry with the host and device acessible pointers, and the
-    /// buffer size.
-    EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size)
+    /// Create an entry with the host and device acessible pointers, the buffer
+    /// size, and a boolean indicating whether the buffer was locked externally.
+    EntryTy(void *HstPtr, void *DevAccessiblePtr, size_t Size,
+            bool ExternallyLocked)
         : HstPtr(HstPtr), DevAccessiblePtr(DevAccessiblePtr), Size(Size),
-          References(1) {}
+          ExternallyLocked(ExternallyLocked), References(1) {}
 
     /// Utility constructor used for std::set searches.
     EntryTy(void *HstPtr)
-        : HstPtr(HstPtr), DevAccessiblePtr(nullptr), Size(0), References(0) {}
+        : HstPtr(HstPtr), DevAccessiblePtr(nullptr), Size(0),
+          ExternallyLocked(false), References(0) {}
   };
 
   /// Comparator of mep entries. Use the host pointer to enforce an order
@@ -304,54 +311,117 @@ class PinnedAllocationMapTy {
   /// Reference to the corresponding device.
   GenericDeviceTy &Device;
 
-  /// Find an allocation that intersects with \p Buffer pointer. Assume
-  /// the map's mutex is acquired.
-  PinnedAllocSetTy::iterator findIntersecting(const void *Buffer) const {
+  /// Indicate whether mapped host buffers should be locked automatically.
+  bool LockMappedBuffers;
+
+  /// Indicate whether failures when locking mapped buffers should be ingored.
+  bool IgnoreLockMappedFailures;
+
+  /// Find an allocation that intersects with \p HstPtr pointer. Assume the
+  /// map's mutex is acquired.
+  const EntryTy *findIntersecting(const void *HstPtr) const {
     if (Allocs.empty())
-      return Allocs.end();
+      return nullptr;
 
     // Search the first allocation with starting address that is not less than
     // the buffer address.
-    auto It = Allocs.lower_bound({const_cast<void *>(Buffer)});
+    auto It = Allocs.lower_bound({const_cast<void *>(HstPtr)});
 
     // Direct match of starting addresses.
-    if (It != Allocs.end() && It->HstPtr == Buffer)
-      return It;
+    if (It != Allocs.end() && It->HstPtr == HstPtr)
+      return &(*It);
 
     // Not direct match but may be a previous pinned allocation in the map which
     // contains the buffer. Return false if there is no such a previous
     // allocation.
     if (It == Allocs.begin())
-      return Allocs.end();
+      return nullptr;
 
     // Move to the previous pinned allocation.
     --It;
 
     // The buffer is not contained in the pinned allocation.
-    if (advanceVoidPtr(It->HstPtr, It->Size) > Buffer)
-      return It;
+    if (advanceVoidPtr(It->HstPtr, It->Size) > HstPtr)
+      return &(*It);
 
     // None found.
-    return Allocs.end();
+    return nullptr;
+  }
+
+  /// Insert an entry to the map representing a locked buffer. The number of
+  /// references is set to one.
+  Error insertEntry(void *HstPtr, void *DevAccessiblePtr, size_t Size,
+                    bool ExternallyLocked = false);
+
+  /// Erase an existing entry from the map.
+  Error eraseEntry(const EntryTy &Entry);
+
+  /// Register a new user into an entry that represents a locked buffer. Check
+  /// also that the registered buffer with \p HstPtr address and \p Size is
+  /// actually contained into the entry.
+  Error registerEntryUse(const EntryTy &Entry, void *HstPtr, size_t Size);
+
+  /// Unregister a user from the entry and return whether it is the last user.
+  /// If it is the last user, the entry will have to be removed from the map
+  /// and unlock the entry's host buffer (if necessary).
+  Expected<bool> unregisterEntryUse(const EntryTy &Entry);
+
+  /// Indicate whether the first range A fully contains the second range B.
+  static bool contains(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
+    void *EndA = advanceVoidPtr(PtrA, SizeA);
+    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    return (PtrB >= PtrA && EndB <= EndA);
+  }
+
+  /// Indicate whether the first range A intersects with the second range B.
+  static bool intersects(void *PtrA, size_t SizeA, void *PtrB, size_t SizeB) {
+    void *EndA = advanceVoidPtr(PtrA, SizeA);
+    void *EndB = advanceVoidPtr(PtrB, SizeB);
+    return (PtrA < EndB && PtrB < EndA);
   }
 
 public:
   /// Create the map of pinned allocations corresponding to a specific device.
-  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {}
+  PinnedAllocationMapTy(GenericDeviceTy &Device) : Device(Device) {
 
-  /// Register a host buffer that was recently locked. None of the already
-  /// registered pinned allocations should intersect with this new one. The
-  /// registration requires the host pointer in \p HstPtr, the pointer that the
-  /// devices should use when transferring data from/to the allocation in
-  /// \p DevAccessiblePtr, and the size of the allocation in \p Size. Notice
-  /// that some plugins may use the same pointer for the \p HstPtr and
-  /// \p DevAccessiblePtr. The allocation must be unregistered using the
+    // Envar that indicates whether mapped host buffers should be locked
+    // automatically. The possible values are boolean (on/off) and a special:
+    //   off:       Mapped host buffers are not locked.
+    //   on:        Mapped host buffers are locked in a best-effort approach.
+    //              Failure to lock the buffers are silent.
+    //   mandatory: Mapped host buffers are always locked and failures to lock
+    //              a buffer results in a fatal error.
+    StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS", "off");
+
+    bool Enabled;
+    if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
+      // Parsed as a boolean value. Enable the feature if necessary.
+      LockMappedBuffers = Enabled;
+      IgnoreLockMappedFailures = true;
+    } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
+      // Enable the feature and failures are fatal.
+      LockMappedBuffers = true;
+      IgnoreLockMappedFailures = false;
+    } else {
+      // Disable by default.
+      DP("Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS=%s\n",
+         OMPX_LockMappedBuffers.get().data());
+      LockMappedBuffers = false;
+    }
+  }
+
+  /// Register a buffer that was recently allocated as a locked host buffer.
+  /// None of the already registered pinned allocations should intersect with
+  /// this new one. The registration requires the host pointer in \p HstPtr,
+  /// the device accessible pointer in \p DevAccessiblePtr, and the size of the
+  /// allocation in \p Size. The allocation must be unregistered using the
   /// unregisterHostBuffer function.
   Error registerHostBuffer(void *HstPtr, void *DevAccessiblePtr, size_t Size);
 
   /// Unregister a host pinned allocation passing the host pointer which was
   /// previously registered using the registerHostBuffer function. When calling
-  /// this function, the pinned allocation cannot have any other user.
+  /// this function, the pinned allocation cannot have any other user and will
+  /// not be unlocked by this function.
   Error unregisterHostBuffer(void *HstPtr);
 
   /// Lock the host buffer at \p HstPtr or register a new user if it intersects
@@ -365,6 +435,15 @@ public:
   /// pinned allocation is removed from the map and the memory is unlocked.
   Error unlockHostBuffer(void *HstPtr);
 
+  /// Lock or register a host buffer that was recently mapped by libomptarget.
+  /// This behavior is applied if LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS is
+  /// enabled. Even if not enabled, externally locked buffers are registered
+  /// in order to optimize their transfers.
+  Error lockMappedHostBuffer(void *HstPtr, size_t Size);
+
+  /// Unlock or unregister a host buffer that was unmapped by libomptarget.
+  Error unlockUnmappedHostBuffer(void *HstPtr);
+
   /// Return the device accessible pointer associated to the host pinned
   /// allocation which the \p HstPtr belongs, if any. Return null in case the
   /// \p HstPtr does not belong to any host pinned allocation. The device
@@ -374,13 +453,12 @@ public:
     std::shared_lock<std::shared_mutex> Lock(Mutex);
 
     // Find the intersecting allocation if any.
-    auto It = findIntersecting(HstPtr);
-    if (It == Allocs.end())
+    const EntryTy *Entry = findIntersecting(HstPtr);
+    if (!Entry)
       return nullptr;
 
-    const EntryTy &Entry = *It;
-    return advanceVoidPtr(Entry.DevAccessiblePtr,
-                          getPtrDiff(HstPtr, Entry.HstPtr));
+    return advanceVoidPtr(Entry->DevAccessiblePtr,
+                          getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
   /// Check whether a buffer belongs to a registered host pinned allocation.
@@ -388,7 +466,7 @@ public:
     std::shared_lock<std::shared_mutex> Lock(Mutex);
 
     // Return whether there is an intersecting allocation.
-    return (findIntersecting(const_cast<void *>(HstPtr)) != Allocs.end());
+    return (findIntersecting(const_cast<void *>(HstPtr)) != nullptr);
   }
 };
 
@@ -457,14 +535,40 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return PinnedAllocs.lockHostBuffer(HstPtr, Size);
   }
 
-  virtual Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) = 0;
-
   /// Unpin a host memory buffer that was previously pinned.
   Error dataUnlock(void *HstPtr) {
     return PinnedAllocs.unlockHostBuffer(HstPtr);
   }
 
+  /// Lock the host buffer \p HstPtr with \p Size bytes with the vendor-specific
+  /// API and return the device accessible pointer.
+  virtual Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) = 0;
+
+  /// Unlock a previously locked host buffer starting at \p HstPtr.
   virtual Error dataUnlockImpl(void *HstPtr) = 0;
+
+  /// Mark the host buffer with address \p HstPtr and \p Size bytes as a mapped
+  /// buffer. This means that libomptarget created a new mapping of that host
+  /// buffer (e.g., because a user OpenMP target map) and the buffer may be used
+  /// as source/destination of memory transfers. We can use this information to
+  /// lock the host buffer and optimize its memory transfers.
+  Error notifyDataMapped(void *HstPtr, int64_t Size) {
+    return PinnedAllocs.lockMappedHostBuffer(HstPtr, Size);
+  }
+
+  /// Mark the host buffer with address \p HstPtr as unmapped. This means that
+  /// libomptarget removed an existing mapping. If the plugin locked the buffer
+  /// in notifyDataMapped, this function should unlock it.
+  Error notifyDataUnmapped(void *HstPtr) {
+    return PinnedAllocs.unlockUnmappedHostBuffer(HstPtr);
+  }
+
+  /// Check whether the host buffer with address \p HstPtr is pinned by the
+  /// underlying vendor-specific runtime (if any). Retrieve the host pointer,
+  /// the device accessible pointer and the size of the original pinned buffer.
+  virtual Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
+                                         void *&BaseDevAccessiblePtr,
+                                         size_t &BaseSize) const = 0;
 
   /// Submit data to the device (host to device transfer).
   Error dataSubmit(void *TgtPtr, const void *HstPtr, int64_t Size,
