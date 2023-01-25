@@ -2,7 +2,7 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,SICI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,VI,SICIVI --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=GCN,PREGFX11,GFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS --implicit-check-not=error: %s
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX11 --implicit-check-not=error: %s
 // RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=GCN,GFX11PLUS,GFX12 --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
@@ -175,6 +175,10 @@ s_sendmsg sendmsg(MSG_RTN_GET_TBA)
 // SICI: :[[@LINE-1]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 // VI: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 // GFX10: :[[@LINE-3]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+
+s_sendmsg sendmsg(MSG_RTN_GET_SE_AID_ID)
+// PREGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+// GFX11: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(-1)
 // GCN: :[[@LINE-1]]:{{[0-9]+}}: error: invalid message id
