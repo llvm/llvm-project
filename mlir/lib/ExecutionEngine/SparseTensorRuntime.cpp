@@ -821,8 +821,9 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELITER)
 #undef IMPL_DELITER
 
 char *getTensorFilename(index_type id) {
-  char var[80];
-  sprintf(var, "TENSOR%" PRIu64, id);
+  constexpr size_t BUF_SIZE = 80;
+  char var[BUF_SIZE];
+  snprintf(var, BUF_SIZE, "TENSOR%" PRIu64, id);
   char *env = getenv(var);
   if (!env)
     MLIR_SPARSETENSOR_FATAL("Environment variable %s is not set\n", var);
