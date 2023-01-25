@@ -25,16 +25,6 @@ static unsigned checkArchVersion(llvm::StringRef Arch) {
   return 0;
 }
 
-void AArch64::getFeatureOption(StringRef Name, std::string &Feature) {
-  for (const auto &E : llvm::AArch64::Extensions) {
-    if (Name == E.Name) {
-      Feature = E.Feature;
-      return;
-    }
-  }
-  Feature = Name.str();
-}
-
 std::optional<AArch64::ArchInfo> AArch64::getArchForCpu(StringRef CPU) {
   if (CPU == "generic")
     return ARMV8A;
