@@ -57,14 +57,13 @@ TEST(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan Plan;
   Plan.setEntry(VPBB1);
 
-  // TODO: UseI uses DefI but DefI does not dominate UseI. Currently missed by
-  // the verifier.
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
-  EXPECT_TRUE(VPlanVerifier::verifyPlanIsValid(Plan));
+  EXPECT_FALSE(VPlanVerifier::verifyPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("", ::testing::internal::GetCapturedStderr().c_str());
+  EXPECT_STREQ("Use before def!\n",
+               ::testing::internal::GetCapturedStderr().c_str());
 #endif
 }
 
@@ -99,14 +98,13 @@ TEST(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   VPlan Plan;
   Plan.setEntry(VPBB1);
 
-  // TODO: Blend uses Def but Def does not dominate Blend. Currently missed by
-  // the verifier.
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
-  EXPECT_TRUE(VPlanVerifier::verifyPlanIsValid(Plan));
+  EXPECT_FALSE(VPlanVerifier::verifyPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("", ::testing::internal::GetCapturedStderr().c_str());
+  EXPECT_STREQ("Use before def!\n",
+               ::testing::internal::GetCapturedStderr().c_str());
 #endif
 
   delete Phi;
