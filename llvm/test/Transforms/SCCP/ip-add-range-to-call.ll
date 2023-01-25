@@ -15,7 +15,7 @@ define i32 @caller1() {
 ; CHECK-LABEL: @caller1(
 ; CHECK-NEXT:    [[C1:%.*]] = call i32 @callee(i32 10), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @callee(i32 20), !range [[RNG0]]
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[C1]], [[C2]]
+; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[C1]], [[C2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %c1 = call i32 @callee(i32 10)
