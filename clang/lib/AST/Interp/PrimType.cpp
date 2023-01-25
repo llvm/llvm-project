@@ -8,7 +8,6 @@
 
 #include "PrimType.h"
 #include "Boolean.h"
-#include "Floating.h"
 #include "Pointer.h"
 
 using namespace clang;

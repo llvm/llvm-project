@@ -160,8 +160,6 @@ private:
     else if constexpr (std::is_same_v<T, uint64_t> ||
                        std::is_same_v<T, Integral<64, false>>)
       return PT_Uint64;
-    else if constexpr (std::is_same_v<T, Floating>)
-      return PT_Float;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

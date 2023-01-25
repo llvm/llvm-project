@@ -473,49 +473,6 @@ bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   return CheckFieldsInitialized(S, OpPC, This, R);
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
-  // In a constant context, assume that any dynamic rounding mode or FP
-  // exception state matches the default floating-point environment.
-  if (S.inConstantContext())
-    return true;
-
-  const SourceInfo &E = S.Current->getSource(OpPC);
-  FPOptions FPO = E.asExpr()->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-
-  if ((Status & APFloat::opInexact) &&
-      FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
-    // Inexact result means that it depends on rounding mode. If the requested
-    // mode is dynamic, the evaluation cannot be made in compile time.
-    S.FFDiag(E, diag::note_constexpr_dynamic_rounding);
-    return false;
-  }
-
-  if ((Status != APFloat::opOK) &&
-      (FPO.getRoundingMode() == llvm::RoundingMode::Dynamic ||
-       FPO.getExceptionMode() != LangOptions::FPE_Ignore ||
-       FPO.getAllowFEnvAccess())) {
-    S.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
-    return false;
-  }
-
-  if ((Status & APFloat::opStatus::opInvalidOp) &&
-      FPO.getExceptionMode() != LangOptions::FPE_Ignore) {
-    // There is no usefully definable result.
-    S.FFDiag(E);
-    return false;
-  }
-
-  return true;
-}
-
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM) {
-  Floating F = S.Stk.pop<Floating>();
-  Floating Result = F.toSemantics(Sem, RM);
-  S.Stk.push<Floating>(Result);
-  return true;
-}
-
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter

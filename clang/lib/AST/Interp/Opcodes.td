@@ -25,7 +25,6 @@ def Sint32 : Type;
 def Uint32 : Type;
 def Sint64 : Type;
 def Uint64 : Type;
-def Float : Type;
 def Ptr : Type;
 
 //===----------------------------------------------------------------------===//
@@ -41,14 +40,11 @@ def ArgSint32 : ArgType { let Name = "int32_t"; }
 def ArgUint32 : ArgType { let Name = "uint32_t"; }
 def ArgSint64 : ArgType { let Name = "int64_t"; }
 def ArgUint64 : ArgType { let Name = "uint64_t"; }
-def ArgFloat : ArgType { let Name = "Floating"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
-def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
-def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -58,21 +54,18 @@ class TypeClass {
   list<Type> Types;
 }
 
+def NumberTypeClass : TypeClass {
+  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
+               Uint32, Sint64, Uint64];
+}
+
 def IntegerTypeClass : TypeClass {
   let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
                Uint32, Sint64, Uint64];
 }
 
-def NumberTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Float]);
-}
-
-def FloatTypeClass : TypeClass {
-  let Types = [Float];
-}
-
 def AluTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool]);
+  let Types = !listconcat(NumberTypeClass.Types, [Bool]);
 }
 
 def PtrTypeClass : TypeClass {
@@ -83,16 +76,12 @@ def BoolTypeClass : TypeClass {
   let Types = [Bool];
 }
 
-def NonPtrTypeClass : TypeClass {
-  let Types = !listconcat(IntegerTypeClass.Types, [Bool], [Float]);
-}
-
 def AllTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types, FloatTypeClass.Types);
+  let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types);
 }
 
 def ComparableTypeClass : TypeClass {
-  let Types = !listconcat(AluTypeClass.Types, [Ptr], [Float]);
+  let Types = !listconcat(AluTypeClass.Types, [Ptr]);
 }
 
 class SingletonTypeClass<Type Ty> : TypeClass {
@@ -117,11 +106,6 @@ class Opcode {
 class AluOpcode : Opcode {
   let Types = [AluTypeClass];
   let HasGroup = 1;
-}
-
-class FloatOpcode : Opcode {
-  let Types = [];
-  let Args = [ArgRoundingMode];
 }
 
 class IntegerOpcode : Opcode {
@@ -215,7 +199,6 @@ def ConstSint32 : ConstOpcode<Sint32, ArgSint32>;
 def ConstUint32 : ConstOpcode<Uint32, ArgUint32>;
 def ConstSint64 : ConstOpcode<Sint64, ArgSint64>;
 def ConstUint64 : ConstOpcode<Uint64, ArgUint64>;
-def ConstFloat : ConstOpcode<Float, ArgFloat>;
 def ConstBool : ConstOpcode<Bool, ArgBool>;
 
 // [] -> [Integer]
@@ -436,19 +419,13 @@ def DecPtr : Opcode {
 //===----------------------------------------------------------------------===//
 
 // [Real, Real] -> [Real]
-def Add  : AluOpcode;
-def Addf : FloatOpcode;
-def Sub  : AluOpcode;
-def Subf : FloatOpcode;
-def Mul  : AluOpcode;
-def Mulf : FloatOpcode;
-def Rem  : IntegerOpcode;
-def Div  : IntegerOpcode;
-def Divf : FloatOpcode;
-
-def BitAnd : IntegerOpcode;
-def BitOr : IntegerOpcode;
-def BitXor : IntegerOpcode;
+def Sub : AluOpcode;
+def Add : AluOpcode;
+def Mul : AluOpcode;
+def Rem : Opcode {
+  let Types = [NumberTypeClass];
+  let HasGroup = 1;
+}
 
 def Shl : Opcode {
   let Types = [IntegerTypeClass, IntegerTypeClass];
@@ -459,6 +436,14 @@ def Shr : Opcode {
   let Types = [IntegerTypeClass, IntegerTypeClass];
   let HasGroup = 1;
 }
+
+def BitAnd : IntegerOpcode;
+def BitOr : IntegerOpcode;
+def Div : Opcode {
+  let Types = [NumberTypeClass];
+  let HasGroup = 1;
+}
+def BitXor : IntegerOpcode;
 
 //===----------------------------------------------------------------------===//
 // Unary operators.
@@ -477,19 +462,20 @@ def DecPop: IntegerOpcode;
 
 // [Real] -> [Real]
 def Neg: Opcode {
-  let Types = [NonPtrTypeClass];
+  let Types = [AluTypeClass];
   let HasGroup = 1;
 }
 
 // [Real] -> [Real]
 def Comp: Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [NumberTypeClass];
   let HasGroup = 1;
 }
 
 //===----------------------------------------------------------------------===//
-// Cast, CastFP.
+// Cast.
 //===----------------------------------------------------------------------===//
+// TODO: Expand this to handle casts between more types.
 
 def FromCastTypeClass : TypeClass {
   let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
@@ -501,25 +487,6 @@ def ToCastTypeClass : TypeClass {
 
 def Cast: Opcode {
   let Types = [FromCastTypeClass, ToCastTypeClass];
-  let HasGroup = 1;
-}
-
-def CastFP : Opcode {
-  let Types = [];
-  let Args = [ArgFltSemantics, ArgRoundingMode];
-}
-
-// Cast an integer to a floating type
-def CastIntegralFloating : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [ArgFltSemantics, ArgRoundingMode];
-  let HasGroup = 1;
-}
-
-// Cast a floating to an integer type
-def CastFloatingIntegral : Opcode {
-  let Types = [AluTypeClass];
-  let Args = [];
   let HasGroup = 1;
 }
 
