@@ -587,7 +587,7 @@ void RVVEmitter::createRVVIntrinsics(
           continue;
         // Create a masked intrinsic
         std::optional<RVVTypes> MaskTypes =
-            TypeCache.computeTypes(BT, Log2LMUL, NF, Prototype);
+            TypeCache.computeTypes(BT, Log2LMUL, NF, MaskedPrototype);
         Out.push_back(std::make_unique<RVVIntrinsic>(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
