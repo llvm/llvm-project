@@ -117,3 +117,78 @@ else:
   %res.6 = xor i8 %res.5, %add.8
   ret i8 %res.6
 }
+
+define i16 @sge_with_sext_to_zext_conversion(i8 %a)  {
+; CHECK-LABEL: @sge_with_sext_to_zext_conversion(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[SEXT:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[ADD_1:%.*]] = add i16 [[SEXT]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i16 [[SEXT]], -128
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i16 [[SEXT]], -127
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i16 [[ADD_1]], [[ADD_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i16 [[RES_1]], [[ADD_3]]
+; CHECK-NEXT:    ret i16 [[RES_2]]
+; CHECK:       else:
+; CHECK-NEXT:    [[SEXT_2:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[ADD_4:%.*]] = add i16 [[SEXT_2]], 1
+; CHECK-NEXT:    [[ADD_5:%.*]] = add i16 [[SEXT_2]], -128
+; CHECK-NEXT:    [[ADD_6:%.*]] = add i16 [[SEXT_2]], -127
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i16 [[ADD_4]], [[ADD_5]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i16 [[RES_3]], [[ADD_6]]
+; CHECK-NEXT:    ret i16 [[RES_4]]
+;
+entry:
+  %cmp = icmp sgt i8 %a, 0
+  br i1 %cmp, label %then, label %else
+
+then:
+  %sext = sext i8 %a to i16
+  %add.1 = add i16 %sext, 1
+  %add.2 = add i16 %sext, 65408
+  %add.3 = add i16 %sext, 65409
+  %res.1 = xor i16 %add.1, %add.2
+  %res.2 = xor i16 %res.1, %add.3
+  ret i16 %res.2
+
+else:
+  %sext.2 = sext i8 %a to i16
+  %add.4 = add i16 %sext.2, 1
+  %add.5 = add i16 %sext.2, 65408
+  %add.6 = add i16 %sext.2, 65409
+  %res.3 = xor i16 %add.4, %add.5
+  %res.4 = xor i16 %res.3, %add.6
+  ret i16 %res.4
+}
+
+@c = internal global <6 x i8> zeroinitializer, align 8
+
+; Test case for PR60280.
+define <6 x i8> @vector_constant_replacement_in_add(<6 x i8> %a) {
+; CHECK-LABEL: @vector_constant_replacement_in_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add <6 x i8> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <6 x i8> [[ADD]]
+;
+entry:
+  %c = load <6 x i8>, ptr @c, align 8
+  %add = add <6 x i8> %a, %c
+  ret <6 x i8> %add
+}
+
+declare i32 @callee()
+
+; Test case for PR60278.
+define i64 @constant_ptrtoint_replacement(i64 %a) {
+; CHECK-LABEL: @constant_ptrtoint_replacement(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RES:%.*]] = add i64 [[A:%.*]], ptrtoint (ptr @callee to i64)
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  %fn.addr = ptrtoint ptr @callee to i64
+  %res = add i64 %a, %fn.addr
+  ret i64 %res
+}
