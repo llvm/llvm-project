@@ -99,6 +99,7 @@ static_library("AST") {
     "Interp/Descriptor.cpp",
     "Interp/Disasm.cpp",
     "Interp/EvalEmitter.cpp",
+    "Interp/Floating.cpp",
     "Interp/Frame.cpp",
     "Interp/Function.cpp",
     "Interp/Interp.cpp",
