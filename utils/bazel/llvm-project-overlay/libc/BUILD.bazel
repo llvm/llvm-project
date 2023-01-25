@@ -1103,6 +1103,7 @@ libc_support_library(
         "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
+        "src/string/memory_utils/strstr_implementations.h",
     ],
     deps = [
         ":__support_common",
@@ -1315,6 +1316,7 @@ libc_function(
     hdrs = ["src/string/strstr.h"],
     deps = [
         ":__support_common",
+        ":string_memory_utils",
         ":string_utils",
     ],
 )
