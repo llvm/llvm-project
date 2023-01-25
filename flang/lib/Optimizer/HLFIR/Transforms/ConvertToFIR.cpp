@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
+#include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -28,6 +29,37 @@ namespace hlfir {
 } // namespace hlfir
 
 using namespace mlir;
+
+static mlir::Value genAllocatableTempFromSourceBox(mlir::Location loc,
+                                                   fir::FirOpBuilder &builder,
+                                                   mlir::Value sourceBox) {
+  assert(sourceBox.getType().isa<fir::BaseBoxType>() &&
+         "must be a base box type");
+  // Use the runtime to make a quick and dirty temp with the rhs value.
+  // Overkill for scalar rhs that could be done in much more clever ways.
+  // Note that temp descriptor must have the allocatable flag set so that
+  // the runtime will allocate it with the shape and type parameters of
+  // the RHS.
+  // This has the huge benefit of dealing with all cases, including
+  // polymorphic entities.
+  mlir::Type fromHeapType = fir::HeapType::get(
+      fir::unwrapRefType(sourceBox.getType().cast<fir::BoxType>().getEleTy()));
+  mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
+  auto fromMutableBox = builder.createTemporary(loc, fromBoxHeapType);
+  mlir::Value unallocatedBox =
+      fir::factory::createUnallocatedBox(builder, loc, fromBoxHeapType, {});
+  builder.create<fir::StoreOp>(loc, unallocatedBox, fromMutableBox);
+  fir::runtime::genAssign(builder, loc, fromMutableBox, sourceBox);
+  mlir::Value copy = builder.create<fir::LoadOp>(loc, fromMutableBox);
+  return copy;
+}
+
+static std::pair<mlir::Value, bool>
+genTempFromSourceBox(mlir::Location loc, fir::FirOpBuilder &builder,
+                     mlir::Value sourceBox) {
+  return {genAllocatableTempFromSourceBox(loc, builder, sourceBox),
+          /*cleanUpTemp=*/true};
+}
 
 namespace {
 /// May \p lhs alias with \p rhs?
@@ -65,23 +97,9 @@ public:
       auto to = fir::getBase(builder.createBox(loc, lhsExv));
       auto from = fir::getBase(builder.createBox(loc, rhsExv));
       bool cleanUpTemp = false;
-      mlir::Type fromHeapType = fir::HeapType::get(
-          fir::unwrapRefType(from.getType().cast<fir::BoxType>().getEleTy()));
-      if (mayAlias(rhs, lhs)) {
-        /// Use the runtime to make a quick and dirty temp with the rhs value.
-        /// Overkill for scalar rhs that could be done in much more clever ways.
-        /// Note that temp descriptor must have the allocatable flag set so that
-        /// the runtime will allocate it with the shape and type parameters of
-        //  the RHS.
-        mlir::Type fromBoxHeapType = fir::BoxType::get(fromHeapType);
-        auto fromMutableBox = builder.createTemporary(loc, fromBoxHeapType);
-        mlir::Value unallocatedBox = fir::factory::createUnallocatedBox(
-            builder, loc, fromBoxHeapType, {});
-        builder.create<fir::StoreOp>(loc, unallocatedBox, fromMutableBox);
-        fir::runtime::genAssign(builder, loc, fromMutableBox, from);
-        cleanUpTemp = true;
-        from = builder.create<fir::LoadOp>(loc, fromMutableBox);
-      }
+      if (mayAlias(rhs, lhs))
+        std::tie(from, cleanUpTemp) = genTempFromSourceBox(loc, builder, from);
+
       auto toMutableBox = builder.createTemporary(loc, to.getType());
       // As per 10.2.1.2 point 1 (1) polymorphic variables must be allocatable.
       // It is assumed here that they have been reallocated with the dynamic
@@ -89,8 +107,7 @@ public:
       builder.create<fir::StoreOp>(loc, to, toMutableBox);
       fir::runtime::genAssign(builder, loc, toMutableBox, from);
       if (cleanUpTemp) {
-        mlir::Value addr =
-            builder.create<fir::BoxAddrOp>(loc, fromHeapType, from);
+        mlir::Value addr = builder.create<fir::BoxAddrOp>(loc, from);
         builder.create<fir::FreeMemOp>(loc, addr);
       }
     } else {
@@ -105,6 +122,122 @@ public:
       fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv);
     }
     rewriter.eraseOp(assignOp);
+    return mlir::success();
+  }
+};
+
+class CopyInOpConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
+public:
+  explicit CopyInOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
+
+  struct CopyInResult {
+    mlir::Value addr;
+    mlir::Value wasCopied;
+  };
+
+  static CopyInResult genNonOptionalCopyIn(mlir::Location loc,
+                                           fir::FirOpBuilder &builder,
+                                           hlfir::CopyInOp copyInOp) {
+    mlir::Value inputVariable = copyInOp.getVar();
+    mlir::Type resultAddrType = copyInOp.getCopiedIn().getType();
+    mlir::Value isContiguous =
+        fir::runtime::genIsContiguous(builder, loc, inputVariable);
+    mlir::Value addr =
+        builder
+            .genIfOp(loc, {resultAddrType}, isContiguous,
+                     /*withElseRegion=*/true)
+            .genThen(
+                [&]() { builder.create<fir::ResultOp>(loc, inputVariable); })
+            .genElse([&] {
+              // Create temporary on the heap. Note that the runtime is used and
+              // that is desired: since the data copy happens under a runtime
+              // check (for IsContiguous) the copy loops can hardly provide any
+              // value to optimizations, instead, the optimizer just wastes
+              // compilation time on these loops.
+              mlir::Value temp =
+                  genAllocatableTempFromSourceBox(loc, builder, inputVariable);
+              // Get rid of allocatable flag in the fir.box.
+              temp = builder.create<fir::ReboxOp>(loc, resultAddrType, temp,
+                                                  /*shape=*/mlir::Value{},
+                                                  /*slice=*/mlir::Value{});
+              builder.create<fir::ResultOp>(loc, temp);
+            })
+            .getResults()[0];
+    return {addr, builder.genNot(loc, isContiguous)};
+  }
+
+  static CopyInResult genOptionalCopyIn(mlir::Location loc,
+                                        fir::FirOpBuilder &builder,
+                                        hlfir::CopyInOp copyInOp) {
+    mlir::Type resultAddrType = copyInOp.getCopiedIn().getType();
+    mlir::Value isPresent = copyInOp.getVarIsPresent();
+    auto res =
+        builder
+            .genIfOp(loc, {resultAddrType, builder.getI1Type()}, isPresent,
+                     /*withElseRegion=*/true)
+            .genThen([&]() {
+              CopyInResult res = genNonOptionalCopyIn(loc, builder, copyInOp);
+              builder.create<fir::ResultOp>(
+                  loc, mlir::ValueRange{res.addr, res.wasCopied});
+            })
+            .genElse([&] {
+              mlir::Value absent =
+                  builder.create<fir::AbsentOp>(loc, resultAddrType);
+              builder.create<fir::ResultOp>(
+                  loc, mlir::ValueRange{absent, isPresent});
+            })
+            .getResults();
+    return {res[0], res[1]};
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::CopyInOp copyInOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = copyInOp.getLoc();
+    auto module = copyInOp->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    CopyInResult result = copyInOp.getVarIsPresent()
+                              ? genOptionalCopyIn(loc, builder, copyInOp)
+                              : genNonOptionalCopyIn(loc, builder, copyInOp);
+    rewriter.replaceOp(copyInOp, {result.addr, result.wasCopied});
+    return mlir::success();
+  }
+};
+
+class CopyOutOpConversion : public mlir::OpRewritePattern<hlfir::CopyOutOp> {
+public:
+  explicit CopyOutOpConversion(mlir::MLIRContext *ctx)
+      : OpRewritePattern{ctx} {}
+
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::CopyOutOp copyOutOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Location loc = copyOutOp.getLoc();
+    auto module = copyOutOp->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+
+    builder.genIfThen(loc, copyOutOp.getWasCopied())
+        .genThen([&]() {
+          mlir::Value temp = copyOutOp.getTemp();
+          if (mlir::Value var = copyOutOp.getVar()) {
+            auto mutableBox = builder.createTemporary(loc, var.getType());
+            builder.create<fir::StoreOp>(loc, var, mutableBox);
+            // Generate Assign() call to copy data from the temporary
+            // to the variable. Note that in case the actual argument
+            // is ALLOCATABLE/POINTER the Assign() implementation
+            // should not engage its reallocation, because the temporary
+            // is rank, shape and type compatible with it (it was created
+            // from the variable).
+            fir::runtime::genAssign(builder, loc, mutableBox, temp);
+          }
+          mlir::Type heapType =
+              fir::HeapType::get(fir::dyn_cast_ptrOrBoxEleTy(temp.getType()));
+          mlir::Value tempAddr =
+              builder.create<fir::BoxAddrOp>(loc, heapType, temp);
+          builder.create<fir::FreeMemOp>(loc, tempAddr);
+        })
+        .end();
+    rewriter.eraseOp(copyOutOp);
     return mlir::success();
   }
 };
@@ -390,9 +523,9 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<AssignOpConversion, DeclareOpConversion, DesignateOpConversion,
-                NoReassocOpConversion, NullOpConversion>(context);
+    patterns.insert<AssignOpConversion, CopyInOpConversion, CopyOutOpConversion,
+                    DeclareOpConversion, DesignateOpConversion,
+                    NoReassocOpConversion, NullOpConversion>(context);
     mlir::ConversionTarget target(*context);
     target.addIllegalDialect<hlfir::hlfirDialect>();
     target.markUnknownOpDynamicallyLegal(
@@ -405,6 +538,7 @@ public:
     }
   }
 };
+
 } // namespace
 
 std::unique_ptr<mlir::Pass> hlfir::createConvertHLFIRtoFIRPass() {
