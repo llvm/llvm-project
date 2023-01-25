@@ -190,11 +190,10 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX1200:
       IsWave32Capable = true;
       Features["ci-insts"] = true;
-      Features["dot1-insts"] = true;
       Features["dot5-insts"] = true;
-      Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
+      Features["dot9-insts"] = true;
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
@@ -217,6 +216,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
       Features["dot8-insts"] = true;
+      Features["dot9-insts"] = true;
       Features["dl-insts"] = true;
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;

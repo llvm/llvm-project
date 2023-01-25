@@ -146,6 +146,7 @@ protected:
   bool HasDot6Insts = false;
   bool HasDot7Insts = false;
   bool HasDot8Insts = false;
+  bool HasDot9Insts = false;
   bool HasMAIInsts = false;
   bool HasFP8Insts = false;
   bool HasPkFmacF16Inst = false;
@@ -740,6 +741,10 @@ public:
 
   bool hasDot8Insts() const {
     return HasDot8Insts;
+  }
+
+  bool hasDot9Insts() const {
+    return HasDot9Insts;
   }
 
   bool hasMAIInsts() const {

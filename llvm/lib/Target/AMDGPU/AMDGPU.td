@@ -599,8 +599,13 @@ def FeatureDot7Insts : SubtargetFeature<"dot7-insts",
 def FeatureDot8Insts : SubtargetFeature<"dot8-insts",
   "HasDot8Insts",
   "true",
-  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16, "
-  "v_dot4_i32_iu8, v_dot8_i32_iu4 instructions"
+  "Has v_dot4_i32_iu8, v_dot8_i32_iu4 instructions"
+>;
+
+def FeatureDot9Insts : SubtargetFeature<"dot9-insts",
+  "HasDot9Insts",
+  "true",
+  "Has v_dot2_f16_f16, v_dot2_bf16_bf16, v_dot2_f32_bf16 instructions"
 >;
 
 def FeatureMAIInsts : SubtargetFeature<"mai-insts",
@@ -999,7 +1004,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
-   FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeatureVOP3Literal, FeatureDPP8,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureA16, FeatureFastDenormalF32, FeatureG16,
    FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
@@ -1353,6 +1358,7 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
+   FeatureDot9Insts,
    FeatureNSAEncoding,
    FeatureNSAMaxSize5,
    FeatureWavefrontSize32,
@@ -1401,6 +1407,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
+   FeatureDot9Insts,
    FeatureNSAEncoding,
    FeatureNSAMaxSize5,
    FeatureWavefrontSize32,
@@ -1409,6 +1416,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureImageInsts,
+   FeatureExtendedImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
    FeatureSALUFloatInsts,
@@ -1855,6 +1863,9 @@ def HasDot7Insts : Predicate<"Subtarget->hasDot7Insts()">,
 
 def HasDot8Insts : Predicate<"Subtarget->hasDot8Insts()">,
   AssemblerPredicate<(all_of FeatureDot8Insts)>;
+
+def HasDot9Insts : Predicate<"Subtarget->hasDot9Insts()">,
+  AssemblerPredicate<(all_of FeatureDot9Insts)>;
 
 def HasGetWaveIdInst : Predicate<"Subtarget->hasGetWaveIdInst()">,
   AssemblerPredicate<(all_of FeatureGetWaveIdInst)>;
