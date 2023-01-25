@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
@@ -39,12 +40,72 @@ public:
     return "apply transform dialect operations one by one";
   }
 
+  ArrayRef<transform::MappedValue>
+  findOperationsByName(Operation *root, StringRef name,
+                       SmallVectorImpl<transform::MappedValue> &storage) {
+    size_t start = storage.size();
+    root->walk([&](Operation *op) {
+      if (op->getName().getStringRef() == name) {
+        storage.push_back(op);
+      }
+    });
+    return ArrayRef(storage).drop_front(start);
+  }
+
+  ArrayRef<transform::MappedValue>
+  createParameterMapping(MLIRContext &context, ArrayRef<int> values,
+                         SmallVectorImpl<transform::MappedValue> &storage) {
+    size_t start = storage.size();
+    llvm::append_range(storage, llvm::map_range(values, [&](int v) {
+                         Builder b(&context);
+                         return transform::MappedValue(b.getI64IntegerAttr(v));
+                       }));
+    return ArrayRef(storage).drop_front(start);
+  }
+
   void runOnOperation() override {
+    if (!bindFirstExtraToOps.empty() && !bindFirstExtraToParams.empty()) {
+      emitError(UnknownLoc::get(&getContext()))
+          << "cannot bind the first extra top-level argument to both "
+             "operations and parameters";
+      return signalPassFailure();
+    }
+    if (!bindSecondExtraToOps.empty() && !bindSecondExtraToParams.empty()) {
+      emitError(UnknownLoc::get(&getContext()))
+          << "cannot bind the second extra top-level argument to both "
+             "operations and parameters";
+      return signalPassFailure();
+    }
+    if ((!bindSecondExtraToOps.empty() || !bindSecondExtraToParams.empty()) &&
+        bindFirstExtraToOps.empty() && bindFirstExtraToParams.empty()) {
+      emitError(UnknownLoc::get(&getContext()))
+          << "cannot bind the second extra top-level argument without binding "
+             "the first";
+      return signalPassFailure();
+    }
+
+    SmallVector<transform::MappedValue> extraMappingStorage;
+    SmallVector<ArrayRef<transform::MappedValue>> extraMapping;
+    if (!bindFirstExtraToOps.empty()) {
+      extraMapping.push_back(findOperationsByName(
+          getOperation(), bindFirstExtraToOps.getValue(), extraMappingStorage));
+    } else if (!bindFirstExtraToParams.empty()) {
+      extraMapping.push_back(createParameterMapping(
+          getContext(), bindFirstExtraToParams, extraMappingStorage));
+    }
+    if (!bindSecondExtraToOps.empty()) {
+      extraMapping.push_back(findOperationsByName(
+          getOperation(), bindSecondExtraToOps, extraMappingStorage));
+    } else if (!bindSecondExtraToParams.empty()) {
+      extraMapping.push_back(createParameterMapping(
+          getContext(), bindSecondExtraToParams, extraMappingStorage));
+    }
+
     ModuleOp module = getOperation();
     for (auto op :
          module.getBody()->getOps<transform::TransformOpInterface>()) {
       if (failed(transform::applyTransforms(
-              module, op,
+              module, op, extraMapping,
               transform::TransformOptions().enableExpensiveChecks(
                   enableExpensiveChecks))))
         return signalPassFailure();
@@ -55,6 +116,24 @@ public:
       *this, "enable-expensive-checks", llvm::cl::init(false),
       llvm::cl::desc("perform expensive checks to better report errors in the "
                      "transform IR")};
+
+  Option<std::string> bindFirstExtraToOps{
+      *this, "bind-first-extra-to-ops",
+      llvm::cl::desc("bind the first extra argument of the top-level op to "
+                     "payload operations of the given kind")};
+  ListOption<int> bindFirstExtraToParams{
+      *this, "bind-first-extra-to-params",
+      llvm::cl::desc("bind the first extra argument of the top-level op to "
+                     "the given integer parameters")};
+
+  Option<std::string> bindSecondExtraToOps{
+      *this, "bind-second-extra-to-ops",
+      llvm::cl::desc("bind the second extra argument of the top-level op to "
+                     "payload operations of the given kind")};
+  ListOption<int> bindSecondExtraToParams{
+      *this, "bind-second-extra-to-params",
+      llvm::cl::desc("bind the second extra argument of the top-level op to "
+                     "the given integer parameters")};
 };
 
 struct TestTransformDialectEraseSchedulePass
