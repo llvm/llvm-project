@@ -103,6 +103,7 @@ static_library("AST") {
     "Interp/Function.cpp",
     "Interp/Interp.cpp",
     "Interp/InterpBlock.cpp",
+    "Interp/InterpBuiltin.cpp",
     "Interp/InterpFrame.cpp",
     "Interp/InterpStack.cpp",
     "Interp/InterpState.cpp",
