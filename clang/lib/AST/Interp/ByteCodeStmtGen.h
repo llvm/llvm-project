@@ -62,6 +62,9 @@ private:
   bool visitForStmt(const ForStmt *S);
   bool visitBreakStmt(const BreakStmt *S);
   bool visitContinueStmt(const ContinueStmt *S);
+  bool visitSwitchStmt(const SwitchStmt *S);
+  bool visitCaseStmt(const CaseStmt *S);
+  bool visitDefaultStmt(const DefaultStmt *S);
 
   /// Type of the expression returned by the function.
   std::optional<PrimType> ReturnType;
