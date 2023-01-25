@@ -1,10 +1,10 @@
-; RUN: opt -loop-rotate -licm -verify-memoryssa %s -S | FileCheck %s
+; RUN: opt -passes='loop-mssa(loop-rotate,licm)' -verify-memoryssa %s -S | FileCheck %s
 ; REQUIRES: asserts
 
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; CHECK-LABEL: @func_42()
 define void @func_42() {
@@ -20,8 +20,8 @@ for.cond1050:                                     ; preds = %for.cond1050.loopex
   br i1 %cmp1051, label %for.cond1055.preheader, label %cleanup1400.loopexit1
 
 for.cond1055.preheader:                           ; preds = %for.cond1050
-  store i64 0, i64* null, align 8
-  %0 = load i64, i64* null, align 8
+  store i64 0, ptr null, align 8
+  %0 = load i64, ptr null, align 8
   %tobool1383 = icmp eq i64 %0, 0
   br i1 %tobool1383, label %for.cond1055.preheader.cleanup1400.loopexit.split_crit_edge, label %for.cond1055.preheader.for.cond1055.preheader.split_crit_edge
 
@@ -47,6 +47,6 @@ cleanup1400.loopexit1:                            ; preds = %for.cond1050
   br label %cleanup1400
 
 cleanup1400:                                      ; preds = %cleanup1400.loopexit1, %cleanup1400.loopexit.split
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull undef)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull undef)
   unreachable
 }

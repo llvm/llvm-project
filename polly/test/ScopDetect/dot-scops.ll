@@ -11,7 +11,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @func(i32 %n, i32 %m, double* noalias nonnull %A) {
+define void @func(i32 %n, i32 %m, ptr noalias nonnull %A) {
 entry:
   br label %outer.for
 
@@ -27,9 +27,9 @@ outer.for:
     br i1 %i.cmp, label %body1, label %inner.exit
 
     body1:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %i
-      %a = load double, double* %A_idx
-      store double %a, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %i
+      %a = load double, ptr %A_idx
+      store double %a, ptr %A_idx
       br label %inner.inc
 
   inner.inc:
@@ -40,7 +40,7 @@ outer.for:
     br label %outer.inc
 
 outer.inc:
-  store double %b, double* %A
+  store double %b, ptr %A
   %j.inc = add nuw nsw i32 %j, 1
   br label %outer.for
 

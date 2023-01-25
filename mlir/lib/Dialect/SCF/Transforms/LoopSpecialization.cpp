@@ -11,20 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCFFORLOOPPEELING
+#define GEN_PASS_DEF_SCFFORLOOPSPECIALIZATION
+#define GEN_PASS_DEF_SCFPARALLELLOOPSPECIALIZATION
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using scf::ForOp;
@@ -52,7 +59,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   }
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value cond;
   for (auto bound : llvm::zip(op.getUpperBound(), constantIndices)) {
     Value constant =
@@ -86,7 +93,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
     return;
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value constant = b.create<arith::ConstantIndexOp>(op.getLoc(), minConstant);
   Value cond = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
                                        bound, constant);
@@ -147,7 +154,6 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-template <typename OpTy, bool IsMin>
 static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
                                         ForOp partialIteration,
                                         Value previousUb) {
@@ -157,18 +163,20 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
          "expected same step in main and partial loop");
   Value step = forOp.getStep();
 
-  forOp.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.operands(), IsMin, mainIv,
-                                     previousUb, step,
+  forOp.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, mainIv, previousUb,
+                                     step,
                                      /*insideLoop=*/true);
+    return WalkResult::advance();
   });
-  partialIteration.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.operands(), IsMin, partialIv,
-                                     previousUb, step, /*insideLoop=*/false);
+  partialIteration.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, partialIv, previousUb,
+                                     step, /*insideLoop=*/false);
+    return WalkResult::advance();
   });
 }
 
@@ -181,10 +189,7 @@ LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
     return failure();
 
   // Rewrite affine.min and affine.max ops.
-  rewriteAffineOpAfterPeeling<AffineMinOp, /*IsMin=*/true>(
-      rewriter, forOp, partialIteration, previousUb);
-  rewriteAffineOpAfterPeeling<AffineMaxOp, /*IsMin=*/false>(
-      rewriter, forOp, partialIteration, previousUb);
+  rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
 
   return success();
 }
@@ -235,7 +240,8 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
 namespace {
 struct ParallelLoopSpecialization
-    : public SCFParallelLoopSpecializationBase<ParallelLoopSpecialization> {
+    : public impl::SCFParallelLoopSpecializationBase<
+          ParallelLoopSpecialization> {
   void runOnOperation() override {
     getOperation()->walk(
         [](ParallelOp op) { specializeParallelLoopForUnrolling(op); });
@@ -243,13 +249,13 @@ struct ParallelLoopSpecialization
 };
 
 struct ForLoopSpecialization
-    : public SCFForLoopSpecializationBase<ForLoopSpecialization> {
+    : public impl::SCFForLoopSpecializationBase<ForLoopSpecialization> {
   void runOnOperation() override {
     getOperation()->walk([](ForOp op) { specializeForLoopForUnrolling(op); });
   }
 };
 
-struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
+struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
   void runOnOperation() override {
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();

@@ -94,11 +94,63 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  // Set up fields and context if a constructor.
-  if (auto *MD = dyn_cast<CXXMethodDecl>(F))
-    return this->bail(MD);
+  // Constructor. Set up field initializers.
+  if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
+    const RecordDecl *RD = Ctor->getParent();
+    const Record *R = this->getRecord(RD);
+    if (!R)
+      return false;
 
-  if (auto *Body = F->getBody())
+    for (const auto *Init : Ctor->inits()) {
+      const Expr *InitExpr = Init->getInit();
+      if (const FieldDecl *Member = Init->getMember()) {
+        const Record::Field *F = R->getField(Member);
+
+        if (std::optional<PrimType> T = this->classify(InitExpr)) {
+          if (!this->emitThis(InitExpr))
+            return false;
+
+          if (!this->visit(InitExpr))
+            return false;
+
+          if (!this->emitInitField(*T, F->Offset, InitExpr))
+            return false;
+
+          if (!this->emitPopPtr(InitExpr))
+            return false;
+        } else {
+          // Non-primitive case. Get a pointer to the field-to-initialize
+          // on the stack and call visitInitialzer() for it.
+          if (!this->emitThis(InitExpr))
+            return false;
+
+          if (!this->emitGetPtrField(F->Offset, InitExpr))
+            return false;
+
+          if (!this->visitInitializer(InitExpr))
+            return false;
+
+          if (!this->emitPopPtr(InitExpr))
+            return false;
+        }
+      } else if (const Type *Base = Init->getBaseClass()) {
+        // Base class initializer.
+        // Get This Base and call initializer on it.
+        auto *BaseDecl = Base->getAsCXXRecordDecl();
+        assert(BaseDecl);
+        const Record::Base *B = R->getBase(BaseDecl);
+        assert(B);
+        if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
+          return false;
+        if (!this->visitInitializer(InitExpr))
+          return false;
+        if (!this->emitPopPtr(InitExpr))
+          return false;
+      }
+    }
+  }
+
+  if (const auto *Body = F->getBody())
     if (!visitStmt(Body))
       return false;
 
@@ -120,6 +172,16 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitReturnStmt(cast<ReturnStmt>(S));
   case Stmt::IfStmtClass:
     return visitIfStmt(cast<IfStmt>(S));
+  case Stmt::WhileStmtClass:
+    return visitWhileStmt(cast<WhileStmt>(S));
+  case Stmt::DoStmtClass:
+    return visitDoStmt(cast<DoStmt>(S));
+  case Stmt::ForStmtClass:
+    return visitForStmt(cast<ForStmt>(S));
+  case Stmt::BreakStmtClass:
+    return visitBreakStmt(cast<BreakStmt>(S));
+  case Stmt::ContinueStmtClass:
+    return visitContinueStmt(cast<ContinueStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -145,7 +207,7 @@ bool ByteCodeStmtGen<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (auto *D : DS->decls()) {
     // Variable declarator.
     if (auto *VD = dyn_cast<VarDecl>(D)) {
-      if (!visitVarDecl(VD))
+      if (!this->visitVarDecl(VD))
         return false;
       continue;
     }
@@ -171,18 +233,21 @@ bool ByteCodeStmtGen<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       return this->emitRet(*ReturnType, RS);
     } else {
       // RVO - construct the value in the return location.
-      auto ReturnLocation = [this, RE] { return this->emitGetParamPtr(0, RE); };
-      if (!this->visitInitializer(RE, ReturnLocation))
+      if (!this->emitRVOPtr(RE))
         return false;
+      if (!this->visitInitializer(RE))
+        return false;
+      if (!this->emitPopPtr(RE))
+        return false;
+
       this->emitCleanup();
       return this->emitRetVoid(RS);
     }
-  } else {
-    this->emitCleanup();
-    if (!this->emitRetVoid(RS))
-      return false;
-    return true;
   }
+
+  // Void return.
+  this->emitCleanup();
+  return this->emitRetVoid(RS);
 }
 
 template <class Emitter>
@@ -231,33 +296,99 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
 }
 
 template <class Emitter>
-bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
-  auto DT = VD->getType();
+bool ByteCodeStmtGen<Emitter>::visitWhileStmt(const WhileStmt *S) {
+  const Expr *Cond = S->getCond();
+  const Stmt *Body = S->getBody();
 
-  if (!VD->hasLocalStorage()) {
-    // No code generation required.
-    return true;
-  }
+  LabelTy CondLabel = this->getLabel(); // Label before the condition.
+  LabelTy EndLabel = this->getLabel();  // Label after the loop.
+  LoopScope<Emitter> LS(this, EndLabel, CondLabel);
 
-  // Integers, pointers, primitives.
-  if (Optional<PrimType> T = this->classify(DT)) {
-    auto Off = this->allocateLocalPrimitive(VD, *T, DT.isConstQualified());
-    // Compile the initialiser in its own scope.
-    {
-      ExprScope<Emitter> Scope(this);
-      if (!this->visit(VD->getInit()))
-        return false;
-    }
-    // Set the value.
-    return this->emitSetLocal(*T, Off, VD);
-  } else {
-    // Composite types - allocate storage and initialize it.
-    if (auto Off = this->allocateLocal(VD)) {
-      return this->visitLocalInitializer(VD->getInit(), *Off);
-    } else {
-      return this->bail(VD);
-    }
+  this->emitLabel(CondLabel);
+  if (!this->visitBool(Cond))
+    return false;
+  if (!this->jumpFalse(EndLabel))
+    return false;
+
+  if (!this->visitStmt(Body))
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+
+  this->emitLabel(EndLabel);
+
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitDoStmt(const DoStmt *S) {
+  const Expr *Cond = S->getCond();
+  const Stmt *Body = S->getBody();
+
+  LabelTy StartLabel = this->getLabel();
+  LabelTy EndLabel = this->getLabel();
+  LabelTy CondLabel = this->getLabel();
+  LoopScope<Emitter> LS(this, EndLabel, CondLabel);
+
+  this->emitLabel(StartLabel);
+  if (!this->visitStmt(Body))
+    return false;
+  this->emitLabel(CondLabel);
+  if (!this->visitBool(Cond))
+    return false;
+  if (!this->jumpTrue(StartLabel))
+    return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
+  // for (Init; Cond; Inc) { Body }
+  const Stmt *Init = S->getInit();
+  const Expr *Cond = S->getCond();
+  const Expr *Inc = S->getInc();
+  const Stmt *Body = S->getBody();
+
+  LabelTy EndLabel = this->getLabel();
+  LabelTy CondLabel = this->getLabel();
+  LabelTy IncLabel = this->getLabel();
+  LoopScope<Emitter> LS(this, EndLabel, IncLabel);
+
+  if (Init && !this->visitStmt(Init))
+    return false;
+  this->emitLabel(CondLabel);
+  if (Cond) {
+    if (!this->visitBool(Cond))
+      return false;
+    if (!this->jumpFalse(EndLabel))
+      return false;
   }
+  if (Body && !this->visitStmt(Body))
+    return false;
+  this->emitLabel(IncLabel);
+  if (Inc && !this->discard(Inc))
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitBreakStmt(const BreakStmt *S) {
+  if (!BreakLabel)
+    return false;
+
+  return this->jump(*BreakLabel);
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
+  if (!ContinueLabel)
+    return false;
+
+  return this->jump(*ContinueLabel);
 }
 
 namespace clang {

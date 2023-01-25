@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("WebAssemblyTests") {
   deps = [
@@ -10,6 +10,7 @@ unittest("WebAssemblyTests") {
     "//llvm/lib/Target/WebAssembly:LLVMWebAssemblyCodeGen",
     "//llvm/lib/Target/WebAssembly/MCTargetDesc",
     "//llvm/lib/Target/WebAssembly/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "//llvm/lib/Target/WebAssembly" ]
   sources = [ "WebAssemblyExceptionInfoTest.cpp" ]

@@ -1,51 +1,51 @@
-; RUN: opt < %s -tbaa -basic-aa -dse -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=tbaa,basic-aa -passes=dse -S | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; DSE should make use of TBAA.
 
 ; CHECK: @test0_yes
-; CHECK-NEXT: load i8, i8* %b
-; CHECK-NEXT: store i8 1, i8* %a
+; CHECK-NEXT: load i8, ptr %b
+; CHECK-NEXT: store i8 1, ptr %a
 ; CHECK-NEXT: ret i8 %y
-define i8 @test0_yes(i8* %a, i8* %b) nounwind {
-  store i8 0, i8* %a, !tbaa !1
-  %y = load i8, i8* %b, !tbaa !2
-  store i8 1, i8* %a, !tbaa !1
+define i8 @test0_yes(ptr %a, ptr %b) nounwind {
+  store i8 0, ptr %a, !tbaa !1
+  %y = load i8, ptr %b, !tbaa !2
+  store i8 1, ptr %a, !tbaa !1
   ret i8 %y
 }
 
 ; CHECK: @test0_no
-; CHECK-NEXT: store i8 0, i8* %a
-; CHECK-NEXT: load i8, i8* %b
-; CHECK-NEXT: store i8 1, i8* %a
+; CHECK-NEXT: store i8 0, ptr %a
+; CHECK-NEXT: load i8, ptr %b
+; CHECK-NEXT: store i8 1, ptr %a
 ; CHECK-NEXT: ret i8 %y
-define i8 @test0_no(i8* %a, i8* %b) nounwind {
-  store i8 0, i8* %a, !tbaa !3
-  %y = load i8, i8* %b, !tbaa !4
-  store i8 1, i8* %a, !tbaa !3
+define i8 @test0_no(ptr %a, ptr %b) nounwind {
+  store i8 0, ptr %a, !tbaa !3
+  %y = load i8, ptr %b, !tbaa !4
+  store i8 1, ptr %a, !tbaa !3
   ret i8 %y
 }
 
 ; CHECK: @test1_yes
-; CHECK-NEXT: load i8, i8* %b
-; CHECK-NEXT: store i8 1, i8* %a
+; CHECK-NEXT: load i8, ptr %b
+; CHECK-NEXT: store i8 1, ptr %a
 ; CHECK-NEXT: ret i8 %y
-define i8 @test1_yes(i8* %a, i8* %b) nounwind {
-  store i8 0, i8* %a
-  %y = load i8, i8* %b, !tbaa !5
-  store i8 1, i8* %a
+define i8 @test1_yes(ptr %a, ptr %b) nounwind {
+  store i8 0, ptr %a
+  %y = load i8, ptr %b, !tbaa !5
+  store i8 1, ptr %a
   ret i8 %y
 }
 
 ; CHECK: @test1_no
-; CHECK-NEXT: store i8 0, i8* %a
-; CHECK-NEXT: load i8, i8* %b
-; CHECK-NEXT: store i8 1, i8* %a
+; CHECK-NEXT: store i8 0, ptr %a
+; CHECK-NEXT: load i8, ptr %b
+; CHECK-NEXT: store i8 1, ptr %a
 ; CHECK-NEXT: ret i8 %y
-define i8 @test1_no(i8* %a, i8* %b) nounwind {
-  store i8 0, i8* %a
-  %y = load i8, i8* %b, !tbaa !6
-  store i8 1, i8* %a
+define i8 @test1_no(ptr %a, ptr %b) nounwind {
+  store i8 0, ptr %a
+  %y = load i8, ptr %b, !tbaa !6
+  store i8 1, ptr %a
   ret i8 %y
 }
 

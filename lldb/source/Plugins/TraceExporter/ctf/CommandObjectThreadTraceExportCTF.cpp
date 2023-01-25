@@ -54,12 +54,12 @@ Status CommandObjectThreadTraceExportCTF::CommandOptions::SetOptionValue(
 void CommandObjectThreadTraceExportCTF::CommandOptions::OptionParsingStarting(
     ExecutionContext *execution_context) {
   m_file.clear();
-  m_thread_index = None;
+  m_thread_index = std::nullopt;
 }
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectThreadTraceExportCTF::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_thread_trace_export_ctf_options);
+  return llvm::ArrayRef(g_thread_trace_export_ctf_options);
 }
 
 bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
@@ -81,7 +81,7 @@ bool CommandObjectThreadTraceExportCTF::DoExecute(Args &command,
     return false;
   } else {
     auto do_work = [&]() -> Error {
-      Expected<TraceCursorUP> cursor = trace_sp->CreateNewCursor(*thread);
+      Expected<TraceCursorSP> cursor = trace_sp->CreateNewCursor(*thread);
       if (!cursor)
         return cursor.takeError();
       TraceHTR htr(*thread, **cursor);

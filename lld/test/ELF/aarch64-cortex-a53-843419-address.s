@@ -6,7 +6,7 @@
 // RUN:          .data : { *(.data) } }" > %t.script
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-PRINT %s
-// RUN: llvm-objdump --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
 
 // Test cases for Cortex-A53 Erratum 843419 that involve interactions
 // between the generated patches and the address of sections.

@@ -486,6 +486,10 @@ static DecodeStatus DecodeMovePOperands(MCInst &Inst, unsigned Insn,
                                         uint64_t Address,
                                         const MCDisassembler *Decoder);
 
+static DecodeStatus DecodeFIXMEInstruction(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder);
+
 static MCDisassembler *createMipsDisassembler(
                        const Target &T,
                        const MCSubtargetInfo &STI,
@@ -1813,7 +1817,7 @@ static DecodeStatus DecodeMemMMImm12(MCInst &Inst, unsigned Insn,
     break;
   case Mips::SC_MM:
     Inst.addOperand(MCOperand::createReg(Reg));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     Inst.addOperand(MCOperand::createReg(Reg));
     if (Inst.getOpcode() == Mips::LWP_MM || Inst.getOpcode() == Mips::SWP_MM)
@@ -2512,4 +2516,13 @@ static DecodeStatus DecodeBlezGroupBranchMMR6(MCInst &MI, InsnType insn,
   MI.addOperand(MCOperand::createImm(Imm));
 
   return MCDisassembler::Success;
+}
+
+// This instruction does not have a working decoder, and needs to be
+// fixed. This "fixme" function was introduced to keep the backend compiling,
+// while making changes to tablegen code.
+static DecodeStatus DecodeFIXMEInstruction(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  return MCDisassembler::Fail;
 }

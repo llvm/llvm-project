@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 void IdDependentBackwardBranchCheck::registerMatchers(MatchFinder *Finder) {
   // Prototype to identify all variables which hold a thread-variant ID.
@@ -259,6 +257,4 @@ void IdDependentBackwardBranchCheck::check(
   }
 }
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera

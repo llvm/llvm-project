@@ -27,7 +27,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK-NEXT:             [o, m, n] -> { Stmt_for_k[i0, i1, i2] -> MemRef_A[3 + i0, i1, 7 + i2] };
 ; CHECK-NEXT: }
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A) {
 entry:
   br label %for.i
 
@@ -48,8 +48,8 @@ for.k:
   %subscript2 = mul i64 %subscript1, %o
   %offset2 = add nsw i64 %k, 7
   %subscript = add i64 %subscript2, %offset2
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript
+  store double 1.0, ptr %idx
   br label %for.k.inc
 
 for.k.inc:

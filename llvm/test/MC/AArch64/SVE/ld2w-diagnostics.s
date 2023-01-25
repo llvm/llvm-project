@@ -86,7 +86,7 @@ ld2w { z0.s, z1.d }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld2w { z0.s, z2.s }, p0/z, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: ld2w { z0.s, z2.s }, p0/z, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

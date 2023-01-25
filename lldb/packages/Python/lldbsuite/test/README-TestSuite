@@ -105,19 +105,6 @@ to the Python test suite under the current 'test' directory.
   Later versions of unittest2 include changes in unittest made in Python 3.2 and
   onwards after the release of Python 2.7.
 
-- dotest.pl
-
-  In case you wonder, there is also a 'dotest.pl' perl script file.  It was
-  created to visit each Python test case under the specified directory and
-  invoke Python's builtin unittest.main() on each test case.
-
-  It does not take advantage of the test runner and test suite functionality
-  provided by Python's unitest framework.  Its existence is because we want a
-  different way of running the whole test suite.  As lldb and the Python test
-  suite become more reliable, we don't expect to be using 'dotest.pl' anymore.
-
-  Note: dotest.pl has been moved to the attic directory.
-
 - Profiling dotest.py runs
 
   I used the following command line thingy to do the profiling on a SnowLeopard

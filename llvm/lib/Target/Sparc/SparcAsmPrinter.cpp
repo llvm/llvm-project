@@ -55,8 +55,8 @@ namespace {
     void emitFunctionBodyStart() override;
     void emitInstruction(const MachineInstr *MI) override;
 
-    static const char *getRegisterName(unsigned RegNo) {
-      return SparcInstPrinter::getRegisterName(RegNo);
+    static const char *getRegisterName(MCRegister Reg) {
+      return SparcInstPrinter::getRegisterName(Reg);
     }
 
     bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,

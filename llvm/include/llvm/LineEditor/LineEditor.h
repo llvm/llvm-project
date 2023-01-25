@@ -9,10 +9,10 @@
 #ifndef LLVM_LINEEDITOR_LINEEDITOR_H
 #define LLVM_LINEEDITOR_LINEEDITOR_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdio>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,8 +36,8 @@ public:
 
   /// Reads a line.
   ///
-  /// \return The line, or llvm::Optional<std::string>() on EOF.
-  llvm::Optional<std::string> readLine() const;
+  /// \return The line, or std::optional<std::string>() on EOF.
+  std::optional<std::string> readLine() const;
 
   void saveHistory();
   void loadHistory();

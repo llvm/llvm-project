@@ -6,9 +6,13 @@
 ; Test case from PR1614.
 define i32 @test_PR1614(i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: 'test_PR1614'
-; CHECK: -->  (%a smax %b)
-; CHECK: -->  (%a smax %b smax %c)
-; CHECK-NOT: smax
+; CHECK-NEXT:  Classifying expressions for: @test_PR1614
+; CHECK-NEXT:    %B = select i1 %A, i32 %a, i32 %b
+; CHECK-NEXT:    --> (%a smax %b) U: full-set S: full-set
+; CHECK-NEXT:    %D = select i1 %C, i32 %B, i32 %c
+; CHECK-NEXT:    --> (%a smax %b smax %c) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @test_PR1614
+;
 
   %A = icmp sgt i32 %a, %b
   %B = select i1 %A, i32 %a, i32 %b
@@ -30,7 +34,8 @@ define void @smin_simplify_with_guard(i32 %n) {
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: -1 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_simplify_with_guard
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is %n
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is %n
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is %n
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -58,7 +63,6 @@ for.cond.cleanup:
 
 define void @smin_to_smax(i32 %n) {
 ; FIXME: ((-1 * (0 smin %n)) + %n)  is actually just  (0 smax %n)
-
 ; CHECK-LABEL: 'smin_to_smax'
 ; CHECK-NEXT:  Classifying expressions for: @smin_to_smax
 ; CHECK-NEXT:    %i.011 = phi i32 [ %n, %for.body.lr.ph ], [ %dec, %for.body ]
@@ -67,7 +71,8 @@ define void @smin_to_smax(i32 %n) {
 ; CHECK-NEXT:    --> {(-1 + %n),+,-1}<nw><%for.body> U: full-set S: full-set Exits: (-1 + (0 smin %n)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smin_to_smax
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * (0 smin %n)) + %n)
-; CHECK-NEXT:  Loop %for.body: max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is 2147483647
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is ((-1 * (0 smin %n)) + %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %for.body: Trip multiple is 1
@@ -94,18 +99,20 @@ for.cond.cleanup:
 
 ; The information from the loop guard can be used to simplify the trip count expression.
 define void @smax_simplify_with_guard(i32 %start, i32 %n) {
-; CHECK-LABEL:  'smax_simplify_with_guard'
+; CHECK-LABEL: 'smax_simplify_with_guard'
 ; CHECK-NEXT:  Classifying expressions for: @smax_simplify_with_guard
 ; CHECK-NEXT:    %k.0.i26 = phi i32 [ %start, %loop.ph ], [ %inc.i, %loop ]
-; CHECK-NEXT:    -->  {%start,+,1}<nsw><%loop> U: full-set S: full-set      Exits: %n     LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,1}<nsw><%loop> U: full-set S: full-set Exits: %n LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %inc.i = add nsw i32 %k.0.i26, 1
-; CHECK-NEXT:    -->  {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set     Exits: (1 + %n)       LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(1 + %start),+,1}<nw><%loop> U: full-set S: full-set Exits: (1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @smax_simplify_with_guard
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((-1 * %start) + %n)
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) +  %n)
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 * %start) + %n)
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is ((-1 * %start) + %n)
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 1
+;
 entry:
   %guard = icmp sge i32 %n, %start
   br i1 %guard, label %loop.ph, label %exit

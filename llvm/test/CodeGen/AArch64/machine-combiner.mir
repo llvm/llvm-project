@@ -34,10 +34,10 @@ body:             |
     ; CHECK: MADDWrrr %1, %2, %3
     %5 = MADDWrrr %1, %2, $wzr
     %6 = ADDWrr %3, killed %5
-    %7 = SCVTFUWDri killed %6
-    ; CHECK: FMADDDrrr %7, %7, %0
-    %8 = FMULDrr %7, %7
-    %9 = FADDDrr %0, killed %8
+    %7 = SCVTFUWDri killed %6, implicit $fpcr
+    ; CHECK: FMADDDrrr %7, %7, %0, implicit $fpcr
+    %8 = FMULDrr %7, %7, implicit $fpcr
+    %9 = FADDDrr %0, killed %8, implicit $fpcr
     $d0 = COPY %9
     RET_ReallyLR implicit $d0
 

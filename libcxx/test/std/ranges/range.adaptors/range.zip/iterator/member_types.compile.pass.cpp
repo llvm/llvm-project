@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Iterator traits and member typedefs in zip_view::<iterator>.
 
@@ -74,7 +73,11 @@ void test() {
     static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
     static_assert(std::is_same_v<Iter::value_type, std::pair<int, int>>);
+#else
+    static_assert(std::is_same_v<Iter::value_type, std::tuple<int, int>>);
+#endif
     static_assert(HasIterCategory<Iter>);
   }
 
@@ -121,7 +124,11 @@ void test() {
     static_assert(std::is_same_v<Iter::iterator_concept, std::random_access_iterator_tag>);
     static_assert(std::is_same_v<Iter::iterator_category, std::input_iterator_tag>);
     static_assert(std::is_same_v<Iter::difference_type, std::ptrdiff_t>);
+#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
     static_assert(std::is_same_v<Iter::value_type, std::pair<int, std::pair<int, int>>>);
+#else
+    static_assert(std::is_same_v<Iter::value_type, std::tuple<int, std::tuple<int, int>>>);
+#endif
     static_assert(HasIterCategory<Iter>);
   }
 
@@ -162,7 +169,11 @@ void test() {
     // value_type of multiple views with different value_type
     std::ranges::zip_view v{foos, bars};
     using Iter = decltype(v.begin());
+#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
     static_assert(std::is_same_v<Iter::value_type, std::pair<Foo, Bar>>);
+#else
+    static_assert(std::is_same_v<Iter::value_type, std::tuple<Foo, Bar>>);
+#endif
   }
 
   {

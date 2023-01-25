@@ -2,10 +2,13 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
+
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 cc_binary(
     name = "llvm-bolt-heatmap",
@@ -16,12 +19,12 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":Utils",
+        "//llvm:AllTargetsAsmParsers",
+        "//llvm:AllTargetsDisassemblers",
         "//llvm:MC",
         "//llvm:Object",
         "//llvm:Support",
-        "//llvm:AllTargetsAsmParsers",
-        "//llvm:AllTargetsDisassemblers",
-    ]
+    ],
 )
 
 cc_binary(
@@ -32,7 +35,7 @@ cc_binary(
     deps = [
         ":Profile",
         "//llvm:Support",
-    ]
+    ],
 )
 
 cc_binary(
@@ -45,9 +48,9 @@ cc_binary(
         ":Profile",
         ":Rewrite",
         ":RuntimeLibs",
-        ":Utils",
-        ":TargetX86",
         ":TargetAArch64",
+        ":TargetX86",
+        ":Utils",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
@@ -90,15 +93,25 @@ cc_library(
     ],
 )
 
+expand_template(
+    name = "RuntimeLibraryVariables_inc",
+    out = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc",
+    substitutions = {
+        # FIXME this is a total guess
+        "@LLVM_LIBDIR_SUFFIX@": "lib",
+    },
+    template = "include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc.in",
+)
+
 cc_library(
     name = "RuntimeLibs",
     srcs = glob([
         "lib/RuntimeLibs/*.cpp",
     ]),
-    hdrs = glob([
-        "include/bolt/RuntimeLibs/*.h",
-    ]),
     includes = ["include"],
+    textual_hdrs = glob([
+        "include/bolt/RuntimeLibs/*.h",
+    ]) + ["include/bolt/RuntimeLibs/RuntimeLibraryVariables.inc"],
     deps = [
         ":Core",
         ":Passes",
@@ -183,8 +196,6 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Core",
-        "//llvm:X86CommonTableGen",
-        "//llvm:X86UtilsAndDesc",
         "//llvm:Analysis",
         "//llvm:BinaryFormat",
         "//llvm:CodeGen",
@@ -197,6 +208,8 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:X86CommonTableGen",
+        "//llvm:X86UtilsAndDesc",
     ],
 )
 
@@ -253,6 +266,7 @@ cc_library(
         "//llvm:MCParser",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:ir_headers",
     ],
 )
 

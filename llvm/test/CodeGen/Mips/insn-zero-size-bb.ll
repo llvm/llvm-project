@@ -8,7 +8,7 @@
 declare i32 @foo(...)
 declare void @bar()
 
-define void @main() personality i8* bitcast (i32 (...)* @foo to i8*) {
+define void @main() personality ptr @foo {
 entry:
   invoke void @bar() #0
           to label %unreachable unwind label %return
@@ -19,8 +19,8 @@ unreachable:
   unreachable
 
 return:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
   ret void
 }
 

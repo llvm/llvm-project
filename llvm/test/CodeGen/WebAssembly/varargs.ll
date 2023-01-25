@@ -11,12 +11,11 @@ target triple = "wasm32-unknown-emscripten"
 ; CHECK-LABEL: start:
 ; CHECK-NEXT: .functype start (i32, i32) -> ()
 ; CHECK-NOT: __stack_pointer
-define void @start(i8** %ap, ...) {
+define void @start(ptr %ap, ...) {
 entry:
-  %0 = bitcast i8** %ap to i8*
 ; Store the second argument (the hidden vararg buffer pointer) into ap
 ; CHECK: i32.store 0($0), $1
-  call void @llvm.va_start(i8* %0)
+  call void @llvm.va_start(ptr %ap)
   ret void
 }
 
@@ -25,10 +24,9 @@ entry:
 ; CHECK-LABEL: end:
 ; CHECK-NEXT: .functype end (i32) -> (){{$}}
 ; CHECK-NEXT: return{{$}}
-define void @end(i8** %ap) {
+define void @end(ptr %ap) {
 entry:
-  %0 = bitcast i8** %ap to i8*
-  call void @llvm.va_end(i8* %0)
+  call void @llvm.va_end(ptr %ap)
   ret void
 }
 
@@ -39,11 +37,9 @@ entry:
 ; CHECK-NEXT: i32.load  $push0=, 0($1){{$}}
 ; CHECK-NEXT: i32.store 0($0), $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
-define void @copy(i8** %ap, i8** %bp) {
+define void @copy(ptr %ap, ptr %bp) {
 entry:
-  %0 = bitcast i8** %ap to i8*
-  %1 = bitcast i8** %bp to i8*
-  call void @llvm.va_copy(i8* %0, i8* %1)
+  call void @llvm.va_copy(ptr %ap, ptr %bp)
   ret void
 }
 
@@ -58,9 +54,9 @@ entry:
 ; CHECK-NEXT: i32.store  0($0), $pop[[NUM3]]{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM4:[0-9]+]]=, 0($1){{$}}
 ; CHECK-NEXT: return     $pop[[NUM4]]{{$}}
-define i8 @arg_i8(i8** %ap) {
+define i8 @arg_i8(ptr %ap) {
 entry:
-  %t = va_arg i8** %ap, i8
+  %t = va_arg ptr %ap, i8
   ret i8 %t
 }
 
@@ -79,9 +75,9 @@ entry:
 ; CHECK-NEXT: i32.store  0($0), $pop[[NUM7]]{{$}}
 ; CHECK-NEXT: i32.load   $push[[NUM8:[0-9]+]]=, 0($1){{$}}
 ; CHECK-NEXT: return     $pop[[NUM8]]{{$}}
-define i32 @arg_i32(i8** %ap) {
+define i32 @arg_i32(ptr %ap) {
 entry:
-  %t = va_arg i8** %ap, i32
+  %t = va_arg ptr %ap, i32
   ret i32 %t
 }
 
@@ -93,9 +89,9 @@ entry:
 ; CHECK: i64.load
 ; CHECK: i64.load
 ; CHECK: return{{$}}
-define i128 @arg_i128(i8** %ap) {
+define i128 @arg_i128(ptr %ap) {
 entry:
-  %t = va_arg i8** %ap, i128
+  %t = va_arg ptr %ap, i128
   ret i128 %t
 }
 
@@ -128,16 +124,15 @@ define void @caller_some() {
 ; Test a va_start call in a non-entry block
 ; CHECK-LABEL: startbb:
 ; CHECK: .functype startbb (i32, i32, i32) -> ()
-define void @startbb(i1 %cond, i8** %ap, ...) {
+define void @startbb(i1 %cond, ptr %ap, ...) {
 entry:
   br i1 %cond, label %bb0, label %bb1
 bb0:
   ret void
 bb1:
-  %0 = bitcast i8** %ap to i8*
 ; Store the second argument (the hidden vararg buffer pointer) into ap
 ; CHECK: i32.store 0($1), $2
-  call void @llvm.va_start(i8* %0)
+  call void @llvm.va_start(ptr %ap)
   ret void
 }
 
@@ -200,12 +195,12 @@ define void @nonlegal_fixed(fp128 %x, ...) nounwind {
 ; UNKNOWN-NEXT: i32.const       $push6=, 7
 ; UNKNOWN-NEXT: i32.store       0($1), $pop6
 ; UNKNOWN-NEXT: call            callee, $1
-define void @call_fp128_alignment(i8* %p) {
+define void @call_fp128_alignment(ptr %p) {
 entry:
   call void (...) @callee(i8 7, fp128 0xL00000000000000018000000000000000)
   ret void
 }
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
-declare void @llvm.va_copy(i8*, i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
+declare void @llvm.va_copy(ptr, ptr)

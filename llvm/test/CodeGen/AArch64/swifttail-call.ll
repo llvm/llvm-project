@@ -222,14 +222,14 @@ define swifttailcc void @fromtail_toC() #0 {
   ret void
 }
 
-declare swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-define swiftcc i8* @CallSwiftSelf(i8* swiftself %closure, i8* %context) #0 {
+declare swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+define swiftcc ptr @CallSwiftSelf(ptr swiftself %closure, ptr %context) #0 {
 ; CHECK-LABEL: CallSwiftSelf:
 ; CHECK: stp x20
   ;call void asm "","~{r13}"() ; We get a push r13 but why not with the call
   ; below?
-  %res = call swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-  ret i8* %res
+  %res = call swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+  ret ptr %res
 }
 
 attributes #0 = { uwtable }

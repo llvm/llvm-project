@@ -12,8 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class ObjFile;
 
@@ -23,10 +22,10 @@ class DwarfObject final : public llvm::DWARFObject {
 public:
   bool isLittleEndian() const override { return true; }
 
-  llvm::Optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &sec,
-                                            uint64_t pos) const override {
+  std::optional<llvm::RelocAddrEntry> find(const llvm::DWARFSection &sec,
+                                           uint64_t pos) const override {
     // TODO: implement this
-    return llvm::None;
+    return std::nullopt;
   }
 
   void forEachInfoSections(
@@ -57,7 +56,6 @@ private:
   llvm::StringRef strSection;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

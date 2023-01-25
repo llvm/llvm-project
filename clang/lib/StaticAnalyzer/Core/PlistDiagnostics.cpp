@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -165,7 +166,7 @@ static void printCoverage(const PathDiagnostic *D,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
 
-static Optional<StringRef> getExpandedMacro(
+static std::optional<StringRef> getExpandedMacro(
     SourceLocation MacroLoc, const cross_tu::CrossTranslationUnitContext &CTU,
     const MacroExpansionContext &MacroExpansions, const SourceManager &SM);
 
@@ -384,9 +385,9 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
     SourceLocation MacroExpansionLoc =
         P->getLocation().asLocation().getExpansionLoc();
 
-    const Optional<StringRef> MacroName =
+    const std::optional<StringRef> MacroName =
         MacroExpansions.getOriginalText(MacroExpansionLoc);
-    const Optional<StringRef> ExpansionText =
+    const std::optional<StringRef> ExpansionText =
         getExpandedMacro(MacroExpansionLoc, CTU, MacroExpansions, SM);
 
     if (!MacroName || !ExpansionText)
@@ -407,11 +408,11 @@ void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
 
     // Output the macro name.
     Indent(o, indent) << "<key>name</key>";
-    EmitString(o, MacroName.value()) << '\n';
+    EmitString(o, *MacroName) << '\n';
 
     // Output what it expands into.
     Indent(o, indent) << "<key>expansion</key>";
-    EmitString(o, ExpansionText.value()) << '\n';
+    EmitString(o, *ExpansionText) << '\n';
 
     // Finish up.
     --indent;
@@ -825,7 +826,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 // Definitions of helper functions and methods for expanding macros.
 //===----------------------------------------------------------------------===//
 
-static Optional<StringRef>
+static std::optional<StringRef>
 getExpandedMacro(SourceLocation MacroExpansionLoc,
                  const cross_tu::CrossTranslationUnitContext &CTU,
                  const MacroExpansionContext &MacroExpansions,

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve %s -S -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -mtriple=thumbv8.1m.main -mve-tail-predication -tail-predication=enabled -mattr=+mve %s -S -o - | FileCheck %s
 
 ; CHECK-LABEL: reduction_i32
 ; CHECK: phi i32 [ 0, %vector.ph ]

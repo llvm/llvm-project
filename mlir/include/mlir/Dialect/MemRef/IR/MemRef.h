@@ -15,8 +15,11 @@
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <optional>
 
 namespace mlir {
 
@@ -48,10 +51,20 @@ LogicalResult foldMemRefCast(Operation *op, Value inner = nullptr);
 Type getTensorTypeFromMemRefType(Type type);
 
 /// Finds a single dealloc operation for the given allocated value. If there
-/// are > 1 deallocates for `allocValue`, returns None, else returns the single
-/// deallocate if it exists or nullptr.
-Optional<Operation *> findDealloc(Value allocValue);
+/// are > 1 deallocates for `allocValue`, returns std::nullopt, else returns the
+/// single deallocate if it exists or nullptr.
+std::optional<Operation *> findDealloc(Value allocValue);
 
+/// Return the dimensions of the given memref value.
+SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
+                                        Value value);
+
+/// Create a rank-reducing SubViewOp @[0 .. 0] with strides [1 .. 1] and
+/// appropriate sizes (i.e. `memref.getSizes()`) to reduce the rank of `memref`
+/// to that of `targetShape`.
+Value createCanonicalRankReducingSubViewOp(OpBuilder &b, Location loc,
+                                           Value memref,
+                                           ArrayRef<int64_t> targetShape);
 } // namespace memref
 } // namespace mlir
 

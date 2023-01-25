@@ -8,6 +8,8 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.gdbclientutils import MockGDBServerResponder
+from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class MemoryCommandRegion(TestBase):
@@ -37,6 +39,11 @@ class MemoryCommandRegion(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+    # This test and the next build a large result string in such a way that
+    # when run under ASAN the test always times out.  Most of the time is in the asan
+    # checker under PyUnicode_Append.
+    # This seems to be a worst-case scenario for ASAN performance.
+    @skipIfAsan
     def test_command(self):
         self.setup_program()
 
@@ -88,6 +95,7 @@ class MemoryCommandRegion(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual(result.GetOutput(), all_regions)
 
+    @skipIfAsan
     def test_no_overlapping_regions(self):
         # In the past on Windows we were recording AllocationBase as the base address
         # of the current region, not BaseAddress. So if a range of pages was split
@@ -120,3 +128,70 @@ class MemoryCommandRegion(TestBase):
 
                 previous_base = region_base
                 previous_end = region_end
+
+class MemoryCommandRegionAll(GDBRemoteTestBase):
+    NO_DEBUG_INFO_TESTCASE = True
+
+    def test_all_error(self):
+        # The --all option should keep looping until the end of the memory range.
+        # If there is an error it should be reported as if you were just asking
+        # for one region. In this case the error is the remote not supporting
+        # qMemoryRegionInfo.
+        # (a region being unmapped is not an error, we just get a result
+        # describing an unmapped range)
+        class MyResponder(MockGDBServerResponder):
+            def qMemoryRegionInfo(self, addr):
+                # Empty string means unsupported.
+                return ""
+
+        self.server.responder = MyResponder()
+        target = self.dbg.CreateTarget('')
+        if self.TraceOn():
+            self.runCmd("log enable gdb-remote packets")
+            self.addTearDownHook(
+                  lambda: self.runCmd("log disable gdb-remote packets"))
+
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("memory region --all ", result)
+        self.assertFalse(result.Succeeded())
+        self.assertEqual(result.GetError(),
+                    "error: qMemoryRegionInfo is not supported\n")
+
+    @skipIfAsan
+    def test_all_no_abi_plugin(self):
+        # There are two conditions for breaking the all loop. Either we get to
+        # LLDB_INVALID_ADDRESS, or the ABI plugin tells us we have got beyond
+        # the mappable range. If we don't have an ABI plugin, the option should still
+        # work and only check the first condition.
+
+        class MyResponder(MockGDBServerResponder):
+            def qMemoryRegionInfo(self, addr):
+                if addr == 0:
+                    return "start:0;size:100000000;"
+                # Goes until the end of memory.
+                if addr == 0x100000000:
+                    return "start:100000000;size:fffffffeffffffff;"
+
+        self.server.responder = MyResponder()
+        target = self.dbg.CreateTarget('')
+        if self.TraceOn():
+          self.runCmd("log enable gdb-remote packets")
+          self.addTearDownHook(
+                lambda: self.runCmd("log disable gdb-remote packets"))
+
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process,
+                                      [lldb.eStateStopped])
+
+        interp = self.dbg.GetCommandInterpreter()
+        result = lldb.SBCommandReturnObject()
+        interp.HandleCommand("memory region --all ", result)
+        self.assertTrue(result.Succeeded())
+        self.assertEqual(result.GetOutput(),
+                    "[0x0000000000000000-0x0000000100000000) ---\n"
+                    "[0x0000000100000000-0xffffffffffffffff) ---\n")

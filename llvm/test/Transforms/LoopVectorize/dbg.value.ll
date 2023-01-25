@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine | FileCheck %s
+; RUN: opt < %s -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 | FileCheck %s
 ; Make sure we vectorize with debugging turned on.
 
 source_filename = "test/Transforms/LoopVectorize/dbg.value.ll"
@@ -18,13 +18,13 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   ;CHECK: load <4 x i32>
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv, !dbg !23
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !23
-  %arrayidx2 = getelementptr inbounds [1024 x i32], [1024 x i32]* @C, i64 0, i64 %indvars.iv, !dbg !23
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !23
+  %arrayidx = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv, !dbg !23
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !23
+  %arrayidx2 = getelementptr inbounds [1024 x i32], ptr @C, i64 0, i64 %indvars.iv, !dbg !23
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !23
   %add = add nsw i32 %1, %0, !dbg !23
-  %arrayidx4 = getelementptr inbounds [1024 x i32], [1024 x i32]* @A, i64 0, i64 %indvars.iv, !dbg !23
-  store i32 %add, i32* %arrayidx4, align 4, !dbg !23
+  %arrayidx4 = getelementptr inbounds [1024 x i32], ptr @A, i64 0, i64 %indvars.iv, !dbg !23
+  store i32 %add, ptr %arrayidx4, align 4, !dbg !23
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !22
   tail call void @llvm.dbg.value(metadata !12, metadata !19, metadata !21), !dbg !22
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !22

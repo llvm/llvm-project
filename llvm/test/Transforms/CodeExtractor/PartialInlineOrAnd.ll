@@ -1,9 +1,6 @@
-; RUN: opt < %s -partial-inliner -S | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -S | FileCheck %s
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=3 -skip-partial-inlining-cost-analysis  -S | FileCheck --check-prefix=LIMIT3 %s
-; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=3 -skip-partial-inlining-cost-analysis -S | FileCheck  --check-prefix=LIMIT3 %s
-; RUN: opt < %s -partial-inliner -max-num-inline-blocks=2 -S | FileCheck --check-prefix=LIMIT2 %s
-; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=LIMIT2 %s
+; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=3 -skip-partial-inlining-cost-analysis -S | FileCheck --check-prefix=LIMIT3 %s
+; RUN: opt < %s -passes=partial-inliner -max-num-inline-blocks=2 -S | FileCheck --check-prefix=LIMIT2 %s
 
 
 ; Function Attrs: nounwind uwtable
@@ -65,7 +62,7 @@ bb:
   ret i32 %tmp
 }
 
-attributes #0 = { nounwind } 
+attributes #0 = { nounwind }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind }
 

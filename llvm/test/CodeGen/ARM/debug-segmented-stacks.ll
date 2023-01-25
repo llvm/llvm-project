@@ -7,7 +7,7 @@
 
 define void @test_basic() #0 !dbg !4 {
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 
 ; ARM-linux:      test_basic:
@@ -74,6 +74,6 @@ define void @test_basic() #0 !dbg !4 {
 !33 = !DILocation(line: 13, scope: !4)
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 attributes #0 = { "split-stack" }

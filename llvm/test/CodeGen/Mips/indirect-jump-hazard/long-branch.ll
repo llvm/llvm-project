@@ -129,7 +129,7 @@ entry:
   br i1 %cmp, label %end, label %then
 
 then:
-  store i32 1, i32* @x, align 4
+  store i32 1, ptr @x, align 4
   br label %end
 
 end:

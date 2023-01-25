@@ -16,9 +16,11 @@
 
 namespace llvm {
 
+class R600Subtarget;
+
 class R600MachineFunctionInfo final : public AMDGPUMachineFunction {
 public:
-  R600MachineFunctionInfo(const MachineFunction &MF);
+  R600MachineFunctionInfo(const Function &F, const R600Subtarget *STI);
   unsigned CFStackSize;
 };
 

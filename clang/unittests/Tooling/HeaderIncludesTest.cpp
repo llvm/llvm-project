@@ -20,10 +20,12 @@ namespace {
 
 class HeaderIncludesTest : public ::testing::Test {
 protected:
-  std::string insert(llvm::StringRef Code, llvm::StringRef Header) {
+  std::string insert(llvm::StringRef Code, llvm::StringRef Header,
+                     IncludeDirective Directive = IncludeDirective::Include) {
     HeaderIncludes Includes(FileName, Code, Style);
     assert(Header.startswith("\"") || Header.startswith("<"));
-    auto R = Includes.insert(Header.trim("\"<>"), Header.startswith("<"));
+    auto R =
+        Includes.insert(Header.trim("\"<>"), Header.startswith("<"), Directive);
     if (!R)
       return std::string(Code);
     auto Result = applyAllReplacements(Code, Replacements(*R));
@@ -58,6 +60,25 @@ TEST_F(HeaderIncludesTest, RepeatedIncludes) {
   }
   std::string Expected = Code + "#include \"a2.h\"\n";
   EXPECT_EQ(Expected, insert(Code, "\"a2.h\""));
+}
+
+TEST_F(HeaderIncludesTest, InsertImportWithSameInclude) {
+  std::string Code = "#include \"a.h\"\n";
+  std::string Expected = Code + "#import \"a.h\"\n";
+  EXPECT_EQ(Expected, insert(Code, "\"a.h\"", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, DontInsertAlreadyImported) {
+  std::string Code = "#import \"a.h\"\n";
+  EXPECT_EQ(Code, insert(Code, "\"a.h\"", IncludeDirective::Import));
+}
+
+TEST_F(HeaderIncludesTest, DeleteImportAndSameInclude) {
+  std::string Code = R"cpp(
+#include <abc.h>
+#import <abc.h>
+int x;)cpp";
+  EXPECT_EQ("\nint x;", remove(Code, "<abc.h>"));
 }
 
 TEST_F(HeaderIncludesTest, NoExistingIncludeWithDefine) {

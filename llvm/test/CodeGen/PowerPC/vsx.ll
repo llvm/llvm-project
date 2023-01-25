@@ -857,7 +857,7 @@ define <2 x i64> @test27(<2 x i64> %a, <2 x i64> %b) {
 
 }
 
-define <2 x double> @test28(<2 x double>* %a) {
+define <2 x double> @test28(ptr %a) {
 ; CHECK-LABEL: test28:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -878,13 +878,13 @@ define <2 x double> @test28(<2 x double>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %a, align 16
+  %v = load <2 x double>, ptr %a, align 16
   ret <2 x double> %v
 
 
 }
 
-define void @test29(<2 x double>* %a, <2 x double> %b) {
+define void @test29(ptr %a, <2 x double> %b) {
 ; CHECK-LABEL: test29:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvd2x v2, 0, r3
@@ -905,13 +905,13 @@ define void @test29(<2 x double>* %a, <2 x double> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <2 x double> %b, <2 x double>* %a, align 16
+  store <2 x double> %b, ptr %a, align 16
   ret void
 
 
 }
 
-define <2 x double> @test28u(<2 x double>* %a) {
+define <2 x double> @test28u(ptr %a) {
 ; CHECK-LABEL: test28u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -932,13 +932,13 @@ define <2 x double> @test28u(<2 x double>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %a, align 8
+  %v = load <2 x double>, ptr %a, align 8
   ret <2 x double> %v
 
 
 }
 
-define void @test29u(<2 x double>* %a, <2 x double> %b) {
+define void @test29u(ptr %a, <2 x double> %b) {
 ; CHECK-LABEL: test29u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvd2x v2, 0, r3
@@ -959,13 +959,13 @@ define void @test29u(<2 x double>* %a, <2 x double> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <2 x double> %b, <2 x double>* %a, align 8
+  store <2 x double> %b, ptr %a, align 8
   ret void
 
 
 }
 
-define <2 x i64> @test30(<2 x i64>* %a) {
+define <2 x i64> @test30(ptr %a) {
 ; CHECK-LABEL: test30:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x v2, 0, r3
@@ -986,14 +986,14 @@ define <2 x i64> @test30(<2 x i64>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <2 x i64>, <2 x i64>* %a, align 16
+  %v = load <2 x i64>, ptr %a, align 16
   ret <2 x i64> %v
 
 
 
 }
 
-define void @test31(<2 x i64>* %a, <2 x i64> %b) {
+define void @test31(ptr %a, <2 x i64> %b) {
 ; CHECK-LABEL: test31:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvd2x v2, 0, r3
@@ -1014,13 +1014,13 @@ define void @test31(<2 x i64>* %a, <2 x i64> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <2 x i64> %b, <2 x i64>* %a, align 16
+  store <2 x i64> %b, ptr %a, align 16
   ret void
 
 
 }
 
-define <4 x float> @test32(<4 x float>* %a) {
+define <4 x float> @test32(ptr %a) {
 ; CHECK-LABEL: test32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvw4x v2, 0, r3
@@ -1041,14 +1041,14 @@ define <4 x float> @test32(<4 x float>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <4 x float>, <4 x float>* %a, align 16
+  %v = load <4 x float>, ptr %a, align 16
   ret <4 x float> %v
 
 
 
 }
 
-define void @test33(<4 x float>* %a, <4 x float> %b) {
+define void @test33(ptr %a, <4 x float> %b) {
 ; CHECK-LABEL: test33:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvw4x v2, 0, r3
@@ -1069,14 +1069,14 @@ define void @test33(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <4 x float> %b, <4 x float>* %a, align 16
+  store <4 x float> %b, ptr %a, align 16
   ret void
 
 
 
 }
 
-define <4 x float> @test32u(<4 x float>* %a) {
+define <4 x float> @test32u(ptr %a) {
 ; CHECK-LABEL: test32u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li r4, 15
@@ -1109,13 +1109,13 @@ define <4 x float> @test32u(<4 x float>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <4 x float>, <4 x float>* %a, align 8
+  %v = load <4 x float>, ptr %a, align 8
   ret <4 x float> %v
 
 
 }
 
-define void @test33u(<4 x float>* %a, <4 x float> %b) {
+define void @test33u(ptr %a, <4 x float> %b) {
 ; CHECK-LABEL: test33u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvw4x v2, 0, r3
@@ -1136,14 +1136,14 @@ define void @test33u(<4 x float>* %a, <4 x float> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <4 x float> %b, <4 x float>* %a, align 8
+  store <4 x float> %b, ptr %a, align 8
   ret void
 
 
 
 }
 
-define <4 x i32> @test34(<4 x i32>* %a) {
+define <4 x i32> @test34(ptr %a) {
 ; CHECK-LABEL: test34:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvw4x v2, 0, r3
@@ -1164,14 +1164,14 @@ define <4 x i32> @test34(<4 x i32>* %a) {
 ; CHECK-LE-NEXT:    lxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-NEXT:    blr
-  %v = load <4 x i32>, <4 x i32>* %a, align 16
+  %v = load <4 x i32>, ptr %a, align 16
   ret <4 x i32> %v
 
 
 
 }
 
-define void @test35(<4 x i32>* %a, <4 x i32> %b) {
+define void @test35(ptr %a, <4 x i32> %b) {
 ; CHECK-LABEL: test35:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stxvw4x v2, 0, r3
@@ -1192,7 +1192,7 @@ define void @test35(<4 x i32>* %a, <4 x i32> %b) {
 ; CHECK-LE-NEXT:    xxswapd vs0, v2
 ; CHECK-LE-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-LE-NEXT:    blr
-  store <4 x i32> %b, <4 x i32>* %a, align 16
+  store <4 x i32> %b, ptr %a, align 16
   ret void
 
 
@@ -1595,7 +1595,7 @@ define <2 x i64> @test47(<2 x float> %a) {
 ; FIXME: The code quality here looks pretty bad.
 }
 
-define <2 x double> @test50(double* %a) {
+define <2 x double> @test50(ptr %a) {
 ; CHECK-LABEL: test50:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvdsx v2, 0, r3
@@ -1615,7 +1615,7 @@ define <2 x double> @test50(double* %a) {
 ; CHECK-LE:       # %bb.0:
 ; CHECK-LE-NEXT:    lxvdsx v2, 0, r3
 ; CHECK-LE-NEXT:    blr
-  %v = load double, double* %a, align 8
+  %v = load double, ptr %a, align 8
   %w = insertelement <2 x double> undef, double %v, i32 0
   %x = insertelement <2 x double> %w, double %v, i32 1
   ret <2 x double> %x

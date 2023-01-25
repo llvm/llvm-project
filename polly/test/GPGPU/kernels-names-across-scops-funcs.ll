@@ -4,14 +4,14 @@
 
 ; REQUIRES: pollyacc
 
-; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_arg1, i32 %arg) #0 {
-; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_1_KERNEL_0(i8 addrspace(1)* %MemRef_arg1, i32 %arg) #0 {
-; KERNEL: define ptx_kernel void @FUNC_foo2_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_arg1, i32 %arg) #0 {
+; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_arg1, i32 %arg) #0 {
+; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_1_KERNEL_0(ptr addrspace(1) %MemRef_arg1, i32 %arg) #0 {
+; KERNEL: define ptx_kernel void @FUNC_foo2_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_arg1, i32 %arg) #0 {
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(i32 %arg, i32* %arg1) #0 {
+define void @foo(i32 %arg, ptr %arg1) #0 {
 bb:
   br label %bb2
 
@@ -24,10 +24,10 @@ bb3:                                              ; preds = %bb2
 
 bb4:                                              ; preds = %bb4, %bb3
   %tmp5 = phi i64 [ 0, %bb3 ], [ %tmp9, %bb4 ]
-  %tmp6 = getelementptr inbounds i32, i32* %arg1, i64 %tmp5
-  %tmp7 = load i32, i32* %tmp6, align 4, !tbaa !2
+  %tmp6 = getelementptr inbounds i32, ptr %arg1, i64 %tmp5
+  %tmp7 = load i32, ptr %tmp6, align 4, !tbaa !2
   %tmp8 = add nsw i32 %tmp7, 1
-  store i32 %tmp8, i32* %tmp6, align 4, !tbaa !2
+  store i32 %tmp8, ptr %tmp6, align 4, !tbaa !2
   %tmp9 = add nuw nsw i64 %tmp5, 1
   %tmp10 = zext i32 %arg to i64
   %tmp11 = icmp ne i64 %tmp9, %tmp10
@@ -50,10 +50,10 @@ bb18:                                             ; preds = %bb16
 
 bb19:                                             ; preds = %bb19, %bb18
   %tmp20 = phi i64 [ 0, %bb18 ], [ %tmp24, %bb19 ]
-  %tmp21 = getelementptr inbounds i32, i32* %arg1, i64 %tmp20
-  %tmp22 = load i32, i32* %tmp21, align 4, !tbaa !2
+  %tmp21 = getelementptr inbounds i32, ptr %arg1, i64 %tmp20
+  %tmp22 = load i32, ptr %tmp21, align 4, !tbaa !2
   %tmp23 = add nsw i32 %tmp22, 1
-  store i32 %tmp23, i32* %tmp21, align 4, !tbaa !2
+  store i32 %tmp23, ptr %tmp21, align 4, !tbaa !2
   %tmp24 = add nuw nsw i64 %tmp20, 1
   %tmp25 = zext i32 %arg to i64
   %tmp26 = icmp ne i64 %tmp24, %tmp25
@@ -70,16 +70,16 @@ bb29:                                             ; preds = %bb28, %bb13
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind
 declare i64 @clock() #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind uwtable
-define void @foo2(i32 %arg, i32* %arg1) #0 {
+define void @foo2(i32 %arg, ptr %arg1) #0 {
 bb:
   br label %bb2
 
@@ -92,10 +92,10 @@ bb3:                                              ; preds = %bb2
 
 bb4:                                              ; preds = %bb4, %bb3
   %tmp5 = phi i64 [ 0, %bb3 ], [ %tmp9, %bb4 ]
-  %tmp6 = getelementptr inbounds i32, i32* %arg1, i64 %tmp5
-  %tmp7 = load i32, i32* %tmp6, align 4, !tbaa !2
+  %tmp6 = getelementptr inbounds i32, ptr %arg1, i64 %tmp5
+  %tmp7 = load i32, ptr %tmp6, align 4, !tbaa !2
   %tmp8 = add nsw i32 %tmp7, 1
-  store i32 %tmp8, i32* %tmp6, align 4, !tbaa !2
+  store i32 %tmp8, ptr %tmp6, align 4, !tbaa !2
   %tmp9 = add nuw nsw i64 %tmp5, 1
   %tmp10 = zext i32 %arg to i64
   %tmp11 = icmp ne i64 %tmp9, %tmp10

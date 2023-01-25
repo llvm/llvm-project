@@ -3,14 +3,14 @@
 ; from promoting @f to fastcc.
 
 ; CHECK-LABEL: define{{.*}}fastcc{{.*}}@f(
-define internal i8* @f() {
-  ret i8* blockaddress(@f, %L1)
+define internal ptr @f() {
+  ret ptr blockaddress(@f, %L1)
 L1:
-  ret i8* null
+  ret ptr null
 }
 
 define void @g() {
   ; CHECK: call{{.*}}fastcc{{.*}}@f
-  %p = call i8* @f()
+  %p = call ptr @f()
   ret void
 }

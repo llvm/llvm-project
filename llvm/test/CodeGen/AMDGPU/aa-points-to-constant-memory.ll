@@ -5,89 +5,89 @@
 ; turn out to be stores to constant memory, and will therefore be
 ; deleted as UB.
 
-define void @test_constant_addrspace(i8 addrspace(4)* %p) {
+define void @test_constant_addrspace(ptr addrspace(4) %p) {
 ; CHECK-LABEL: @test_constant_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  store i8 0, i8 addrspace(4)* %p
+  store i8 0, ptr addrspace(4) %p
   ret void
 }
 
-define void @test_constant32bit_addrspace(i8 addrspace(6)* %p) {
+define void @test_constant32bit_addrspace(ptr addrspace(6) %p) {
 ; CHECK-LABEL: @test_constant32bit_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  store i8 0, i8 addrspace(6)* %p
+  store i8 0, ptr addrspace(6) %p
   ret void
 }
 
-define void @test_cast_generic_from_constant_addrspace(i8 addrspace(4)* %p) {
+define void @test_cast_generic_from_constant_addrspace(ptr addrspace(4) %p) {
 ; CHECK-LABEL: @test_cast_generic_from_constant_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i8 addrspace(4)* %p to i8*
-  store i8 0, i8* %cast
+  %cast = addrspacecast ptr addrspace(4) %p to ptr
+  store i8 0, ptr %cast
   ret void
 }
 
-define void @test_cast_generic_from_constant32bit_addrspace(i8 addrspace(6)* %p) {
+define void @test_cast_generic_from_constant32bit_addrspace(ptr addrspace(6) %p) {
 ; CHECK-LABEL: @test_cast_generic_from_constant32bit_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i8 addrspace(6)* %p to i8*
-  store i8 0, i8* %cast
+  %cast = addrspacecast ptr addrspace(6) %p to ptr
+  store i8 0, ptr %cast
   ret void
 }
 
-define void @test_cast_generic_to_constant_addrspace(i8* %p) {
+define void @test_cast_generic_to_constant_addrspace(ptr %p) {
 ; CHECK-LABEL: @test_cast_generic_to_constant_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i8* %p to i8 addrspace(4)*
-  store i8 0, i8 addrspace(4)* %cast
+  %cast = addrspacecast ptr %p to ptr addrspace(4)
+  store i8 0, ptr addrspace(4) %cast
   ret void
 }
 
-define void @test_cast_generic_to_constant32bit_addrspace(i8* %p) {
+define void @test_cast_generic_to_constant32bit_addrspace(ptr %p) {
 ; CHECK-LABEL: @test_cast_generic_to_constant32bit_addrspace(
 ; CHECK-NEXT:    ret void
 ;
-  %cast = addrspacecast i8* %p to i8 addrspace(6)*
-  store i8 0, i8 addrspace(6)* %cast
+  %cast = addrspacecast ptr %p to ptr addrspace(6)
+  store i8 0, ptr addrspace(6) %cast
   ret void
 }
 
-define amdgpu_kernel void @noalias_readnone_global_kernarg(i32 addrspace(1)* noalias readnone %arg) {
+define amdgpu_kernel void @noalias_readnone_global_kernarg(ptr addrspace(1) noalias readnone %arg) {
 ; CHECK-LABEL: @noalias_readnone_global_kernarg(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(1)* %arg
+  store i32 0, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @noalias_readonly_global_kernarg(i32 addrspace(1)* noalias readonly %arg) {
+define amdgpu_kernel void @noalias_readonly_global_kernarg(ptr addrspace(1) noalias readonly %arg) {
 ; CHECK-LABEL: @noalias_readonly_global_kernarg(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(1)* %arg
+  store i32 0, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @readnone_global_kernarg(i32 addrspace(1)* readnone %arg) {
+define amdgpu_kernel void @readnone_global_kernarg(ptr addrspace(1) readnone %arg) {
 ; CHECK-LABEL: @readnone_global_kernarg(
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[ARG:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[ARG:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(1)* %arg
+  store i32 0, ptr addrspace(1) %arg
   ret void
 }
 
-define amdgpu_kernel void @readonly_global_kernarg(i32 addrspace(1)* readonly %arg) {
+define amdgpu_kernel void @readonly_global_kernarg(ptr addrspace(1) readonly %arg) {
 ; CHECK-LABEL: @readonly_global_kernarg(
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[ARG:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr addrspace(1) [[ARG:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(1)* %arg
+  store i32 0, ptr addrspace(1) %arg
   ret void
 }
 
@@ -97,7 +97,7 @@ define amdgpu_kernel void @constant_gv_global_as() {
 ; CHECK-LABEL: @constant_gv_global_as(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(1)* @global_as_constant
+  store i32 0, ptr addrspace(1) @global_as_constant
   ret void
 }
 
@@ -107,6 +107,6 @@ define amdgpu_kernel void @nonconst_gv_constant_as() {
 ; CHECK-LABEL: @nonconst_gv_constant_as(
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32 addrspace(4)* @global_nonconstant_constant_as
+  store i32 0, ptr addrspace(4) @global_nonconstant_constant_as
   ret void
 }

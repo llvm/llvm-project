@@ -92,7 +92,7 @@ static void addAllocTypeAttribute(LLVMContext &Ctx, CallBase *CI,
 }
 
 static bool hasSingleAllocType(uint8_t AllocTypes) {
-  const unsigned NumAllocTypes = countPopulation(AllocTypes);
+  const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
 }
@@ -135,7 +135,7 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
   assert(StackMD);
   std::vector<uint64_t> CallStack;
   CallStack.reserve(StackMD->getNumOperands());
-  for (auto &MIBStackIter : StackMD->operands()) {
+  for (const auto &MIBStackIter : StackMD->operands()) {
     auto *StackId = mdconst::dyn_extract<ConstantInt>(MIBStackIter);
     assert(StackId);
     CallStack.push_back(StackId->getZExtValue());
@@ -223,4 +223,22 @@ bool CallStackTrie::buildAndAttachMIBMetadata(CallBase *CI) {
          "Should only be left with Alloc's location in stack");
   CI->setMetadata(LLVMContext::MD_memprof, MDNode::get(Ctx, MIBNodes));
   return true;
+}
+
+template <>
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::CallStackIterator(
+    const MDNode *N, bool End)
+    : N(N) {
+  if (!N)
+    return;
+  Iter = End ? N->op_end() : N->op_begin();
+}
+
+template <>
+uint64_t
+CallStack<MDNode, MDNode::op_iterator>::CallStackIterator::operator*() {
+  assert(Iter != N->op_end());
+  ConstantInt *StackIdCInt = mdconst::dyn_extract<ConstantInt>(*Iter);
+  assert(StackIdCInt);
+  return StackIdCInt->getZExtValue();
 }

@@ -80,10 +80,10 @@ void TwoScalarOps() {
   four_shorts ? some_short : some_short;
   // CHECK: [[COND:%.+]] = load <4 x i16>
   // CHECK: [[LHS:%.+]] = load i16
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[LHS]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[LHS]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x i16> [[LHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load i16
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i16> [[RHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i16> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i16>
@@ -95,10 +95,10 @@ void TwoScalarOps() {
   four_shorts ? some_ushort : some_ushort;
   // CHECK: [[COND:%.+]] = load <4 x i16>
   // CHECK: [[LHS:%.+]] = load i16
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[LHS]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[LHS]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x i16> [[LHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load i16
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i16> poison, i16 [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i16> [[RHS_SPLAT_INSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i16> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i16>
@@ -111,11 +111,11 @@ void TwoScalarOps() {
   // CHECK: [[COND:%.+]] = load <4 x i32>
   // CHECK: [[LHS:%.+]] = load i16
   // CHECK: [[LHS_ZEXT:%.+]] = zext i16 [[LHS]] to i32
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[LHS_ZEXT]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[LHS_ZEXT]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x i32> [[LHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load i16
   // CHECK: [[RHS_SEXT:%.+]] = sext i16 [[RHS]] to i32
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS_SEXT]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS_SEXT]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
@@ -128,10 +128,10 @@ void TwoScalarOps() {
   // CHECK: [[COND:%.+]] = load <4 x i32>
   // CHECK: [[LHS:%.+]] = load i32
   // CHECK: [[LHS_CONV:%.+]] = sitofp i32 [[LHS]] to float
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[LHS_CONV]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[LHS_CONV]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x float> [[LHS_SPLAT_INSERT]], <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load float
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x float> [[RHS_SPLAT_INSERT]], <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
@@ -145,11 +145,11 @@ void TwoScalarOps() {
   four_ll ? some_double : some_ll;
   // CHECK: [[COND:%.+]] = load <4 x i64>
   // CHECK: [[LHS:%.+]] = load double
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x double> poison, double [[LHS]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x double> poison, double [[LHS]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x double> [[LHS_SPLAT_INSERT]], <4 x double> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load i64
   // CHECK: [[RHS_CONV:%.+]] = sitofp i64 [[RHS]] to double
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x double> poison, double [[RHS_CONV]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x double> poison, double [[RHS_CONV]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x double> [[RHS_SPLAT_INSERT]], <4 x double> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
@@ -163,11 +163,11 @@ void TwoScalarOps() {
   four_ints ? some_int : some_short;
   // CHECK: [[COND:%.+]] = load <4 x i32>
   // CHECK: [[LHS:%.+]] = load i32
-  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[LHS]], i32 0
+  // CHECK: [[LHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[LHS]], i64 0
   // CHECK: [[LHS_SPLAT:%.+]] = shufflevector <4 x i32> [[LHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[RHS:%.+]] = load i16
   // CHECK: [[RHS_SEXT:%.+]] = sext i16 [[RHS]] to i32
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS_SEXT]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS_SEXT]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
@@ -183,7 +183,7 @@ void OneScalarOp() {
   // CHECK: [[COND:%.+]] = load <4 x i32>
   // CHECK: [[LHS:%.+]] = load <4 x i32>
   // CHECK: [[RHS:%.+]] = load i32
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i32> poison, i32 [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i32> [[RHS_SPLAT_INSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
@@ -206,7 +206,7 @@ void OneScalarOp() {
   // CHECK: [[COND:%.+]] = load <4 x i32>
   // CHECK: [[LHS:%.+]] = load <4 x float>
   // CHECK: [[RHS:%.+]] = load float
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x float> poison, float [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x float> [[RHS_SPLAT_INSERT]], <4 x float> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i32> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i32>
@@ -243,7 +243,7 @@ void OneScalarOp() {
   // CHECK: [[LHS:%.+]] = load <4 x i64>
   // CHECK: [[RHS:%.+]] = load i32
   // CHECK: [[RHS_CONV:%.+]] = sext i32 [[RHS]] to i64
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i64> poison, i64 [[RHS_CONV]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i64> poison, i64 [[RHS_CONV]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i64> [[RHS_SPLAT_INSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>
@@ -256,7 +256,7 @@ void OneScalarOp() {
   // CHECK: [[COND:%.+]] = load <4 x i64>
   // CHECK: [[LHS:%.+]] = load <4 x i64>
   // CHECK: [[RHS:%.+]] = load i64
-  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i64> poison, i64 [[RHS]], i32 0
+  // CHECK: [[RHS_SPLAT_INSERT:%.+]] = insertelement <4 x i64> poison, i64 [[RHS]], i64 0
   // CHECK: [[RHS_SPLAT:%.+]] = shufflevector <4 x i64> [[RHS_SPLAT_INSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
   // CHECK: [[NEG:%.+]] = icmp slt <4 x i64> [[COND]], zeroinitializer
   // CHECK: [[SEXT:%.+]] = sext <4 x i1> [[NEG]] to <4 x i64>

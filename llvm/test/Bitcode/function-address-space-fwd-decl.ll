@@ -4,14 +4,14 @@
 define void @call_named() {
 entry:
   %0 = tail call addrspace(40) i32 @named(i16* null)
-  ; CHECK: %0 = tail call addrspace(40) i32 @named(i16* null)
+  ; CHECK: %0 = tail call addrspace(40) i32 @named(ptr null)
   ret void
 }
 
 define void @call_numbered() {
 entry:
   %0 = tail call addrspace(40) i32 @0(i16* null)
-  ; CHECK: %0 = tail call addrspace(40) i32 @0(i16* null)
+  ; CHECK: %0 = tail call addrspace(40) i32 @0(ptr null)
   ret void
 }
 
@@ -34,6 +34,6 @@ return:
 declare i32 @foo() addrspace(40)
 ; CHECK: declare i32 @foo() addrspace(40)
 declare i32 @named(i16* nocapture) addrspace(40)
-; CHECK: declare i32 @named(i16* nocapture) addrspace(40)
+; CHECK: declare i32 @named(ptr nocapture) addrspace(40)
 declare i32 @0(i16*) addrspace(40)
-; CHECK: declare i32 @0(i16*) addrspace(40)
+; CHECK: declare i32 @0(ptr) addrspace(40)

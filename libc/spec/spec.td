@@ -39,6 +39,7 @@ class RestrictedPtrType<Type type> : Type {
 def VarArgType : NamedType<"...">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
+def UnsignedIntType : NamedType<"unsigned int">;
 def LongType : NamedType<"long">;
 def UnsignedLongType : NamedType<"unsigned long">;
 def LongLongType : NamedType<"long long">;
@@ -63,6 +64,10 @@ def LongDoublePtr : PtrType<LongDoubleType>;
 def IntMaxTType : NamedType<"intmax_t">;
 def UIntMaxTType : NamedType<"uintmax_t">;
 
+def OffTType : NamedType<"off_t">;
+def OffTPtr : PtrType<OffTType>;
+def SSizeTType : NamedType<"ssize_t">;
+
 // _Noreturn is really not a type, but it is convenient to treat it as a type.
 def NoReturn : NamedType<"_Noreturn void">;
 
@@ -75,6 +80,7 @@ def ConstCharPtr : ConstType<CharPtr>;
 def CharRestrictedPtr : RestrictedPtrType<CharType>;
 def CharRestrictedPtrPtr : RestrictedPtrType<CharPtr>;
 def ConstCharRestrictedPtr : ConstType<CharRestrictedPtr>;
+def ConstCharRestrictedPtrPtr : PtrType<ConstCharRestrictedPtr>;
 
 def OnceFlagType : NamedType<"once_flag">;
 def OnceFlagTypePtr : PtrType<OnceFlagType>;
@@ -106,6 +112,20 @@ def AtexitHandlerT : NamedType<"__atexithandler_t">;
 def FILE : NamedType<"FILE">;
 def FILEPtr : PtrType<FILE>;
 def FILERestrictedPtr : RestrictedPtrType<FILE>;
+
+def PThreadTType : NamedType<"pthread_t">;
+
+def PidT : NamedType<"pid_t">;
+def RestrictedPidTPtr : RestrictedPtrType<PidT>;
+
+def StructRUsage : NamedType<"struct rusage">;
+def StructRUsagePtr : PtrType<StructRUsage>;
+
+def StructTimevalType : NamedType<"struct timeval">;
+def StructTimevalPtr : PtrType<StructTimevalType>;
+def RestrictedStructTimevalPtr : RestrictedPtrType<StructTimevalType>;
+
+def SuSecondsT : NamedType<"suseconds_t">;
 
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;

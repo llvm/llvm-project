@@ -8,6 +8,7 @@ add_flang_library(FIRSupport
 
   DEPENDS
   FIROpsIncGen
+  HLFIROpsIncGen
   MLIRIR
   ${dialect_libs}
 
@@ -16,4 +17,7 @@ add_flang_library(FIRSupport
   MLIROpenMPToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
+
+  LINK_COMPONENTS
+  TargetParser
 )

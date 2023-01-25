@@ -7,7 +7,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @foo(float** nocapture readonly %X) {
+define void @foo(ptr nocapture readonly %X) {
 entry:
   br label %for.body
 
@@ -17,16 +17,16 @@ for.cond.cleanup:
 for.body:
   %i.011 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %conv = sitofp i64 %i.011 to float
-  %BaseA = load float*, float** %X, align 8
-  %BaseB = load float*, float** %X, align 8
-  %arrayidx = getelementptr inbounds float, float* %BaseA, i64 %i.011
-  %A = load float, float* %arrayidx, align 4
+  %BaseA = load ptr, ptr %X, align 8
+  %BaseB = load ptr, ptr %X, align 8
+  %arrayidx = getelementptr inbounds float, ptr %BaseA, i64 %i.011
+  %A = load float, ptr %arrayidx, align 4
   %add = fadd float %A, %conv
-  store float %add, float* %arrayidx, align 4
-  %arrayidxB = getelementptr inbounds float, float* %BaseB, i64 %i.011
-  %B = load float, float* %arrayidxB, align 4
+  store float %add, ptr %arrayidx, align 4
+  %arrayidxB = getelementptr inbounds float, ptr %BaseB, i64 %i.011
+  %B = load float, ptr %arrayidxB, align 4
   %addB = fadd float %B, %conv
-  store float %addB, float* %arrayidxB, align 4
+  store float %addB, ptr %arrayidxB, align 4
   %inc = add nuw nsw i64 %i.011, 1
   %exitcond = icmp eq i64 %inc, 1024
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

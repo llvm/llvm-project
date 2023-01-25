@@ -248,11 +248,13 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
       if (SI.IncludeHeader == OI.IncludeHeader) {
         Found = true;
         SI.References += OI.References;
+        SI.SupportedDirectives |= OI.SupportedDirectives;
         break;
       }
     }
     if (!Found && MergeIncludes)
-      S.IncludeHeaders.emplace_back(OI.IncludeHeader, OI.References);
+      S.IncludeHeaders.emplace_back(OI.IncludeHeader, OI.References,
+                                    OI.supportedDirectives());
   }
 
   S.Origin |= O.Origin | SymbolOrigin::Merge;

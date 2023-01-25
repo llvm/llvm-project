@@ -13,7 +13,7 @@
 ; RUN:   --check-prefix=CHECK-AIX-32 -implicit-check-not vmrg \
 ; RUN:   -implicit-check-not=vperm %s
 
-define <16 x i8> @test(i32* %s, i32* %t) {
+define <16 x i8> @test(ptr %s, ptr %t) {
 ; CHECK-LE-LABEL: test:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lfiwzx f0, 0, r3
@@ -33,8 +33,7 @@ define <16 x i8> @test(i32* %s, i32* %t) {
 ; CHECK-AIX-32-NEXT:    blr
 
 entry:
-  %0 = bitcast i32* %s to <4 x i8>*
-  %1 = load <4 x i8>, <4 x i8>* %0, align 4
-  %2 = shufflevector <4 x i8> %1, <4 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-  ret <16 x i8> %2
+  %0 = load <4 x i8>, ptr %s, align 4
+  %1 = shufflevector <4 x i8> %0, <4 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <16 x i8> %1
 }

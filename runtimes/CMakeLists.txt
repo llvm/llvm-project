@@ -1,5 +1,12 @@
 # This file handles building LLVM runtime sub-projects.
 cmake_minimum_required(VERSION 3.13.4)
+if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+    "minimum version of CMake required to build LLVM will become 3.20.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.20.0 now to avoid issues in the future!")
+endif()
 project(Runtimes C CXX ASM)
 
 # Add path for custom and the LLVM build's modules to the CMake module path.
@@ -16,14 +23,14 @@ list(INSERT CMAKE_MODULE_PATH 0
 # We order libraries to mirror roughly how they are layered, except that compiler-rt can depend
 # on libc++, so we put it after.
 set(LLVM_DEFAULT_RUNTIMES "libc;libunwind;libcxxabi;pstl;libcxx;compiler-rt;openmp")
-set(LLVM_ALL_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
+set(LLVM_SUPPORTED_RUNTIMES "${LLVM_DEFAULT_RUNTIMES};llvm-libgcc")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
-  "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
+  "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
 if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
   set(LLVM_ENABLE_RUNTIMES ${LLVM_DEFAULT_RUNTIMES})
 endif()
 include(SortSubset)
-sort_subset("${LLVM_ALL_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
+sort_subset("${LLVM_SUPPORTED_RUNTIMES}" "${LLVM_ENABLE_RUNTIMES}" LLVM_ENABLE_RUNTIMES)
 
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
@@ -54,6 +61,7 @@ if (NOT LLVM_BINARY_DIR)
 endif()
 if (NOT LLVM_FOUND)
   set(LLVM_TOOLS_BINARY_DIR ${LLVM_BINARY_DIR}/bin)
+  set(LLVM_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
   set(LLVM_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
 endif()
 
@@ -132,7 +140,7 @@ endif()
 # Check for -nostdlib++ first; if there's no C++ standard library yet,
 # all check_cxx_compiler_flag commands will fail until we add -nostdlib++
 # (or -nodefaultlibs).
-llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 endif()
@@ -167,6 +175,9 @@ endif()
 
 # This can be used to detect whether we're in the runtimes build.
 set(LLVM_RUNTIMES_BUILD ON)
+
+include(SetTargetTriple)
+set_llvm_target_triple()
 
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
@@ -231,7 +242,12 @@ if(LLVM_INCLUDE_TESTS)
   # LLVM_RUNTIMES_LIT_DEPENDS is populated when lit tests are added between
   # umbrella_list_testsuite begin and end. The bootstrap runtimes builds
   # currently assumes this target exists.
-  add_custom_target(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  get_property(LLVM_RUNTIMES_LIT_DEPENDS GLOBAL PROPERTY LLVM_RUNTIMES_LIT_DEPENDS)
+  add_custom_target(runtimes-test-depends)
+  if(LLVM_RUNTIMES_LIT_DEPENDS)
+    # add_dependencies complains if called with no dependencies
+    add_dependencies(runtimes-test-depends ${LLVM_RUNTIMES_LIT_DEPENDS})
+  endif()
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
   umbrella_lit_testsuite_end(check-runtimes)
@@ -244,15 +260,12 @@ if(LLVM_INCLUDE_TESTS)
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 
-  if(LLVM_RUNTIMES_TARGET)
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
-  else()
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
-  endif()
+  get_property(LLVM_RUNTIMES_LIT_TESTSUITES GLOBAL PROPERTY LLVM_RUNTIMES_LIT_TESTSUITES)
+  string(REPLACE ";" "\n" LLVM_RUNTIMES_LIT_TESTSUITES "${LLVM_RUNTIMES_LIT_TESTSUITES}")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/lit.tests ${LLVM_RUNTIMES_LIT_TESTSUITES})
+else()
+  # Create empty files so the parent build can use these unconditionally.
+  file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/lit.tests)
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
@@ -270,9 +283,6 @@ if(SUB_COMPONENTS)
 
     if(TARGET install-${component})
       list(APPEND SUB_INSTALL_TARGETS install-${component})
-    endif()
-    if(TARGET install-${component}-stripped)
-      list(APPEND SUB_INSTALL_TARGETS install-${component}-stripped)
     endif()
   endforeach()
 

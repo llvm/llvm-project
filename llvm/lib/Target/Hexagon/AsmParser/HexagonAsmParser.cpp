@@ -115,8 +115,9 @@ class HexagonAsmParser : public MCTargetAsmParser {
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
   bool ParseDirectiveFalign(unsigned Size, SMLoc L);
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseDirectiveSubsection(SMLoc L);
   bool ParseDirectiveComm(bool IsLocal, SMLoc L);
@@ -354,6 +355,11 @@ public:
       return false;
     return Value == -1;
   }
+  bool issgp10Const() const {
+    if (!isReg())
+      return false;
+    return getReg() == Hexagon::SGP1_0;
+  }
   bool iss11_0Imm() const {
     return CheckImmRange(11 + 26, 0, true, true, true);
   }
@@ -399,6 +405,9 @@ public:
 
   void addn1ConstOperands(MCInst &Inst, unsigned N) const {
     addImmOperands(Inst, N);
+  }
+  void addsgp10ConstOperands(MCInst &Inst, unsigned N) const {
+    addRegOperands(Inst, N);
   }
 
   StringRef getToken() const {
@@ -573,7 +582,7 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
   case Match_MnemonicFail:
     return Error(IDLoc, "unrecognized instruction");
   case Match_InvalidOperand:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Match_InvalidTiedOperand:
     SMLoc ErrorLoc = IDLoc;
     if (ErrorInfo != ~0U) {
@@ -791,12 +800,12 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
   HexagonMCELFStreamer &HexagonELFStreamer =
       static_cast<HexagonMCELFStreamer &>(getStreamer());
   if (IsLocal) {
-    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(Sym, Size, ByteAlignment,
-                                                      AccessAlignment);
+    HexagonELFStreamer.HexagonMCEmitLocalCommonSymbol(
+        Sym, Size, Align(ByteAlignment), AccessAlignment);
     return false;
   }
 
-  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, ByteAlignment,
+  HexagonELFStreamer.HexagonMCEmitCommonSymbol(Sym, Size, Align(ByteAlignment),
                                                AccessAlignment);
   return false;
 }
@@ -858,11 +867,11 @@ bool HexagonAsmParser::splitIdentifier(OperandVector &Operands) {
 }
 
 bool HexagonAsmParser::parseOperand(OperandVector &Operands) {
-  unsigned Register;
+  MCRegister Register;
   SMLoc Begin;
   SMLoc End;
   MCAsmLexer &Lexer = getLexer();
-  if (!ParseRegister(Register, Begin, End)) {
+  if (!parseRegister(Register, Begin, End)) {
     if (!ErrorMissingParenthesis)
       switch (Register) {
       default:
@@ -954,12 +963,12 @@ bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,
   return false;
 }
 
-bool HexagonAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool HexagonAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
 }
 
-OperandMatchResultTy HexagonAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy HexagonAsmParser::tryParseRegister(MCRegister &RegNo,
                                                         SMLoc &StartLoc,
                                                         SMLoc &EndLoc) {
   MCAsmLexer &Lexer = getLexer();
@@ -1440,7 +1449,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
   // Translate a "$Rx =  CONST32(#imm)" to "$Rx = memw(gp+#LABEL) "
   case Hexagon::CONST32:
     is32bit = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // Translate a "$Rx:y =  CONST64(#imm)" to "$Rx:y = memd(gp+#LABEL) "
   case Hexagon::CONST64:
     // FIXME: need better way to detect AsmStreamer (upstream removed getKind())
@@ -1487,7 +1496,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
 
       MES->switchSection(mySection);
       unsigned byteSize = is32bit ? 4 : 8;
-      getStreamer().emitCodeAlignment(byteSize, &getSTI(), byteSize);
+      getStreamer().emitCodeAlignment(Align(byteSize), &getSTI(), byteSize);
 
       MCSymbol *Sym;
 

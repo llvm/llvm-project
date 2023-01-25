@@ -54,10 +54,12 @@ public:
   const uint16_t *SuperRegIndices;
   const LaneBitmask LaneMask;
   /// Classes with a higher priority value are assigned first by register
-  /// allocators using a greedy heuristic. The value is in the range [0,63].
-  /// Values >= 32 should be used with care since they may overlap with other
-  /// fields in the allocator's priority heuristics.
+  /// allocators using a greedy heuristic. The value is in the range [0,31].
   const uint8_t AllocationPriority;
+
+  // Change allocation priority heuristic used by greedy.
+  const bool GlobalPriority;
+
   /// Configurable target specific flags.
   const uint8_t TSFlags;
   /// Whether the class supports two (or more) disjunct subregister indices.
@@ -198,7 +200,7 @@ public:
   ///
   /// By default, this method returns all registers in the class.
   ArrayRef<MCPhysReg> getRawAllocationOrder(const MachineFunction &MF) const {
-    return OrderFunc ? OrderFunc(MF) : makeArrayRef(begin(), getNumRegs());
+    return OrderFunc ? OrderFunc(MF) : ArrayRef(begin(), getNumRegs());
   }
 
   /// Returns the combination of all lane masks of register in this class.
@@ -355,7 +357,7 @@ public:
     unsigned NumRegs = getNumRegs();
     assert(Idx < InfoDesc->NumCosts && "CostPerUse index out of bounds");
 
-    return makeArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
+    return ArrayRef(&InfoDesc->CostPerUse[Idx * NumRegs], NumRegs);
   }
 
   /// Return true if the register is in the allocation of any register class.
@@ -523,6 +525,16 @@ public:
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns either a string explaining why the given register is reserved for
+  /// this function, or an empty optional if no explanation has been written.
+  /// The absence of an explanation does not mean that the register is not
+  /// reserved (meaning, you should check that PhysReg is in fact reserved
+  /// before calling this).
+  virtual std::optional<std::string>
+  explainReservedReg(const MachineFunction &MF, MCRegister PhysReg) const {
+    return {};
+  }
+
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
   virtual bool isAsmClobberable(const MachineFunction &MF,
@@ -626,6 +638,14 @@ public:
     return RC;
   }
 
+  /// Return a register class that can be used for a subregister copy from/into
+  /// \p SuperRC at \p SubRegIdx.
+  virtual const TargetRegisterClass *
+  getSubRegisterClass(const TargetRegisterClass *SuperRC,
+                      unsigned SubRegIdx) const {
+    return nullptr;
+  }
+
   /// Return the subregister index you get from composing
   /// two subregister indices.
   ///
@@ -672,6 +692,14 @@ public:
   /// Debugging helper: dump register in human readable form to dbgs() stream.
   static void dumpReg(Register Reg, unsigned SubRegIndex = 0,
                       const TargetRegisterInfo *TRI = nullptr);
+
+  /// Return target defined base register class for a physical register.
+  /// This is the register class with the lowest BaseClassOrder containing the
+  /// register.
+  /// Will be nullptr if the register is not in any base register class.
+  virtual const TargetRegisterClass *getPhysRegBaseClass(MCRegister Reg) const {
+    return nullptr;
+  }
 
 protected:
   /// Overridden by TableGen in targets that have sub-registers.
@@ -1007,6 +1035,12 @@ public:
     return false;
   }
 
+  /// Process frame indices in reverse block order. This changes the behavior of
+  /// the RegScavenger passed to eliminateFrameIndex. If this is true targets
+  /// should scavengeRegisterBackwards in eliminateFrameIndex. New targets
+  /// should prefer reverse scavenging behavior.
+  virtual bool supportsBackwardScavenger() const { return false; }
+
   /// This method must be overriden to eliminate abstract frame indices from
   /// instructions which may use them. The instruction referenced by the
   /// iterator contains an MO_FrameIndex operand which must be eliminated by
@@ -1014,7 +1048,9 @@ public:
   /// as long as it keeps the iterator pointing at the finished product.
   /// SPAdj is the SP adjustment due to call frame setup instruction.
   /// FIOperandNum is the FI operand number.
-  virtual void eliminateFrameIndex(MachineBasicBlock::iterator MI,
+  /// Returns true if the current instruction was removed and the iterator
+  /// is not longer valid
+  virtual bool eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                    int SPAdj, unsigned FIOperandNum,
                                    RegScavenger *RS = nullptr) const = 0;
 

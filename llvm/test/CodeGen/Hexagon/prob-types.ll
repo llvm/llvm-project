@@ -41,17 +41,17 @@ declare <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32>) #0
 declare <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32>, <32 x i32>) #0
 
 ; Function Attrs: nounwind
-define hidden void @f0(<32 x i32>* %a0, <32 x i32>* %a1, i32 %a2, <32 x i32> %a3, <32 x i32> %a4, <32 x i32> %a5, i32 %a6, <32 x i32> %a7) #1 {
+define hidden void @f0(ptr %a0, ptr %a1, i32 %a2, <32 x i32> %a3, <32 x i32> %a4, <32 x i32> %a5, i32 %a6, <32 x i32> %a7) #1 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
-  %v0 = phi <32 x i32>* [ %v38, %b1 ], [ %a0, %b0 ]
-  %v1 = phi <32 x i32>* [ %v4, %b1 ], [ %a1, %b0 ]
+  %v0 = phi ptr [ %v38, %b1 ], [ %a0, %b0 ]
+  %v1 = phi ptr [ %v4, %b1 ], [ %a1, %b0 ]
   %v2 = phi i32 [ %v39, %b1 ], [ %a2, %b0 ]
   %v3 = phi <32 x i32> [ %v34, %b1 ], [ %a3, %b0 ]
-  %v4 = getelementptr inbounds <32 x i32>, <32 x i32>* %v1, i32 1
-  %v5 = load <32 x i32>, <32 x i32>* %v1, align 128, !tbaa !0
+  %v4 = getelementptr inbounds <32 x i32>, ptr %v1, i32 1
+  %v5 = load <32 x i32>, ptr %v1, align 128, !tbaa !0
   %v6 = tail call <32 x i32> @llvm.hexagon.V6.vdmpybus.128B(<32 x i32> %v5, i32 16843009) #2
   %v7 = tail call <32 x i32> @llvm.hexagon.V6.vlalignbi.128B(<32 x i32> %v6, <32 x i32> %a4, i32 2) #2
   %v8 = tail call <32 x i32> @llvm.hexagon.V6.vaddh.128B(<32 x i32> %v6, <32 x i32> %v7) #2
@@ -81,14 +81,14 @@ b1:                                               ; preds = %b1, %b0
   %v32 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %v22, <32 x i32> %v31) #2
   %v33 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v26) #2
   %v34 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.128B(<32 x i32> %v22, <32 x i32> %v33) #2
-  %v35 = getelementptr inbounds <32 x i32>, <32 x i32>* %v0, i32 1
-  store <32 x i32> %v28, <32 x i32>* %v0, align 128, !tbaa !0
-  %v36 = getelementptr inbounds <32 x i32>, <32 x i32>* %v0, i32 2
-  store <32 x i32> %v30, <32 x i32>* %v35, align 128, !tbaa !0
-  %v37 = getelementptr inbounds <32 x i32>, <32 x i32>* %v0, i32 3
-  store <32 x i32> %v32, <32 x i32>* %v36, align 128, !tbaa !0
-  %v38 = getelementptr inbounds <32 x i32>, <32 x i32>* %v0, i32 4
-  store <32 x i32> %v34, <32 x i32>* %v37, align 128, !tbaa !0
+  %v35 = getelementptr inbounds <32 x i32>, ptr %v0, i32 1
+  store <32 x i32> %v28, ptr %v0, align 128, !tbaa !0
+  %v36 = getelementptr inbounds <32 x i32>, ptr %v0, i32 2
+  store <32 x i32> %v30, ptr %v35, align 128, !tbaa !0
+  %v37 = getelementptr inbounds <32 x i32>, ptr %v0, i32 3
+  store <32 x i32> %v32, ptr %v36, align 128, !tbaa !0
+  %v38 = getelementptr inbounds <32 x i32>, ptr %v0, i32 4
+  store <32 x i32> %v34, ptr %v37, align 128, !tbaa !0
   %v39 = add nsw i32 %v2, 128
   %v40 = icmp slt i32 %v39, %a6
   br i1 %v40, label %b1, label %b2

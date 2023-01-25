@@ -74,7 +74,7 @@ entry:
   ret half %add
 }
 
-define half @load_i16(i16 *%hp) {
+define half @load_i16(ptr %hp) {
 ; CHECK-VFPV4-SOFT-LABEL: load_i16:
 ; CHECK-VFPV4-SOFT:       @ %bb.0: @ %entry
 ; CHECK-VFPV4-SOFT-NEXT:    vmov.f32 s0, #1.000000e+00
@@ -111,20 +111,20 @@ define half @load_i16(i16 *%hp) {
 ; CHECK-FP16-HARD-NEXT:    vadd.f16 s0, s2, s0
 ; CHECK-FP16-HARD-NEXT:    bx lr
 entry:
-  %h = load i16, i16 *%hp, align 2
+  %h = load i16, ptr %hp, align 2
   %hc = bitcast i16 %h to half
   %add = fadd half %hc, 1.0
   ret half %add
 }
 
-define i16 @load_f16(half *%hp) {
+define i16 @load_f16(ptr %hp) {
 ; CHECK-LABEL: load_f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrh r0, [r0]
 ; CHECK-NEXT:    adds r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
-  %h = load half, half *%hp, align 2
+  %h = load half, ptr %hp, align 2
   %hc = bitcast half %h to i16
   %add = add i16 %hc, 1
   ret i16 %add

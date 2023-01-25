@@ -9,6 +9,8 @@
 #ifndef MATH_OPS
 #define MATH_OPS
 
+include "mlir/Dialect/Arith/IR/ArithBase.td"
+include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
 include "mlir/Dialect/Math/IR/MathBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -17,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Base class for math dialect ops. Ops in this dialect have no side effects and
 // can be applied element-wise to vectors and tensors.
 class Math_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Math_Dialect, mnemonic, traits # [NoSideEffect,
+    Op<Math_Dialect, mnemonic, traits # [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
 
@@ -36,51 +38,98 @@ class Math_IntegerUnaryOp<string mnemonic, list<Trait> traits = []> :
 // operand and result of the same type. This type can be a floating point type,
 // vector or tensor thereof.
 class Math_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
-    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins FloatLike:$operand);
+    Math_Op<mnemonic,
+        traits # [SameOperandsAndResultType,
+                  DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let arguments = (ins FloatLike:$operand,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);
 
-  let assemblyFormat = "$operand attr-dict `:` type($result)";
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
+}
+
+// Base class for binary math operations on integer types. Require two
+// operands and one result of the same type. This type can be an integer
+// type, vector or tensor thereof.
+class Math_IntegerBinaryOp<string mnemonic, list<Trait> traits = []> :
+    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
 
 // Base class for binary math operations on floating point types. Require two
 // operands and one result of the same type. This type can be a floating point
 // type, vector or tensor thereof.
 class Math_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
-    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs);
+    Math_Op<mnemonic,
+        traits # [SameOperandsAndResultType,
+                  DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let arguments = (ins FloatLike:$lhs, FloatLike:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);
 
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
 }
 
 // Base class for floating point ternary operations. Require three operands and
 // one result of the same type. This type can be a floating point type, vector
 // or tensor thereof.
 class Math_FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
-    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins FloatLike:$a, FloatLike:$b, FloatLike:$c);
+    Math_Op<mnemonic,
+        traits # [SameOperandsAndResultType,
+                  DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let arguments = (ins FloatLike:$a, FloatLike:$b, FloatLike:$c,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);
 
-  let assemblyFormat = "$a `,` $b `,` $c attr-dict `:` type($result)";
+  let assemblyFormat = [{ $a `,` $b `,` $c (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
 }
 
 //===----------------------------------------------------------------------===//
-// AbsOp
+// AbsFOp
 //===----------------------------------------------------------------------===//
 
-def Math_AbsOp : Math_FloatUnaryOp<"abs"> {
+def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
   let summary = "floating point absolute-value operation";
   let description = [{
-    The `abs` operation computes the absolute value. It takes one operand of
-    floating point type (i.e., scalar, tensor or vector) and returns one result of
-    the same type.
+    The `absf` operation computes the absolute value. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type.
 
     Example:
 
     ```mlir
     // Scalar absolute value.
-    %a = math.abs %b : f64
+    %a = math.absf %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AbsIOp
+//===----------------------------------------------------------------------===//
+
+def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
+  let summary = "integer absolute-value operation";
+  let description = [{
+    The `absi` operation computes the absolute value. It takes one operand of
+    integer type (i.e., scalar, tensor or vector) and returns one result of the
+    same type.
+
+    Example:
+
+    ```mlir
+    // Scalar absolute value.
+    %a = math.absi %b : i64
     ```
   }];
   let hasFolder = 1;
@@ -110,6 +159,7 @@ def Math_AtanOp : Math_FloatUnaryOp<"atan">{
     %a = math.atan %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -142,6 +192,29 @@ def Math_Atan2Op : Math_FloatBinaryOp<"atan2">{
     // Scalar variant.
     %a = math.atan2 %b, %c : f32
     ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CbrtOp
+//===----------------------------------------------------------------------===//
+
+def Math_CbrtOp : Math_FloatUnaryOp<"cbrt"> {
+  let summary = "cube root of the specified value";
+  let description = [{
+    The `cbrt` operation computes the cube root. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type. It has no standard attributes.
+
+    Example:
+
+    ```mlir
+    // Scalar cube root value.
+    %a = math.cbrt %b : f64
+    ```
+
+    Note: This op is not equivalent to powf(..., 1/3.0).
   }];
 }
 
@@ -224,6 +297,7 @@ def Math_CosOp : Math_FloatUnaryOp<"cos"> {
     %a = math.cos %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -250,6 +324,7 @@ def Math_SinOp : Math_FloatUnaryOp<"sin"> {
     %a = math.sin %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -336,6 +411,7 @@ def Math_ErfOp : Math_FloatUnaryOp<"erf"> {
     %a = math.erf %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 
@@ -420,6 +496,7 @@ def Math_ExpM1Op : Math_FloatUnaryOp<"expm1"> {
     %a = math.expm1 %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -443,9 +520,11 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 
     ```mlir
     // Scalar floor value.
-    %a = math.floor %b : f64 
+    %a = math.floor %b : f64
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -477,6 +556,33 @@ def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
     particular case of lowering to LLVM, this is guaranteed to lower
     to the `llvm.fma.*` intrinsic.
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// IPowIOp
+//===----------------------------------------------------------------------===//
+
+def Math_IPowIOp : Math_IntegerBinaryOp<"ipowi"> {
+  let summary = "signed integer raised to the power of operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.ipowi` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `ipowi` operation takes two operands of integer type (i.e., scalar,
+    tensor or vector) and returns one result of the same type. Operands
+    must have the same type.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer exponentiation.
+    %a = math.ipowi %b, %c : i32
+    ```
+  }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -608,7 +714,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
     one result of the same type. It has no standard attributes.
 
     Example:
-  
+
     ```mlir
     // Scalar reciprocal square root value.
     %a = math.rsqrt %b : f64
@@ -655,6 +761,7 @@ def Math_TanOp : Math_FloatUnaryOp<"tan"> {
     %a = math.tan %b : f64
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -675,6 +782,37 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
     %a = math.tanh %b : f64
     ```
   }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// RoundEvenOp
+//===----------------------------------------------------------------------===//
+
+def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
+  let summary = "round of the specified value with halfway cases to even";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.roundeven` ssa-use `:` type
+    ```
+
+    The `roundeven` operation returns the operand rounded to the nearest integer
+    value in floating-point format. It takes one operand of floating point type
+    (i.e., scalar, tensor or vector) and produces one result of the same type.  The
+    operation rounds the argument to the nearest integer value in floating-point
+    format, rounding halfway cases to even, regardless of the current
+    rounding direction.
+
+    Example:
+
+    ```mlir
+    // Scalar round operation.
+    %a = math.roundeven %b : f64
+    ```
+  }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -704,6 +842,87 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
     %a = math.round %b : f64
     ```
   }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// TruncOp
+//===----------------------------------------------------------------------===//
+
+def Math_TruncOp : Math_FloatUnaryOp<"trunc"> {
+  let summary = "trunc of the specified value";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.trunc` ssa-use `:` type
+    ```
+
+    The `trunc` operation returns the operand rounded to the nearest integer
+    value in floating-point format. It takes one operand of floating point type
+    (i.e., scalar, tensor or vector) and produces one result of the same type.
+    The operation always rounds to the nearest integer not larger in magnitude
+    than the operand, regardless of the current rounding direction.
+
+    Example:
+
+    ```mlir
+    // Scalar trunc operation.
+    %a = math.trunc %b : f64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FPowIOp
+//===----------------------------------------------------------------------===//
+
+def Math_FPowIOp : Math_Op<"fpowi",
+    [SameOperandsAndResultShape, AllTypesMatch<["lhs", "result"]>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
+  let summary = "floating point raised to the signed integer power";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.fpowi` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `fpowi` operation takes a `base` operand of floating point type
+    (i.e. scalar, tensor or vector) and a `power` operand of integer type
+    (also scalar, tensor or vector) and returns one result of the same type
+    as `base`. The result is `base` raised to the power of `power`.
+    The operation is elementwise for non-scalars, e.g.:
+
+    ```mlir
+    %v = math.fpowi %base, %power : vector<2xf32>, vector<2xi32
+    ```
+
+    The result is a vector of:
+
+    ```
+    [<math.fpowi %base[0], %power[0]>, <math.fpowi %base[1], %power[1]>]
+    ```
+
+    Example:
+
+    ```mlir
+    // Scalar exponentiation.
+    %a = math.fpowi %base, %power : f64, i32
+    ```
+  }];
+
+  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath);
+  let results = (outs FloatLike:$result);
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($lhs) `,` type($rhs) }];
+
+  // TODO: add a constant folder using pow[f] for cases, when
+  //       the power argument is exactly representable in floating
+  //       point type of the base.
 }
 
 #endif // MATH_OPS

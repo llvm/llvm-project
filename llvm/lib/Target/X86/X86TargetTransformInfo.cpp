@@ -13,29 +13,39 @@
 ///
 //===----------------------------------------------------------------------===//
 /// About Cost Model numbers used below it's necessary to say the following:
-/// the numbers correspond to some "generic" X86 CPU instead of usage of
-/// concrete CPU model. Usually the numbers correspond to CPU where the feature
-/// apeared at the first time. For example, if we do Subtarget.hasSSE42() in
+/// the numbers correspond to some "generic" X86 CPU instead of usage of a
+/// specific CPU model. Usually the numbers correspond to the CPU where the
+/// feature first appeared. For example, if we do Subtarget.hasSSE42() in
 /// the lookups below the cost is based on Nehalem as that was the first CPU
-/// to support that feature level and thus has most likely the worst case cost.
+/// to support that feature level and thus has most likely the worst case cost,
+/// although we may discard an outlying worst cost from one CPU (e.g. Atom).
+///
 /// Some examples of other technologies/CPUs:
 ///   SSE 3   - Pentium4 / Athlon64
 ///   SSE 4.1 - Penryn
-///   SSE 4.2 - Nehalem
-///   AVX     - Sandy Bridge
-///   AVX2    - Haswell
+///   SSE 4.2 - Nehalem / Silvermont
+///   AVX     - Sandy Bridge / Jaguar / Bulldozer
+///   AVX2    - Haswell / Ryzen
 ///   AVX-512 - Xeon Phi / Skylake
+///
 /// And some examples of instruction target dependent costs (latency)
 ///                   divss     sqrtss          rsqrtss
-///   AMD K7            11-16     19              3
-///   Piledriver        9-24      13-15           5
-///   Jaguar            14        16              2
-///   Pentium II,III    18        30              2
-///   Nehalem           7-14      7-18            3
-///   Haswell           10-13     11              5
-/// TODO: Develop and implement  the target dependent cost model and
-/// specialize cost numbers for different Cost Model Targets such as throughput,
-/// code size, latency and uop count.
+///   AMD K7          11-16     19              3
+///   Piledriver      9-24      13-15           5
+///   Jaguar          14        16              2
+///   Pentium II,III  18        30              2
+///   Nehalem         7-14      7-18            3
+///   Haswell         10-13     11              5
+///
+/// Interpreting the 4 TargetCostKind types:
+/// TCK_RecipThroughput and TCK_Latency should try to match the worst case
+/// values reported by the CPU scheduler models (and llvm-mca).
+/// TCK_CodeSize should match the instruction count (e.g. divss = 1), NOT the
+/// actual encoding size of the instruction.
+/// TCK_SizeAndLatency should match the worst case micro-op counts reported by
+/// by the CPU scheduler models (and llvm-mca), to ensure that they are
+/// compatible with the MicroOpBufferSize and LoopMicroOpBufferSize values which are
+/// often used as the cost thresholds where TCK_SizeAndLatency is requested.
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetTransformInfo.h"
@@ -46,6 +56,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -57,6 +68,38 @@ using namespace llvm;
 //
 //===----------------------------------------------------------------------===//
 
+// Helper struct to store/access costs for each cost kind.
+// TODO: Move this to allow other targets to use it?
+struct CostKindCosts {
+  unsigned RecipThroughputCost = ~0U;
+  unsigned LatencyCost = ~0U;
+  unsigned CodeSizeCost = ~0U;
+  unsigned SizeAndLatencyCost = ~0U;
+
+  std::optional<unsigned>
+  operator[](TargetTransformInfo::TargetCostKind Kind) const {
+    unsigned Cost = ~0U;
+    switch (Kind) {
+    case TargetTransformInfo::TCK_RecipThroughput:
+      Cost = RecipThroughputCost;
+      break;
+    case TargetTransformInfo::TCK_Latency:
+      Cost = LatencyCost;
+      break;
+    case TargetTransformInfo::TCK_CodeSize:
+      Cost = CodeSizeCost;
+      break;
+    case TargetTransformInfo::TCK_SizeAndLatency:
+      Cost = SizeAndLatencyCost;
+      break;
+    }
+    if (Cost == ~0U)
+      return std::nullopt;
+    return Cost;
+  }
+};
+using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
+
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) {
   assert(isPowerOf2_32(TyWidth) && "Ty width must be power of 2");
@@ -66,7 +109,7 @@ X86TTIImpl::getPopcntSupport(unsigned TyWidth) {
   return ST->hasPOPCNT() ? TTI::PSK_FastHardware : TTI::PSK_Software;
 }
 
-llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
+std::optional<unsigned> X86TTIImpl::getCacheSize(
   TargetTransformInfo::CacheLevel Level) const {
   switch (Level) {
   case TargetTransformInfo::CacheLevel::L1D:
@@ -96,7 +139,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheSize(
   llvm_unreachable("Unknown TargetTransformInfo::CacheLevel");
 }
 
-llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
+std::optional<unsigned> X86TTIImpl::getCacheAssociativity(
   TargetTransformInfo::CacheLevel Level) const {
   //   - Penryn
   //   - Nehalem
@@ -109,7 +152,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   //   - Kabylake
   switch (Level) {
   case TargetTransformInfo::CacheLevel::L1D:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetTransformInfo::CacheLevel::L2D:
     return 8;
   }
@@ -153,7 +196,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
 unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
   return getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector)
-      .getFixedSize();
+      .getFixedValue();
 }
 
 unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
@@ -176,15 +219,9 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
 
 InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
-    TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Opd1PropInfo,
-                                         Opd2PropInfo, Args, CxtI);
 
   // vXi8 multiplications are always promoted to vXi16.
   if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
@@ -197,12 +234,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
            getCastInstrCost(Instruction::Trunc, Ty, WideVecTy,
                             TargetTransformInfo::CastContextHint::None,
                             CostKind) +
-           getArithmeticInstrCost(Opcode, WideVecTy, CostKind, Op1Info, Op2Info,
-                                  Opd1PropInfo, Opd2PropInfo);
+           getArithmeticInstrCost(Opcode, WideVecTy, CostKind, Op1Info, Op2Info);
   }
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
@@ -214,6 +250,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Op1MinSize = BaseT::minRequiredElementSize(Args[0], Op1Signed);
     unsigned Op2MinSize = BaseT::minRequiredElementSize(Args[1], Op2Signed);
     unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
+    bool SignedMode = Op1Signed || Op2Signed;
 
     // If both are representable as i15 and at least one is constant,
     // zero-extended, or sign-extended from vXi16 (or less pre-SSE41) then we
@@ -235,109 +272,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         LT.second =
             MVT::getVectorVT(MVT::i16, 2 * LT.second.getVectorNumElements());
     }
-  }
 
-  // Vector multiply by pow2 will be simplified to shifts.
-  if (ISD == ISD::MUL &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      Opd2PropInfo == TargetTransformInfo::OP_PowerOf2)
-    return getArithmeticInstrCost(Instruction::Shl, Ty, CostKind, Op1Info,
-                                  Op2Info, TargetTransformInfo::OP_None,
-                                  TargetTransformInfo::OP_None);
-
-  // On X86, vector signed division by constants power-of-two are
-  // normally expanded to the sequence SRA + SRL + ADD + SRA.
-  // The OperandValue properties may not be the same as that of the previous
-  // operation; conservatively assume OP_None.
-  if ((ISD == ISD::SDIV || ISD == ISD::SREM) &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
-    InstructionCost Cost =
-        2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
-                                   TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
-                                   TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
-                                   TargetTransformInfo::OP_None);
-
-    if (ISD == ISD::SREM) {
-      // For SREM: (X % C) is the equivalent of (X - (X/C)*C)
-      Cost += getArithmeticInstrCost(Instruction::Mul, Ty, CostKind, Op1Info,
-                                     Op2Info);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Op1Info,
-                                     Op2Info);
-    }
-
-    return Cost;
-  }
-
-  // Vector unsigned division/remainder will be simplified to shifts/masks.
-  if ((ISD == ISD::UDIV || ISD == ISD::UREM) &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
-    if (ISD == ISD::UDIV)
-      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
-                                    Op2Info, TargetTransformInfo::OP_None,
-                                    TargetTransformInfo::OP_None);
-    // UREM
-    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Op1Info,
-                                  Op2Info, TargetTransformInfo::OP_None,
-                                  TargetTransformInfo::OP_None);
-  }
-
-  static const CostTblEntry GLMCostTable[] = {
-    { ISD::FDIV,  MVT::f32,   18 }, // divss
-    { ISD::FDIV,  MVT::v4f32, 35 }, // divps
-    { ISD::FDIV,  MVT::f64,   33 }, // divsd
-    { ISD::FDIV,  MVT::v2f64, 65 }, // divpd
-  };
-
-  if (ST->useGLMDivSqrtCosts())
-    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-
-  static const CostTblEntry SLMCostTable[] = {
-    { ISD::MUL,   MVT::v4i32, 11 }, // pmulld
-    { ISD::MUL,   MVT::v8i16, 2  }, // pmullw
-    { ISD::FMUL,  MVT::f64,   2  }, // mulsd
-    { ISD::FMUL,  MVT::v2f64, 4  }, // mulpd
-    { ISD::FMUL,  MVT::v4f32, 2  }, // mulps
-    { ISD::FDIV,  MVT::f32,   17 }, // divss
-    { ISD::FDIV,  MVT::v4f32, 39 }, // divps
-    { ISD::FDIV,  MVT::f64,   32 }, // divsd
-    { ISD::FDIV,  MVT::v2f64, 69 }, // divpd
-    { ISD::FADD,  MVT::v2f64, 2  }, // addpd
-    { ISD::FSUB,  MVT::v2f64, 2  }, // subpd
-    // v2i64/v4i64 mul is custom lowered as a series of long:
-    // multiplies(3), shifts(3) and adds(2)
-    // slm muldq version throughput is 2 and addq throughput 4
-    // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
-    //       3X4 (addq throughput) = 17
-    { ISD::MUL,   MVT::v2i64, 17 },
-    // slm addq\subq throughput is 4
-    { ISD::ADD,   MVT::v2i64, 4  },
-    { ISD::SUB,   MVT::v2i64, 4  },
-  };
-
-  if (ST->useSLMArithCosts()) {
-    if (Args.size() == 2 && ISD == ISD::MUL && LT.second == MVT::v4i32) {
-      // Check if the operands can be shrinked into a smaller datatype.
-      // TODO: Merge this into generiic vXi32 MUL patterns above.
-      bool Op1Signed = false;
-      unsigned Op1MinSize = BaseT::minRequiredElementSize(Args[0], Op1Signed);
-      bool Op2Signed = false;
-      unsigned Op2MinSize = BaseT::minRequiredElementSize(Args[1], Op2Signed);
-
-      bool SignedMode = Op1Signed || Op2Signed;
-      unsigned OpMinSize = std::max(Op1MinSize, Op2MinSize);
-
+    // Check if the vXi32 operands can be shrunk into a smaller datatype.
+    // This should match the codegen from reduceVMULWidth.
+    // TODO: Make this generic (!ST->SSE41 || ST->isPMULLDSlow()).
+    if (ST->useSLMArithCosts() && LT.second == MVT::v4i32) {
       if (OpMinSize <= 7)
         return LT.first * 3; // pmullw/sext
       if (!SignedMode && OpMinSize <= 8)
@@ -347,418 +286,711 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (!SignedMode && OpMinSize <= 16)
         return LT.first * 5; // pmullw/pmulhw/pshuf
     }
+  }
 
-    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD,
-                                            LT.second)) {
-      return LT.first * Entry->Cost;
+  // Vector multiply by pow2 will be simplified to shifts.
+  // Vector multiply by -pow2 will be simplified to shifts/negates.
+  if (ISD == ISD::MUL && Op2Info.isConstant() &&
+      (Op2Info.isPowerOf2() || Op2Info.isNegatedPowerOf2())) {
+    InstructionCost Cost =
+        getArithmeticInstrCost(Instruction::Shl, Ty, CostKind,
+                               Op1Info.getNoProps(), Op2Info.getNoProps());
+    if (Op2Info.isNegatedPowerOf2())
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind);
+    return Cost;
+  }
+
+  // On X86, vector signed division by constants power-of-two are
+  // normally expanded to the sequence SRA + SRL + ADD + SRA.
+  // The OperandValue properties may not be the same as that of the previous
+  // operation; conservatively assume OP_None.
+  if ((ISD == ISD::SDIV || ISD == ISD::SREM) &&
+      Op2Info.isConstant() && Op2Info.isPowerOf2()) {
+    InstructionCost Cost =
+        2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+    Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+    Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind,
+                                   Op1Info.getNoProps(), Op2Info.getNoProps());
+
+    if (ISD == ISD::SREM) {
+      // For SREM: (X % C) is the equivalent of (X - (X/C)*C)
+      Cost += getArithmeticInstrCost(Instruction::Mul, Ty, CostKind, Op1Info.getNoProps(),
+                                     Op2Info.getNoProps());
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Op1Info.getNoProps(),
+                                     Op2Info.getNoProps());
     }
+
+    return Cost;
   }
 
-  static const CostTblEntry AVX512BWUniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v64i8,   2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,   2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,   4 }, // psrlw, pand, pxor, psubb.
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((ISD == ISD::UDIV || ISD == ISD::UREM) &&
+      Op2Info.isConstant() && Op2Info.isPowerOf2()) {
+    if (ISD == ISD::UDIV)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                    Op1Info.getNoProps(), Op2Info.getNoProps());
+    // UREM
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                  Op1Info.getNoProps(), Op2Info.getNoProps());
+  }
+
+  static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 1, 7, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 1, 8, 4, 5 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 1, 8, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 1, 8, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 1, 9, 4, 5 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 1, 8, 2, 3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 1, 8, 2, 3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 1, 9, 4, 6 } }, // psrlw, pand, pxor, psubb.
+
+    { ISD::SHL,  MVT::v16i16, { 1, 1, 1, 1 } }, // psllw
+    { ISD::SRL,  MVT::v16i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SHL,  MVT::v32i16, { 1, 1, 1, 1 } }, // psllw
+    { ISD::SRL,  MVT::v32i16, { 1, 1, 1, 1 } }, // psrlw
+    { ISD::SRA,  MVT::v32i16, { 1, 1, 1, 1 } }, // psrlw
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
-      ST->hasBWI()) {
-    if (const auto *Entry = CostTableLookup(AVX512BWUniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512UniformConstCostTable[] = {
-    { ISD::SRA,  MVT::v2i64,   1 },
-    { ISD::SRA,  MVT::v4i64,   1 },
-    { ISD::SRA,  MVT::v8i64,   1 },
+  static const CostKindTblEntry AVX512UniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  {  2, 12,  5,  6 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  {  3, 10, 12, 12 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v64i8,   4 }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,   4 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,   8 }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v16i16, {  2,  7,  4,  4 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16, {  2,  7,  4,  4 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16, {  2,  7,  4,  4 } }, // psraw + split.
 
-    { ISD::SDIV, MVT::v16i32,  6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v16i32,  8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32,  5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v16i32,  7 }, // pmuludq+mul+sub sequence
+    { ISD::SHL,  MVT::v8i32,  {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v8i32,  {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v8i32,  {  1,  1,  1,  1 } }, // psrad
+    { ISD::SHL,  MVT::v16i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v16i32, {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v16i32, {  1,  1,  1,  1 } }, // psrad
+
+    { ISD::SRA,  MVT::v2i64,  {  1,  1,  1,  1 } }, // psraq
+    { ISD::SHL,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  {  1,  1,  1,  1 } }, // psraq
+    { ISD::SHL,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v8i64,  {  1,  1,  1,  1 } }, // psraq
+
+    { ISD::SDIV, MVT::v16i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v16i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v16i32, {  7 } }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
-      ST->hasAVX512()) {
-    if (const auto *Entry = CostTableLookup(AVX512UniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512UniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v32i8,   2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v32i8,   2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v32i8,   4 }, // psrlw, pand, pxor, psubb.
+  static const CostKindTblEntry AVX2UniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8, {  1,  8,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  1,  8,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  2, 10,  5,  6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8, {  2,  8,  2,  4 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8, {  2,  8,  2,  4 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8, {  3, 10,  5,  9 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SRA,  MVT::v4i64,   4 }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psllw
+    { ISD::SRL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psrlw
+    { ISD::SRA,  MVT::v8i16, {  1,  1,  1,  1 } }, // psraw
+    { ISD::SHL,  MVT::v16i16,{  2,  2,  1,  2 } }, // psllw
+    { ISD::SRL,  MVT::v16i16,{  2,  2,  1,  2 } }, // psrlw
+    { ISD::SRA,  MVT::v16i16,{  2,  2,  1,  2 } }, // psraw
 
-    { ISD::SDIV, MVT::v8i32,   6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v8i32,   8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,   5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v8i32,   7 }, // pmuludq+mul+sub sequence
+    { ISD::SHL,  MVT::v4i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrld
+    { ISD::SRA,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrad
+    { ISD::SHL,  MVT::v8i32, {  2,  2,  1,  2 } }, // pslld
+    { ISD::SRL,  MVT::v8i32, {  2,  2,  1,  2 } }, // psrld
+    { ISD::SRA,  MVT::v8i32, {  2,  2,  1,  2 } }, // psrad
+
+    { ISD::SHL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psllq
+    { ISD::SRL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psrlq
+    { ISD::SRA,  MVT::v2i64, {  2,  3,  3,  3 } }, // psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64, {  2,  2,  1,  2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64, {  2,  2,  1,  2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64, {  4,  4,  3,  6 } }, // psrad + shuffle + split.
+
+    { ISD::SDIV, MVT::v8i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v8i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v8i32, {  7 } }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
-      ST->hasAVX2()) {
-    if (const auto *Entry = CostTableLookup(AVX2UniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(AVX2UniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v16i8,     2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v16i8,     2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v16i8,     4 }, // psrlw, pand, pxor, psubb.
+  static const CostKindTblEntry AVXUniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8, {  2,  7,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  2,  7,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  3,  9,  5,  6 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8, {  4,  7,  7,  8 } }, // 2*(psllw + pand) + split.
+    { ISD::SRL,  MVT::v32i8, {  4,  7,  7,  8 } }, // 2*(psrlw + pand) + split.
+    { ISD::SRA,  MVT::v32i8, {  7,  7, 12, 13 } }, // 2*(psrlw, pand, pxor, psubb) + split.
 
-    { ISD::SHL,  MVT::v32i8,   4+2 }, // 2*(psllw + pand) + split.
-    { ISD::SRL,  MVT::v32i8,   4+2 }, // 2*(psrlw + pand) + split.
-    { ISD::SRA,  MVT::v32i8,   8+2 }, // 2*(psrlw, pand, pxor, psubb) + split.
+    { ISD::SHL,  MVT::v8i16, {  1,  2,  1,  1 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  1,  2,  1,  1 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  1,  2,  1,  1 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16,{  3,  6,  4,  5 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16,{  3,  6,  4,  5 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16,{  3,  6,  4,  5 } }, // psraw + split.
 
-    { ISD::SDIV, MVT::v8i32,  12+2 }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32,  16+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32,     6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32,     8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  10+2 }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32,  14+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32,     5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32,     7 }, // pmuludq+mul+sub sequence
+    { ISD::SHL,  MVT::v4i32, {  1,  2,  1,  1 } }, // pslld.
+    { ISD::SRL,  MVT::v4i32, {  1,  2,  1,  1 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  1,  2,  1,  1 } }, // psrad.
+    { ISD::SHL,  MVT::v8i32, {  3,  6,  4,  5 } }, // pslld + split.
+    { ISD::SRL,  MVT::v8i32, {  3,  6,  4,  5 } }, // psrld + split.
+    { ISD::SRA,  MVT::v8i32, {  3,  6,  4,  5 } }, // psrad + split.
+
+    { ISD::SHL,  MVT::v2i64, {  1,  2,  1,  1 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  1,  2,  1,  1 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  2,  3,  3,  3 } }, // psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64, {  3,  6,  4,  5 } }, // 2 x psllq + split.
+    { ISD::SRL,  MVT::v4i64, {  3,  6,  4,  5 } }, // 2 x psllq + split.
+    { ISD::SRA,  MVT::v4i64, {  5,  7,  8,  9 } }, // 2 x psrad + shuffle + split.
+
+    { ISD::SDIV, MVT::v8i32, { 14 } }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32, { 18 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v8i32, { 12 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32, { 16 } }, // 2*pmuludq+mul+sub sequence + split.
   };
 
   // XOP has faster vXi8 shifts.
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
-      ST->hasSSE2() && !ST->hasXOP()) {
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
+    if (const auto *Entry =
+            CostTableLookup(AVXUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSE2UniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8, {  1,  7,  2,  3 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  1,  7,  2,  3 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {  3,  9,  5,  6 } }, // psrlw, pand, pxor, psubb.
+
+    { ISD::SHL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  1,  1,  1,  1 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  1,  1,  1,  1 } }, // psraw.
+
+    { ISD::SHL,  MVT::v4i32, {  1,  1,  1,  1 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  1,  1,  1,  1 } }, // psrad.
+
+    { ISD::SHL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  1,  1,  1,  1 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  3,  5,  6,  6 } }, // 2 x psrad + shuffle.
+
+    { ISD::SDIV, MVT::v4i32, {  6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32, {  8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v4i32, {  5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32, {  7 } }, // pmuludq+mul+sub sequence
+  };
+
+  // XOP has faster vXi8 shifts.
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasSSE2() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
     if (const auto *Entry =
             CostTableLookup(SSE2UniformConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512BWConstCostTable[] = {
-    { ISD::SDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v32i16,  6 }, // vpmulhw sequence
-    { ISD::SREM, MVT::v32i16,  8 }, // vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i16,  6 }, // vpmulhuw sequence
-    { ISD::UREM, MVT::v32i16,  8 }, // vpmulhuw+mul+sub sequence
+  static const CostKindTblEntry AVX512BWConstCostTable[] = {
+    { ISD::SDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v32i16, {  6 } }, // vpmulhw sequence
+    { ISD::SREM, MVT::v32i16, {  8 } }, // vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i16, {  6 } }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v32i16, {  8 } }, // vpmulhuw+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      ST->hasBWI()) {
+  if (Op2Info.isConstant() && ST->hasBWI())
     if (const auto *Entry =
             CostTableLookup(AVX512BWConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512ConstCostTable[] = {
-    { ISD::SDIV, MVT::v16i32, 15 }, // vpmuldq sequence
-    { ISD::SREM, MVT::v16i32, 17 }, // vpmuldq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32, 15 }, // vpmuludq sequence
-    { ISD::UREM, MVT::v16i32, 17 }, // vpmuludq+mul+sub sequence
-    { ISD::SDIV, MVT::v64i8,  28 }, // 4*ext+4*pmulhw sequence
-    { ISD::SREM, MVT::v64i8,  32 }, // 4*ext+4*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v64i8,  28 }, // 4*ext+4*pmulhw sequence
-    { ISD::UREM, MVT::v64i8,  32 }, // 4*ext+4*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v32i16, 12 }, // 2*vpmulhw sequence
-    { ISD::SREM, MVT::v32i16, 16 }, // 2*vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i16, 12 }, // 2*vpmulhuw sequence
-    { ISD::UREM, MVT::v32i16, 16 }, // 2*vpmulhuw+mul+sub sequence
+  static const CostKindTblEntry AVX512ConstCostTable[] = {
+    { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
+    { ISD::SREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
+    { ISD::UREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v32i16, { 12 } }, // 2*vpmulhw sequence
+    { ISD::SREM, MVT::v32i16, { 16 } }, // 2*vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i16, { 12 } }, // 2*vpmulhuw sequence
+    { ISD::UREM, MVT::v32i16, { 16 } }, // 2*vpmulhuw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v16i32, { 15 } }, // vpmuldq sequence
+    { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
+    { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      ST->hasAVX512()) {
+  if (Op2Info.isConstant() && ST->hasAVX512())
     if (const auto *Entry =
             CostTableLookup(AVX512ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2ConstCostTable[] = {
-    { ISD::SDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v16i16,  6 }, // vpmulhw sequence
-    { ISD::SREM, MVT::v16i16,  8 }, // vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v16i16,  6 }, // vpmulhuw sequence
-    { ISD::UREM, MVT::v16i16,  8 }, // vpmulhuw+mul+sub sequence
-    { ISD::SDIV, MVT::v8i32,  15 }, // vpmuldq sequence
-    { ISD::SREM, MVT::v8i32,  19 }, // vpmuldq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  15 }, // vpmuludq sequence
-    { ISD::UREM, MVT::v8i32,  19 }, // vpmuludq+mul+sub sequence
+  static const CostKindTblEntry AVX2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v16i16, {  6 } }, // vpmulhw sequence
+    { ISD::SREM, MVT::v16i16, {  8 } }, // vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v16i16, {  6 } }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v16i16, {  8 } }, // vpmulhuw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v8i32,  { 15 } }, // vpmuldq sequence
+    { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
+    { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      ST->hasAVX2()) {
+  if (Op2Info.isConstant() && ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE2ConstCostTable[] = {
-    { ISD::SDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::SREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::UREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v16i16, 12+2 }, // 2*pmulhw sequence + split.
-    { ISD::SREM, MVT::v16i16, 16+2 }, // 2*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v8i16,     6 }, // pmulhw sequence
-    { ISD::SREM, MVT::v8i16,     8 }, // pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v16i16, 12+2 }, // 2*pmulhuw sequence + split.
-    { ISD::UREM, MVT::v16i16, 16+2 }, // 2*pmulhuw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v8i16,     6 }, // pmulhuw sequence
-    { ISD::UREM, MVT::v8i16,     8 }, // pmulhuw+mul+sub sequence
-    { ISD::SDIV, MVT::v8i32,  38+2 }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32,  48+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32,    19 }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32,    24 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  30+2 }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32,  40+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32,    15 }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32,    20 }, // pmuludq+mul+sub sequence
+  static const CostKindTblEntry AVXConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  { 30 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::SREM, MVT::v32i8,  { 34 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v32i8,  { 30 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::UREM, MVT::v32i8,  { 34 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+
+    { ISD::SDIV, MVT::v16i16, { 14 } }, // 2*pmulhw sequence + split.
+    { ISD::SREM, MVT::v16i16, { 18 } }, // 2*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v16i16, { 14 } }, // 2*pmulhuw sequence + split.
+    { ISD::UREM, MVT::v16i16, { 18 } }, // 2*pmulhuw+mul+sub sequence + split.
+
+    { ISD::SDIV, MVT::v8i32,  { 32 } }, // vpmuludq sequence
+    { ISD::SREM, MVT::v8i32,  { 38 } }, // vpmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  { 32 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32,  { 42 } }, // 2*pmuludq+mul+sub sequence + split.
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
-      ST->hasSSE2()) {
-    // pmuldq sequence.
-    if (ISD == ISD::SDIV && LT.second == MVT::v8i32 && ST->hasAVX())
-      return LT.first * 32;
-    if (ISD == ISD::SREM && LT.second == MVT::v8i32 && ST->hasAVX())
-      return LT.first * 38;
-    if (ISD == ISD::SDIV && LT.second == MVT::v4i32 && ST->hasSSE41())
-      return LT.first * 15;
-    if (ISD == ISD::SREM && LT.second == MVT::v4i32 && ST->hasSSE41())
-      return LT.first * 20;
+  if (Op2Info.isConstant() && ST->hasAVX())
+    if (const auto *Entry = CostTableLookup(AVXConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
+  static const CostKindTblEntry SSE41ConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i32,  { 15 } }, // vpmuludq sequence
+    { ISD::SREM, MVT::v4i32,  { 20 } }, // vpmuludq+mul+sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasSSE41())
+    if (const auto *Entry =
+            CostTableLookup(SSE41ConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSE2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v16i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v16i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v16i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v16i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v8i16,  {  6 } }, // pmulhw sequence
+    { ISD::SREM, MVT::v8i16,  {  8 } }, // pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v8i16,  {  6 } }, // pmulhuw sequence
+    { ISD::UREM, MVT::v8i16,  {  8 } }, // pmulhuw+mul+sub sequence
+
+    { ISD::SDIV, MVT::v4i32,  { 19 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32,  { 24 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v4i32,  { 15 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32,  { 20 } }, // pmuludq+mul+sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512BWShiftCostTable[] = {
-    { ISD::SHL,   MVT::v16i8,      4 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v16i8,      4 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v16i8,      4 }, // extend/vpsravw/pack sequence.
-    { ISD::SHL,   MVT::v32i8,      4 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v32i8,      4 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v32i8,      6 }, // extend/vpsravw/pack sequence.
-    { ISD::SHL,   MVT::v64i8,      6 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v64i8,      7 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v64i8,     15 }, // extend/vpsravw/pack sequence.
+  static const CostKindTblEntry AVX512BWUniformCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 3,10, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 4,12, 8,12 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 4, 8, 7, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 5,10,10,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 4, 8, 7,10 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 5,10,10,15 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,   MVT::v8i16,      1 }, // vpsllvw
-    { ISD::SRL,   MVT::v8i16,      1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v8i16,      1 }, // vpsravw
-    { ISD::SHL,   MVT::v16i16,     1 }, // vpsllvw
-    { ISD::SRL,   MVT::v16i16,     1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v16i16,     1 }, // vpsravw
-    { ISD::SHL,   MVT::v32i16,     1 }, // vpsllvw
-    { ISD::SRL,   MVT::v32i16,     1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v32i16,     1 }, // vpsravw
+    { ISD::SHL,  MVT::v32i16, { 2, 4, 2, 3 } }, // psllw
+    { ISD::SRL,  MVT::v32i16, { 2, 4, 2, 3 } }, // psrlw
+    { ISD::SRA,  MVT::v32i16, { 2, 4, 2, 3 } }, // psrqw
   };
 
-  if (ST->hasBWI())
-    if (const auto *Entry = CostTableLookup(AVX512BWShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+  if (ST->hasBWI() && Op2Info.isUniform())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWUniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2UniformCostTable[] = {
+  static const CostKindTblEntry AVX512UniformCostTable[] = {
+    { ISD::SHL,  MVT::v32i16, { 5,10, 5, 7 } }, // psllw + split.
+    { ISD::SRL,  MVT::v32i16, { 5,10, 5, 7 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v32i16, { 5,10, 5, 7 } }, // psraw + split.
+
+    { ISD::SHL,  MVT::v16i32, { 2, 4, 2, 3 } }, // pslld
+    { ISD::SRL,  MVT::v16i32, { 2, 4, 2, 3 } }, // psrld
+    { ISD::SRA,  MVT::v16i32, { 2, 4, 2, 3 } }, // psrad
+
+    { ISD::SRA,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psraq
+    { ISD::SHL,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  { 1, 4, 1, 2 } }, // psraq
+    { ISD::SHL,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v8i64,  { 1, 4, 1, 2 } }, // psraq
+  };
+
+  if (ST->hasAVX512() && Op2Info.isUniform())
+    if (const auto *Entry =
+            CostTableLookup(AVX512UniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry AVX2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v16i16, 1 }, // psllw.
-    { ISD::SRL,  MVT::v16i16, 1 }, // psrlw.
-    { ISD::SRA,  MVT::v16i16, 1 }, // psraw.
-    { ISD::SHL,  MVT::v32i16, 2 }, // 2*psllw.
-    { ISD::SRL,  MVT::v32i16, 2 }, // 2*psrlw.
-    { ISD::SRA,  MVT::v32i16, 2 }, // 2*psraw.
+    { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  { 3, 9, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  { 4, 5, 9,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  { 4, 7, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8,  { 4, 8, 7, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8,  { 6, 9,11,16 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v8i32,  1 }, // pslld
-    { ISD::SRL,  MVT::v8i32,  1 }, // psrld
-    { ISD::SRA,  MVT::v8i32,  1 }, // psrad
-    { ISD::SHL,  MVT::v4i64,  1 }, // psllq
-    { ISD::SRL,  MVT::v4i64,  1 }, // psrlq
+    { ISD::SHL,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16,  { 1, 2, 1, 2 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16, { 2, 4, 2, 3 } }, // psllw.
+    { ISD::SRL,  MVT::v16i16, { 2, 4, 2, 3 } }, // psrlw.
+    { ISD::SRA,  MVT::v16i16, { 2, 4, 2, 3 } }, // psraw.
+
+    { ISD::SHL,  MVT::v4i32,  { 1, 2, 1, 2 } }, // pslld
+    { ISD::SRL,  MVT::v4i32,  { 1, 2, 1, 2 } }, // psrld
+    { ISD::SRA,  MVT::v4i32,  { 1, 2, 1, 2 } }, // psrad
+    { ISD::SHL,  MVT::v8i32,  { 2, 4, 2, 3 } }, // pslld
+    { ISD::SRL,  MVT::v8i32,  { 2, 4, 2, 3 } }, // psrld
+    { ISD::SRA,  MVT::v8i32,  { 2, 4, 2, 3 } }, // psrad
+
+    { ISD::SHL,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v2i64,  { 1, 2, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v2i64,  { 2, 4, 5, 7 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  { 2, 4, 1, 2 } }, // psrlq
+    { ISD::SRA,  MVT::v4i64,  { 4, 6, 5, 9 } }, // 2 x psrad + shuffle.
   };
 
-  if (ST->hasAVX2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
+  if (ST->hasAVX2() && Op2Info.isUniform())
     if (const auto *Entry =
             CostTableLookup(AVX2UniformCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE2UniformCostTable[] = {
-    // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v8i16,  1 }, // psllw.
-    { ISD::SHL,  MVT::v4i32,  1 }, // pslld
-    { ISD::SHL,  MVT::v2i64,  1 }, // psllq.
+  static const CostKindTblEntry AVXUniformCostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  {  4, 4, 6, 8 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8,  {  4, 8, 5, 8 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8,  {  6, 6, 9,13 } }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v32i8,  {  7, 8,11,14 } }, // psllw + pand + split.
+    { ISD::SRL,  MVT::v32i8,  {  7, 9,10,14 } }, // psrlw + pand + split.
+    { ISD::SRA,  MVT::v32i8,  { 10,11,16,21 } }, // psrlw, pand, pxor, psubb + split.
 
-    { ISD::SRL,  MVT::v8i16,  1 }, // psrlw.
-    { ISD::SRL,  MVT::v4i32,  1 }, // psrld.
-    { ISD::SRL,  MVT::v2i64,  1 }, // psrlq.
+    { ISD::SHL,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16,  {  1, 3, 1, 2 } }, // psraw.
+    { ISD::SHL,  MVT::v16i16, {  3, 7, 5, 7 } }, // psllw + split.
+    { ISD::SRL,  MVT::v16i16, {  3, 7, 5, 7 } }, // psrlw + split.
+    { ISD::SRA,  MVT::v16i16, {  3, 7, 5, 7 } }, // psraw + split.
 
-    { ISD::SRA,  MVT::v8i16,  1 }, // psraw.
-    { ISD::SRA,  MVT::v4i32,  1 }, // psrad.
+    { ISD::SHL,  MVT::v4i32,  {  1, 3, 1, 2 } }, // pslld.
+    { ISD::SRL,  MVT::v4i32,  {  1, 3, 1, 2 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32,  {  1, 3, 1, 2 } }, // psrad.
+    { ISD::SHL,  MVT::v8i32,  {  3, 7, 5, 7 } }, // pslld + split.
+    { ISD::SRL,  MVT::v8i32,  {  3, 7, 5, 7 } }, // psrld + split.
+    { ISD::SRA,  MVT::v8i32,  {  3, 7, 5, 7 } }, // psrad + split.
+
+    { ISD::SHL,  MVT::v2i64,  {  1, 3, 1, 2 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64,  {  1, 3, 1, 2 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64,  {  3, 4, 5, 7 } }, // 2 x psrad + shuffle.
+    { ISD::SHL,  MVT::v4i64,  {  3, 7, 4, 6 } }, // psllq + split.
+    { ISD::SRL,  MVT::v4i64,  {  3, 7, 4, 6 } }, // psrlq + split.
+    { ISD::SRA,  MVT::v4i64,  {  6, 7,10,13 } }, // 2 x (2 x psrad + shuffle) + split.
   };
 
-  if (ST->hasSSE2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
+  // XOP has faster vXi8 shifts.
+  if (ST->hasAVX() && Op2Info.isUniform() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
+    if (const auto *Entry =
+            CostTableLookup(AVXUniformCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
+
+  static const CostKindTblEntry SSE2UniformCostTable[] = {
+    // Uniform splats are cheaper for the following instructions.
+    { ISD::SHL,  MVT::v16i8, {  9, 10, 6, 9 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {  9, 13, 5, 9 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, { 11, 15, 9,13 } }, // pcmpgtb sequence.
+
+    { ISD::SHL,  MVT::v8i16, {  2, 2, 1, 2 } }, // psllw.
+    { ISD::SRL,  MVT::v8i16, {  2, 2, 1, 2 } }, // psrlw.
+    { ISD::SRA,  MVT::v8i16, {  2, 2, 1, 2 } }, // psraw.
+
+    { ISD::SHL,  MVT::v4i32, {  2, 2, 1, 2 } }, // pslld
+    { ISD::SRL,  MVT::v4i32, {  2, 2, 1, 2 } }, // psrld.
+    { ISD::SRA,  MVT::v4i32, {  2, 2, 1, 2 } }, // psrad.
+
+    { ISD::SHL,  MVT::v2i64, {  2, 2, 1, 2 } }, // psllq.
+    { ISD::SRL,  MVT::v2i64, {  2, 2, 1, 2 } }, // psrlq.
+    { ISD::SRA,  MVT::v2i64, {  5, 9, 5, 7 } }, // 2*psrlq + xor + sub.
+  };
+
+  if (ST->hasSSE2() && Op2Info.isUniform() &&
+      (!ST->hasXOP() || LT.second.getScalarSizeInBits() != 8))
     if (const auto *Entry =
             CostTableLookup(SSE2UniformCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512DQCostTable[] = {
-    { ISD::MUL,  MVT::v2i64, 2 }, // pmullq
-    { ISD::MUL,  MVT::v4i64, 2 }, // pmullq
-    { ISD::MUL,  MVT::v8i64, 2 }  // pmullq
+  static const CostKindTblEntry AVX512DQCostTable[] = {
+    { ISD::MUL,  MVT::v2i64, { 2, 15, 1, 3 } }, // pmullq
+    { ISD::MUL,  MVT::v4i64, { 2, 15, 1, 3 } }, // pmullq
+    { ISD::MUL,  MVT::v8i64, { 3, 15, 1, 3 } }  // pmullq
   };
 
   // Look for AVX512DQ lowering tricks for custom cases.
   if (ST->hasDQI())
     if (const auto *Entry = CostTableLookup(AVX512DQCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512BWCostTable[] = {
-    { ISD::SHL,   MVT::v64i8,     11 }, // vpblendvb sequence.
-    { ISD::SRL,   MVT::v64i8,     11 }, // vpblendvb sequence.
-    { ISD::SRA,   MVT::v64i8,     24 }, // vpblendvb sequence.
+  static const CostKindTblEntry AVX512BWCostTable[] = {
+    { ISD::SHL,   MVT::v16i8,   {  4,  8, 4, 5 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v16i8,   {  4,  8, 4, 5 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v16i8,   {  4,  8, 4, 5 } }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v32i8,   {  4, 23,11,16 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v32i8,   {  4, 30,12,18 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v32i8,   {  6, 13,24,30 } }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v64i8,   {  6, 19,13,15 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v64i8,   {  7, 27,15,18 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v64i8,   { 15, 15,30,30 } }, // extend/vpsravw/pack sequence.
+
+    { ISD::SHL,   MVT::v8i16,   {  1,  1, 1, 1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v8i16,   {  1,  1, 1, 1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v8i16,   {  1,  1, 1, 1 } }, // vpsravw
+    { ISD::SHL,   MVT::v16i16,  {  1,  1, 1, 1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v16i16,  {  1,  1, 1, 1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v16i16,  {  1,  1, 1, 1 } }, // vpsravw
+    { ISD::SHL,   MVT::v32i16,  {  1,  1, 1, 1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v32i16,  {  1,  1, 1, 1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v32i16,  {  1,  1, 1, 1 } }, // vpsravw
+
+    { ISD::ADD,   MVT::v64i8,   {  1,  1, 1, 1 } }, // paddb
+    { ISD::ADD,   MVT::v32i16,  {  1,  1, 1, 1 } }, // paddw
+
+    { ISD::ADD,   MVT::v32i8,   {  1,  1, 1, 1 } }, // paddb
+    { ISD::ADD,   MVT::v16i16,  {  1,  1, 1, 1 } }, // paddw
+    { ISD::ADD,   MVT::v8i32,   {  1,  1, 1, 1 } }, // paddd
+    { ISD::ADD,   MVT::v4i64,   {  1,  1, 1, 1 } }, // paddq
+
+    { ISD::SUB,   MVT::v64i8,   {  1,  1, 1, 1 } }, // psubb
+    { ISD::SUB,   MVT::v32i16,  {  1,  1, 1, 1 } }, // psubw
+
+    { ISD::MUL,   MVT::v32i16,  {  1,  5, 1, 1 } }, // pmullw
+
+    { ISD::SUB,   MVT::v32i8,   {  1,  1, 1, 1 } }, // psubb
+    { ISD::SUB,   MVT::v16i16,  {  1,  1, 1, 1 } }, // psubw
+    { ISD::SUB,   MVT::v8i32,   {  1,  1, 1, 1 } }, // psubd
+    { ISD::SUB,   MVT::v4i64,   {  1,  1, 1, 1 } }, // psubq
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX512CostTable[] = {
-    { ISD::SHL,     MVT::v4i32,      1 },
-    { ISD::SRL,     MVT::v4i32,      1 },
-    { ISD::SRA,     MVT::v4i32,      1 },
-    { ISD::SHL,     MVT::v8i32,      1 },
-    { ISD::SRL,     MVT::v8i32,      1 },
-    { ISD::SRA,     MVT::v8i32,      1 },
-    { ISD::SHL,     MVT::v16i32,     1 },
-    { ISD::SRL,     MVT::v16i32,     1 },
-    { ISD::SRA,     MVT::v16i32,     1 },
+  static const CostKindTblEntry AVX512CostTable[] = {
+    { ISD::SHL,     MVT::v64i8,   { 15, 19,27,33 } }, // vpblendv+split sequence.
+    { ISD::SRL,     MVT::v64i8,   { 15, 19,30,36 } }, // vpblendv+split sequence.
+    { ISD::SRA,     MVT::v64i8,   { 37, 37,51,63 } }, // vpblendv+split sequence.
 
-    { ISD::SHL,     MVT::v2i64,      1 },
-    { ISD::SRL,     MVT::v2i64,      1 },
-    { ISD::SHL,     MVT::v4i64,      1 },
-    { ISD::SRL,     MVT::v4i64,      1 },
-    { ISD::SHL,     MVT::v8i64,      1 },
-    { ISD::SRL,     MVT::v8i64,      1 },
+    { ISD::SHL,     MVT::v32i16,  { 11, 16,11,15 } }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SRL,     MVT::v32i16,  { 11, 16,11,15 } }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SRA,     MVT::v32i16,  { 11, 16,11,15 } }, // 2*extend/vpsravd/pack sequence.
 
-    { ISD::SRA,     MVT::v2i64,      1 },
-    { ISD::SRA,     MVT::v4i64,      1 },
-    { ISD::SRA,     MVT::v8i64,      1 },
+    { ISD::SHL,     MVT::v4i32,   {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v4i32,   {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v4i32,   {  1,  1, 1, 1 } },
+    { ISD::SHL,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::SHL,     MVT::v16i32,  {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v16i32,  {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v16i32,  {  1,  1, 1, 1 } },
 
-    { ISD::MUL,     MVT::v16i32,     1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v8i64,      6 }, // 3*pmuludq/3*shift/2*add
-    { ISD::MUL,     MVT::i64,        1 }, // Skylake from http://www.agner.org/
+    { ISD::SHL,     MVT::v2i64,   {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v2i64,   {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v2i64,   {  1,  1, 1, 1 } },
+    { ISD::SHL,     MVT::v4i64,   {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v4i64,   {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v4i64,   {  1,  1, 1, 1 } },
+    { ISD::SHL,     MVT::v8i64,   {  1,  1, 1, 1 } },
+    { ISD::SRL,     MVT::v8i64,   {  1,  1, 1, 1 } },
+    { ISD::SRA,     MVT::v8i64,   {  1,  1, 1, 1 } },
 
-    { ISD::FNEG,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::f64,        4 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v2f64,      4 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f64,      8 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f64,     16 }, // Skylake from http://www.agner.org/
+    { ISD::ADD,     MVT::v64i8,   {  3,  7, 5, 5 } }, // 2*paddb + split
+    { ISD::ADD,     MVT::v32i16,  {  3,  7, 5, 5 } }, // 2*paddw + split
 
-    { ISD::FNEG,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::f32,        3 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f32,      3 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f32,      5 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v16f32,    10 }, // Skylake from http://www.agner.org/
+    { ISD::SUB,     MVT::v64i8,   {  3,  7, 5, 5 } }, // 2*psubb + split
+    { ISD::SUB,     MVT::v32i16,  {  3,  7, 5, 5 } }, // 2*psubw + split
+
+    { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v4i64,   {  1,  1, 1, 1 } },
+
+    { ISD::OR,      MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v4i64,   {  1,  1, 1, 1 } },
+
+    { ISD::XOR,     MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v4i64,   {  1,  1, 1, 1 } },
+
+    { ISD::MUL,     MVT::v16i32,  {  1, 10, 1, 2 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v8i32,   {  1, 10, 1, 2 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v4i32,   {  1, 10, 1, 2 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v8i64,   {  6,  9, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,     MVT::i64,     {  1 } }, // Skylake from http://www.agner.org/
+
+    { ISD::FNEG,    MVT::v8f64,   {  1,  1, 1, 2 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v8f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v4f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v8f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v4f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v8f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v2f64,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::f64,     {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+
+    { ISD::FDIV,    MVT::f64,     {  4, 14, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,   {  4, 14, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,   {  8, 14, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f64,   { 16, 23, 1, 3 } }, // Skylake from http://www.agner.org/
+
+    { ISD::FNEG,    MVT::v16f32,  {  1,  1, 1, 2 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v16f32,  {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v8f32,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v16f32,  {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v8f32,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v16f32,  {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v8f32,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f32,   {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::f32,     {  1,  4, 1, 1 } }, // Skylake from http://www.agner.org/
+
+    { ISD::FDIV,    MVT::f32,     {  3, 11, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,   {  3, 11, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,   {  5, 11, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v16f32,  { 10, 18, 1, 3 } }, // Skylake from http://www.agner.org/
   };
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX2ShiftCostTable[] = {
+  static const CostKindTblEntry AVX2ShiftCostTable[] = {
     // Shifts on vXi64/vXi32 on AVX2 is legal even though we declare to
     // customize them to detect the cases where shift amount is a scalar one.
-    { ISD::SHL,     MVT::v4i32,    2 }, // vpsllvd (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i32,    2 }, // vpsrlvd (Haswell from agner.org)
-    { ISD::SRA,     MVT::v4i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v8i32,    2 }, // vpsllvd (Haswell from agner.org)
-    { ISD::SRL,     MVT::v8i32,    2 }, // vpsrlvd (Haswell from agner.org)
-    { ISD::SRA,     MVT::v8i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v2i64,    1 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v2i64,    1 }, // vpsrlvq (Haswell from agner.org)
-    { ISD::SHL,     MVT::v4i64,    1 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i64,    1 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i32,  { 2, 3, 1, 3 } }, // vpsllvd (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i32,  { 2, 3, 1, 3 } }, // vpsrlvd (Haswell from agner.org)
+    { ISD::SRA,     MVT::v4i32,  { 2, 3, 1, 3 } }, // vpsravd (Haswell from agner.org)
+    { ISD::SHL,     MVT::v8i32,  { 4, 4, 1, 3 } }, // vpsllvd (Haswell from agner.org)
+    { ISD::SRL,     MVT::v8i32,  { 4, 4, 1, 3 } }, // vpsrlvd (Haswell from agner.org)
+    { ISD::SRA,     MVT::v8i32,  { 4, 4, 1, 3 } }, // vpsravd (Haswell from agner.org)
+    { ISD::SHL,     MVT::v2i64,  { 2, 3, 1, 1 } }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v2i64,  { 2, 3, 1, 1 } }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i64,  { 4, 4, 1, 2 } }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i64,  { 4, 4, 1, 2 } }, // vpsrlvq (Haswell from agner.org)
   };
 
   if (ST->hasAVX512()) {
-    if (ISD == ISD::SHL && LT.second == MVT::v32i16 &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+    if (ISD == ISD::SHL && LT.second == MVT::v32i16 && Op2Info.isConstant())
       // On AVX512, a packed v32i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
       return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                    Op1Info, Op2Info,
-                                    TargetTransformInfo::OP_None,
-                                    TargetTransformInfo::OP_None);
+                                    Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
   // Look for AVX2 lowering tricks (XOP is always better at v4i32 shifts).
   if (ST->hasAVX2() && !(ST->hasXOP() && LT.second == MVT::v4i32)) {
     if (ISD == ISD::SHL && LT.second == MVT::v16i16 &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+        Op2Info.isConstant())
       // On AVX2, a packed v16i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
       return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                    Op1Info, Op2Info,
-                                    TargetTransformInfo::OP_None,
-                                    TargetTransformInfo::OP_None);
+                                    Op1Info.getNoProps(), Op2Info.getNoProps());
 
     if (const auto *Entry = CostTableLookup(AVX2ShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
   }
 
-  static const CostTblEntry XOPShiftCostTable[] = {
+  static const CostKindTblEntry XOPShiftCostTable[] = {
     // 128bit shifts take 1cy, but right shifts require negation beforehand.
-    { ISD::SHL,     MVT::v16i8,    1 },
-    { ISD::SRL,     MVT::v16i8,    2 },
-    { ISD::SRA,     MVT::v16i8,    2 },
-    { ISD::SHL,     MVT::v8i16,    1 },
-    { ISD::SRL,     MVT::v8i16,    2 },
-    { ISD::SRA,     MVT::v8i16,    2 },
-    { ISD::SHL,     MVT::v4i32,    1 },
-    { ISD::SRL,     MVT::v4i32,    2 },
-    { ISD::SRA,     MVT::v4i32,    2 },
-    { ISD::SHL,     MVT::v2i64,    1 },
-    { ISD::SRL,     MVT::v2i64,    2 },
-    { ISD::SRA,     MVT::v2i64,    2 },
+    { ISD::SHL,     MVT::v16i8,  { 1, 3, 1, 1 } },
+    { ISD::SRL,     MVT::v16i8,  { 2, 3, 1, 1 } },
+    { ISD::SRA,     MVT::v16i8,  { 2, 3, 1, 1 } },
+    { ISD::SHL,     MVT::v8i16,  { 1, 3, 1, 1 } },
+    { ISD::SRL,     MVT::v8i16,  { 2, 3, 1, 1 } },
+    { ISD::SRA,     MVT::v8i16,  { 2, 3, 1, 1 } },
+    { ISD::SHL,     MVT::v4i32,  { 1, 3, 1, 1 } },
+    { ISD::SRL,     MVT::v4i32,  { 2, 3, 1, 1 } },
+    { ISD::SRA,     MVT::v4i32,  { 2, 3, 1, 1 } },
+    { ISD::SHL,     MVT::v2i64,  { 1, 3, 1, 1 } },
+    { ISD::SRL,     MVT::v2i64,  { 2, 3, 1, 1 } },
+    { ISD::SRA,     MVT::v2i64,  { 2, 3, 1, 1 } },
     // 256bit shifts require splitting if AVX2 didn't catch them above.
-    { ISD::SHL,     MVT::v32i8,  2+2 },
-    { ISD::SRL,     MVT::v32i8,  4+2 },
-    { ISD::SRA,     MVT::v32i8,  4+2 },
-    { ISD::SHL,     MVT::v16i16, 2+2 },
-    { ISD::SRL,     MVT::v16i16, 4+2 },
-    { ISD::SRA,     MVT::v16i16, 4+2 },
-    { ISD::SHL,     MVT::v8i32,  2+2 },
-    { ISD::SRL,     MVT::v8i32,  4+2 },
-    { ISD::SRA,     MVT::v8i32,  4+2 },
-    { ISD::SHL,     MVT::v4i64,  2+2 },
-    { ISD::SRL,     MVT::v4i64,  4+2 },
-    { ISD::SRA,     MVT::v4i64,  4+2 },
+    { ISD::SHL,     MVT::v32i8,  { 4, 7, 5, 6 } },
+    { ISD::SRL,     MVT::v32i8,  { 6, 7, 5, 6 } },
+    { ISD::SRA,     MVT::v32i8,  { 6, 7, 5, 6 } },
+    { ISD::SHL,     MVT::v16i16, { 4, 7, 5, 6 } },
+    { ISD::SRL,     MVT::v16i16, { 6, 7, 5, 6 } },
+    { ISD::SRA,     MVT::v16i16, { 6, 7, 5, 6 } },
+    { ISD::SHL,     MVT::v8i32,  { 4, 7, 5, 6 } },
+    { ISD::SRL,     MVT::v8i32,  { 6, 7, 5, 6 } },
+    { ISD::SRA,     MVT::v8i32,  { 6, 7, 5, 6 } },
+    { ISD::SHL,     MVT::v4i64,  { 4, 7, 5, 6 } },
+    { ISD::SRL,     MVT::v4i64,  { 6, 7, 5, 6 } },
+    { ISD::SRA,     MVT::v4i64,  { 6, 7, 5, 6 } },
   };
 
   // Look for XOP lowering tricks.
@@ -766,46 +998,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // If the right shift is constant then we'll fold the negation so
     // it's as cheap as a left shift.
     int ShiftISD = ISD;
-    if ((ShiftISD == ISD::SRL || ShiftISD == ISD::SRA) &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+    if ((ShiftISD == ISD::SRL || ShiftISD == ISD::SRA) && Op2Info.isConstant())
       ShiftISD = ISD::SHL;
     if (const auto *Entry =
             CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
   }
 
-  static const CostTblEntry SSE2UniformShiftCostTable[] = {
-    // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v16i16, 2+2 }, // 2*psllw + split.
-    { ISD::SHL,  MVT::v8i32,  2+2 }, // 2*pslld + split.
-    { ISD::SHL,  MVT::v4i64,  2+2 }, // 2*psllq + split.
-
-    { ISD::SRL,  MVT::v16i16, 2+2 }, // 2*psrlw + split.
-    { ISD::SRL,  MVT::v8i32,  2+2 }, // 2*psrld + split.
-    { ISD::SRL,  MVT::v4i64,  2+2 }, // 2*psrlq + split.
-
-    { ISD::SRA,  MVT::v16i16, 2+2 }, // 2*psraw + split.
-    { ISD::SRA,  MVT::v8i32,  2+2 }, // 2*psrad + split.
-    { ISD::SRA,  MVT::v2i64,    4 }, // 2*psrad + shuffle.
-    { ISD::SRA,  MVT::v4i64,  8+2 }, // 2*(2*psrad + shuffle) + split.
-  };
-
-  if (ST->hasSSE2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
-
-    // Handle AVX2 uniform v4i64 ISD::SRA, it's not worth a table.
-    if (ISD == ISD::SRA && LT.second == MVT::v4i64 && ST->hasAVX2())
-      return LT.first * 4; // 2*psrad + shuffle.
-
-    if (const auto *Entry =
-            CostTableLookup(SSE2UniformShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
-
-  if (ISD == ISD::SHL &&
-      Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) {
+  if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
     MVT VT = LT.second;
     // Vector shift left by non uniform constant can be lowered
     // into vector multiply.
@@ -814,255 +1015,388 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       ISD = ISD::MUL;
   }
 
-  static const CostTblEntry AVX2CostTable[] = {
-    { ISD::SHL,  MVT::v16i8,      6 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v32i8,      6 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
-    { ISD::SHL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
+  static const CostKindTblEntry GLMCostTable[] = {
+    { ISD::FDIV,  MVT::f32,   { 18, 19, 1, 1 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 35, 36, 1, 1 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 33, 34, 1, 1 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 65, 66, 1, 1 } }, // divpd
+  };
 
-    { ISD::SRL,  MVT::v16i8,      6 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v32i8,      6 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
-    { ISD::SRL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
+  if (ST->useGLMDivSqrtCosts())
+    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-    { ISD::SRA,  MVT::v16i8,     17 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v32i8,     17 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v64i8,     34 }, // 2*vpblendvb sequence.
-    { ISD::SRA,  MVT::v8i16,      5 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v16i16,     7 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v32i16,    14 }, // 2*extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v2i64,      2 }, // srl/xor/sub sequence.
-    { ISD::SRA,  MVT::v4i64,      2 }, // srl/xor/sub sequence.
+  static const CostKindTblEntry SLMCostTable[] = {
+    { ISD::MUL,   MVT::v4i32, { 11, 11, 1, 7 } }, // pmulld
+    { ISD::MUL,   MVT::v8i16, {  2,  5, 1, 1 } }, // pmullw
+    { ISD::FMUL,  MVT::f64,   {  2,  5, 1, 1 } }, // mulsd
+    { ISD::FMUL,  MVT::f32,   {  1,  4, 1, 1 } }, // mulss
+    { ISD::FMUL,  MVT::v2f64, {  4,  7, 1, 1 } }, // mulpd
+    { ISD::FMUL,  MVT::v4f32, {  2,  5, 1, 1 } }, // mulps
+    { ISD::FDIV,  MVT::f32,   { 17, 19, 1, 1 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 39, 39, 1, 6 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 32, 34, 1, 1 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 69, 69, 1, 6 } }, // divpd
+    { ISD::FADD,  MVT::v2f64, {  2,  4, 1, 1 } }, // addpd
+    { ISD::FSUB,  MVT::v2f64, {  2,  4, 1, 1 } }, // subpd
+    // v2i64/v4i64 mul is custom lowered as a series of long:
+    // multiplies(3), shifts(3) and adds(2)
+    // slm muldq version throughput is 2 and addq throughput 4
+    // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
+    //       3X4 (addq throughput) = 17
+    { ISD::MUL,   MVT::v2i64, { 17, 22, 9, 9 } },
+    // slm addq\subq throughput is 4
+    { ISD::ADD,   MVT::v2i64, {  4,  2, 1, 2 } },
+    { ISD::SUB,   MVT::v2i64, {  4,  2, 1, 2 } },
+  };
 
-    { ISD::SUB,  MVT::v32i8,      1 }, // psubb
-    { ISD::ADD,  MVT::v32i8,      1 }, // paddb
-    { ISD::SUB,  MVT::v16i16,     1 }, // psubw
-    { ISD::ADD,  MVT::v16i16,     1 }, // paddw
-    { ISD::SUB,  MVT::v8i32,      1 }, // psubd
-    { ISD::ADD,  MVT::v8i32,      1 }, // paddd
-    { ISD::SUB,  MVT::v4i64,      1 }, // psubq
-    { ISD::ADD,  MVT::v4i64,      1 }, // paddq
+  if (ST->useSLMArithCosts())
+    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-    { ISD::MUL,  MVT::v16i16,     1 }, // pmullw
-    { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
-    { ISD::MUL,  MVT::v4i64,      6 }, // 3*pmuludq/3*shift/2*add
+  static const CostKindTblEntry AVX2CostTable[] = {
+    { ISD::SHL,  MVT::v16i8,   {  6, 21,11,16 } }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v32i8,   {  6, 23,11,22 } }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,   {  5, 18, 5,10 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i16,  {  8, 10,10,14 } }, // extend/vpsrlvd/pack sequence.
 
-    { ISD::FNEG, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FNEG, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FADD, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FADD, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FSUB, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::f64,        1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v2f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::SRL,  MVT::v16i8,   {  6, 27,12,18 } }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v32i8,   {  8, 30,12,24 } }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,   {  5, 11, 5,10 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i16,  {  8, 10,10,14 } }, // extend/vpsrlvd/pack sequence.
 
-    { ISD::FDIV, MVT::f32,        7 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32,      7 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v8f32,     14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::f64,       14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v2f64,     14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f64,     28 }, // Haswell from http://www.agner.org/
+    { ISD::SRA,  MVT::v16i8,   { 17, 17,24,30 } }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v32i8,   { 18, 20,24,43 } }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,   {  5, 11, 5,10 } }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v16i16,  {  8, 10,10,14 } }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v2i64,   {  4,  5, 5, 5 } }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v4i64,   {  8,  8, 5, 9 } }, // srl/xor/sub sequence.
+
+    { ISD::SUB,  MVT::v32i8,   {  1,  1, 1, 2 } }, // psubb
+    { ISD::ADD,  MVT::v32i8,   {  1,  1, 1, 2 } }, // paddb
+    { ISD::SUB,  MVT::v16i16,  {  1,  1, 1, 2 } }, // psubw
+    { ISD::ADD,  MVT::v16i16,  {  1,  1, 1, 2 } }, // paddw
+    { ISD::SUB,  MVT::v8i32,   {  1,  1, 1, 2 } }, // psubd
+    { ISD::ADD,  MVT::v8i32,   {  1,  1, 1, 2 } }, // paddd
+    { ISD::SUB,  MVT::v4i64,   {  1,  1, 1, 2 } }, // psubq
+    { ISD::ADD,  MVT::v4i64,   {  1,  1, 1, 2 } }, // paddq
+
+    { ISD::MUL,  MVT::v16i16,  {  2,  5, 1, 1 } }, // pmullw
+    { ISD::MUL,  MVT::v8i32,   {  4, 10, 1, 2 } }, // pmulld
+    { ISD::MUL,  MVT::v4i32,   {  2, 10, 1, 2 } }, // pmulld
+    { ISD::MUL,  MVT::v4i64,   {  6, 10, 8,13 } }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,  MVT::v2i64,   {  6, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+
+    { ISD::FNEG, MVT::v4f64,   {  1,  1, 1, 2 } }, // vxorpd
+    { ISD::FNEG, MVT::v8f32,   {  1,  1, 1, 2 } }, // vxorps
+
+    { ISD::FADD, MVT::f64,     {  1,  4, 1, 1 } }, // vaddsd
+    { ISD::FADD, MVT::f32,     {  1,  4, 1, 1 } }, // vaddss
+    { ISD::FADD, MVT::v2f64,   {  1,  4, 1, 1 } }, // vaddpd
+    { ISD::FADD, MVT::v4f32,   {  1,  4, 1, 1 } }, // vaddps
+    { ISD::FADD, MVT::v4f64,   {  1,  4, 1, 2 } }, // vaddpd
+    { ISD::FADD, MVT::v8f32,   {  1,  4, 1, 2 } }, // vaddps
+
+    { ISD::FSUB, MVT::f64,     {  1,  4, 1, 1 } }, // vsubsd
+    { ISD::FSUB, MVT::f32,     {  1,  4, 1, 1 } }, // vsubss
+    { ISD::FSUB, MVT::v2f64,   {  1,  4, 1, 1 } }, // vsubpd
+    { ISD::FSUB, MVT::v4f32,   {  1,  4, 1, 1 } }, // vsubps
+    { ISD::FSUB, MVT::v4f64,   {  1,  4, 1, 2 } }, // vsubpd
+    { ISD::FSUB, MVT::v8f32,   {  1,  4, 1, 2 } }, // vsubps
+
+    { ISD::FMUL, MVT::f64,     {  1,  5, 1, 1 } }, // vmulsd
+    { ISD::FMUL, MVT::f32,     {  1,  5, 1, 1 } }, // vmulss
+    { ISD::FMUL, MVT::v2f64,   {  1,  5, 1, 1 } }, // vmulpd
+    { ISD::FMUL, MVT::v4f32,   {  1,  5, 1, 1 } }, // vmulps
+    { ISD::FMUL, MVT::v4f64,   {  1,  5, 1, 2 } }, // vmulpd
+    { ISD::FMUL, MVT::v8f32,   {  1,  5, 1, 2 } }, // vmulps
+
+    { ISD::FDIV, MVT::f32,     {  7, 13, 1, 1 } }, // vdivss
+    { ISD::FDIV, MVT::v4f32,   {  7, 13, 1, 1 } }, // vdivps
+    { ISD::FDIV, MVT::v8f32,   { 14, 21, 1, 3 } }, // vdivps
+    { ISD::FDIV, MVT::f64,     { 14, 20, 1, 1 } }, // vdivsd
+    { ISD::FDIV, MVT::v2f64,   { 14, 20, 1, 1 } }, // vdivpd
+    { ISD::FDIV, MVT::v4f64,   { 28, 35, 1, 3 } }, // vdivpd
   };
 
   // Look for AVX2 lowering tricks for custom cases.
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry AVX1CostTable[] = {
+  static const CostKindTblEntry AVX1CostTable[] = {
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
-    { ISD::MUL,     MVT::v16i16,     4 },
-    { ISD::MUL,     MVT::v8i32,      5 }, // BTVER2 from http://www.agner.org/
-    { ISD::MUL,     MVT::v4i64,     12 },
+    { ISD::MUL,     MVT::v16i16,  {  4,  8,  5,  6 } }, // pmullw + split
+    { ISD::MUL,     MVT::v8i32,   {  5,  8,  5, 10 } }, // pmulld + split
+    { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
+    { ISD::MUL,     MVT::v4i64,   { 12, 15, 19, 20 } },
 
-    { ISD::SUB,     MVT::v32i8,      4 },
-    { ISD::ADD,     MVT::v32i8,      4 },
-    { ISD::SUB,     MVT::v16i16,     4 },
-    { ISD::ADD,     MVT::v16i16,     4 },
-    { ISD::SUB,     MVT::v8i32,      4 },
-    { ISD::ADD,     MVT::v8i32,      4 },
-    { ISD::SUB,     MVT::v4i64,      4 },
-    { ISD::ADD,     MVT::v4i64,      4 },
+    { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v4i64,   {  1,  1, 1, 2 } }, // vandps
 
-    { ISD::SHL,     MVT::v32i8,     22 }, // pblendvb sequence + split.
-    { ISD::SHL,     MVT::v8i16,      6 }, // pblendvb sequence.
-    { ISD::SHL,     MVT::v16i16,    13 }, // pblendvb sequence + split.
-    { ISD::SHL,     MVT::v4i32,      3 }, // pslld/paddd/cvttps2dq/pmulld
-    { ISD::SHL,     MVT::v8i32,      9 }, // pslld/paddd/cvttps2dq/pmulld + split
-    { ISD::SHL,     MVT::v2i64,      2 }, // Shift each lane + blend.
-    { ISD::SHL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+    { ISD::OR,      MVT::v32i8,   {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v16i16,  {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v8i32,   {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v4i64,   {  1,  1, 1, 2 } }, // vorps
 
-    { ISD::SRL,     MVT::v32i8,     23 }, // pblendvb sequence + split.
-    { ISD::SRL,     MVT::v16i16,    28 }, // pblendvb sequence + split.
-    { ISD::SRL,     MVT::v4i32,      6 }, // Shift each lane + blend.
-    { ISD::SRL,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
-    { ISD::SRL,     MVT::v2i64,      2 }, // Shift each lane + blend.
-    { ISD::SRL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+    { ISD::XOR,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v4i64,   {  1,  1, 1, 2 } }, // vxorps
 
-    { ISD::SRA,     MVT::v32i8,     44 }, // pblendvb sequence + split.
-    { ISD::SRA,     MVT::v16i16,    28 }, // pblendvb sequence + split.
-    { ISD::SRA,     MVT::v4i32,      6 }, // Shift each lane + blend.
-    { ISD::SRA,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
-    { ISD::SRA,     MVT::v2i64,      5 }, // Shift each lane + blend.
-    { ISD::SRA,     MVT::v4i64,     12 }, // Shift each lane + blend + split.
+    { ISD::SUB,     MVT::v32i8,   {  4,  2, 5, 6 } }, // psubb + split
+    { ISD::ADD,     MVT::v32i8,   {  4,  2, 5, 6 } }, // paddb + split
+    { ISD::SUB,     MVT::v16i16,  {  4,  2, 5, 6 } }, // psubw + split
+    { ISD::ADD,     MVT::v16i16,  {  4,  2, 5, 6 } }, // paddw + split
+    { ISD::SUB,     MVT::v8i32,   {  4,  2, 5, 6 } }, // psubd + split
+    { ISD::ADD,     MVT::v8i32,   {  4,  2, 5, 6 } }, // paddd + split
+    { ISD::SUB,     MVT::v4i64,   {  4,  2, 5, 6 } }, // psubq + split
+    { ISD::ADD,     MVT::v4i64,   {  4,  2, 5, 6 } }, // paddq + split
+    { ISD::SUB,     MVT::v2i64,   {  1,  1, 1, 1 } }, // psubq
+    { ISD::ADD,     MVT::v2i64,   {  1,  1, 1, 1 } }, // paddq
 
-    { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
+    { ISD::SHL,     MVT::v16i8,   { 10, 21,11,17 } }, // pblendvb sequence.
+    { ISD::SHL,     MVT::v32i8,   { 22, 22,27,40 } }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v8i16,   {  6,  9,11,11 } }, // pblendvb sequence.
+    { ISD::SHL,     MVT::v16i16,  { 13, 16,24,25 } }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v4i32,   {  3, 11, 4, 6 } }, // pslld/paddd/cvttps2dq/pmulld
+    { ISD::SHL,     MVT::v8i32,   {  9, 11,12,17 } }, // pslld/paddd/cvttps2dq/pmulld + split
+    { ISD::SHL,     MVT::v2i64,   {  2,  4, 4, 6 } }, // Shift each lane + blend.
+    { ISD::SHL,     MVT::v4i64,   {  6,  7,11,15 } }, // Shift each lane + blend + split.
 
-    { ISD::FMUL,    MVT::f64,        2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FMUL,    MVT::v2f64,      2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FMUL,    MVT::v4f64,      4 }, // BTVER2 from http://www.agner.org/
+    { ISD::SRL,     MVT::v16i8,   { 11, 27,12,18 } }, // pblendvb sequence.
+    { ISD::SRL,     MVT::v32i8,   { 23, 23,30,43 } }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v8i16,   { 13, 16,14,22 } }, // pblendvb sequence.
+    { ISD::SRL,     MVT::v16i16,  { 28, 30,31,48 } }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v4i32,   {  6,  7,12,16 } }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v8i32,   { 14, 14,26,34 } }, // Shift each lane + blend + split.
+    { ISD::SRL,     MVT::v2i64,   {  2,  4, 4, 6 } }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v4i64,   {  6,  7,11,15 } }, // Shift each lane + blend + split.
 
-    { ISD::FDIV,    MVT::f32,       14 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f32,     14 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f32,     28 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::f64,       22 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v2f64,     22 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f64,     44 }, // SNB from http://www.agner.org/
+    { ISD::SRA,     MVT::v16i8,   { 21, 22,24,36 } }, // pblendvb sequence.
+    { ISD::SRA,     MVT::v32i8,   { 44, 45,51,76 } }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v8i16,   { 13, 16,14,22 } }, // pblendvb sequence.
+    { ISD::SRA,     MVT::v16i16,  { 28, 30,31,48 } }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v4i32,   {  6,  7,12,16 } }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v8i32,   { 14, 14,26,34 } }, // Shift each lane + blend + split.
+    { ISD::SRA,     MVT::v2i64,   {  5,  6,10,14 } }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v4i64,   { 12, 12,22,30 } }, // Shift each lane + blend + split.
+
+    { ISD::FNEG,    MVT::v4f64,   {  2,  2, 1, 2 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FNEG,    MVT::v8f32,   {  2,  2, 1, 2 } }, // BTVER2 from http://www.agner.org/
+
+    { ISD::FADD,    MVT::f64,     {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FADD,    MVT::f32,     {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FADD,    MVT::v2f64,   {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FADD,    MVT::v4f32,   {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FADD,    MVT::v4f64,   {  2,  5, 1, 2 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FADD,    MVT::v8f32,   {  2,  5, 1, 2 } }, // BDVER2 from http://www.agner.org/
+
+    { ISD::FSUB,    MVT::f64,     {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FSUB,    MVT::f32,     {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FSUB,    MVT::v2f64,   {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FSUB,    MVT::v4f32,   {  1,  5, 1, 1 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FSUB,    MVT::v4f64,   {  2,  5, 1, 2 } }, // BDVER2 from http://www.agner.org/
+    { ISD::FSUB,    MVT::v8f32,   {  2,  5, 1, 2 } }, // BDVER2 from http://www.agner.org/
+
+    { ISD::FMUL,    MVT::f64,     {  2,  5, 1, 1 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::f32,     {  1,  5, 1, 1 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v2f64,   {  2,  5, 1, 1 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f32,   {  1,  5, 1, 1 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f64,   {  4,  5, 1, 2 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v8f32,   {  2,  5, 1, 2 } }, // BTVER2 from http://www.agner.org/
+
+    { ISD::FDIV,    MVT::f32,     { 14, 14, 1, 1 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,   { 14, 14, 1, 1 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,   { 28, 29, 1, 3 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::f64,     { 22, 22, 1, 1 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,   { 22, 22, 1, 1 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,   { 44, 45, 1, 3 } }, // SNB from http://www.agner.org/
   };
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE42CostTable[] = {
-    { ISD::FADD, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry SSE42CostTable[] = {
+    { ISD::FADD, MVT::f64,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::f32,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v2f64,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::f32 ,    1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f32 ,   {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v2f64,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FMUL, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::f64,    {  1,  5, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::f32,    {  1,  5, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,  {  1,  5, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f32,  {  1,  5, 1, 1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FDIV,  MVT::f32,   14 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::v4f32, 14 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::f64,   22 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::v2f64, 22 }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::f32,   { 14, 14, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::v4f32, { 14, 14, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::f64,   { 22, 22, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::v2f64, { 22, 22, 1, 1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::MUL,   MVT::v2i64,  6 }  // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,   MVT::v2i64, {  6, 10,10,10 } }  // 3*pmuludq/3*shift/2*add
   };
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE41CostTable[] = {
-    { ISD::SHL,  MVT::v16i8,      10 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v8i16,      11 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v4i32,       4 }, // pslld/paddd/cvttps2dq/pmulld
+  static const CostKindTblEntry SSE41CostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 15, 24,17,22 } }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,  { 11, 14,11,11 } }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v4i32,  { 14, 20, 4,10 } }, // pslld/paddd/cvttps2dq/pmulld
 
-    { ISD::SRL,  MVT::v16i8,      11 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v8i16,      13 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v4i32,      16 }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v16i8,  { 16, 27,18,24 } }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,  { 22, 26,23,27 } }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v2i64,  {  4,  6, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::SRA,  MVT::v16i8,      21 }, // pblendvb sequence.
-    { ISD::SRA,  MVT::v8i16,      13 }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v16i8,  { 38, 41,30,36 } }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,  { 22, 26,23,27 } }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v4i32,  { 16, 17,15,19 } }, // Shift each lane + blend.
+    { ISD::SRA,  MVT::v2i64,  {  8, 17, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v4i32,       2 }  // pmulld (Nehalem from agner.org)
+    { ISD::MUL,  MVT::v4i32,  {  2, 11, 1, 1 } }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE2CostTable[] = {
+  static const CostKindTblEntry SSE2CostTable[] = {
     // We don't correctly identify costs of casts because they are marked as
     // custom.
-    { ISD::SHL,  MVT::v16i8,      13 }, // cmpgtb sequence.
-    { ISD::SHL,  MVT::v8i16,      25 }, // cmpgtw sequence.
-    { ISD::SHL,  MVT::v4i32,      16 }, // pslld/paddd/cvttps2dq/pmuludq.
-    { ISD::SHL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
+    { ISD::SHL,  MVT::v16i8,  { 13, 21,26,28 } }, // cmpgtb sequence.
+    { ISD::SHL,  MVT::v8i16,  { 24, 27,16,20 } }, // cmpgtw sequence.
+    { ISD::SHL,  MVT::v4i32,  { 17, 19,10,12 } }, // pslld/paddd/cvttps2dq/pmuludq.
+    { ISD::SHL,  MVT::v2i64,  {  4,  6, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::SRL,  MVT::v16i8,      14 }, // cmpgtb sequence.
-    { ISD::SRL,  MVT::v8i16,      16 }, // cmpgtw sequence.
-    { ISD::SRL,  MVT::v4i32,      12 }, // Shift each lane + blend.
-    { ISD::SRL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
+    { ISD::SRL,  MVT::v16i8,  { 14, 28,27,30 } }, // cmpgtb sequence.
+    { ISD::SRL,  MVT::v8i16,  { 16, 19,31,31 } }, // cmpgtw sequence.
+    { ISD::SRL,  MVT::v4i32,  { 12, 12,15,19 } }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v2i64,  {  4,  6, 5, 7 } }, // splat+shuffle sequence.
 
-    { ISD::SRA,  MVT::v16i8,      27 }, // unpacked cmpgtb sequence.
-    { ISD::SRA,  MVT::v8i16,      16 }, // cmpgtw sequence.
-    { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
-    { ISD::SRA,  MVT::v2i64,       8 }, // srl/xor/sub splat+shuffle sequence.
+    { ISD::SRA,  MVT::v16i8,  { 27, 30,54,54 } }, // unpacked cmpgtb sequence.
+    { ISD::SRA,  MVT::v8i16,  { 16, 19,31,31 } }, // cmpgtw sequence.
+    { ISD::SRA,  MVT::v4i32,  { 12, 12,15,19 } }, // Shift each lane + blend.
+    { ISD::SRA,  MVT::v2i64,  {  8, 11,12,16 } }, // srl/xor/sub splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v8i16,       1 }, // pmullw
-    { ISD::MUL,  MVT::v4i32,       6 }, // 3*pmuludq/4*shuffle
-    { ISD::MUL,  MVT::v2i64,       8 }, // 3*pmuludq/3*shift/2*add
+    { ISD::AND,  MVT::v16i8,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v8i16,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v4i32,  {  1,  1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v2i64,  {  1,  1, 1, 1 } }, // pand
 
-    { ISD::FDIV, MVT::f32,        23 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32,      39 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::f64,        38 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::v2f64,      69 }, // Pentium IV from http://www.agner.org/
+    { ISD::OR,   MVT::v16i8,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v8i16,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v4i32,  {  1,  1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v2i64,  {  1,  1, 1, 1 } }, // por
 
-    { ISD::FNEG, MVT::f32,         1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::f64,         1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::v4f32,       1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::v2f64,       1 }, // Pentium IV from http://www.agner.org/
+    { ISD::XOR,  MVT::v16i8,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v8i16,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v4i32,  {  1,  1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v2i64,  {  1,  1, 1, 1 } }, // pxor
 
-    { ISD::FADD, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
-    { ISD::FADD, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::ADD,  MVT::v2i64,  {  1,  2, 1, 2 } }, // paddq
+    { ISD::SUB,  MVT::v2i64,  {  1,  2, 1, 2 } }, // psubq
 
-    { ISD::FSUB, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
-    { ISD::FSUB, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::MUL,  MVT::v8i16,  {  1,  5, 1, 1 } }, // pmullw
+    { ISD::MUL,  MVT::v4i32,  {  6,  8, 7, 7 } }, // 3*pmuludq/4*shuffle
+    { ISD::MUL,  MVT::v2i64,  {  8, 10, 8, 8 } }, // 3*pmuludq/3*shift/2*add
+
+    { ISD::FDIV, MVT::f32,    { 23, 23, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f32,  { 39, 39, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::f64,    { 38, 38, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::v2f64,  { 69, 69, 1, 1 } }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FNEG, MVT::f32,    {  1,  1, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::f64,    {  1,  1, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32,  {  1,  1, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v2f64,  {  1,  1, 1, 1 } }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FADD, MVT::f32,    {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FADD, MVT::f64,    {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FADD, MVT::v2f64,  {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FSUB, MVT::f32,    {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,    {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FSUB, MVT::v2f64,  {  2,  3, 1, 1 } }, // Pentium IV from http://www.agner.org/
+
+    { ISD::FMUL, MVT::f64,    {  2,  5, 1, 1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,  {  2,  5, 1, 1 } }, // Pentium IV from http://www.agner.org/
   };
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry SSE1CostTable[] = {
-    { ISD::FDIV, MVT::f32,   17 }, // Pentium III from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32, 34 }, // Pentium III from http://www.agner.org/
+  static const CostKindTblEntry SSE1CostTable[] = {
+    { ISD::FDIV, MVT::f32,   { 17, 18, 1, 1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f32, { 34, 48, 1, 1 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FNEG, MVT::f32,    2 }, // Pentium III from http://www.agner.org/
-    { ISD::FNEG, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FNEG, MVT::f32,   {  2,  2, 1, 2 } }, // Pentium III from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32, {  2,  2, 1, 2 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FADD, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::FADD, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FADD, MVT::f32,   {  1,  3, 1, 1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32, {  2,  3, 1, 1 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FSUB, MVT::f32,   {  1,  3, 1, 1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32, {  2,  3, 1, 1 } }, // Pentium III from http://www.agner.org/
+
+    { ISD::FMUL, MVT::f32,   {  2,  5, 1, 1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f32, {  2,  5, 1, 1 } }, // Pentium III from http://www.agner.org/
   };
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ADD,  MVT::i64,    1 }, // Core (Merom) from http://www.agner.org/
-    { ISD::SUB,  MVT::i64,    1 }, // Core (Merom) from http://www.agner.org/
-    { ISD::MUL,  MVT::i64,    2 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
+    { ISD::ADD,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
+    { ISD::SUB,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
+    { ISD::MUL,  MVT::i64,  {  2 } }, // Nehalem from http://www.agner.org/
   };
 
   if (ST->is64Bit())
     if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
-  static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ADD,  MVT::i8,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::ADD,  MVT::i16,   1 }, // Pentium III from http://www.agner.org/
-    { ISD::ADD,  MVT::i32,   1 }, // Pentium III from http://www.agner.org/
+  static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
+    { ISD::ADD,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::ADD,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::ADD,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::SUB,  MVT::i8,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::SUB,  MVT::i16,   1 }, // Pentium III from http://www.agner.org/
-    { ISD::SUB,  MVT::i32,   1 }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
+
+    { ISD::FNEG, MVT::f64, {  2,  2, 1, 3 } }, // (x87)
+    { ISD::FADD, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
+    { ISD::FSUB, MVT::f64, {  2,  3, 1, 1 } }, // (x87)
+    { ISD::FMUL, MVT::f64, {  2,  5, 1, 1 } }, // (x87)
+    { ISD::FDIV, MVT::f64, { 38, 38, 1, 1 } }, // (x87)
   };
 
   if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, LT.second))
-    return LT.first * Entry->Cost;
+    if (auto KindCost = Entry->Cost[CostKind])
+      return LT.first * *KindCost;
 
   // It is not a good idea to vectorize division. We have to scalarize it and
   // in the process we will often end up having to spilling regular
@@ -1070,28 +1404,48 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // anyways so try hard to prevent vectorization of division - it is
   // generally a bad idea. Assume somewhat arbitrarily that we have to be able
   // to hide "20 cycles" for each lane.
-  if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
-                               ISD == ISD::UDIV || ISD == ISD::UREM)) {
-    InstructionCost ScalarCost = getArithmeticInstrCost(
-        Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info,
-        TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+  if (CostKind == TTI::TCK_RecipThroughput && LT.second.isVector() &&
+      (ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
+       ISD == ISD::UREM)) {
+    InstructionCost ScalarCost =
+        getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
+                               Op1Info.getNoProps(), Op2Info.getNoProps());
     return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
   }
 
+  // Handle some basic single instruction code size cases.
+  if (CostKind == TTI::TCK_CodeSize) {
+    switch (ISD) {
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+    case ISD::FDIV:
+    case ISD::FNEG:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      return LT.first;
+      break;
+    }
+  }
+
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Args, CxtI);
 }
 
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *BaseTp,
-                                           ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp,
+                                           ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind,
+                                           int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args) {
   // 64-bit packed float vectors (v2f32) are widened to type v4f32.
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, BaseTp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(BaseTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask);
+
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
   if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
@@ -1108,8 +1462,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     int NumElts = LT.second.getVectorNumElements();
     if ((Index % NumElts) == 0)
       return 0;
-    std::pair<InstructionCost, MVT> SubLT =
-        TLI->getTypeLegalizationCost(DL, SubTp);
+    std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
@@ -1134,8 +1487,9 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         auto *SubTy = FixedVectorType::get(BaseTp->getElementType(),
                                            SubLT.second.getVectorNumElements());
         int ExtractIndex = alignDown((Index % NumElts), NumSubElts);
-        InstructionCost ExtractCost = getShuffleCost(
-            TTI::SK_ExtractSubvector, VecTy, None, ExtractIndex, SubTy);
+        InstructionCost ExtractCost =
+            getShuffleCost(TTI::SK_ExtractSubvector, VecTy, std::nullopt,
+                           CostKind, ExtractIndex, SubTy);
 
         // If the original size is 32-bits or more, we can use pshufd. Otherwise
         // if we have SSSE3 we can use pshufb.
@@ -1155,8 +1509,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // isn't free, because we need to preserve the rest of the wide vector.
   if (Kind == TTI::SK_InsertSubvector && LT.second.isVector()) {
     int NumElts = LT.second.getVectorNumElements();
-    std::pair<InstructionCost, MVT> SubLT =
-        TLI->getTypeLegalizationCost(DL, SubTp);
+    std::pair<InstructionCost, MVT> SubLT = getTypeLegalizationCost(SubTp);
     if (SubLT.second.isVector()) {
       int NumSubElts = SubLT.second.getVectorNumElements();
       if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
@@ -1183,6 +1536,11 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse,          MVT::v2i16, 1}, // pshuflw
       {TTI::SK_Reverse,          MVT::v4i8,  3}, // punpck/pshuflw/packus
       {TTI::SK_Reverse,          MVT::v2i8,  1}, // punpck
+
+      {TTI::SK_Splice,           MVT::v4i16, 2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i16, 2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v4i8,  2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i8,  2}, // punpck+psrldq
 
       {TTI::SK_PermuteTwoSrc,    MVT::v4i16, 2}, // punpck/pshuflw
       {TTI::SK_PermuteTwoSrc,    MVT::v2i16, 2}, // punpck/pshuflw
@@ -1250,7 +1608,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         InstructionCost Cost = 0;
         processShuffleMasks(
             NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
-            [this, SingleOpTy, &PrevSrcReg, &PrevRegMask,
+            [this, SingleOpTy, CostKind, &PrevSrcReg, &PrevRegMask,
              &Cost](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
               if (!ShuffleVectorInst::isIdentityMask(RegMask)) {
                 // Check if the previous register can be just copied to the next
@@ -1258,7 +1616,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                 if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
                     PrevRegMask != RegMask)
                   Cost += getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
-                                         RegMask, 0, nullptr);
+                                         RegMask, CostKind, 0, nullptr);
                 else
                   // Just a copy of previous destination register.
                   Cost += TTI::TCC_Basic;
@@ -1272,21 +1630,21 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
               PrevSrcReg = SrcReg;
               PrevRegMask = RegMask;
             },
-            [this, SingleOpTy, &Cost](ArrayRef<int> RegMask,
-                                      unsigned /*Unused*/,
-                                      unsigned /*Unused*/) {
+            [this, SingleOpTy, CostKind, &Cost](ArrayRef<int> RegMask,
+                                                unsigned /*Unused*/,
+                                                unsigned /*Unused*/) {
               Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy, RegMask,
-                                     0, nullptr);
+                                     CostKind, 0, nullptr);
             });
         return Cost;
       }
 
       InstructionCost NumOfShuffles = (NumOfSrcs - 1) * NumOfDests;
       return NumOfShuffles * getShuffleCost(TTI::SK_PermuteTwoSrc, SingleOpTy,
-                                            None, 0, nullptr);
+                                            std::nullopt, CostKind, 0, nullptr);
     }
 
-    return BaseT::getShuffleCost(Kind, BaseTp, Mask, Index, SubTp);
+    return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
   }
 
   // For 2-input shuffles, we must account for splitting the 2 inputs into many.
@@ -1338,6 +1696,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       {TTI::SK_Select, MVT::v32i16, 1}, // vblendmw
       {TTI::SK_Select, MVT::v64i8,  1}, // vblendmb
+
+      {TTI::SK_Splice, MVT::v32i16, 2}, // vshufi64x2 + palignr
+      {TTI::SK_Splice, MVT::v32f16, 2}, // vshufi64x2 + palignr
+      {TTI::SK_Splice, MVT::v64i8,  2}, // vshufi64x2 + palignr
   };
 
   if (ST->hasBWI())
@@ -1345,71 +1707,84 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             CostTableLookup(AVX512BWShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
-  static const CostTblEntry AVX512ShuffleTbl[] = {
-      {TTI::SK_Broadcast, MVT::v8f64, 1},  // vbroadcastpd
-      {TTI::SK_Broadcast, MVT::v16f32, 1}, // vbroadcastps
-      {TTI::SK_Broadcast, MVT::v8i64, 1},  // vpbroadcastq
-      {TTI::SK_Broadcast, MVT::v16i32, 1}, // vpbroadcastd
-      {TTI::SK_Broadcast, MVT::v32i16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v32f16, 1}, // vpbroadcastw
-      {TTI::SK_Broadcast, MVT::v64i8, 1},  // vpbroadcastb
+  static const CostKindTblEntry AVX512ShuffleTbl[] = {
+      {TTI::SK_Broadcast, MVT::v8f64,  { 1, 1, 1, 1 } }, // vbroadcastsd
+      {TTI::SK_Broadcast, MVT::v16f32, { 1, 1, 1, 1 } }, // vbroadcastss
+      {TTI::SK_Broadcast, MVT::v8i64,  { 1, 1, 1, 1 } }, // vpbroadcastq
+      {TTI::SK_Broadcast, MVT::v16i32, { 1, 1, 1, 1 } }, // vpbroadcastd
+      {TTI::SK_Broadcast, MVT::v32i16, { 1, 1, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v32f16, { 1, 1, 1, 1 } }, // vpbroadcastw
+      {TTI::SK_Broadcast, MVT::v64i8,  { 1, 1, 1, 1 } }, // vpbroadcastb
 
-      {TTI::SK_Reverse, MVT::v8f64, 1},  // vpermpd
-      {TTI::SK_Reverse, MVT::v16f32, 1}, // vpermps
-      {TTI::SK_Reverse, MVT::v8i64, 1},  // vpermq
-      {TTI::SK_Reverse, MVT::v16i32, 1}, // vpermd
-      {TTI::SK_Reverse, MVT::v32i16, 7}, // per mca
-      {TTI::SK_Reverse, MVT::v32f16, 7}, // per mca
-      {TTI::SK_Reverse, MVT::v64i8,  7}, // per mca
+      {TTI::SK_Reverse, MVT::v8f64,  { 1, 3, 1, 1 } }, // vpermpd
+      {TTI::SK_Reverse, MVT::v16f32, { 1, 3, 1, 1 } }, // vpermps
+      {TTI::SK_Reverse, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpermq
+      {TTI::SK_Reverse, MVT::v16i32, { 1, 3, 1, 1 } }, // vpermd
+      {TTI::SK_Reverse, MVT::v32i16, { 7, 7, 7, 7 } }, // per mca
+      {TTI::SK_Reverse, MVT::v32f16, { 7, 7, 7, 7 } }, // per mca
+      {TTI::SK_Reverse, MVT::v64i8,  { 7, 7, 7, 7 } }, // per mca
 
-      {TTI::SK_PermuteSingleSrc, MVT::v8f64, 1},  // vpermpd
-      {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
-      {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1},  // vpermpd
-      {TTI::SK_PermuteSingleSrc, MVT::v16f32, 1}, // vpermps
-      {TTI::SK_PermuteSingleSrc, MVT::v8f32, 1},  // vpermps
-      {TTI::SK_PermuteSingleSrc, MVT::v4f32, 1},  // vpermps
-      {TTI::SK_PermuteSingleSrc, MVT::v8i64, 1},  // vpermq
-      {TTI::SK_PermuteSingleSrc, MVT::v4i64, 1},  // vpermq
-      {TTI::SK_PermuteSingleSrc, MVT::v2i64, 1},  // vpermq
-      {TTI::SK_PermuteSingleSrc, MVT::v16i32, 1}, // vpermd
-      {TTI::SK_PermuteSingleSrc, MVT::v8i32, 1},  // vpermd
-      {TTI::SK_PermuteSingleSrc, MVT::v4i32, 1},  // vpermd
-      {TTI::SK_PermuteSingleSrc, MVT::v16i8, 1},  // pshufb
+      {TTI::SK_Splice, MVT::v8f64,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v4f64,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v16f32, { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v8f32,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v8i64,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v4i64,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v16i32, { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v8i32,  { 1, 1, 1, 1 } }, // vpalignd
+      {TTI::SK_Splice, MVT::v32i16, { 4, 4, 4, 4 } }, // split + palignr
+      {TTI::SK_Splice, MVT::v32f16, { 4, 4, 4, 4 } }, // split + palignr
+      {TTI::SK_Splice, MVT::v64i8,  { 4, 4, 4, 4 } }, // split + palignr
 
-      {TTI::SK_PermuteTwoSrc, MVT::v8f64, 1},  // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v16f32, 1}, // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v8i64, 1},  // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v16i32, 1}, // vpermt2d
-      {TTI::SK_PermuteTwoSrc, MVT::v4f64, 1},  // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v8f32, 1},  // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v4i64, 1},  // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v8i32, 1},  // vpermt2d
-      {TTI::SK_PermuteTwoSrc, MVT::v2f64, 1},  // vpermt2pd
-      {TTI::SK_PermuteTwoSrc, MVT::v4f32, 1},  // vpermt2ps
-      {TTI::SK_PermuteTwoSrc, MVT::v2i64, 1},  // vpermt2q
-      {TTI::SK_PermuteTwoSrc, MVT::v4i32, 1},  // vpermt2d
+      {TTI::SK_PermuteSingleSrc, MVT::v8f64,  { 1, 3, 1, 1 } }, // vpermpd
+      {TTI::SK_PermuteSingleSrc, MVT::v4f64,  { 1, 3, 1, 1 } }, // vpermpd
+      {TTI::SK_PermuteSingleSrc, MVT::v2f64,  { 1, 3, 1, 1 } }, // vpermpd
+      {TTI::SK_PermuteSingleSrc, MVT::v16f32, { 1, 3, 1, 1 } }, // vpermps
+      {TTI::SK_PermuteSingleSrc, MVT::v8f32,  { 1, 3, 1, 1 } }, // vpermps
+      {TTI::SK_PermuteSingleSrc, MVT::v4f32,  { 1, 3, 1, 1 } }, // vpermps
+      {TTI::SK_PermuteSingleSrc, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpermq
+      {TTI::SK_PermuteSingleSrc, MVT::v4i64,  { 1, 3, 1, 1 } }, // vpermq
+      {TTI::SK_PermuteSingleSrc, MVT::v2i64,  { 1, 3, 1, 1 } }, // vpermq
+      {TTI::SK_PermuteSingleSrc, MVT::v16i32, { 1, 3, 1, 1 } }, // vpermd
+      {TTI::SK_PermuteSingleSrc, MVT::v8i32,  { 1, 3, 1, 1 } }, // vpermd
+      {TTI::SK_PermuteSingleSrc, MVT::v4i32,  { 1, 3, 1, 1 } }, // vpermd
+      {TTI::SK_PermuteSingleSrc, MVT::v16i8,  { 1, 3, 1, 1 } }, // pshufb
+
+      {TTI::SK_PermuteTwoSrc, MVT::v8f64,  { 1, 3, 1, 1 } }, // vpermt2pd
+      {TTI::SK_PermuteTwoSrc, MVT::v16f32, { 1, 3, 1, 1 } }, // vpermt2ps
+      {TTI::SK_PermuteTwoSrc, MVT::v8i64,  { 1, 3, 1, 1 } }, // vpermt2q
+      {TTI::SK_PermuteTwoSrc, MVT::v16i32, { 1, 3, 1, 1 } }, // vpermt2d
+      {TTI::SK_PermuteTwoSrc, MVT::v4f64,  { 1, 3, 1, 1 } }, // vpermt2pd
+      {TTI::SK_PermuteTwoSrc, MVT::v8f32,  { 1, 3, 1, 1 } }, // vpermt2ps
+      {TTI::SK_PermuteTwoSrc, MVT::v4i64,  { 1, 3, 1, 1 } }, // vpermt2q
+      {TTI::SK_PermuteTwoSrc, MVT::v8i32,  { 1, 3, 1, 1 } }, // vpermt2d
+      {TTI::SK_PermuteTwoSrc, MVT::v2f64,  { 1, 3, 1, 1 } }, // vpermt2pd
+      {TTI::SK_PermuteTwoSrc, MVT::v4f32,  { 1, 3, 1, 1 } }, // vpermt2ps
+      {TTI::SK_PermuteTwoSrc, MVT::v2i64,  { 1, 3, 1, 1 } }, // vpermt2q
+      {TTI::SK_PermuteTwoSrc, MVT::v4i32,  { 1, 3, 1, 1 } }, // vpermt2d
 
       // FIXME: This just applies the type legalization cost rules above
       // assuming these completely split.
-      {TTI::SK_PermuteSingleSrc, MVT::v32i16, 14},
-      {TTI::SK_PermuteSingleSrc, MVT::v32f16, 14},
-      {TTI::SK_PermuteSingleSrc, MVT::v64i8,  14},
-      {TTI::SK_PermuteTwoSrc,    MVT::v32i16, 42},
-      {TTI::SK_PermuteTwoSrc,    MVT::v32f16, 42},
-      {TTI::SK_PermuteTwoSrc,    MVT::v64i8,  42},
+      {TTI::SK_PermuteSingleSrc, MVT::v32i16, { 14, 14, 14, 14 } },
+      {TTI::SK_PermuteSingleSrc, MVT::v32f16, { 14, 14, 14, 14 } },
+      {TTI::SK_PermuteSingleSrc, MVT::v64i8,  { 14, 14, 14, 14 } },
+      {TTI::SK_PermuteTwoSrc,    MVT::v32i16, { 42, 42, 42, 42 } },
+      {TTI::SK_PermuteTwoSrc,    MVT::v32f16, { 42, 42, 42, 42 } },
+      {TTI::SK_PermuteTwoSrc,    MVT::v64i8,  { 42, 42, 42, 42 } },
 
-      {TTI::SK_Select, MVT::v32i16, 1}, // vpternlogq
-      {TTI::SK_Select, MVT::v32f16, 1}, // vpternlogq
-      {TTI::SK_Select, MVT::v64i8,  1}, // vpternlogq
-      {TTI::SK_Select, MVT::v8f64,  1}, // vblendmpd
-      {TTI::SK_Select, MVT::v16f32, 1}, // vblendmps
-      {TTI::SK_Select, MVT::v8i64,  1}, // vblendmq
-      {TTI::SK_Select, MVT::v16i32, 1}, // vblendmd
+      {TTI::SK_Select, MVT::v32i16, { 1, 1, 1, 1 } }, // vpternlogq
+      {TTI::SK_Select, MVT::v32f16, { 1, 1, 1, 1 } }, // vpternlogq
+      {TTI::SK_Select, MVT::v64i8,  { 1, 1, 1, 1 } }, // vpternlogq
+      {TTI::SK_Select, MVT::v8f64,  { 1, 1, 1, 1 } }, // vblendmpd
+      {TTI::SK_Select, MVT::v16f32, { 1, 1, 1, 1 } }, // vblendmps
+      {TTI::SK_Select, MVT::v8i64,  { 1, 1, 1, 1 } }, // vblendmq
+      {TTI::SK_Select, MVT::v16i32, { 1, 1, 1, 1 } }, // vblendmd
   };
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512ShuffleTbl, Kind, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * *KindCost;
 
   static const CostTblEntry AVX2ShuffleTbl[] = {
       {TTI::SK_Broadcast, MVT::v4f64, 1},  // vbroadcastpd
@@ -1430,7 +1805,13 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       {TTI::SK_Select, MVT::v16i16, 1}, // vpblendvb
       {TTI::SK_Select, MVT::v16f16, 1}, // vpblendvb
-      {TTI::SK_Select, MVT::v32i8, 1},  // vpblendvb
+      {TTI::SK_Select, MVT::v32i8,  1}, // vpblendvb
+
+      {TTI::SK_Splice, MVT::v8i32,  2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v8f32,  2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v16i16, 2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v16f16, 2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v32i8,  2}, // vperm2i128 + vpalignr
 
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
       {TTI::SK_PermuteSingleSrc, MVT::v8f32, 1},  // vpermps
@@ -1509,6 +1890,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v16f16, 3}, // vpand + vpandn + vpor
       {TTI::SK_Select, MVT::v32i8, 3},  // vpand + vpandn + vpor
 
+      {TTI::SK_Splice, MVT::v4i64,  2}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v4f64,  2}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v8i32,  4}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v8f32,  4}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v16i16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v16f16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v32i8,  5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 2},  // vperm2f128 + vshufpd
       {TTI::SK_PermuteSingleSrc, MVT::v4i64, 2},  // vperm2f128 + vshufpd
       {TTI::SK_PermuteSingleSrc, MVT::v8f32, 4},  // 2*vperm2f128 + 2*vshufps
@@ -1563,6 +1952,12 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v8f16, 3}, // 2*pshufb + por
       {TTI::SK_Select, MVT::v16i8, 3}, // 2*pshufb + por
 
+      {TTI::SK_Splice, MVT::v4i32, 1}, // palignr
+      {TTI::SK_Splice, MVT::v4f32, 1}, // palignr
+      {TTI::SK_Splice, MVT::v8i16, 1}, // palignr
+      {TTI::SK_Splice, MVT::v8f16, 1}, // palignr
+      {TTI::SK_Splice, MVT::v16i8, 1}, // palignr
+
       {TTI::SK_PermuteSingleSrc, MVT::v8i16, 1}, // pshufb
       {TTI::SK_PermuteSingleSrc, MVT::v8f16, 1}, // pshufb
       {TTI::SK_PermuteSingleSrc, MVT::v16i8, 1}, // pshufb
@@ -1598,6 +1993,13 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v8i16, 3}, // pand + pandn + por
       {TTI::SK_Select, MVT::v8f16, 3}, // pand + pandn + por
       {TTI::SK_Select, MVT::v16i8, 3}, // pand + pandn + por
+
+      {TTI::SK_Splice, MVT::v2i64, 1}, // shufpd
+      {TTI::SK_Splice, MVT::v2f64, 1}, // shufpd
+      {TTI::SK_Splice, MVT::v4i32, 2}, // 2*{unpck,movsd,pshufd}
+      {TTI::SK_Splice, MVT::v8i16, 3}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v8f16, 3}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v16i8, 3}, // psrldq + psrlldq + por
 
       {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1}, // shufpd
       {TTI::SK_PermuteSingleSrc, MVT::v2i64, 1}, // pshufd
@@ -1641,6 +2043,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     { TTI::SK_Broadcast,        MVT::v4f32, 1 }, // shufps
     { TTI::SK_Reverse,          MVT::v4f32, 1 }, // shufps
     { TTI::SK_Select,           MVT::v4f32, 2 }, // 2*shufps
+    { TTI::SK_Splice,           MVT::v4f32, 2 }, // 2*shufps
     { TTI::SK_PermuteSingleSrc, MVT::v4f32, 1 }, // shufps
     { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
@@ -1649,7 +2052,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (const auto *Entry = CostTableLookup(SSE1ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
 
-  return BaseT::getShuffleCost(Kind, BaseTp, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, BaseTp, Mask, CostKind, Index, SubTp);
 }
 
 InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
@@ -2044,6 +2447,7 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v8i1,    MVT::v8i32,  2 }, // vpslld+vptestmd
+    { ISD::TRUNCATE,  MVT::v16i1,   MVT::v8i32,  2 }, // vpslld+vptestmd
     { ISD::TRUNCATE,  MVT::v2i1,    MVT::v2i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i1,    MVT::v4i64,  2 }, // vpsllq+vptestmq
     { ISD::TRUNCATE,  MVT::v4i32,   MVT::v4i64,  1 }, // vpmovqd
@@ -2079,6 +2483,9 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::ZERO_EXTEND, MVT::v4i32,  MVT::v4i1,   2 }, // vpternlogd+psrld
     { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v8i1,   1 }, // vpternlogd
     { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v8i1,   2 }, // vpternlogd+psrld
+    { ISD::SIGN_EXTEND, MVT::v8i32,  MVT::v16i1,  1 }, // vpternlogd
+    { ISD::ZERO_EXTEND, MVT::v8i32,  MVT::v16i1,  2 }, // vpternlogd+psrld
+
     { ISD::SIGN_EXTEND, MVT::v2i64,  MVT::v2i1,   1 }, // vpternlogq
     { ISD::ZERO_EXTEND, MVT::v2i64,  MVT::v2i1,   2 }, // vpternlogq+psrlq
     { ISD::SIGN_EXTEND, MVT::v4i64,  MVT::v4i1,   1 }, // vpternlogq
@@ -2528,9 +2935,8 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   }
 
   // Fall back to legalized types.
-  std::pair<InstructionCost, MVT> LTSrc = TLI->getTypeLegalizationCost(DL, Src);
-  std::pair<InstructionCost, MVT> LTDest =
-      TLI->getTypeLegalizationCost(DL, Dst);
+  std::pair<InstructionCost, MVT> LTSrc = getTypeLegalizationCost(Src);
+  std::pair<InstructionCost, MVT> LTDest = getTypeLegalizationCost(Dst);
 
   // If we're truncating to the same legalized type - just assume its free.
   if (ISD == ISD::TRUNCATE && LTSrc.second == LTDest.second)
@@ -2624,13 +3030,13 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                                CmpInst::Predicate VecPred,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
-  // TODO: Handle other cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
+  // Early out if this type isn't scalar/vector integer/float.
+  if (!(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy()))
     return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
                                      I);
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   MVT MTy = LT.second;
 
@@ -2680,6 +3086,18 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
           ExtraCost = 3;
         }
         break;
+      case CmpInst::Predicate::FCMP_ONE:
+      case CmpInst::Predicate::FCMP_UEQ:
+        // Without AVX we need to expand FCMP_ONE/FCMP_UEQ cases.
+        // Use FCMP_UEQ expansion - FCMP_ONE should be the same.
+        if (CondTy && !ST->hasAVX())
+          return getCmpSelInstrCost(Opcode, ValTy, CondTy,
+                                    CmpInst::Predicate::FCMP_UNO, CostKind) +
+                 getCmpSelInstrCost(Opcode, ValTy, CondTy,
+                                    CmpInst::Predicate::FCMP_OEQ, CostKind) +
+                 getArithmeticInstrCost(Instruction::Or, CondTy, CostKind);
+
+        break;
       case CmpInst::Predicate::BAD_ICMP_PREDICATE:
       case CmpInst::Predicate::BAD_FCMP_PREDICATE:
         // Assume worst case scenario and add the maximum extra cost.
@@ -2691,159 +3109,210 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     }
   }
 
-  static const CostTblEntry SLMCostTbl[] = {
+  static const CostKindTblEntry SLMCostTbl[] = {
     // slm pcmpeq/pcmpgt throughput is 2
-    { ISD::SETCC,   MVT::v2i64,   2 },
+    { ISD::SETCC,   MVT::v2i64,   { 2, 5, 1, 2 } },
+    // slm pblendvb/blendvpd/blendvps throughput is 4
+    { ISD::SELECT,  MVT::v2f64,   { 4, 4, 1, 3 } }, // vblendvpd
+    { ISD::SELECT,  MVT::v4f32,   { 4, 4, 1, 3 } }, // vblendvps
+    { ISD::SELECT,  MVT::v2i64,   { 4, 4, 1, 3 } }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   { 4, 4, 1, 3 } }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   { 4, 4, 1, 3 } }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   { 4, 4, 1, 3 } }, // pblendvb
   };
 
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::SETCC,   MVT::v32i16,  1 },
-    { ISD::SETCC,   MVT::v64i8,   1 },
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::SETCC,   MVT::v32i16,  { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v16i16,  { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v64i8,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v32i8,   { 1, 1, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v32i16,  1 },
-    { ISD::SELECT,  MVT::v64i8,   1 },
+    { ISD::SELECT,  MVT::v32i16,  { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v64i8,   { 1, 1, 1, 1 } },
   };
 
-  static const CostTblEntry AVX512CostTbl[] = {
-    { ISD::SETCC,   MVT::v8i64,   1 },
-    { ISD::SETCC,   MVT::v16i32,  1 },
-    { ISD::SETCC,   MVT::v8f64,   1 },
-    { ISD::SETCC,   MVT::v16f32,  1 },
+  static const CostKindTblEntry AVX512CostTbl[] = {
+    { ISD::SETCC,   MVT::v8f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v4f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v16f32,  { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 1, 4, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v8i64,   1 },
-    { ISD::SELECT,  MVT::v4i64,   1 },
-    { ISD::SELECT,  MVT::v2i64,   1 },
-    { ISD::SELECT,  MVT::v16i32,  1 },
-    { ISD::SELECT,  MVT::v8i32,   1 },
-    { ISD::SELECT,  MVT::v4i32,   1 },
-    { ISD::SELECT,  MVT::v8f64,   1 },
-    { ISD::SELECT,  MVT::v4f64,   1 },
-    { ISD::SELECT,  MVT::v2f64,   1 },
-    { ISD::SELECT,  MVT::f64,     1 },
-    { ISD::SELECT,  MVT::v16f32,  1 },
-    { ISD::SELECT,  MVT::v8f32 ,  1 },
-    { ISD::SELECT,  MVT::v4f32,   1 },
-    { ISD::SELECT,  MVT::f32  ,   1 },
+    { ISD::SETCC,   MVT::v8i64,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v4i64,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v2i64,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v16i32,  { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v8i32,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v32i16,  { 3, 7, 5, 5 } },
+    { ISD::SETCC,   MVT::v64i8,   { 3, 7, 5, 5 } },
 
-    { ISD::SETCC,   MVT::v32i16,  2 }, // FIXME: should probably be 4
-    { ISD::SETCC,   MVT::v64i8,   2 }, // FIXME: should probably be 4
+    { ISD::SELECT,  MVT::v8i64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v4i64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v2i64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v16i32,  { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v8i32,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v4i32,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v8f64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v4f64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v2f64,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::f64,     { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v16f32,  { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v8f32 ,  { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v4f32,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::f32  ,   { 1, 1, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v32i16,  2 },
-    { ISD::SELECT,  MVT::v16i16,  1 },
-    { ISD::SELECT,  MVT::v8i16,   1 },
-    { ISD::SELECT,  MVT::v64i8,   2 },
-    { ISD::SELECT,  MVT::v32i8,   1 },
-    { ISD::SELECT,  MVT::v16i8,   1 },
+    { ISD::SELECT,  MVT::v32i16,  { 2, 2, 4, 4 } },
+    { ISD::SELECT,  MVT::v16i16,  { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v64i8,   { 2, 2, 4, 4 } },
+    { ISD::SELECT,  MVT::v32i8,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v16i8,   { 1, 1, 1, 1 } },
   };
 
-  static const CostTblEntry AVX2CostTbl[] = {
-    { ISD::SETCC,   MVT::v4i64,   1 },
-    { ISD::SETCC,   MVT::v8i32,   1 },
-    { ISD::SETCC,   MVT::v16i16,  1 },
-    { ISD::SETCC,   MVT::v32i8,   1 },
+  static const CostKindTblEntry AVX2CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f64,   { 1, 4, 1, 2 } },
+    { ISD::SETCC,   MVT::v2f64,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 1, 4, 1, 2 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 4, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 4, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v4f64,   2 }, // vblendvpd
-    { ISD::SELECT,  MVT::v8f32,   2 }, // vblendvps
-    { ISD::SELECT,  MVT::v4i64,   2 }, // pblendvb
-    { ISD::SELECT,  MVT::v8i32,   2 }, // pblendvb
-    { ISD::SELECT,  MVT::v16i16,  2 }, // pblendvb
-    { ISD::SELECT,  MVT::v32i8,   2 }, // pblendvb
+    { ISD::SETCC,   MVT::v4i64,   { 1, 1, 1, 2 } },
+    { ISD::SETCC,   MVT::v8i32,   { 1, 1, 1, 2 } },
+    { ISD::SETCC,   MVT::v16i16,  { 1, 1, 1, 2 } },
+    { ISD::SETCC,   MVT::v32i8,   { 1, 1, 1, 2 } },
+
+    { ISD::SELECT,  MVT::v4f64,   { 2, 2, 1, 2 } }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   { 2, 2, 1, 2 } }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v16i16,  { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v32i8,   { 2, 2, 1, 2 } }, // pblendvb
   };
 
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f64,   1 },
-    { ISD::SETCC,   MVT::v8f32,   1 },
+  static const CostKindTblEntry XOPCostTbl[] = {
+    { ISD::SETCC,   MVT::v4i64,   { 4, 2, 5, 6 } },
+    { ISD::SETCC,   MVT::v2i64,   { 1, 1, 1, 1 } },
+  };
+
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f64,   { 2, 3, 1, 2 } },
+    { ISD::SETCC,   MVT::v2f64,   { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::v8f32,   { 2, 3, 1, 2 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 3, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 3, 1, 1 } },
+
     // AVX1 does not support 8-wide integer compare.
-    { ISD::SETCC,   MVT::v4i64,   4 },
-    { ISD::SETCC,   MVT::v8i32,   4 },
-    { ISD::SETCC,   MVT::v16i16,  4 },
-    { ISD::SETCC,   MVT::v32i8,   4 },
+    { ISD::SETCC,   MVT::v4i64,   { 4, 2, 5, 6 } },
+    { ISD::SETCC,   MVT::v8i32,   { 4, 2, 5, 6 } },
+    { ISD::SETCC,   MVT::v16i16,  { 4, 2, 5, 6 } },
+    { ISD::SETCC,   MVT::v32i8,   { 4, 2, 5, 6 } },
 
-    { ISD::SELECT,  MVT::v4f64,   3 }, // vblendvpd
-    { ISD::SELECT,  MVT::v8f32,   3 }, // vblendvps
-    { ISD::SELECT,  MVT::v4i64,   3 }, // vblendvpd
-    { ISD::SELECT,  MVT::v8i32,   3 }, // vblendvps
-    { ISD::SELECT,  MVT::v16i16,  3 }, // vandps + vandnps + vorps
-    { ISD::SELECT,  MVT::v32i8,   3 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v4f64,   { 3, 3, 1, 2 } }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   { 3, 3, 1, 2 } }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   { 3, 3, 1, 2 } }, // vblendvpd
+    { ISD::SELECT,  MVT::v8i32,   { 3, 3, 1, 2 } }, // vblendvps
+    { ISD::SELECT,  MVT::v16i16,  { 3, 3, 3, 3 } }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v32i8,   { 3, 3, 3, 3 } }, // vandps + vandnps + vorps
   };
 
-  static const CostTblEntry SSE42CostTbl[] = {
-    { ISD::SETCC,   MVT::v2i64,   1 },
+  static const CostKindTblEntry SSE42CostTbl[] = {
+    { ISD::SETCC,   MVT::v2i64,   { 1, 2, 1, 2 } },
   };
 
-  static const CostTblEntry SSE41CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   1 },
-    { ISD::SETCC,   MVT::v4f32,   1 },
+  static const CostKindTblEntry SSE41CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   { 1, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::v4f32,   { 1, 5, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v2f64,   2 }, // blendvpd
-    { ISD::SELECT,  MVT::f64,     2 }, // blendvpd
-    { ISD::SELECT,  MVT::v4f32,   2 }, // blendvps
-    { ISD::SELECT,  MVT::f32  ,   2 }, // blendvps
-    { ISD::SELECT,  MVT::v2i64,   2 }, // pblendvb
-    { ISD::SELECT,  MVT::v4i32,   2 }, // pblendvb
-    { ISD::SELECT,  MVT::v8i16,   2 }, // pblendvb
-    { ISD::SELECT,  MVT::v16i8,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v2f64,   { 2, 2, 1, 2 } }, // blendvpd
+    { ISD::SELECT,  MVT::f64,     { 2, 2, 1, 2 } }, // blendvpd
+    { ISD::SELECT,  MVT::v4f32,   { 2, 2, 1, 2 } }, // blendvps
+    { ISD::SELECT,  MVT::f32  ,   { 2, 2, 1, 2 } }, // blendvps
+    { ISD::SELECT,  MVT::v2i64,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v4i32,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   { 2, 2, 1, 2 } }, // pblendvb
   };
 
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   2 },
-    { ISD::SETCC,   MVT::f64,     1 },
-    { ISD::SETCC,   MVT::v2i64,   5 }, // pcmpeqd/pcmpgtd expansion
-    { ISD::SETCC,   MVT::v4i32,   1 },
-    { ISD::SETCC,   MVT::v8i16,   1 },
-    { ISD::SETCC,   MVT::v16i8,   1 },
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   { 2, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::f64,     { 1, 5, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v2f64,   2 }, // andpd + andnpd + orpd
-    { ISD::SELECT,  MVT::f64,     2 }, // andpd + andnpd + orpd
-    { ISD::SELECT,  MVT::v2i64,   2 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v4i32,   2 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v8i16,   2 }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v16i8,   2 }, // pand + pandn + por
+    { ISD::SETCC,   MVT::v2i64,   { 5, 4, 5, 5 } }, // pcmpeqd/pcmpgtd expansion
+    { ISD::SETCC,   MVT::v4i32,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v8i16,   { 1, 1, 1, 1 } },
+    { ISD::SETCC,   MVT::v16i8,   { 1, 1, 1, 1 } },
+
+    { ISD::SELECT,  MVT::v2f64,   { 2, 2, 3, 3 } }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::f64,     { 2, 2, 3, 3 } }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::v2i64,   { 2, 2, 3, 3 } }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v4i32,   { 2, 2, 3, 3 } }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v8i16,   { 2, 2, 3, 3 } }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v16i8,   { 2, 2, 3, 3 } }, // pand + pandn + por
   };
 
-  static const CostTblEntry SSE1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f32,   2 },
-    { ISD::SETCC,   MVT::f32,     1 },
+  static const CostKindTblEntry SSE1CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f32,   { 2, 5, 1, 1 } },
+    { ISD::SETCC,   MVT::f32,     { 1, 5, 1, 1 } },
 
-    { ISD::SELECT,  MVT::v4f32,   2 }, // andps + andnps + orps
-    { ISD::SELECT,  MVT::f32,     2 }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::v4f32,   { 2, 2, 3, 3 } }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::f32,     { 2, 2, 3, 3 } }, // andps + andnps + orps
   };
 
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
+
+  if (ST->hasXOP())
+    if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-      return LT.first * (ExtraCost + Entry->Cost);
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * (ExtraCost + *KindCost);
+
+  // Assume a 3cy latency for fp select ops.
+  if (CostKind == TTI::TCK_Latency && Opcode == Instruction::Select)
+    if (ValTy->getScalarType()->isFloatingPointTy())
+      return 3;
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
@@ -2851,9 +3320,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
 
 InstructionCost
-X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                           TTI::TargetCostKind CostKind) {
-
+X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                  TTI::TargetCostKind CostKind) {
   // Costs should match the codegen from:
   // BITREVERSE: llvm\test\CodeGen\X86\vector-bitreverse.ll
   // BSWAP: llvm\test\CodeGen\X86\bswap-vector.ll
@@ -2863,457 +3331,626 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   // TODO: Overflow intrinsics (*ADDO, *SUBO, *MULO) with vector types are not
   //       specialized in these tables yet.
-  static const CostTblEntry AVX512BITALGCostTbl[] = {
-    { ISD::CTPOP,      MVT::v32i16,  1 },
-    { ISD::CTPOP,      MVT::v64i8,   1 },
-    { ISD::CTPOP,      MVT::v16i16,  1 },
-    { ISD::CTPOP,      MVT::v32i8,   1 },
-    { ISD::CTPOP,      MVT::v8i16,   1 },
-    { ISD::CTPOP,      MVT::v16i8,   1 },
+  static const CostKindTblEntry AVX512VBMI2CostTbl[] = {
+    { ISD::FSHL,       MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::FSHL,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v8i16,   {  1,  1,  1,  1 } },
   };
-  static const CostTblEntry AVX512VPOPCNTDQCostTbl[] = {
-    { ISD::CTPOP,      MVT::v8i64,   1 },
-    { ISD::CTPOP,      MVT::v16i32,  1 },
-    { ISD::CTPOP,      MVT::v4i64,   1 },
-    { ISD::CTPOP,      MVT::v8i32,   1 },
-    { ISD::CTPOP,      MVT::v2i64,   1 },
-    { ISD::CTPOP,      MVT::v4i32,   1 },
+  static const CostKindTblEntry AVX512BITALGCostTbl[] = {
+    { ISD::CTPOP,      MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  1,  1,  1,  1 } },
   };
-  static const CostTblEntry AVX512CDCostTbl[] = {
-    { ISD::CTLZ,       MVT::v8i64,   1 },
-    { ISD::CTLZ,       MVT::v16i32,  1 },
-    { ISD::CTLZ,       MVT::v32i16,  8 },
-    { ISD::CTLZ,       MVT::v64i8,  20 },
-    { ISD::CTLZ,       MVT::v4i64,   1 },
-    { ISD::CTLZ,       MVT::v8i32,   1 },
-    { ISD::CTLZ,       MVT::v16i16,  4 },
-    { ISD::CTLZ,       MVT::v32i8,  10 },
-    { ISD::CTLZ,       MVT::v2i64,   1 },
-    { ISD::CTLZ,       MVT::v4i32,   1 },
-    { ISD::CTLZ,       MVT::v8i16,   4 },
-    { ISD::CTLZ,       MVT::v16i8,   4 },
+  static const CostKindTblEntry AVX512VPOPCNTDQCostTbl[] = {
+    { ISD::CTPOP,      MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  1,  1,  1,  1 } },
   };
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::ABS,        MVT::v32i16,  1 },
-    { ISD::ABS,        MVT::v64i8,   1 },
-    { ISD::BITREVERSE, MVT::v8i64,   3 },
-    { ISD::BITREVERSE, MVT::v16i32,  3 },
-    { ISD::BITREVERSE, MVT::v32i16,  3 },
-    { ISD::BITREVERSE, MVT::v64i8,   2 },
-    { ISD::BSWAP,      MVT::v8i64,   1 },
-    { ISD::BSWAP,      MVT::v16i32,  1 },
-    { ISD::BSWAP,      MVT::v32i16,  1 },
-    { ISD::CTLZ,       MVT::v8i64,  23 },
-    { ISD::CTLZ,       MVT::v16i32, 22 },
-    { ISD::CTLZ,       MVT::v32i16, 18 },
-    { ISD::CTLZ,       MVT::v64i8,  17 },
-    { ISD::CTPOP,      MVT::v8i64,   7 },
-    { ISD::CTPOP,      MVT::v16i32, 11 },
-    { ISD::CTPOP,      MVT::v32i16,  9 },
-    { ISD::CTPOP,      MVT::v64i8,   6 },
-    { ISD::CTTZ,       MVT::v8i64,  10 },
-    { ISD::CTTZ,       MVT::v16i32, 14 },
-    { ISD::CTTZ,       MVT::v32i16, 12 },
-    { ISD::CTTZ,       MVT::v64i8,   9 },
-    { ISD::SADDSAT,    MVT::v32i16,  1 },
-    { ISD::SADDSAT,    MVT::v64i8,   1 },
-    { ISD::SMAX,       MVT::v32i16,  1 },
-    { ISD::SMAX,       MVT::v64i8,   1 },
-    { ISD::SMIN,       MVT::v32i16,  1 },
-    { ISD::SMIN,       MVT::v64i8,   1 },
-    { ISD::SSUBSAT,    MVT::v32i16,  1 },
-    { ISD::SSUBSAT,    MVT::v64i8,   1 },
-    { ISD::UADDSAT,    MVT::v32i16,  1 },
-    { ISD::UADDSAT,    MVT::v64i8,   1 },
-    { ISD::UMAX,       MVT::v32i16,  1 },
-    { ISD::UMAX,       MVT::v64i8,   1 },
-    { ISD::UMIN,       MVT::v32i16,  1 },
-    { ISD::UMIN,       MVT::v64i8,   1 },
-    { ISD::USUBSAT,    MVT::v32i16,  1 },
-    { ISD::USUBSAT,    MVT::v64i8,   1 },
+  static const CostKindTblEntry AVX512CDCostTbl[] = {
+    { ISD::CTLZ,       MVT::v8i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v16i32,  {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v32i16,  { 18, 27, 23, 27 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  3, 16,  9, 11 } },
+    { ISD::CTLZ,       MVT::v4i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v8i32,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v16i16,  {  8, 19, 11, 13 } },
+    { ISD::CTLZ,       MVT::v32i8,   {  2, 11,  9, 10 } },
+    { ISD::CTLZ,       MVT::v2i64,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v4i32,   {  1,  5,  1,  1 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  3, 15,  4,  6 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  2, 10,  9, 10 } },
+
+    { ISD::CTTZ,       MVT::v8i64,   {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v4i64,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v8i32,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v2i64,   {  1,  8,  6,  6 } },
+    { ISD::CTTZ,       MVT::v4i32,   {  1,  8,  6,  6 } },
   };
-  static const CostTblEntry AVX512CostTbl[] = {
-    { ISD::ABS,        MVT::v8i64,   1 },
-    { ISD::ABS,        MVT::v16i32,  1 },
-    { ISD::ABS,        MVT::v32i16,  2 },
-    { ISD::ABS,        MVT::v64i8,   2 },
-    { ISD::ABS,        MVT::v4i64,   1 },
-    { ISD::ABS,        MVT::v2i64,   1 },
-    { ISD::BITREVERSE, MVT::v8i64,  36 },
-    { ISD::BITREVERSE, MVT::v16i32, 24 },
-    { ISD::BITREVERSE, MVT::v32i16, 10 },
-    { ISD::BITREVERSE, MVT::v64i8,  10 },
-    { ISD::BSWAP,      MVT::v8i64,   4 },
-    { ISD::BSWAP,      MVT::v16i32,  4 },
-    { ISD::BSWAP,      MVT::v32i16,  4 },
-    { ISD::CTLZ,       MVT::v8i64,  29 },
-    { ISD::CTLZ,       MVT::v16i32, 35 },
-    { ISD::CTLZ,       MVT::v32i16, 28 },
-    { ISD::CTLZ,       MVT::v64i8,  18 },
-    { ISD::CTPOP,      MVT::v8i64,  16 },
-    { ISD::CTPOP,      MVT::v16i32, 24 },
-    { ISD::CTPOP,      MVT::v32i16, 18 },
-    { ISD::CTPOP,      MVT::v64i8,  12 },
-    { ISD::CTTZ,       MVT::v8i64,  20 },
-    { ISD::CTTZ,       MVT::v16i32, 28 },
-    { ISD::CTTZ,       MVT::v32i16, 24 },
-    { ISD::CTTZ,       MVT::v64i8,  18 },
-    { ISD::SMAX,       MVT::v8i64,   1 },
-    { ISD::SMAX,       MVT::v16i32,  1 },
-    { ISD::SMAX,       MVT::v32i16,  2 },
-    { ISD::SMAX,       MVT::v64i8,   2 },
-    { ISD::SMAX,       MVT::v4i64,   1 },
-    { ISD::SMAX,       MVT::v2i64,   1 },
-    { ISD::SMIN,       MVT::v8i64,   1 },
-    { ISD::SMIN,       MVT::v16i32,  1 },
-    { ISD::SMIN,       MVT::v32i16,  2 },
-    { ISD::SMIN,       MVT::v64i8,   2 },
-    { ISD::SMIN,       MVT::v4i64,   1 },
-    { ISD::SMIN,       MVT::v2i64,   1 },
-    { ISD::UMAX,       MVT::v8i64,   1 },
-    { ISD::UMAX,       MVT::v16i32,  1 },
-    { ISD::UMAX,       MVT::v32i16,  2 },
-    { ISD::UMAX,       MVT::v64i8,   2 },
-    { ISD::UMAX,       MVT::v4i64,   1 },
-    { ISD::UMAX,       MVT::v2i64,   1 },
-    { ISD::UMIN,       MVT::v8i64,   1 },
-    { ISD::UMIN,       MVT::v16i32,  1 },
-    { ISD::UMIN,       MVT::v32i16,  2 },
-    { ISD::UMIN,       MVT::v64i8,   2 },
-    { ISD::UMIN,       MVT::v4i64,   1 },
-    { ISD::UMIN,       MVT::v2i64,   1 },
-    { ISD::USUBSAT,    MVT::v16i32,  2 }, // pmaxud + psubd
-    { ISD::USUBSAT,    MVT::v2i64,   2 }, // pmaxuq + psubq
-    { ISD::USUBSAT,    MVT::v4i64,   2 }, // pmaxuq + psubq
-    { ISD::USUBSAT,    MVT::v8i64,   2 }, // pmaxuq + psubq
-    { ISD::UADDSAT,    MVT::v16i32,  3 }, // not + pminud + paddd
-    { ISD::UADDSAT,    MVT::v2i64,   3 }, // not + pminuq + paddq
-    { ISD::UADDSAT,    MVT::v4i64,   3 }, // not + pminuq + paddq
-    { ISD::UADDSAT,    MVT::v8i64,   3 }, // not + pminuq + paddq
-    { ISD::SADDSAT,    MVT::v32i16,  2 },
-    { ISD::SADDSAT,    MVT::v64i8,   2 },
-    { ISD::SSUBSAT,    MVT::v32i16,  2 },
-    { ISD::SSUBSAT,    MVT::v64i8,   2 },
-    { ISD::UADDSAT,    MVT::v32i16,  2 },
-    { ISD::UADDSAT,    MVT::v64i8,   2 },
-    { ISD::USUBSAT,    MVT::v32i16,  2 },
-    { ISD::USUBSAT,    MVT::v64i8,   2 },
-    { ISD::FMAXNUM,    MVT::f32,     2 },
-    { ISD::FMAXNUM,    MVT::v4f32,   2 },
-    { ISD::FMAXNUM,    MVT::v8f32,   2 },
-    { ISD::FMAXNUM,    MVT::v16f32,  2 },
-    { ISD::FMAXNUM,    MVT::f64,     2 },
-    { ISD::FMAXNUM,    MVT::v2f64,   2 },
-    { ISD::FMAXNUM,    MVT::v4f64,   2 },
-    { ISD::FMAXNUM,    MVT::v8f64,   2 },
+  static const CostKindTblEntry AVX512BWCostTbl[] = {
+    { ISD::ABS,        MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::BITREVERSE, MVT::v8i64,   {  3 } },
+    { ISD::BITREVERSE, MVT::v16i32,  {  3 } },
+    { ISD::BITREVERSE, MVT::v32i16,  {  3 } },
+    { ISD::BITREVERSE, MVT::v64i8,   {  2 } },
+    { ISD::BSWAP,      MVT::v8i64,   {  1 } },
+    { ISD::BSWAP,      MVT::v16i32,  {  1 } },
+    { ISD::BSWAP,      MVT::v32i16,  {  1 } },
+    { ISD::CTLZ,       MVT::v8i64,   {  8, 22, 23, 23 } },
+    { ISD::CTLZ,       MVT::v16i32,  {  8, 23, 25, 25 } },
+    { ISD::CTLZ,       MVT::v32i16,  {  4, 15, 15, 16 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  3, 12, 10,  9 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  3,  7, 10, 10 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  3,  7, 10, 10 } },
+    { ISD::CTPOP,      MVT::v8i64,   {  3,  8, 10, 12 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  7, 11, 14, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  7, 11, 14, 14 } },
+    { ISD::CTPOP,      MVT::v16i32,  {  7, 12, 14, 16 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  2,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  2,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v32i16,  {  3,  7, 11, 13 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  2,  4,  8,  8 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  2,  4,  8,  8 } },
+    { ISD::CTPOP,      MVT::v64i8,   {  2,  5,  8, 10 } },
+    { ISD::CTTZ,       MVT::v8i16,   {  3,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v16i16,  {  3,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v32i16,  {  3, 10, 14, 16 } },
+    { ISD::CTTZ,       MVT::v16i8,   {  2,  6, 11, 11 } },
+    { ISD::CTTZ,       MVT::v32i8,   {  2,  6, 11, 11 } },
+    { ISD::CTTZ,       MVT::v64i8,   {  3,  7, 11, 13 } },
+    { ISD::ROTL,       MVT::v32i16,  {  2,  8,  6,  8 } },
+    { ISD::ROTL,       MVT::v16i16,  {  2,  8,  6,  7 } },
+    { ISD::ROTL,       MVT::v8i16,   {  2,  7,  6,  7 } },
+    { ISD::ROTL,       MVT::v64i8,   {  5,  6, 11, 12 } },
+    { ISD::ROTL,       MVT::v32i8,   {  5, 15,  7, 10 } },
+    { ISD::ROTL,       MVT::v16i8,   {  5, 15,  7, 10 } },
+    { ISD::ROTR,       MVT::v32i16,  {  2,  8,  6,  8 } },
+    { ISD::ROTR,       MVT::v16i16,  {  2,  8,  6,  7 } },
+    { ISD::ROTR,       MVT::v8i16,   {  2,  7,  6,  7 } },
+    { ISD::ROTR,       MVT::v64i8,   {  5,  6, 12, 14 } },
+    { ISD::ROTR,       MVT::v32i8,   {  5, 14,  6,  9 } },
+    { ISD::ROTR,       MVT::v16i8,   {  5, 14,  6,  9 } },
+    { ISD::SADDSAT,    MVT::v32i16,  {  1 } },
+    { ISD::SADDSAT,    MVT::v64i8,   {  1 } },
+    { ISD::SMAX,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::SMAX,       MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::SSUBSAT,    MVT::v32i16,  {  1 } },
+    { ISD::SSUBSAT,    MVT::v64i8,   {  1 } },
+    { ISD::UADDSAT,    MVT::v32i16,  {  1 } },
+    { ISD::UADDSAT,    MVT::v64i8,   {  1 } },
+    { ISD::UMAX,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::UMAX,       MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v32i16,  {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v64i8,   {  1,  1,  1,  1 } },
+    { ISD::USUBSAT,    MVT::v32i16,  {  1 } },
+    { ISD::USUBSAT,    MVT::v64i8,   {  1 } },
   };
-  static const CostTblEntry XOPCostTbl[] = {
-    { ISD::BITREVERSE, MVT::v4i64,   4 },
-    { ISD::BITREVERSE, MVT::v8i32,   4 },
-    { ISD::BITREVERSE, MVT::v16i16,  4 },
-    { ISD::BITREVERSE, MVT::v32i8,   4 },
-    { ISD::BITREVERSE, MVT::v2i64,   1 },
-    { ISD::BITREVERSE, MVT::v4i32,   1 },
-    { ISD::BITREVERSE, MVT::v8i16,   1 },
-    { ISD::BITREVERSE, MVT::v16i8,   1 },
-    { ISD::BITREVERSE, MVT::i64,     3 },
-    { ISD::BITREVERSE, MVT::i32,     3 },
-    { ISD::BITREVERSE, MVT::i16,     3 },
-    { ISD::BITREVERSE, MVT::i8,      3 }
+  static const CostKindTblEntry AVX512CostTbl[] = {
+    { ISD::ABS,        MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v32i16,  {  2,  7,  4,  4 } },
+    { ISD::ABS,        MVT::v16i16,  {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v64i8,   {  2,  7,  4,  4 } },
+    { ISD::ABS,        MVT::v32i8,   {  1,  1,  1,  1 } },
+    { ISD::BITREVERSE, MVT::v8i64,   { 36 } },
+    { ISD::BITREVERSE, MVT::v16i32,  { 24 } },
+    { ISD::BITREVERSE, MVT::v32i16,  { 10 } },
+    { ISD::BITREVERSE, MVT::v64i8,   { 10 } },
+    { ISD::BSWAP,      MVT::v8i64,   {  4 } },
+    { ISD::BSWAP,      MVT::v16i32,  {  4 } },
+    { ISD::BSWAP,      MVT::v32i16,  {  4 } },
+    { ISD::CTLZ,       MVT::v8i64,   { 10, 28, 32, 32 } },
+    { ISD::CTLZ,       MVT::v16i32,  { 12, 30, 38, 38 } },
+    { ISD::CTLZ,       MVT::v32i16,  {  8, 15, 29, 29 } },
+    { ISD::CTLZ,       MVT::v64i8,   {  6, 11, 19, 19 } },
+    { ISD::CTPOP,      MVT::v8i64,   { 16, 16, 19, 19 } },
+    { ISD::CTPOP,      MVT::v16i32,  { 24, 19, 27, 27 } },
+    { ISD::CTPOP,      MVT::v32i16,  { 18, 15, 22, 22 } },
+    { ISD::CTPOP,      MVT::v64i8,   { 12, 11, 16, 16 } },
+    { ISD::CTTZ,       MVT::v8i64,   {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v16i32,  {  2,  8,  6,  7 } },
+    { ISD::CTTZ,       MVT::v32i16,  {  7, 17, 27, 27 } },
+    { ISD::CTTZ,       MVT::v64i8,   {  6, 13, 21, 21 } },
+    { ISD::ROTL,       MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::ROTL,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v8i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v4i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v2i64,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v8i32,   {  1,  1,  1,  1 } },
+    { ISD::ROTR,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::SMAX,       MVT::v8i64,   {  1,  3,  1,  1 } },
+    { ISD::SMAX,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::SMAX,       MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::SMAX,       MVT::v64i8,   {  3,  7,  5,  5 } },
+    { ISD::SMAX,       MVT::v4i64,   {  1,  3,  1,  1 } },
+    { ISD::SMAX,       MVT::v2i64,   {  1,  3,  1,  1 } },
+    { ISD::SMIN,       MVT::v8i64,   {  1,  3,  1,  1 } },
+    { ISD::SMIN,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::SMIN,       MVT::v64i8,   {  3,  7,  5,  5 } },
+    { ISD::SMIN,       MVT::v4i64,   {  1,  3,  1,  1 } },
+    { ISD::SMIN,       MVT::v2i64,   {  1,  3,  1,  1 } },
+    { ISD::UMAX,       MVT::v8i64,   {  1,  3,  1,  1 } },
+    { ISD::UMAX,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::UMAX,       MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::UMAX,       MVT::v64i8,   {  3,  7,  5,  5 } },
+    { ISD::UMAX,       MVT::v4i64,   {  1,  3,  1,  1 } },
+    { ISD::UMAX,       MVT::v2i64,   {  1,  3,  1,  1 } },
+    { ISD::UMIN,       MVT::v8i64,   {  1,  3,  1,  1 } },
+    { ISD::UMIN,       MVT::v16i32,  {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v32i16,  {  3,  7,  5,  5 } },
+    { ISD::UMIN,       MVT::v64i8,   {  3,  7,  5,  5 } },
+    { ISD::UMIN,       MVT::v4i64,   {  1,  3,  1,  1 } },
+    { ISD::UMIN,       MVT::v2i64,   {  1,  3,  1,  1 } },
+    { ISD::USUBSAT,    MVT::v16i32,  {  2 } }, // pmaxud + psubd
+    { ISD::USUBSAT,    MVT::v2i64,   {  2 } }, // pmaxuq + psubq
+    { ISD::USUBSAT,    MVT::v4i64,   {  2 } }, // pmaxuq + psubq
+    { ISD::USUBSAT,    MVT::v8i64,   {  2 } }, // pmaxuq + psubq
+    { ISD::UADDSAT,    MVT::v16i32,  {  3 } }, // not + pminud + paddd
+    { ISD::UADDSAT,    MVT::v2i64,   {  3 } }, // not + pminuq + paddq
+    { ISD::UADDSAT,    MVT::v4i64,   {  3 } }, // not + pminuq + paddq
+    { ISD::UADDSAT,    MVT::v8i64,   {  3 } }, // not + pminuq + paddq
+    { ISD::SADDSAT,    MVT::v32i16,  {  2 } },
+    { ISD::SADDSAT,    MVT::v64i8,   {  2 } },
+    { ISD::SSUBSAT,    MVT::v32i16,  {  2 } },
+    { ISD::SSUBSAT,    MVT::v64i8,   {  2 } },
+    { ISD::UADDSAT,    MVT::v32i16,  {  2 } },
+    { ISD::UADDSAT,    MVT::v64i8,   {  2 } },
+    { ISD::USUBSAT,    MVT::v32i16,  {  2 } },
+    { ISD::USUBSAT,    MVT::v64i8,   {  2 } },
+    { ISD::FMAXNUM,    MVT::f32,     {  2 } },
+    { ISD::FMAXNUM,    MVT::v4f32,   {  2 } },
+    { ISD::FMAXNUM,    MVT::v8f32,   {  2 } },
+    { ISD::FMAXNUM,    MVT::v16f32,  {  2 } },
+    { ISD::FMAXNUM,    MVT::f64,     {  2 } },
+    { ISD::FMAXNUM,    MVT::v2f64,   {  2 } },
+    { ISD::FMAXNUM,    MVT::v4f64,   {  2 } },
+    { ISD::FMAXNUM,    MVT::v8f64,   {  2 } },
+    { ISD::FSQRT,      MVT::f32,     {  3, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   {  3, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v8f32,   {  6, 12, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v16f32,  { 12, 20, 1, 3 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::f64,     {  6, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v2f64,   {  6, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f64,   { 12, 18, 1, 1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v8f64,   { 24, 32, 1, 3 } }, // Skylake from http://www.agner.org/
   };
-  static const CostTblEntry AVX2CostTbl[] = {
-    { ISD::ABS,        MVT::v4i64,   2 }, // VBLENDVPD(X,VPSUBQ(0,X),X)
-    { ISD::ABS,        MVT::v8i32,   1 },
-    { ISD::ABS,        MVT::v16i16,  1 },
-    { ISD::ABS,        MVT::v32i8,   1 },
-    { ISD::BITREVERSE, MVT::v2i64,   3 },
-    { ISD::BITREVERSE, MVT::v4i64,   3 },
-    { ISD::BITREVERSE, MVT::v4i32,   3 },
-    { ISD::BITREVERSE, MVT::v8i32,   3 },
-    { ISD::BITREVERSE, MVT::v8i16,   3 },
-    { ISD::BITREVERSE, MVT::v16i16,  3 },
-    { ISD::BITREVERSE, MVT::v16i8,   3 },
-    { ISD::BITREVERSE, MVT::v32i8,   3 },
-    { ISD::BSWAP,      MVT::v4i64,   1 },
-    { ISD::BSWAP,      MVT::v8i32,   1 },
-    { ISD::BSWAP,      MVT::v16i16,  1 },
-    { ISD::CTLZ,       MVT::v2i64,   7 },
-    { ISD::CTLZ,       MVT::v4i64,   7 },
-    { ISD::CTLZ,       MVT::v4i32,   5 },
-    { ISD::CTLZ,       MVT::v8i32,   5 },
-    { ISD::CTLZ,       MVT::v8i16,   4 },
-    { ISD::CTLZ,       MVT::v16i16,  4 },
-    { ISD::CTLZ,       MVT::v16i8,   3 },
-    { ISD::CTLZ,       MVT::v32i8,   3 },
-    { ISD::CTPOP,      MVT::v2i64,   3 },
-    { ISD::CTPOP,      MVT::v4i64,   3 },
-    { ISD::CTPOP,      MVT::v4i32,   7 },
-    { ISD::CTPOP,      MVT::v8i32,   7 },
-    { ISD::CTPOP,      MVT::v8i16,   3 },
-    { ISD::CTPOP,      MVT::v16i16,  3 },
-    { ISD::CTPOP,      MVT::v16i8,   2 },
-    { ISD::CTPOP,      MVT::v32i8,   2 },
-    { ISD::CTTZ,       MVT::v2i64,   4 },
-    { ISD::CTTZ,       MVT::v4i64,   4 },
-    { ISD::CTTZ,       MVT::v4i32,   7 },
-    { ISD::CTTZ,       MVT::v8i32,   7 },
-    { ISD::CTTZ,       MVT::v8i16,   4 },
-    { ISD::CTTZ,       MVT::v16i16,  4 },
-    { ISD::CTTZ,       MVT::v16i8,   3 },
-    { ISD::CTTZ,       MVT::v32i8,   3 },
-    { ISD::SADDSAT,    MVT::v16i16,  1 },
-    { ISD::SADDSAT,    MVT::v32i8,   1 },
-    { ISD::SMAX,       MVT::v8i32,   1 },
-    { ISD::SMAX,       MVT::v16i16,  1 },
-    { ISD::SMAX,       MVT::v32i8,   1 },
-    { ISD::SMIN,       MVT::v8i32,   1 },
-    { ISD::SMIN,       MVT::v16i16,  1 },
-    { ISD::SMIN,       MVT::v32i8,   1 },
-    { ISD::SSUBSAT,    MVT::v16i16,  1 },
-    { ISD::SSUBSAT,    MVT::v32i8,   1 },
-    { ISD::UADDSAT,    MVT::v16i16,  1 },
-    { ISD::UADDSAT,    MVT::v32i8,   1 },
-    { ISD::UADDSAT,    MVT::v8i32,   3 }, // not + pminud + paddd
-    { ISD::UMAX,       MVT::v8i32,   1 },
-    { ISD::UMAX,       MVT::v16i16,  1 },
-    { ISD::UMAX,       MVT::v32i8,   1 },
-    { ISD::UMIN,       MVT::v8i32,   1 },
-    { ISD::UMIN,       MVT::v16i16,  1 },
-    { ISD::UMIN,       MVT::v32i8,   1 },
-    { ISD::USUBSAT,    MVT::v16i16,  1 },
-    { ISD::USUBSAT,    MVT::v32i8,   1 },
-    { ISD::USUBSAT,    MVT::v8i32,   2 }, // pmaxud + psubd
-    { ISD::FMAXNUM,    MVT::v8f32,   3 }, // MAXPS + CMPUNORDPS + BLENDVPS
-    { ISD::FMAXNUM,    MVT::v4f64,   3 }, // MAXPD + CMPUNORDPD + BLENDVPD
-    { ISD::FSQRT,      MVT::f32,     7 }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,   7 }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v8f32,  14 }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::f64,    14 }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,  14 }, // Haswell from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f64,  28 }, // Haswell from http://www.agner.org/
+  static const CostKindTblEntry XOPCostTbl[] = {
+    { ISD::BITREVERSE, MVT::v4i64,   {  4 } },
+    { ISD::BITREVERSE, MVT::v8i32,   {  4 } },
+    { ISD::BITREVERSE, MVT::v16i16,  {  4 } },
+    { ISD::BITREVERSE, MVT::v32i8,   {  4 } },
+    { ISD::BITREVERSE, MVT::v2i64,   {  1 } },
+    { ISD::BITREVERSE, MVT::v4i32,   {  1 } },
+    { ISD::BITREVERSE, MVT::v8i16,   {  1 } },
+    { ISD::BITREVERSE, MVT::v16i8,   {  1 } },
+    { ISD::BITREVERSE, MVT::i64,     {  3 } },
+    { ISD::BITREVERSE, MVT::i32,     {  3 } },
+    { ISD::BITREVERSE, MVT::i16,     {  3 } },
+    { ISD::BITREVERSE, MVT::i8,      {  3 } },
+    // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(X,SUB(0,Y))
+    { ISD::ROTL,       MVT::v4i64,   {  4,  7,  5,  6 } },
+    { ISD::ROTL,       MVT::v8i32,   {  4,  7,  5,  6 } },
+    { ISD::ROTL,       MVT::v16i16,  {  4,  7,  5,  6 } },
+    { ISD::ROTL,       MVT::v32i8,   {  4,  7,  5,  6 } },
+    { ISD::ROTL,       MVT::v2i64,   {  1,  3,  1,  1 } },
+    { ISD::ROTL,       MVT::v4i32,   {  1,  3,  1,  1 } },
+    { ISD::ROTL,       MVT::v8i16,   {  1,  3,  1,  1 } },
+    { ISD::ROTL,       MVT::v16i8,   {  1,  3,  1,  1 } },
+    { ISD::ROTR,       MVT::v4i64,   {  4,  7,  8,  9 } },
+    { ISD::ROTR,       MVT::v8i32,   {  4,  7,  8,  9 } },
+    { ISD::ROTR,       MVT::v16i16,  {  4,  7,  8,  9 } },
+    { ISD::ROTR,       MVT::v32i8,   {  4,  7,  8,  9 } },
+    { ISD::ROTR,       MVT::v2i64,   {  1,  3,  3,  3 } },
+    { ISD::ROTR,       MVT::v4i32,   {  1,  3,  3,  3 } },
+    { ISD::ROTR,       MVT::v8i16,   {  1,  3,  3,  3 } },
+    { ISD::ROTR,       MVT::v16i8,   {  1,  3,  3,  3 } }
   };
-  static const CostTblEntry AVX1CostTbl[] = {
-    { ISD::ABS,        MVT::v4i64,   5 }, // VBLENDVPD(X,VPSUBQ(0,X),X)
-    { ISD::ABS,        MVT::v8i32,   3 },
-    { ISD::ABS,        MVT::v16i16,  3 },
-    { ISD::ABS,        MVT::v32i8,   3 },
-    { ISD::BITREVERSE, MVT::v4i64,  12 }, // 2 x 128-bit Op + extract/insert
-    { ISD::BITREVERSE, MVT::v8i32,  12 }, // 2 x 128-bit Op + extract/insert
-    { ISD::BITREVERSE, MVT::v16i16, 12 }, // 2 x 128-bit Op + extract/insert
-    { ISD::BITREVERSE, MVT::v32i8,  12 }, // 2 x 128-bit Op + extract/insert
-    { ISD::BSWAP,      MVT::v4i64,   4 },
-    { ISD::BSWAP,      MVT::v8i32,   4 },
-    { ISD::BSWAP,      MVT::v16i16,  4 },
-    { ISD::CTLZ,       MVT::v4i64,  48 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v8i32,  38 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v16i16, 30 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTLZ,       MVT::v32i8,  20 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v4i64,  16 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v8i32,  24 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v16i16, 20 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTPOP,      MVT::v32i8,  14 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v4i64,  22 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v8i32,  30 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v16i16, 26 }, // 2 x 128-bit Op + extract/insert
-    { ISD::CTTZ,       MVT::v32i8,  20 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SADDSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SADDSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMAX,       MVT::v8i32,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMAX,       MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMAX,       MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMIN,       MVT::v8i32,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMIN,       MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SMIN,       MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SSUBSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::SSUBSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UADDSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UADDSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UADDSAT,    MVT::v8i32,   8 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMAX,       MVT::v8i32,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMAX,       MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMAX,       MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMIN,       MVT::v8i32,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMIN,       MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::UMIN,       MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::USUBSAT,    MVT::v16i16,  4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::USUBSAT,    MVT::v32i8,   4 }, // 2 x 128-bit Op + extract/insert
-    { ISD::USUBSAT,    MVT::v8i32,   6 }, // 2 x 128-bit Op + extract/insert
-    { ISD::FMAXNUM,    MVT::f32,     3 }, // MAXSS + CMPUNORDSS + BLENDVPS
-    { ISD::FMAXNUM,    MVT::v4f32,   3 }, // MAXPS + CMPUNORDPS + BLENDVPS
-    { ISD::FMAXNUM,    MVT::v8f32,   5 }, // MAXPS + CMPUNORDPS + BLENDVPS + ?
-    { ISD::FMAXNUM,    MVT::f64,     3 }, // MAXSD + CMPUNORDSD + BLENDVPD
-    { ISD::FMAXNUM,    MVT::v2f64,   3 }, // MAXPD + CMPUNORDPD + BLENDVPD
-    { ISD::FMAXNUM,    MVT::v4f64,   5 }, // MAXPD + CMPUNORDPD + BLENDVPD + ?
-    { ISD::FSQRT,      MVT::f32,    14 }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,  14 }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v8f32,  28 }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::f64,    21 }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,  21 }, // SNB from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f64,  43 }, // SNB from http://www.agner.org/
+  static const CostKindTblEntry AVX2CostTbl[] = {
+    { ISD::ABS,        MVT::v2i64,   {  2,  4,  3,  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
+    { ISD::ABS,        MVT::v4i64,   {  2,  4,  3,  5 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
+    { ISD::ABS,        MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v8i32,   {  1,  1,  1,  2 } },
+    { ISD::ABS,        MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v16i16,  {  1,  1,  1,  2 } },
+    { ISD::ABS,        MVT::v16i8,   {  1,  1,  1,  1 } },
+    { ISD::ABS,        MVT::v32i8,   {  1,  1,  1,  2 } },
+    { ISD::BITREVERSE, MVT::v2i64,   {  3 } },
+    { ISD::BITREVERSE, MVT::v4i64,   {  3 } },
+    { ISD::BITREVERSE, MVT::v4i32,   {  3 } },
+    { ISD::BITREVERSE, MVT::v8i32,   {  3 } },
+    { ISD::BITREVERSE, MVT::v8i16,   {  3 } },
+    { ISD::BITREVERSE, MVT::v16i16,  {  3 } },
+    { ISD::BITREVERSE, MVT::v16i8,   {  3 } },
+    { ISD::BITREVERSE, MVT::v32i8,   {  3 } },
+    { ISD::BSWAP,      MVT::v4i64,   {  1 } },
+    { ISD::BSWAP,      MVT::v8i32,   {  1 } },
+    { ISD::BSWAP,      MVT::v16i16,  {  1 } },
+    { ISD::CTLZ,       MVT::v2i64,   {  7, 18, 24, 25 } },
+    { ISD::CTLZ,       MVT::v4i64,   { 14, 18, 24, 44 } },
+    { ISD::CTLZ,       MVT::v4i32,   {  5, 16, 19, 20 } },
+    { ISD::CTLZ,       MVT::v8i32,   { 10, 16, 19, 34 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  4, 13, 14, 15 } },
+    { ISD::CTLZ,       MVT::v16i16,  {  6, 14, 14, 24 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  3, 12,  9, 10 } },
+    { ISD::CTLZ,       MVT::v32i8,   {  4, 12,  9, 14 } },
+    { ISD::CTPOP,      MVT::v2i64,   {  3,  9, 10, 10 } },
+    { ISD::CTPOP,      MVT::v4i64,   {  4,  9, 10, 14 } },
+    { ISD::CTPOP,      MVT::v4i32,   {  7, 12, 14, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   {  7, 12, 14, 18 } },
+    { ISD::CTPOP,      MVT::v8i16,   {  3,  7, 11, 11 } },
+    { ISD::CTPOP,      MVT::v16i16,  {  6,  8, 11, 18 } },
+    { ISD::CTPOP,      MVT::v16i8,   {  2,  5,  8,  8 } },
+    { ISD::CTPOP,      MVT::v32i8,   {  3,  5,  8, 12 } },
+    { ISD::CTTZ,       MVT::v2i64,   {  4, 11, 13, 13 } },
+    { ISD::CTTZ,       MVT::v4i64,   {  5, 11, 13, 20 } },
+    { ISD::CTTZ,       MVT::v4i32,   {  7, 14, 17, 17 } },
+    { ISD::CTTZ,       MVT::v8i32,   {  7, 15, 17, 24 } },
+    { ISD::CTTZ,       MVT::v8i16,   {  4,  9, 14, 14 } },
+    { ISD::CTTZ,       MVT::v16i16,  {  6,  9, 14, 24 } },
+    { ISD::CTTZ,       MVT::v16i8,   {  3,  7, 11, 11 } },
+    { ISD::CTTZ,       MVT::v32i8,   {  5,  7, 11, 18 } },
+    { ISD::SADDSAT,    MVT::v16i16,  {  1 } },
+    { ISD::SADDSAT,    MVT::v32i8,   {  1 } },
+    { ISD::SMAX,       MVT::v2i64,   {  2,  7,  2,  3 } },
+    { ISD::SMAX,       MVT::v4i64,   {  2,  7,  2,  3 } },
+    { ISD::SMAX,       MVT::v8i32,   {  1,  1,  1,  2 } },
+    { ISD::SMAX,       MVT::v16i16,  {  1,  1,  1,  2 } },
+    { ISD::SMAX,       MVT::v32i8,   {  1,  1,  1,  2 } },
+    { ISD::SMIN,       MVT::v2i64,   {  2,  7,  2,  3 } },
+    { ISD::SMIN,       MVT::v4i64,   {  2,  7,  2,  3 } },
+    { ISD::SMIN,       MVT::v8i32,   {  1,  1,  1,  2 } },
+    { ISD::SMIN,       MVT::v16i16,  {  1,  1,  1,  2 } },
+    { ISD::SMIN,       MVT::v32i8,   {  1,  1,  1,  2 } },
+    { ISD::SSUBSAT,    MVT::v16i16,  {  1 } },
+    { ISD::SSUBSAT,    MVT::v32i8,   {  1 } },
+    { ISD::UADDSAT,    MVT::v16i16,  {  1 } },
+    { ISD::UADDSAT,    MVT::v32i8,   {  1 } },
+    { ISD::UADDSAT,    MVT::v8i32,   {  3 } }, // not + pminud + paddd
+    { ISD::UMAX,       MVT::v2i64,   {  2,  8,  5,  6 } },
+    { ISD::UMAX,       MVT::v4i64,   {  2,  8,  5,  8 } },
+    { ISD::UMAX,       MVT::v8i32,   {  1,  1,  1,  2 } },
+    { ISD::UMAX,       MVT::v16i16,  {  1,  1,  1,  2 } },
+    { ISD::UMAX,       MVT::v32i8,   {  1,  1,  1,  2 } },
+    { ISD::UMIN,       MVT::v2i64,   {  2,  8,  5,  6 } },
+    { ISD::UMIN,       MVT::v4i64,   {  2,  8,  5,  8 } },
+    { ISD::UMIN,       MVT::v8i32,   {  1,  1,  1,  2 } },
+    { ISD::UMIN,       MVT::v16i16,  {  1,  1,  1,  2 } },
+    { ISD::UMIN,       MVT::v32i8,   {  1,  1,  1,  2 } },
+    { ISD::USUBSAT,    MVT::v16i16,  {  1 } },
+    { ISD::USUBSAT,    MVT::v32i8,   {  1 } },
+    { ISD::USUBSAT,    MVT::v8i32,   {  2 } }, // pmaxud + psubd
+    { ISD::FMAXNUM,    MVT::v8f32,   {  3 } }, // MAXPS + CMPUNORDPS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v4f64,   {  3 } }, // MAXPD + CMPUNORDPD + BLENDVPD
+    { ISD::FSQRT,      MVT::f32,     {  7, 15, 1, 1 } }, // vsqrtss
+    { ISD::FSQRT,      MVT::v4f32,   {  7, 15, 1, 1 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::v8f32,   { 14, 21, 1, 3 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::f64,     { 14, 21, 1, 1 } }, // vsqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 14, 21, 1, 1 } }, // vsqrtpd
+    { ISD::FSQRT,      MVT::v4f64,   { 28, 35, 1, 3 } }, // vsqrtpd
   };
-  static const CostTblEntry GLMCostTbl[] = {
-    { ISD::FSQRT, MVT::f32,   19 }, // sqrtss
-    { ISD::FSQRT, MVT::v4f32, 37 }, // sqrtps
-    { ISD::FSQRT, MVT::f64,   34 }, // sqrtsd
-    { ISD::FSQRT, MVT::v2f64, 67 }, // sqrtpd
+  static const CostKindTblEntry AVX1CostTbl[] = {
+    { ISD::ABS,        MVT::v4i64,   {  6,  8,  6, 12 } }, // VBLENDVPD(X,VPSUBQ(0,X),X)
+    { ISD::ABS,        MVT::v8i32,   {  3,  6,  4,  5 } },
+    { ISD::ABS,        MVT::v16i16,  {  3,  6,  4,  5 } },
+    { ISD::ABS,        MVT::v32i8,   {  3,  6,  4,  5 } },
+    { ISD::BITREVERSE, MVT::v4i64,   { 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v8i32,   { 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v16i16,  { 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::BITREVERSE, MVT::v32i8,   { 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::BSWAP,      MVT::v4i64,   {  4 } },
+    { ISD::BSWAP,      MVT::v8i32,   {  4 } },
+    { ISD::BSWAP,      MVT::v16i16,  {  4 } },
+    { ISD::CTLZ,       MVT::v4i64,   { 29, 33, 49, 58 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v2i64,   { 14, 24, 24, 28 } },
+    { ISD::CTLZ,       MVT::v8i32,   { 24, 28, 39, 48 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v4i32,   { 12, 20, 19, 23 } },
+    { ISD::CTLZ,       MVT::v16i16,  { 19, 22, 29, 38 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v8i16,   {  9, 16, 14, 18 } },
+    { ISD::CTLZ,       MVT::v32i8,   { 14, 15, 19, 28 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTLZ,       MVT::v16i8,   {  7, 12,  9, 13 } },
+    { ISD::CTPOP,      MVT::v4i64,   { 14, 18, 19, 28 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v2i64,   {  7, 14, 10, 14 } },
+    { ISD::CTPOP,      MVT::v8i32,   { 18, 24, 27, 36 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v4i32,   {  9, 20, 14, 18 } },
+    { ISD::CTPOP,      MVT::v16i16,  { 16, 21, 22, 31 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v8i16,   {  8, 18, 11, 15 } },
+    { ISD::CTPOP,      MVT::v32i8,   { 13, 15, 16, 25 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTPOP,      MVT::v16i8,   {  6, 12,  8, 12 } },
+    { ISD::CTTZ,       MVT::v4i64,   { 17, 22, 24, 33 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v2i64,   {  9, 19, 13, 17 } },
+    { ISD::CTTZ,       MVT::v8i32,   { 21, 27, 32, 41 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v4i32,   { 11, 24, 17, 21 } },
+    { ISD::CTTZ,       MVT::v16i16,  { 18, 24, 27, 36 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v8i16,   {  9, 21, 14, 18 } },
+    { ISD::CTTZ,       MVT::v32i8,   { 15, 18, 21, 30 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::CTTZ,       MVT::v16i8,   {  8, 16, 11, 15 } },
+    { ISD::SADDSAT,    MVT::v16i16,  {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SADDSAT,    MVT::v32i8,   {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMAX,       MVT::v4i64,   {  6,  9,  6, 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMAX,       MVT::v2i64,   {  3,  7,  2,  4 } },
+    { ISD::SMAX,       MVT::v8i32,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMAX,       MVT::v16i16,  {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMAX,       MVT::v32i8,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMIN,       MVT::v4i64,   {  6,  9,  6, 12 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMIN,       MVT::v2i64,   {  3,  7,  2,  3 } },
+    { ISD::SMIN,       MVT::v8i32,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMIN,       MVT::v16i16,  {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SMIN,       MVT::v32i8,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SSUBSAT,    MVT::v16i16,  {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::SSUBSAT,    MVT::v32i8,   {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UADDSAT,    MVT::v16i16,  {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UADDSAT,    MVT::v32i8,   {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UADDSAT,    MVT::v8i32,   {  8 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMAX,       MVT::v4i64,   {  9, 10, 11, 17 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMAX,       MVT::v2i64,   {  4,  8,  5,  7 } },
+    { ISD::UMAX,       MVT::v8i32,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMAX,       MVT::v16i16,  {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMAX,       MVT::v32i8,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMIN,       MVT::v4i64,   {  9, 10, 11, 17 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMIN,       MVT::v2i64,   {  4,  8,  5,  7 } },
+    { ISD::UMIN,       MVT::v8i32,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMIN,       MVT::v16i16,  {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::UMIN,       MVT::v32i8,   {  4,  6,  5,  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::USUBSAT,    MVT::v16i16,  {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::USUBSAT,    MVT::v32i8,   {  4 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::USUBSAT,    MVT::v8i32,   {  6 } }, // 2 x 128-bit Op + extract/insert
+    { ISD::FMAXNUM,    MVT::f32,     {  3 } }, // MAXSS + CMPUNORDSS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v4f32,   {  3 } }, // MAXPS + CMPUNORDPS + BLENDVPS
+    { ISD::FMAXNUM,    MVT::v8f32,   {  5 } }, // MAXPS + CMPUNORDPS + BLENDVPS + ?
+    { ISD::FMAXNUM,    MVT::f64,     {  3 } }, // MAXSD + CMPUNORDSD + BLENDVPD
+    { ISD::FMAXNUM,    MVT::v2f64,   {  3 } }, // MAXPD + CMPUNORDPD + BLENDVPD
+    { ISD::FMAXNUM,    MVT::v4f64,   {  5 } }, // MAXPD + CMPUNORDPD + BLENDVPD + ?
+    { ISD::FSQRT,      MVT::f32,     { 21, 21, 1, 1 } }, // vsqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 21, 21, 1, 1 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::v8f32,   { 42, 42, 1, 3 } }, // vsqrtps
+    { ISD::FSQRT,      MVT::f64,     { 27, 27, 1, 1 } }, // vsqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 27, 27, 1, 1 } }, // vsqrtpd
+    { ISD::FSQRT,      MVT::v4f64,   { 54, 54, 1, 3 } }, // vsqrtpd
   };
-  static const CostTblEntry SLMCostTbl[] = {
-    { ISD::FSQRT, MVT::f32,   20 }, // sqrtss
-    { ISD::FSQRT, MVT::v4f32, 40 }, // sqrtps
-    { ISD::FSQRT, MVT::f64,   35 }, // sqrtsd
-    { ISD::FSQRT, MVT::v2f64, 70 }, // sqrtpd
+  static const CostKindTblEntry GLMCostTbl[] = {
+    { ISD::FSQRT,      MVT::f32,     { 19, 20, 1, 1 } }, // sqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 37, 41, 1, 5 } }, // sqrtps
+    { ISD::FSQRT,      MVT::f64,     { 34, 35, 1, 1 } }, // sqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 67, 71, 1, 5 } }, // sqrtpd
   };
-  static const CostTblEntry SSE42CostTbl[] = {
-    { ISD::USUBSAT,    MVT::v4i32,   2 }, // pmaxud + psubd
-    { ISD::UADDSAT,    MVT::v4i32,   3 }, // not + pminud + paddd
-    { ISD::FSQRT,      MVT::f32,    18 }, // Nehalem from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,  18 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry SLMCostTbl[] = {
+    { ISD::FSQRT,      MVT::f32,     { 20, 20, 1, 1 } }, // sqrtss
+    { ISD::FSQRT,      MVT::v4f32,   { 40, 41, 1, 5 } }, // sqrtps
+    { ISD::FSQRT,      MVT::f64,     { 35, 35, 1, 1 } }, // sqrtsd
+    { ISD::FSQRT,      MVT::v2f64,   { 70, 71, 1, 5 } }, // sqrtpd
   };
-  static const CostTblEntry SSE41CostTbl[] = {
-    { ISD::ABS,        MVT::v2i64,   2 }, // BLENDVPD(X,PSUBQ(0,X),X)
-    { ISD::SMAX,       MVT::v4i32,   1 },
-    { ISD::SMAX,       MVT::v16i8,   1 },
-    { ISD::SMIN,       MVT::v4i32,   1 },
-    { ISD::SMIN,       MVT::v16i8,   1 },
-    { ISD::UMAX,       MVT::v4i32,   1 },
-    { ISD::UMAX,       MVT::v8i16,   1 },
-    { ISD::UMIN,       MVT::v4i32,   1 },
-    { ISD::UMIN,       MVT::v8i16,   1 },
+  static const CostKindTblEntry SSE42CostTbl[] = {
+    { ISD::USUBSAT,    MVT::v4i32,   {  2 } }, // pmaxud + psubd
+    { ISD::UADDSAT,    MVT::v4i32,   {  3 } }, // not + pminud + paddd
+    { ISD::FSQRT,      MVT::f32,     { 18, 18, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   { 18, 18, 1, 1 } }, // Nehalem from http://www.agner.org/
   };
-  static const CostTblEntry SSSE3CostTbl[] = {
-    { ISD::ABS,        MVT::v4i32,   1 },
-    { ISD::ABS,        MVT::v8i16,   1 },
-    { ISD::ABS,        MVT::v16i8,   1 },
-    { ISD::BITREVERSE, MVT::v2i64,   5 },
-    { ISD::BITREVERSE, MVT::v4i32,   5 },
-    { ISD::BITREVERSE, MVT::v8i16,   5 },
-    { ISD::BITREVERSE, MVT::v16i8,   5 },
-    { ISD::BSWAP,      MVT::v2i64,   1 },
-    { ISD::BSWAP,      MVT::v4i32,   1 },
-    { ISD::BSWAP,      MVT::v8i16,   1 },
-    { ISD::CTLZ,       MVT::v2i64,  23 },
-    { ISD::CTLZ,       MVT::v4i32,  18 },
-    { ISD::CTLZ,       MVT::v8i16,  14 },
-    { ISD::CTLZ,       MVT::v16i8,   9 },
-    { ISD::CTPOP,      MVT::v2i64,   7 },
-    { ISD::CTPOP,      MVT::v4i32,  11 },
-    { ISD::CTPOP,      MVT::v8i16,   9 },
-    { ISD::CTPOP,      MVT::v16i8,   6 },
-    { ISD::CTTZ,       MVT::v2i64,  10 },
-    { ISD::CTTZ,       MVT::v4i32,  14 },
-    { ISD::CTTZ,       MVT::v8i16,  12 },
-    { ISD::CTTZ,       MVT::v16i8,   9 }
+  static const CostKindTblEntry SSE41CostTbl[] = {
+    { ISD::ABS,        MVT::v2i64,   {  3,  4,  3,  5 } }, // BLENDVPD(X,PSUBQ(0,X),X)
+    { ISD::SMAX,       MVT::v2i64,   {  3,  7,  2,  3 } },
+    { ISD::SMAX,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::SMAX,       MVT::v16i8,   {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v2i64,   {  3,  7,  2,  3 } },
+    { ISD::SMIN,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v16i8,   {  1,  1,  1,  1 } },
+    { ISD::UMAX,       MVT::v2i64,   {  2, 11,  6,  7 } },
+    { ISD::UMAX,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::UMAX,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v2i64,   {  2, 11,  6,  7 } },
+    { ISD::UMIN,       MVT::v4i32,   {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v8i16,   {  1,  1,  1,  1 } },
   };
-  static const CostTblEntry SSE2CostTbl[] = {
-    { ISD::ABS,        MVT::v2i64,   4 },
-    { ISD::ABS,        MVT::v4i32,   3 },
-    { ISD::ABS,        MVT::v8i16,   2 },
-    { ISD::ABS,        MVT::v16i8,   2 },
-    { ISD::BITREVERSE, MVT::v2i64,  29 },
-    { ISD::BITREVERSE, MVT::v4i32,  27 },
-    { ISD::BITREVERSE, MVT::v8i16,  27 },
-    { ISD::BITREVERSE, MVT::v16i8,  20 },
-    { ISD::BSWAP,      MVT::v2i64,   7 },
-    { ISD::BSWAP,      MVT::v4i32,   7 },
-    { ISD::BSWAP,      MVT::v8i16,   7 },
-    { ISD::CTLZ,       MVT::v2i64,  25 },
-    { ISD::CTLZ,       MVT::v4i32,  26 },
-    { ISD::CTLZ,       MVT::v8i16,  20 },
-    { ISD::CTLZ,       MVT::v16i8,  17 },
-    { ISD::CTPOP,      MVT::v2i64,  12 },
-    { ISD::CTPOP,      MVT::v4i32,  15 },
-    { ISD::CTPOP,      MVT::v8i16,  13 },
-    { ISD::CTPOP,      MVT::v16i8,  10 },
-    { ISD::CTTZ,       MVT::v2i64,  14 },
-    { ISD::CTTZ,       MVT::v4i32,  18 },
-    { ISD::CTTZ,       MVT::v8i16,  16 },
-    { ISD::CTTZ,       MVT::v16i8,  13 },
-    { ISD::SADDSAT,    MVT::v8i16,   1 },
-    { ISD::SADDSAT,    MVT::v16i8,   1 },
-    { ISD::SMAX,       MVT::v8i16,   1 },
-    { ISD::SMIN,       MVT::v8i16,   1 },
-    { ISD::SSUBSAT,    MVT::v8i16,   1 },
-    { ISD::SSUBSAT,    MVT::v16i8,   1 },
-    { ISD::UADDSAT,    MVT::v8i16,   1 },
-    { ISD::UADDSAT,    MVT::v16i8,   1 },
-    { ISD::UMAX,       MVT::v8i16,   2 },
-    { ISD::UMAX,       MVT::v16i8,   1 },
-    { ISD::UMIN,       MVT::v8i16,   2 },
-    { ISD::UMIN,       MVT::v16i8,   1 },
-    { ISD::USUBSAT,    MVT::v8i16,   1 },
-    { ISD::USUBSAT,    MVT::v16i8,   1 },
-    { ISD::FMAXNUM,    MVT::f64,     4 },
-    { ISD::FMAXNUM,    MVT::v2f64,   4 },
-    { ISD::FSQRT,      MVT::f64,    32 }, // Nehalem from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v2f64,  32 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry SSSE3CostTbl[] = {
+    { ISD::ABS,        MVT::v4i32,   {  1,  2,  1,  1 } },
+    { ISD::ABS,        MVT::v8i16,   {  1,  2,  1,  1 } },
+    { ISD::ABS,        MVT::v16i8,   {  1,  2,  1,  1 } },
+    { ISD::BITREVERSE, MVT::v2i64,   {  5 } },
+    { ISD::BITREVERSE, MVT::v4i32,   {  5 } },
+    { ISD::BITREVERSE, MVT::v8i16,   {  5 } },
+    { ISD::BITREVERSE, MVT::v16i8,   {  5 } },
+    { ISD::BSWAP,      MVT::v2i64,   {  1 } },
+    { ISD::BSWAP,      MVT::v4i32,   {  1 } },
+    { ISD::BSWAP,      MVT::v8i16,   {  1 } },
+    { ISD::CTLZ,       MVT::v2i64,   { 18, 28, 28, 35 } },
+    { ISD::CTLZ,       MVT::v4i32,   { 15, 20, 22, 28 } },
+    { ISD::CTLZ,       MVT::v8i16,   { 13, 17, 16, 22 } },
+    { ISD::CTLZ,       MVT::v16i8,   { 11, 15, 10, 16 } },
+    { ISD::CTPOP,      MVT::v2i64,   { 13, 19, 12, 18 } },
+    { ISD::CTPOP,      MVT::v4i32,   { 18, 24, 16, 22 } },
+    { ISD::CTPOP,      MVT::v8i16,   { 13, 18, 14, 20 } },
+    { ISD::CTPOP,      MVT::v16i8,   { 11, 12, 10, 16 } },
+    { ISD::CTTZ,       MVT::v2i64,   { 13, 25, 15, 22 } },
+    { ISD::CTTZ,       MVT::v4i32,   { 18, 26, 19, 25 } },
+    { ISD::CTTZ,       MVT::v8i16,   { 13, 20, 17, 23 } },
+    { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } }
   };
-  static const CostTblEntry SSE1CostTbl[] = {
-    { ISD::FMAXNUM,    MVT::f32,     4 },
-    { ISD::FMAXNUM,    MVT::v4f32,   4 },
-    { ISD::FSQRT,      MVT::f32,    28 }, // Pentium III from http://www.agner.org/
-    { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
+  static const CostKindTblEntry SSE2CostTbl[] = {
+    { ISD::ABS,        MVT::v2i64,   {  3,  6,  5,  5 } },
+    { ISD::ABS,        MVT::v4i32,   {  1,  4,  4,  4 } },
+    { ISD::ABS,        MVT::v8i16,   {  1,  2,  3,  3 } },
+    { ISD::ABS,        MVT::v16i8,   {  1,  2,  3,  3 } },
+    { ISD::BITREVERSE, MVT::v2i64,   { 29 } },
+    { ISD::BITREVERSE, MVT::v4i32,   { 27 } },
+    { ISD::BITREVERSE, MVT::v8i16,   { 27 } },
+    { ISD::BITREVERSE, MVT::v16i8,   { 20 } },
+    { ISD::BSWAP,      MVT::v2i64,   {  7 } },
+    { ISD::BSWAP,      MVT::v4i32,   {  7 } },
+    { ISD::BSWAP,      MVT::v8i16,   {  7 } },
+    { ISD::CTLZ,       MVT::v2i64,   { 10, 45, 36, 38 } },
+    { ISD::CTLZ,       MVT::v4i32,   { 10, 45, 38, 40 } },
+    { ISD::CTLZ,       MVT::v8i16,   {  9, 38, 32, 34 } },
+    { ISD::CTLZ,       MVT::v16i8,   {  8, 39, 29, 32 } },
+    { ISD::CTPOP,      MVT::v2i64,   { 12, 26, 16, 18 } },
+    { ISD::CTPOP,      MVT::v4i32,   { 15, 29, 21, 23 } },
+    { ISD::CTPOP,      MVT::v8i16,   { 13, 25, 18, 20 } },
+    { ISD::CTPOP,      MVT::v16i8,   { 10, 21, 14, 16 } },
+    { ISD::CTTZ,       MVT::v2i64,   { 14, 28, 19, 21 } },
+    { ISD::CTTZ,       MVT::v4i32,   { 18, 31, 24, 26 } },
+    { ISD::CTTZ,       MVT::v8i16,   { 16, 27, 21, 23 } },
+    { ISD::CTTZ,       MVT::v16i8,   { 13, 23, 17, 19 } },
+    { ISD::SADDSAT,    MVT::v8i16,   {  1 } },
+    { ISD::SADDSAT,    MVT::v16i8,   {  1 } },
+    { ISD::SMAX,       MVT::v2i64,   {  4,  8, 15, 15 } },
+    { ISD::SMAX,       MVT::v4i32,   {  2,  4,  5,  5 } },
+    { ISD::SMAX,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::SMAX,       MVT::v16i8,   {  2,  4,  5,  5 } },
+    { ISD::SMIN,       MVT::v2i64,   {  4,  8, 15, 15 } },
+    { ISD::SMIN,       MVT::v4i32,   {  2,  4,  5,  5 } },
+    { ISD::SMIN,       MVT::v8i16,   {  1,  1,  1,  1 } },
+    { ISD::SMIN,       MVT::v16i8,   {  2,  4,  5,  5 } },
+    { ISD::SSUBSAT,    MVT::v8i16,   {  1 } },
+    { ISD::SSUBSAT,    MVT::v16i8,   {  1 } },
+    { ISD::UADDSAT,    MVT::v8i16,   {  1 } },
+    { ISD::UADDSAT,    MVT::v16i8,   {  1 } },
+    { ISD::UMAX,       MVT::v2i64,   {  4,  8, 15, 15 } },
+    { ISD::UMAX,       MVT::v4i32,   {  2,  5,  8,  8 } },
+    { ISD::UMAX,       MVT::v8i16,   {  1,  3,  3,  3 } },
+    { ISD::UMAX,       MVT::v16i8,   {  1,  1,  1,  1 } },
+    { ISD::UMIN,       MVT::v2i64,   {  4,  8, 15, 15 } },
+    { ISD::UMIN,       MVT::v4i32,   {  2,  5,  8,  8 } },
+    { ISD::UMIN,       MVT::v8i16,   {  1,  3,  3,  3 } },
+    { ISD::UMIN,       MVT::v16i8,   {  1,  1,  1,  1 } },
+    { ISD::USUBSAT,    MVT::v8i16,   {  1 } },
+    { ISD::USUBSAT,    MVT::v16i8,   {  1 } },
+    { ISD::FMAXNUM,    MVT::f64,     {  4 } },
+    { ISD::FMAXNUM,    MVT::v2f64,   {  4 } },
+    { ISD::FSQRT,      MVT::f64,     { 32, 32, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v2f64,   { 32, 32, 1, 1 } }, // Nehalem from http://www.agner.org/
   };
-  static const CostTblEntry BMI64CostTbl[] = { // 64-bit targets
-    { ISD::CTTZ,       MVT::i64,     1 },
+  static const CostKindTblEntry SSE1CostTbl[] = {
+    { ISD::FMAXNUM,    MVT::f32,     {  4 } },
+    { ISD::FMAXNUM,    MVT::v4f32,   {  4 } },
+    { ISD::FSQRT,      MVT::f32,     { 28, 30, 1, 2 } }, // Pentium III from http://www.agner.org/
+    { ISD::FSQRT,      MVT::v4f32,   { 56, 56, 1, 2 } }, // Pentium III from http://www.agner.org/
   };
-  static const CostTblEntry BMI32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTTZ,       MVT::i32,     1 },
-    { ISD::CTTZ,       MVT::i16,     1 },
-    { ISD::CTTZ,       MVT::i8,      1 },
+  static const CostKindTblEntry BMI64CostTbl[] = { // 64-bit targets
+    { ISD::CTTZ,       MVT::i64,     {  1 } },
   };
-  static const CostTblEntry LZCNT64CostTbl[] = { // 64-bit targets
-    { ISD::CTLZ,       MVT::i64,     1 },
+  static const CostKindTblEntry BMI32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTTZ,       MVT::i32,     {  1 } },
+    { ISD::CTTZ,       MVT::i16,     {  1 } },
+    { ISD::CTTZ,       MVT::i8,      {  1 } },
   };
-  static const CostTblEntry LZCNT32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTLZ,       MVT::i32,     1 },
-    { ISD::CTLZ,       MVT::i16,     1 },
-    { ISD::CTLZ,       MVT::i8,      1 },
+  static const CostKindTblEntry LZCNT64CostTbl[] = { // 64-bit targets
+    { ISD::CTLZ,       MVT::i64,     {  1 } },
   };
-  static const CostTblEntry POPCNT64CostTbl[] = { // 64-bit targets
-    { ISD::CTPOP,      MVT::i64,     1 },
+  static const CostKindTblEntry LZCNT32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTLZ,       MVT::i32,     {  1 } },
+    { ISD::CTLZ,       MVT::i16,     {  2 } },
+    { ISD::CTLZ,       MVT::i8,      {  2 } },
   };
-  static const CostTblEntry POPCNT32CostTbl[] = { // 32 or 64-bit targets
-    { ISD::CTPOP,      MVT::i32,     1 },
-    { ISD::CTPOP,      MVT::i16,     1 },
-    { ISD::CTPOP,      MVT::i8,      1 },
+  static const CostKindTblEntry POPCNT64CostTbl[] = { // 64-bit targets
+    { ISD::CTPOP,      MVT::i64,     {  1, 1, 1, 1 } }, // popcnt
   };
-  static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ABS,        MVT::i64,     2 }, // SUB+CMOV
-    { ISD::BITREVERSE, MVT::i64,    14 },
-    { ISD::BSWAP,      MVT::i64,     1 },
-    { ISD::CTLZ,       MVT::i64,     4 }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTTZ,       MVT::i64,     3 }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTPOP,      MVT::i64,    10 },
-    { ISD::SADDO,      MVT::i64,     1 },
-    { ISD::UADDO,      MVT::i64,     1 },
-    { ISD::UMULO,      MVT::i64,     2 }, // mulq + seto
+  static const CostKindTblEntry POPCNT32CostTbl[] = { // 32 or 64-bit targets
+    { ISD::CTPOP,      MVT::i32,     {  1, 1, 1, 1 } }, // popcnt
+    { ISD::CTPOP,      MVT::i16,     {  1, 1, 2, 2 } }, // popcnt(zext())
+    { ISD::CTPOP,      MVT::i8,      {  1, 1, 2, 2 } }, // popcnt(zext())
   };
-  static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ABS,        MVT::i32,     2 }, // SUB+CMOV
-    { ISD::ABS,        MVT::i16,     2 }, // SUB+CMOV
-    { ISD::BITREVERSE, MVT::i32,    14 },
-    { ISD::BITREVERSE, MVT::i16,    14 },
-    { ISD::BITREVERSE, MVT::i8,     11 },
-    { ISD::BSWAP,      MVT::i32,     1 },
-    { ISD::BSWAP,      MVT::i16,     1 }, // ROL
-    { ISD::CTLZ,       MVT::i32,     4 }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i16,     4 }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTLZ,       MVT::i8,      4 }, // BSR+XOR or BSR+XOR+CMOV
-    { ISD::CTTZ,       MVT::i32,     3 }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ,       MVT::i16,     3 }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTTZ,       MVT::i8,      3 }, // TEST+BSF+CMOV/BRANCH
-    { ISD::CTPOP,      MVT::i32,     8 },
-    { ISD::CTPOP,      MVT::i16,     9 },
-    { ISD::CTPOP,      MVT::i8,      7 },
-    { ISD::SADDO,      MVT::i32,     1 },
-    { ISD::SADDO,      MVT::i16,     1 },
-    { ISD::SADDO,      MVT::i8,      1 },
-    { ISD::UADDO,      MVT::i32,     1 },
-    { ISD::UADDO,      MVT::i16,     1 },
-    { ISD::UADDO,      MVT::i8,      1 },
-    { ISD::UMULO,      MVT::i32,     2 }, // mul + seto
-    { ISD::UMULO,      MVT::i16,     2 },
-    { ISD::UMULO,      MVT::i8,      2 },
+  static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
+    { ISD::ABS,        MVT::i64,     {  1,  2,  3,  4 } }, // SUB+CMOV
+    { ISD::BITREVERSE, MVT::i64,     { 14 } },
+    { ISD::BSWAP,      MVT::i64,     {  1 } },
+    { ISD::CTLZ,       MVT::i64,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR+XOR
+    { ISD::CTTZ,       MVT::i64,     {  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i64,{  1,  1,  1,  1 } }, // BSR
+    { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
+    { ISD::ROTL,       MVT::i64,     {  2, 3, 1, 3 } },
+    { ISD::ROTR,       MVT::i64,     {  2, 3, 1, 3 } },
+    { ISD::FSHL,       MVT::i64,     {  4, 4, 1, 4 } },
+    { ISD::SMAX,       MVT::i64,     {  1,  3,  2,  3 } },
+    { ISD::SMIN,       MVT::i64,     {  1,  3,  2,  3 } },
+    { ISD::UMAX,       MVT::i64,     {  1,  3,  2,  3 } },
+    { ISD::UMIN,       MVT::i64,     {  1,  3,  2,  3 } },
+    { ISD::SADDO,      MVT::i64,     {  1 } },
+    { ISD::UADDO,      MVT::i64,     {  1 } },
+    { ISD::UMULO,      MVT::i64,     {  2 } }, // mulq + seto
+  };
+  static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
+    { ISD::ABS,        MVT::i32,     {  1,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i16,     {  2,  2,  3,  4 } }, // SUB+XOR+SRA or SUB+CMOV
+    { ISD::ABS,        MVT::i8,      {  2,  4,  4,  4 } }, // SUB+XOR+SRA
+    { ISD::BITREVERSE, MVT::i32,     { 14 } },
+    { ISD::BITREVERSE, MVT::i16,     { 14 } },
+    { ISD::BITREVERSE, MVT::i8,      { 11 } },
+    { ISD::BSWAP,      MVT::i32,     {  1 } },
+    { ISD::BSWAP,      MVT::i16,     {  1 } }, // ROL
+    { ISD::CTLZ,       MVT::i32,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i16,     {  4 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ,       MVT::i8,      {  4 } }, // BSR+XOR or BSR+XOR+CMOV
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i16,{  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTLZ_ZERO_UNDEF, MVT::i8, {  2,  2,  3,  3 } }, // BSR+XOR
+    { ISD::CTTZ,       MVT::i32,     {  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i16,     {  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ,       MVT::i8,      {  3 } }, // TEST+BSF+CMOV/BRANCH
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i32,{  1,  1,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i16,{  2,  2,  1,  1 } }, // BSF
+    { ISD::CTTZ_ZERO_UNDEF, MVT::i8, {  2,  2,  1,  1 } }, // BSF
+    { ISD::CTPOP,      MVT::i32,     {  8,  7, 15, 15 } },
+    { ISD::CTPOP,      MVT::i16,     {  9,  8, 17, 17 } },
+    { ISD::CTPOP,      MVT::i8,      {  7,  6, 13, 13 } },
+    { ISD::ROTL,       MVT::i32,     {  2,  3,  1,  3 } },
+    { ISD::ROTL,       MVT::i16,     {  2,  3,  1,  3 } },
+    { ISD::ROTL,       MVT::i8,      {  2,  3,  1,  3 } },
+    { ISD::ROTR,       MVT::i32,     {  2,  3,  1,  3 } },
+    { ISD::ROTR,       MVT::i16,     {  2,  3,  1,  3 } },
+    { ISD::ROTR,       MVT::i8,      {  2,  3,  1,  3 } },
+    { ISD::FSHL,       MVT::i32,     {  4,  4,  1,  4 } },
+    { ISD::FSHL,       MVT::i16,     {  4,  4,  2,  5 } },
+    { ISD::FSHL,       MVT::i8,      {  4,  4,  2,  5 } },
+    { ISD::SMAX,       MVT::i32,     {  1,  2,  2,  3 } },
+    { ISD::SMAX,       MVT::i16,     {  1,  4,  2,  4 } },
+    { ISD::SMAX,       MVT::i8,      {  1,  4,  2,  4 } },
+    { ISD::SMIN,       MVT::i32,     {  1,  2,  2,  3 } },
+    { ISD::SMIN,       MVT::i16,     {  1,  4,  2,  4 } },
+    { ISD::SMIN,       MVT::i8,      {  1,  4,  2,  4 } },
+    { ISD::UMAX,       MVT::i32,     {  1,  2,  2,  3 } },
+    { ISD::UMAX,       MVT::i16,     {  1,  4,  2,  4 } },
+    { ISD::UMAX,       MVT::i8,      {  1,  4,  2,  4 } },
+    { ISD::UMIN,       MVT::i32,     {  1,  2,  2,  3 } },
+    { ISD::UMIN,       MVT::i16,     {  1,  4,  2,  4 } },
+    { ISD::UMIN,       MVT::i8,      {  1,  4,  2,  4 } },
+    { ISD::SADDO,      MVT::i32,     {  1 } },
+    { ISD::SADDO,      MVT::i16,     {  1 } },
+    { ISD::SADDO,      MVT::i8,      {  1 } },
+    { ISD::UADDO,      MVT::i32,     {  1 } },
+    { ISD::UADDO,      MVT::i16,     {  1 } },
+    { ISD::UADDO,      MVT::i8,      {  1 } },
+    { ISD::UMULO,      MVT::i32,     {  2 } }, // mul + seto
+    { ISD::UMULO,      MVT::i16,     {  2 } },
+    { ISD::UMULO,      MVT::i8,      {  2 } },
   };
 
   Type *RetTy = ICA.getReturnType();
@@ -3340,6 +3977,23 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
+    break;
+  case Intrinsic::fshl:
+    ISD = ISD::FSHL;
+    if (!ICA.isTypeBasedOnly()) {
+      const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
+      if (Args[0] == Args[1])
+        ISD = ISD::ROTL;
+    }
+    break;
+  case Intrinsic::fshr:
+    // FSHR has same costs so don't duplicate.
+    ISD = ISD::FSHL;
+    if (!ICA.isTypeBasedOnly()) {
+      const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
+      if (Args[0] == Args[1])
+        ISD = ISD::ROTR;
+    }
     break;
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
@@ -3395,7 +4049,7 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
   if (ISD != ISD::DELETED_NODE) {
     // Legalize the type.
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, OpTy);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(OpTy);
     MVT MTy = LT.second;
 
     // Attempt to lookup cost.
@@ -3415,104 +4069,166 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first * Cost;
     }
 
-    auto adjustTableCost = [](const CostTblEntry &Entry,
+    // Without BMI/LZCNT see if we're only looking for a *_ZERO_UNDEF cost.
+    if (((ISD == ISD::CTTZ && !ST->hasBMI()) ||
+         (ISD == ISD::CTLZ && !ST->hasLZCNT())) &&
+        !MTy.isVector() && !ICA.isTypeBasedOnly()) {
+      const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
+      if (auto *Cst = dyn_cast<ConstantInt>(Args[1]))
+        if (Cst->isAllOnesValue())
+          ISD = ISD == ISD::CTTZ ? ISD::CTTZ_ZERO_UNDEF : ISD::CTLZ_ZERO_UNDEF;
+    }
+
+    // FSQRT is a single instruction.
+    if (ISD == ISD::FSQRT && CostKind == TTI::TCK_CodeSize)
+      return LT.first;
+
+    auto adjustTableCost = [](int ISD, unsigned Cost,
                               InstructionCost LegalizationCost,
                               FastMathFlags FMF) {
       // If there are no NANs to deal with, then these are reduced to a
       // single MIN** or MAX** instruction instead of the MIN/CMP/SELECT that we
       // assume is used in the non-fast case.
-      if (Entry.ISD == ISD::FMAXNUM || Entry.ISD == ISD::FMINNUM) {
+      if (ISD == ISD::FMAXNUM || ISD == ISD::FMINNUM) {
         if (FMF.noNaNs())
           return LegalizationCost * 1;
       }
-      return LegalizationCost * (int)Entry.Cost;
+      return LegalizationCost * (int)Cost;
     };
 
     if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
+
+    if (ST->hasVBMI2())
+      if (const auto *Entry = CostTableLookup(AVX512VBMI2CostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasBITALG())
       if (const auto *Entry = CostTableLookup(AVX512BITALGCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasVPOPCNTDQ())
       if (const auto *Entry = CostTableLookup(AVX512VPOPCNTDQCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasCDI())
       if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasXOP())
       if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasSSE42())
       if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasSSE41())
       if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasSSSE3())
       if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (ST->hasBMI()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(BMI64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          if (auto KindCost = Entry->Cost[CostKind])
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                   ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(BMI32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
     }
 
     if (ST->hasLZCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(LZCNT64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          if (auto KindCost = Entry->Cost[CostKind])
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                   ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(LZCNT32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
     }
 
     if (ST->hasPOPCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(POPCNT64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          if (auto KindCost = Entry->Cost[CostKind])
+            return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                   ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(POPCNT32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
     }
 
     if (ISD == ISD::BSWAP && ST->hasMOVBE() && ST->hasFastMOVBE()) {
@@ -3528,137 +4244,22 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT.first,
+                                 ICA.getFlags());
 
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
-      return adjustTableCost(*Entry, LT.first, ICA.getFlags());
-  }
-
-  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
-}
-
-InstructionCost
-X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                                  TTI::TargetCostKind CostKind) {
-  if (ICA.isTypeBasedOnly())
-    return getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-
-  static const CostTblEntry AVX512BWCostTbl[] = {
-    { ISD::ROTL,       MVT::v32i16,  2 },
-    { ISD::ROTL,       MVT::v16i16,  2 },
-    { ISD::ROTL,       MVT::v8i16,   2 },
-    { ISD::ROTL,       MVT::v64i8,   5 },
-    { ISD::ROTL,       MVT::v32i8,   5 },
-    { ISD::ROTL,       MVT::v16i8,   5 },
-    { ISD::ROTR,       MVT::v32i16,  2 },
-    { ISD::ROTR,       MVT::v16i16,  2 },
-    { ISD::ROTR,       MVT::v8i16,   2 },
-    { ISD::ROTR,       MVT::v64i8,   5 },
-    { ISD::ROTR,       MVT::v32i8,   5 },
-    { ISD::ROTR,       MVT::v16i8,   5 }
-  };
-  static const CostTblEntry AVX512CostTbl[] = {
-    { ISD::ROTL,       MVT::v8i64,   1 },
-    { ISD::ROTL,       MVT::v4i64,   1 },
-    { ISD::ROTL,       MVT::v2i64,   1 },
-    { ISD::ROTL,       MVT::v16i32,  1 },
-    { ISD::ROTL,       MVT::v8i32,   1 },
-    { ISD::ROTL,       MVT::v4i32,   1 },
-    { ISD::ROTR,       MVT::v8i64,   1 },
-    { ISD::ROTR,       MVT::v4i64,   1 },
-    { ISD::ROTR,       MVT::v2i64,   1 },
-    { ISD::ROTR,       MVT::v16i32,  1 },
-    { ISD::ROTR,       MVT::v8i32,   1 },
-    { ISD::ROTR,       MVT::v4i32,   1 }
-  };
-  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(X,SUB(0,Y))
-  static const CostTblEntry XOPCostTbl[] = {
-    { ISD::ROTL,       MVT::v4i64,   4 },
-    { ISD::ROTL,       MVT::v8i32,   4 },
-    { ISD::ROTL,       MVT::v16i16,  4 },
-    { ISD::ROTL,       MVT::v32i8,   4 },
-    { ISD::ROTL,       MVT::v2i64,   1 },
-    { ISD::ROTL,       MVT::v4i32,   1 },
-    { ISD::ROTL,       MVT::v8i16,   1 },
-    { ISD::ROTL,       MVT::v16i8,   1 },
-    { ISD::ROTR,       MVT::v4i64,   6 },
-    { ISD::ROTR,       MVT::v8i32,   6 },
-    { ISD::ROTR,       MVT::v16i16,  6 },
-    { ISD::ROTR,       MVT::v32i8,   6 },
-    { ISD::ROTR,       MVT::v2i64,   2 },
-    { ISD::ROTR,       MVT::v4i32,   2 },
-    { ISD::ROTR,       MVT::v8i16,   2 },
-    { ISD::ROTR,       MVT::v16i8,   2 }
-  };
-  static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ROTL,       MVT::i64,     1 },
-    { ISD::ROTR,       MVT::i64,     1 },
-    { ISD::FSHL,       MVT::i64,     4 }
-  };
-  static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ROTL,       MVT::i32,     1 },
-    { ISD::ROTL,       MVT::i16,     1 },
-    { ISD::ROTL,       MVT::i8,      1 },
-    { ISD::ROTR,       MVT::i32,     1 },
-    { ISD::ROTR,       MVT::i16,     1 },
-    { ISD::ROTR,       MVT::i8,      1 },
-    { ISD::FSHL,       MVT::i32,     4 },
-    { ISD::FSHL,       MVT::i16,     4 },
-    { ISD::FSHL,       MVT::i8,      4 }
-  };
-
-  Intrinsic::ID IID = ICA.getID();
-  Type *RetTy = ICA.getReturnType();
-  const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-  unsigned ISD = ISD::DELETED_NODE;
-  switch (IID) {
-  default:
-    break;
-  case Intrinsic::fshl:
-    ISD = ISD::FSHL;
-    if (Args[0] == Args[1])
-      ISD = ISD::ROTL;
-    break;
-  case Intrinsic::fshr:
-    // FSHR has same costs so don't duplicate.
-    ISD = ISD::FSHL;
-    if (Args[0] == Args[1])
-      ISD = ISD::ROTR;
-    break;
-  }
-
-  if (ISD != ISD::DELETED_NODE) {
-    // Legalize the type.
-    std::pair<InstructionCost, MVT> LT =
-        TLI->getTypeLegalizationCost(DL, RetTy);
-    MVT MTy = LT.second;
-
-    // Attempt to lookup cost.
-    if (ST->hasBWI())
-      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasAVX512())
-      if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->hasXOP())
-      if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (ST->is64Bit())
-      if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
-        return LT.first * Entry->Cost;
-
-    if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return adjustTableCost(Entry->ISD, *KindCost, LT.first, ICA.getFlags());
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
 InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               unsigned Index) {
+                                               TTI::TargetCostKind CostKind,
+                                               unsigned Index, Value *Op0,
+                                               Value *Op1) {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -3684,19 +4285,16 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     // Extract - store vector to stack, load scalar.
     if (Opcode == Instruction::ExtractElement) {
-      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
-                             TTI::TargetCostKind::TCK_RecipThroughput) +
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
              getMemoryOpCost(Instruction::Load, ScalarType, SclAlign, 0,
-                             TTI::TargetCostKind::TCK_RecipThroughput);
+                             CostKind);
     }
     // Insert - store vector to stack, store scalar, load vector.
     if (Opcode == Instruction::InsertElement) {
-      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0,
-                             TTI::TargetCostKind::TCK_RecipThroughput) +
+      return getMemoryOpCost(Instruction::Store, Val, VecAlign, 0, CostKind) +
              getMemoryOpCost(Instruction::Store, ScalarType, SclAlign, 0,
-                             TTI::TargetCostKind::TCK_RecipThroughput) +
-             getMemoryOpCost(Instruction::Load, Val, VecAlign, 0,
-                             TTI::TargetCostKind::TCK_RecipThroughput);
+                             CostKind) +
+             getMemoryOpCost(Instruction::Load, Val, VecAlign, 0, CostKind);
     }
   }
 
@@ -3709,7 +4307,7 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return 1;
 
     // Legalize the type.
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
     // This type is legalized to a scalar type.
     if (!LT.second.isVector())
@@ -3733,12 +4331,36 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       }
     }
 
+    MVT MScalarTy = LT.second.getScalarType();
+    auto IsCheapPInsrPExtrInsertPS = [&]() {
+      // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
+      // Also, assume insertps is relatively cheap on all >= SSE41 targets.
+      return (MScalarTy == MVT::i16 && ST->hasSSE2()) ||
+             (MScalarTy.isInteger() && ST->hasSSE41()) ||
+             (MScalarTy == MVT::f32 && ST->hasSSE41() &&
+              Opcode == Instruction::InsertElement);
+    };
+
     if (Index == 0) {
       // Floating point scalars are already located in index #0.
       // Many insertions to #0 can fold away for scalar fp-ops, so let's assume
       // true for all.
       if (ScalarType->isFloatingPointTy())
         return RegisterFileMoveCost;
+
+      if (Opcode == Instruction::InsertElement &&
+          isa_and_nonnull<UndefValue>(Op0)) {
+        // Consider the gather cost to be cheap.
+        if (isa_and_nonnull<LoadInst>(Op1))
+          return RegisterFileMoveCost;
+        if (!IsCheapPInsrPExtrInsertPS()) {
+          // mov constant-to-GPR + movd/movq GPR -> XMM.
+          if (isa_and_nonnull<Constant>(Op1) && Op1->getType()->isIntegerTy())
+            return 2 + RegisterFileMoveCost;
+          // Assume movd/movq GPR -> XMM is relatively cheap on all targets.
+          return 1 + RegisterFileMoveCost;
+        }
+      }
 
       // Assume movd/movq XMM -> GPR is relatively cheap on all targets.
       if (ScalarType->isIntegerTy() && Opcode == Instruction::ExtractElement)
@@ -3747,19 +4369,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
     assert(ISD && "Unexpected vector opcode");
-    MVT MScalarTy = LT.second.getScalarType();
     if (ST->useSLMArithCosts())
       if (auto *Entry = CostTableLookup(SLMCostTbl, ISD, MScalarTy))
         return Entry->Cost + RegisterFileMoveCost;
 
-    // Assume pinsr/pextr XMM <-> GPR is relatively cheap on all targets.
-    if ((MScalarTy == MVT::i16 && ST->hasSSE2()) ||
-        (MScalarTy.isInteger() && ST->hasSSE41()))
-      return 1 + RegisterFileMoveCost;
-
-    // Assume insertps is relatively cheap on all targets.
-    if (MScalarTy == MVT::f32 && ST->hasSSE41() &&
-        Opcode == Instruction::InsertElement)
+    // Consider cheap cases.
+    if (IsCheapPInsrPExtrInsertPS())
       return 1 + RegisterFileMoveCost;
 
     // For extractions we just need to shuffle the element to index 0, which
@@ -3774,8 +4389,8 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       EVT VT = TLI->getValueType(DL, Val);
       if (VT.getScalarType() != MScalarTy || VT.getSizeInBits() >= 128)
         SubTy = FixedVectorType::get(ScalarType, SubNumElts);
-      ShuffleCost =
-          getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, None, 0, SubTy);
+      ShuffleCost = getShuffleCost(TTI::SK_PermuteTwoSrc, SubTy, std::nullopt,
+                                   CostKind, 0, SubTy);
     }
     int IntOrFpCost = ScalarType->isFloatingPointTy() ? 0 : 1;
     return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
@@ -3786,22 +4401,30 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
   if (Opcode == Instruction::ExtractElement && ScalarType->isPointerTy())
     RegisterFileMoveCost += 1;
 
-  return BaseT::getVectorInstrCost(Opcode, Val, Index) + RegisterFileMoveCost;
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+         RegisterFileMoveCost;
 }
 
-InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
-                                                     const APInt &DemandedElts,
-                                                     bool Insert,
-                                                     bool Extract) {
+InstructionCost
+X86TTIImpl::getScalarizationOverhead(VectorType *Ty, const APInt &DemandedElts,
+                                     bool Insert, bool Extract,
+                                     TTI::TargetCostKind CostKind) {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   MVT MScalarTy = LT.second.getScalarType();
-  unsigned SizeInBits = LT.second.getSizeInBits();
-
+  unsigned LegalVectorBitWidth = LT.second.getSizeInBits();
   InstructionCost Cost = 0;
+
+  constexpr unsigned LaneBitWidth = 128;
+  assert((LegalVectorBitWidth < LaneBitWidth ||
+          (LegalVectorBitWidth % LaneBitWidth) == 0) &&
+         "Illegal vector");
+
+  const int NumLegalVectors = *LT.first.getValue();
+  assert(NumLegalVectors >= 0 && "Negative cost!");
 
   // For insertions, a ISD::BUILD_VECTOR style vector initialization can be much
   // cheaper than an accumulation of ISD::INSERT_VECTOR_ELT.
@@ -3811,9 +4434,9 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
         (MScalarTy == MVT::f32 && ST->hasSSE41())) {
       // For types we can insert directly, insertion into 128-bit sub vectors is
       // cheap, followed by a cheap chain of concatenations.
-      if (SizeInBits <= 128) {
-        Cost +=
-            BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, false);
+      if (LegalVectorBitWidth <= LaneBitWidth) {
+        Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert,
+                                                /*Extract*/ false, CostKind);
       } else {
         // In each 128-lane, if at least one index is demanded but not all
         // indices are demanded and this 128-lane is not the first 128-lane of
@@ -3827,32 +4450,51 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
         // Case#2: inserting into 5th index needs extracti128 + vpinsrd +
         // inserti128.
         // Case#3: inserting into 4,5,6,7 index needs 4*vpinsrd + inserti128.
-        const int CostValue = *LT.first.getValue();
-        assert(CostValue >= 0 && "Negative cost!");
-        unsigned Num128Lanes = SizeInBits / 128 * CostValue;
-        unsigned NumElts = LT.second.getVectorNumElements() * CostValue;
-        APInt WidenedDemandedElts = DemandedElts.zext(NumElts);
-        unsigned Scale = NumElts / Num128Lanes;
-        // We iterate each 128-lane, and check if we need a
-        // extracti128/inserti128 for this 128-lane.
-        for (unsigned I = 0; I < NumElts; I += Scale) {
-          APInt Mask = WidenedDemandedElts.getBitsSet(NumElts, I, I + Scale);
-          APInt MaskedDE = Mask & WidenedDemandedElts;
-          unsigned Population = MaskedDE.countPopulation();
-          Cost += (Population > 0 && Population != Scale &&
-                   I % LT.second.getVectorNumElements() != 0);
-          Cost += Population > 0;
-        }
-        Cost += DemandedElts.countPopulation();
+        assert((LegalVectorBitWidth % LaneBitWidth) == 0 && "Illegal vector");
+        unsigned NumLegalLanes = LegalVectorBitWidth / LaneBitWidth;
+        unsigned NumLanesTotal = NumLegalLanes * NumLegalVectors;
+        unsigned NumLegalElts =
+            LT.second.getVectorNumElements() * NumLegalVectors;
+        assert(NumLegalElts >= DemandedElts.getBitWidth() &&
+               "Vector has been legalized to smaller element count");
+        assert((NumLegalElts % NumLanesTotal) == 0 &&
+               "Unexpected elts per lane");
+        unsigned NumEltsPerLane = NumLegalElts / NumLanesTotal;
 
-        // For vXf32 cases, insertion into the 0'th index in each v4f32
-        // 128-bit vector is free.
-        // NOTE: This assumes legalization widens vXf32 vectors.
-        if (MScalarTy == MVT::f32)
-          for (unsigned i = 0, e = cast<FixedVectorType>(Ty)->getNumElements();
-               i < e; i += 4)
-            if (DemandedElts[i])
-              Cost--;
+        APInt WidenedDemandedElts = DemandedElts.zext(NumLegalElts);
+        auto *LaneTy =
+            FixedVectorType::get(Ty->getElementType(), NumEltsPerLane);
+
+        for (unsigned I = 0; I != NumLanesTotal; ++I) {
+          APInt LaneEltMask = WidenedDemandedElts.extractBits(
+              NumEltsPerLane, NumEltsPerLane * I);
+          if (LaneEltMask.isNullValue())
+            continue;
+          // FIXME: we don't need to extract if all non-demanded elements
+          //        are legalization-inserted padding.
+          if (!LaneEltMask.isAllOnes())
+            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
+                                   CostKind, I * NumEltsPerLane, LaneTy);
+          Cost += BaseT::getScalarizationOverhead(LaneTy, LaneEltMask, Insert,
+                                                  /*Extract*/ false, CostKind);
+        }
+
+        APInt AffectedLanes =
+            APIntOps::ScaleBitMask(WidenedDemandedElts, NumLanesTotal);
+        APInt FullyAffectedLegalVectors = APIntOps::ScaleBitMask(
+            AffectedLanes, NumLegalVectors, /*MatchAllBits=*/true);
+        for (int LegalVec = 0; LegalVec != NumLegalVectors; ++LegalVec) {
+          for (unsigned Lane = 0; Lane != NumLegalLanes; ++Lane) {
+            unsigned I = NumLegalLanes * LegalVec + Lane;
+            // No need to insert unaffected lane; or lane 0 of each legal vector
+            // iff ALL lanes of that vector were affected and will be inserted.
+            if (!AffectedLanes[I] ||
+                (Lane == 0 && FullyAffectedLegalVectors[LegalVec]))
+              continue;
+            Cost += getShuffleCost(TTI::SK_InsertSubvector, Ty, std::nullopt,
+                                   CostKind, I * NumEltsPerLane, LaneTy);
+          }
+        }
       }
     } else if (LT.second.isVector()) {
       // Without fast insertion, we need to use MOVD/MOVQ to pass each demanded
@@ -3884,46 +4526,44 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(VectorType *Ty,
     }
 
     if (LT.second.isVector()) {
-      int CostValue = *LT.first.getValue();
-      assert(CostValue >= 0 && "Negative cost!");
-
-      unsigned NumElts = LT.second.getVectorNumElements() * CostValue;
-      assert(NumElts >= DemandedElts.getBitWidth() &&
+      unsigned NumLegalElts =
+          LT.second.getVectorNumElements() * NumLegalVectors;
+      assert(NumLegalElts >= DemandedElts.getBitWidth() &&
              "Vector has been legalized to smaller element count");
 
-      // If we're extracting elements from a 128-bit subvector lane, we only need
-      // to extract each lane once, not for every element.
-      if (SizeInBits > 128) {
-        assert((SizeInBits % 128) == 0 && "Illegal vector");
-        unsigned NumLegal128Lanes = SizeInBits / 128;
-        unsigned Num128Lanes = NumLegal128Lanes * CostValue;
-        APInt WidenedDemandedElts = DemandedElts.zext(NumElts);
-        unsigned Scale = NumElts / Num128Lanes;
+      // If we're extracting elements from a 128-bit subvector lane,
+      // we only need to extract each lane once, not for every element.
+      if (LegalVectorBitWidth > LaneBitWidth) {
+        unsigned NumLegalLanes = LegalVectorBitWidth / LaneBitWidth;
+        unsigned NumLanesTotal = NumLegalLanes * NumLegalVectors;
+        assert((NumLegalElts % NumLanesTotal) == 0 &&
+               "Unexpected elts per lane");
+        unsigned NumEltsPerLane = NumLegalElts / NumLanesTotal;
 
         // Add cost for each demanded 128-bit subvector extraction.
         // Luckily this is a lot easier than for insertion.
-        APInt DemandedUpper128Lanes =
-            APIntOps::ScaleBitMask(WidenedDemandedElts, Num128Lanes);
-        auto *Ty128 = FixedVectorType::get(Ty->getElementType(), Scale);
-        for (unsigned I = 0; I != Num128Lanes; ++I)
-          if (DemandedUpper128Lanes[I])
-            Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, None,
-                                   I * Scale, Ty128);
+        APInt WidenedDemandedElts = DemandedElts.zext(NumLegalElts);
+        auto *LaneTy =
+            FixedVectorType::get(Ty->getElementType(), NumEltsPerLane);
 
-        // Add all the demanded element extractions together, but adjust the
-        // index to use the equivalent of the bottom 128 bit lane.
-        for (unsigned I = 0; I != NumElts; ++I)
-          if (WidenedDemandedElts[I]) {
-            unsigned Idx = I % Scale;
-            Cost += getVectorInstrCost(Instruction::ExtractElement, Ty, Idx);
-          }
+        for (unsigned I = 0; I != NumLanesTotal; ++I) {
+          APInt LaneEltMask = WidenedDemandedElts.extractBits(
+              NumEltsPerLane, I * NumEltsPerLane);
+          if (LaneEltMask.isNullValue())
+            continue;
+          Cost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
+                                 CostKind, I * NumEltsPerLane, LaneTy);
+          Cost += BaseT::getScalarizationOverhead(
+              LaneTy, LaneEltMask, /*Insert*/ false, Extract, CostKind);
+        }
 
         return Cost;
       }
     }
 
     // Fallback to default extraction.
-    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, false, Extract);
+    Cost += BaseT::getScalarizationOverhead(Ty, DemandedElts, /*Insert*/ false,
+                                            Extract, CostKind);
   }
 
   return Cost;
@@ -3969,11 +4609,8 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
         PromEltTyBits = 16; // promote to i16, AVX512BW.
       break;
     }
-    if (ST->hasDQI()) {
-      PromEltTyBits = 32; // promote to i32, AVX512F.
-      break;
-    }
-    return bailout();
+    PromEltTyBits = 32; // promote to i32, AVX512F.
+    break;
   default:
     return bailout();
   }
@@ -3987,10 +4624,10 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
   auto *DstVecTy = FixedVectorType::get(EltTy, NumDstElements);
 
   // Legalize the types.
-  MVT LegalSrcVecTy = TLI->getTypeLegalizationCost(DL, SrcVecTy).second;
-  MVT LegalPromSrcVecTy = TLI->getTypeLegalizationCost(DL, PromSrcVecTy).second;
-  MVT LegalPromDstVecTy = TLI->getTypeLegalizationCost(DL, PromDstVecTy).second;
-  MVT LegalDstVecTy = TLI->getTypeLegalizationCost(DL, DstVecTy).second;
+  MVT LegalSrcVecTy = getTypeLegalizationCost(SrcVecTy).second;
+  MVT LegalPromSrcVecTy = getTypeLegalizationCost(PromSrcVecTy).second;
+  MVT LegalPromDstVecTy = getTypeLegalizationCost(PromDstVecTy).second;
+  MVT LegalDstVecTy = getTypeLegalizationCost(DstVecTy).second;
   // They should have legalized into vector types.
   if (!LegalSrcVecTy.isVector() || !LegalPromSrcVecTy.isVector() ||
       !LegalPromDstVecTy.isVector() || !LegalDstVecTy.isVector())
@@ -4032,9 +4669,9 @@ X86TTIImpl::getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
       DemandedDstElts.zext(NumDstVectors * NumEltsPerDstVec), NumDstVectors);
   unsigned NumDstVectorsDemanded = DemandedDstVectors.countPopulation();
 
-  InstructionCost SingleShuffleCost =
-      getShuffleCost(TTI::SK_PermuteSingleSrc, SingleDstVecTy,
-                     /*Mask=*/None, /*Index=*/0, /*SubTp=*/nullptr);
+  InstructionCost SingleShuffleCost = getShuffleCost(
+      TTI::SK_PermuteSingleSrc, SingleDstVecTy, /*Mask=*/std::nullopt, CostKind,
+      /*Index=*/0, /*SubTp=*/nullptr);
   return NumDstVectorsDemanded * SingleShuffleCost;
 }
 
@@ -4042,6 +4679,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
@@ -4064,23 +4702,29 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                   CostKind);
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
 
   auto *VTy = dyn_cast<FixedVectorType>(Src);
 
+  InstructionCost Cost = 0;
+
+  // Add a cost for constant load to vector.
+  if (Opcode == Instruction::Store && OpInfo.isConstant())
+    Cost += getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
+                            /*AddressSpace=*/0, CostKind);
+
   // Handle the simple case of non-vectors.
   // NOTE: this assumes that legalization never creates vector from scalars!
-  if (!VTy || !LT.second.isVector())
+  if (!VTy || !LT.second.isVector()) {
     // Each load/store unit costs 1.
-    return LT.first * 1;
+    return (LT.second.isFloatingPoint() ? Cost : 0) + LT.first * 1;
+  }
 
   bool IsLoad = Opcode == Instruction::Load;
 
   Type *EltTy = VTy->getElementType();
 
   const int EltTyBits = DL.getTypeSizeInBits(EltTy);
-
-  InstructionCost Cost = 0;
 
   // Source of truth: how many elements were there in the original IR vector?
   const unsigned SrcNumElt = VTy->getNumElements();
@@ -4154,7 +4798,8 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
         if (!Is0thSubVec)
           Cost += getShuffleCost(IsLoad ? TTI::ShuffleKind::SK_InsertSubvector
                                         : TTI::ShuffleKind::SK_ExtractSubvector,
-                                 VTy, None, NumEltDone(), CurrVecTy);
+                                 VTy, std::nullopt, CostKind, NumEltDone(),
+                                 CurrVecTy);
       }
 
       // While we can directly load/store ZMM, YMM, and 64-bit halves of XMM,
@@ -4170,7 +4815,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                               CoalescedVecEltIdx, CoalescedVecEltIdx + 1);
         assert(DemandedElts.countPopulation() == 1 && "Inserting single value");
         Cost += getScalarizationOverhead(CoalescedVecTy, DemandedElts, IsLoad,
-                                         !IsLoad);
+                                         !IsLoad, CostKind);
       }
 
       // This isn't exactly right. We're using slow unaligned 32-byte accesses
@@ -4211,15 +4856,15 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
       (IsStore && !isLegalMaskedStore(SrcVTy, Alignment))) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnes(NumElem);
-    InstructionCost MaskSplitCost =
-        getScalarizationOverhead(MaskTy, DemandedElts, false, true);
+    InstructionCost MaskSplitCost = getScalarizationOverhead(
+        MaskTy, DemandedElts, /*Insert*/ false, /*Extract*/ true, CostKind);
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt8Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
     InstructionCost BranchCost = getCFInstrCost(Instruction::Br, CostKind);
     InstructionCost MaskCmpCost = NumElem * (BranchCost + ScalarCompareCost);
-    InstructionCost ValueSplitCost =
-        getScalarizationOverhead(SrcVTy, DemandedElts, IsLoad, IsStore);
+    InstructionCost ValueSplitCost = getScalarizationOverhead(
+        SrcVTy, DemandedElts, IsLoad, IsStore, CostKind);
     InstructionCost MemopCost =
         NumElem * BaseT::getMemoryOpCost(Opcode, SrcVTy->getScalarType(),
                                          Alignment, AddressSpace, CostKind);
@@ -4227,27 +4872,30 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   }
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, SrcVTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
   auto VT = TLI->getValueType(DL, SrcVTy);
   InstructionCost Cost = 0;
   if (VT.isSimple() && LT.second != VT.getSimpleVT() &&
       LT.second.getVectorNumElements() == NumElem)
     // Promotion requires extend/truncate for data and a shuffle for mask.
-    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, None, 0, nullptr) +
-            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, None, 0, nullptr);
+    Cost += getShuffleCost(TTI::SK_PermuteTwoSrc, SrcVTy, std::nullopt,
+                           CostKind, 0, nullptr) +
+            getShuffleCost(TTI::SK_PermuteTwoSrc, MaskTy, std::nullopt,
+                           CostKind, 0, nullptr);
 
   else if (LT.first * LT.second.getVectorNumElements() > NumElem) {
     auto *NewMaskTy = FixedVectorType::get(MaskTy->getElementType(),
                                            LT.second.getVectorNumElements());
     // Expanding requires fill mask with zeroes
-    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, None, 0, MaskTy);
+    Cost += getShuffleCost(TTI::SK_InsertSubvector, NewMaskTy, std::nullopt,
+                           CostKind, 0, MaskTy);
   }
 
   // Pre-AVX512 - each maskmov load costs 2 + store costs ~8.
   if (!ST->hasAVX512())
     return Cost + LT.first * (IsLoad ? 2 : 8);
 
-  // AVX-512 masked load/store is cheapper
+  // AVX-512 masked load/store is cheaper
   return Cost + LT.first;
 }
 
@@ -4281,7 +4929,7 @@ InstructionCost X86TTIImpl::getAddressComputationCost(Type *Ty,
 
 InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
-                                       Optional<FastMathFlags> FMF,
+                                       std::optional<FastMathFlags> FMF,
                                        TTI::TargetCostKind CostKind) {
   if (TTI::requiresOrderedReduction(FMF))
     return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
@@ -4343,7 +4991,7 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
         return Entry->Cost;
   }
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   MVT MTy = LT.second;
 
@@ -4486,7 +5134,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
       ReductionCost +=
-          getShuffleCost(TTI::SK_ExtractSubvector, Ty, None, NumVecElts, SubTy);
+          getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt, CostKind,
+                         NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
@@ -4497,8 +5146,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       else
         ShufTy =
             FixedVectorType::get(Type::getInt64Ty(ValVTy->getContext()), 2);
-      ReductionCost +=
-          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, None, 0, nullptr);
+      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy,
+                                      std::nullopt, CostKind, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
       FixedVectorType *ShufTy;
@@ -4508,17 +5157,16 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
       else
         ShufTy =
             FixedVectorType::get(Type::getInt32Ty(ValVTy->getContext()), 4);
-      ReductionCost +=
-          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, None, 0, nullptr);
+      ReductionCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy,
+                                      std::nullopt, CostKind, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
       auto *ShiftTy = FixedVectorType::get(
           Type::getIntNTy(ValVTy->getContext(), Size), 128 / Size);
       ReductionCost += getArithmeticInstrCost(
           Instruction::LShr, ShiftTy, CostKind,
-          TargetTransformInfo::OK_AnyValue,
-          TargetTransformInfo::OK_UniformConstantValue,
-          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+          {TargetTransformInfo::OK_UniformConstantValue, TargetTransformInfo::OP_None});
     }
 
     // Add the arithmetic op for this level.
@@ -4526,12 +5174,13 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   }
 
   // Add the final extract element to the cost.
-  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                            CostKind, 0, nullptr, nullptr);
 }
 
 InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
                                           bool IsUnsigned) {
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   MVT MTy = LT.second;
 
@@ -4661,7 +5310,7 @@ InstructionCost
 X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
                                    bool IsUnsigned,
                                    TTI::TargetCostKind CostKind) {
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   MVT MTy = LT.second;
 
@@ -4787,8 +5436,8 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     // If we're reducing from 256/512 bits, use an extract_subvector.
     if (Size > 128) {
       auto *SubTy = FixedVectorType::get(ValVTy->getElementType(), NumVecElts);
-      MinMaxCost +=
-          getShuffleCost(TTI::SK_ExtractSubvector, Ty, None, NumVecElts, SubTy);
+      MinMaxCost += getShuffleCost(TTI::SK_ExtractSubvector, Ty, std::nullopt,
+                                   CostKind, NumVecElts, SubTy);
       Ty = SubTy;
     } else if (Size == 128) {
       // Reducing from 128 bits is a permute of v2f64/v2i64.
@@ -4798,8 +5447,8 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
             FixedVectorType::get(Type::getDoubleTy(ValTy->getContext()), 2);
       else
         ShufTy = FixedVectorType::get(Type::getInt64Ty(ValTy->getContext()), 2);
-      MinMaxCost +=
-          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, None, 0, nullptr);
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy,
+                                   std::nullopt, CostKind, 0, nullptr);
     } else if (Size == 64) {
       // Reducing from 64 bits is a shuffle of v4f32/v4i32.
       FixedVectorType *ShufTy;
@@ -4807,17 +5456,16 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
         ShufTy = FixedVectorType::get(Type::getFloatTy(ValTy->getContext()), 4);
       else
         ShufTy = FixedVectorType::get(Type::getInt32Ty(ValTy->getContext()), 4);
-      MinMaxCost +=
-          getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy, None, 0, nullptr);
+      MinMaxCost += getShuffleCost(TTI::SK_PermuteSingleSrc, ShufTy,
+                                   std::nullopt, CostKind, 0, nullptr);
     } else {
       // Reducing from smaller size is a shift by immediate.
       auto *ShiftTy = FixedVectorType::get(
           Type::getIntNTy(ValTy->getContext(), Size), 128 / Size);
       MinMaxCost += getArithmeticInstrCost(
           Instruction::LShr, ShiftTy, TTI::TCK_RecipThroughput,
-          TargetTransformInfo::OK_AnyValue,
-          TargetTransformInfo::OK_UniformConstantValue,
-          TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
+          {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+          {TargetTransformInfo::OK_UniformConstantValue, TargetTransformInfo::OP_None});
     }
 
     // Add the arithmetic op for this level.
@@ -4827,7 +5475,8 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   }
 
   // Add the final extract element to the cost.
-  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+  return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                         CostKind, 0, nullptr, nullptr);
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -4921,7 +5570,7 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // We support 64-bit ANDs with immediates with 32-bits of leading zeroes
     // by using a 32-bit operation with implicit zero extension. Detect such
     // immediates here as the normal path expects bit 31 to be sign extended.
-    if (Idx == 1 && Imm.getBitWidth() == 64 && isUInt<32>(Imm.getZExtValue()))
+    if (Idx == 1 && Imm.getBitWidth() == 64 && Imm.isIntN(32))
       return TTI::TCC_Free;
     ImmIdx = 1;
     break;
@@ -4997,16 +5646,16 @@ InstructionCost X86TTIImpl::getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx,
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
-    if ((Idx == 1) && Imm.getBitWidth() <= 64 && isInt<32>(Imm.getSExtValue()))
+    if ((Idx == 1) && Imm.getBitWidth() <= 64 && Imm.isSignedIntN(32))
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_stackmap:
-    if ((Idx < 2) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
+    if ((Idx < 2) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
   case Intrinsic::experimental_patchpoint_void:
   case Intrinsic::experimental_patchpoint_i64:
-    if ((Idx < 4) || (Imm.getBitWidth() <= 64 && isInt<64>(Imm.getSExtValue())))
+    if ((Idx < 4) || (Imm.getBitWidth() <= 64 && Imm.isSignedIntN(64)))
       return TTI::TCC_Free;
     break;
   }
@@ -5088,10 +5737,8 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
 
   auto *IndexVTy = FixedVectorType::get(
       IntegerType::get(SrcVTy->getContext(), IndexSize), VF);
-  std::pair<InstructionCost, MVT> IdxsLT =
-      TLI->getTypeLegalizationCost(DL, IndexVTy);
-  std::pair<InstructionCost, MVT> SrcLT =
-      TLI->getTypeLegalizationCost(DL, SrcVTy);
+  std::pair<InstructionCost, MVT> IdxsLT = getTypeLegalizationCost(IndexVTy);
+  std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(SrcVTy);
   InstructionCost::CostType SplitFactor =
       *std::max(IdxsLT.first, SrcLT.first).getValue();
   if (SplitFactor > 1) {
@@ -5134,7 +5781,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
     auto *MaskTy =
         FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), VF);
     MaskUnpackCost = getScalarizationOverhead(
-        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true);
+        MaskTy, DemandedElts, /*Insert=*/false, /*Extract=*/true, CostKind);
     InstructionCost ScalarCompareCost = getCmpSelInstrCost(
         Instruction::ICmp, Type::getInt1Ty(SrcVTy->getContext()), nullptr,
         CmpInst::BAD_ICMP_PREDICATE, CostKind);
@@ -5144,7 +5791,7 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 
   InstructionCost AddressUnpackCost = getScalarizationOverhead(
       FixedVectorType::get(ScalarTy->getPointerTo(), VF), DemandedElts,
-      /*Insert=*/false, /*Extract=*/true);
+      /*Insert=*/false, /*Extract=*/true, CostKind);
 
   // The cost of the scalar loads/stores.
   InstructionCost MemoryOpCost =
@@ -5153,10 +5800,10 @@ InstructionCost X86TTIImpl::getGSScalarCost(unsigned Opcode, Type *SrcVTy,
 
   // The cost of forming the vector from loaded scalars/
   // scalarizing the vector to perform scalar stores.
-  InstructionCost InsertExtractCost =
-      getScalarizationOverhead(cast<FixedVectorType>(SrcVTy), DemandedElts,
-                               /*Insert=*/Opcode == Instruction::Load,
-                               /*Extract=*/Opcode == Instruction::Store);
+  InstructionCost InsertExtractCost = getScalarizationOverhead(
+      cast<FixedVectorType>(SrcVTy), DemandedElts,
+      /*Insert=*/Opcode == Instruction::Load,
+      /*Extract=*/Opcode == Instruction::Store, CostKind);
 
   return AddressUnpackCost + MemoryOpCost + MaskUnpackCost + InsertExtractCost;
 }
@@ -5400,6 +6047,15 @@ bool X86TTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
   return TLI->isOperationLegal(IsSigned ? ISD::SDIVREM : ISD::UDIVREM, VT);
 }
 
+bool X86TTIImpl::isExpensiveToSpeculativelyExecute(const Instruction* I) {
+  // FDIV is always expensive, even if it has a very low uop count.
+  // TODO: Still necessary for recent CPUs with low latency/throughput fdiv?
+  if (I->getOpcode() == Instruction::FDiv)
+    return true;
+
+  return BaseT::isExpensiveToSpeculativelyExecute(I);
+}
+
 bool X86TTIImpl::isFCmpOrdCheaperThanFCmpZero(Type *Ty) {
   return false;
 }
@@ -5533,7 +6189,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
 
   // Calculate the number of memory operations (NumOfMemOps), required
   // for load/store the VecTy.
-  MVT LegalVT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
+  MVT LegalVT = getTypeLegalizationCost(VecTy).second;
   unsigned VecTySize = DL.getTypeStoreSize(VecTy);
   unsigned LegalVTSize = LegalVT.getStoreSize();
   unsigned NumOfMemOps = (VecTySize + LegalVTSize - 1) / LegalVTSize;
@@ -5605,16 +6261,15 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
     TTI::ShuffleKind ShuffleKind =
         (NumOfMemOps > 1) ? TTI::SK_PermuteTwoSrc : TTI::SK_PermuteSingleSrc;
 
-    InstructionCost ShuffleCost =
-        getShuffleCost(ShuffleKind, SingleMemOpTy, None, 0, nullptr);
+    InstructionCost ShuffleCost = getShuffleCost(
+        ShuffleKind, SingleMemOpTy, std::nullopt, CostKind, 0, nullptr);
 
     unsigned NumOfLoadsInInterleaveGrp =
         Indices.size() ? Indices.size() : Factor;
     auto *ResultTy = FixedVectorType::get(VecTy->getElementType(),
                                           VecTy->getNumElements() / Factor);
     InstructionCost NumOfResults =
-        getTLI()->getTypeLegalizationCost(DL, ResultTy).first *
-        NumOfLoadsInInterleaveGrp;
+        getTypeLegalizationCost(ResultTy).first * NumOfLoadsInInterleaveGrp;
 
     // About a half of the loads may be folded in shuffles when we have only
     // one result. If we have more than one result, or the loads are masked,
@@ -5663,8 +6318,8 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
   // There is no strided stores meanwhile. And store can't be folded in
   // shuffle.
   unsigned NumOfSources = Factor; // The number of values to be merged.
-  InstructionCost ShuffleCost =
-      getShuffleCost(TTI::SK_PermuteTwoSrc, SingleMemOpTy, None, 0, nullptr);
+  InstructionCost ShuffleCost = getShuffleCost(
+      TTI::SK_PermuteTwoSrc, SingleMemOpTy, std::nullopt, CostKind, 0, nullptr);
   unsigned NumOfShufflesPerStore = NumOfSources - 1;
 
   // The SK_MergeTwoSrc shuffle clobbers one of src operands.
@@ -5711,7 +6366,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   // VecTy for interleave memop is <VF*Factor x Elt>.
   // So, for VF=4, Interleave Factor = 3, Element type = i32 we have
   // VecTy = <12 x i32>.
-  MVT LegalVT = getTLI()->getTypeLegalizationCost(DL, VecTy).second;
+  MVT LegalVT = getTypeLegalizationCost(VecTy).second;
 
   // This function can be called with VecTy=<6xi128>, Factor=3, in which case
   // the VF=2, while v2i128 is an unsupported MVT vector type
@@ -5988,4 +6643,38 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
   return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
                                            Alignment, AddressSpace, CostKind,
                                            UseMaskForCond, UseMaskForGaps);
+}
+
+InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                                 int64_t BaseOffset,
+                                                 bool HasBaseReg, int64_t Scale,
+                                                 unsigned AddrSpace) const {
+  // Scaling factors are not free at all.
+  // An indexed folded instruction, i.e., inst (reg1, reg2, scale),
+  // will take 2 allocations in the out of order engine instead of 1
+  // for plain addressing mode, i.e. inst (reg1).
+  // E.g.,
+  // vaddps (%rsi,%rdx), %ymm0, %ymm1
+  // Requires two allocations (one for the load, one for the computation)
+  // whereas:
+  // vaddps (%rsi), %ymm0, %ymm1
+  // Requires just 1 allocation, i.e., freeing allocations for other operations
+  // and having less micro operations to execute.
+  //
+  // For some X86 architectures, this is even worse because for instance for
+  // stores, the complex addressing mode forces the instruction to use the
+  // "load" ports instead of the dedicated "store" port.
+  // E.g., on Haswell:
+  // vmovaps %ymm1, (%r8, %rdi) can use port 2 or 3.
+  // vmovaps %ymm1, (%r8) can use port 2, 3, or 7.
+  TargetLoweringBase::AddrMode AM;
+  AM.BaseGV = BaseGV;
+  AM.BaseOffs = BaseOffset;
+  AM.HasBaseReg = HasBaseReg;
+  AM.Scale = Scale;
+  if (getTLI()->isLegalAddressingMode(DL, AM, Ty, AddrSpace))
+    // Scale represents reg2 * scale, thus account for 1
+    // as soon as we use a second register.
+    return AM.Scale != 0;
+  return -1;
 }

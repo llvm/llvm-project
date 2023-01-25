@@ -11,13 +11,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 #include <string>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
   // We need to call Node.getDestructor() instead of matching a
@@ -47,11 +46,11 @@ void VirtualClassDestructorCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-static Optional<CharSourceRange>
+static std::optional<CharSourceRange>
 getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
                        const SourceManager &SM, const LangOptions &LangOpts) {
   if (Destructor.getLocation().isMacroID())
-    return None;
+    return std::nullopt;
 
   SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
   SourceLocation VirtualBeginSpellingLoc =
@@ -61,9 +60,10 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
 
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
-  Optional<Token> NextToken = Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
-    return None;
+    return std::nullopt;
   SourceLocation StartOfNextToken = NextToken->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);
@@ -216,6 +216,4 @@ void VirtualClassDestructorCheck::check(
       << ProtectedAndVirtual << Fix;
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

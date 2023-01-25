@@ -28,8 +28,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 ; CHECK-LABEL: test2
 ; CHECK:  bl      _gen2
 ; CHECK:  add     [[TMP:x.*]], x0, x1
-; CHECK:  add     [[TMP]], [[TMP]], x2
-; CHECK:  add     [[TMP]], [[TMP]], x3
+; CHECK:  add     [[TMP2:x.*]], x2, x3
+; CHECK:  add     [[TMP]], [[TMP]], [[TMP2]]
 ; CHECK:  add     x0, [[TMP]], x4
 ; CHECK-O0-LABEL: test2
 ; CHECK-O0:  bl      _gen2
@@ -41,8 +41,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 define i64 @test2(i64 %key) {
 entry:
   %key.addr = alloca i64, align 4
-  store i64 %key, i64* %key.addr, align 4
-  %0 = load i64, i64* %key.addr, align 4
+  store i64 %key, ptr %key.addr, align 4
+  %0 = load i64, ptr %key.addr, align 4
   %call = call swiftcc { i64, i64, i64, i64, i64 } @gen2(i64 %0)
 
   %v3 = extractvalue { i64, i64, i64, i64, i64 } %call, 0
@@ -75,8 +75,8 @@ define swiftcc { i64, i64, i64, i64, i64 } @gen2(i64 %key) {
 ; CHECK-LABEL: test3
 ; CHECK: bl      _gen3
 ; CHECK: add             [[TMP:w.*]], w0, w1
-; CHECK: add             [[TMP]], [[TMP]], w2
-; CHECK: add             w0, [[TMP]], w3
+; CHECK: add             [[TMP2:w.*]], w2, w3
+; CHECK: add             w0, [[TMP]], [[TMP2]]
 ; CHECK-O0-LABEL: test3
 ; CHECK-O0: bl      _gen3
 ; CHECK-O0: add             [[TMP:w.*]], w0, w1
@@ -159,8 +159,8 @@ declare swiftcc { double, double, double, double } @gen5()
 ; CHECK-DAG:   fadd    d0, d0, d2
 ; CHECK-DAG:   fadd    d0, d0, d3
 ; CHECK-DAG:   add     [[TMP:w.*]], w0, w1
-; CHECK-DAG:   add     [[TMP]], [[TMP]], w2
-; CHECK-DAG:   add     w0, [[TMP]], w3
+; CHECK-DAG:   add     [[TMP2:w.*]], w2, w3
+; CHECK-DAG:   add     w0, [[TMP]], [[TMP2]]
 ; CHECK-O0-LABEL: test6
 ; CHECK-O0:   bl      _gen6
 ; CHECK-O0-DAG:   fadd    d0, d0, d1

@@ -1,4 +1,3 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 ; Check that all zero branch weights do not cause a crash.

@@ -31,13 +31,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @b() local_unnamed_addr !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), metadata !11, metadata !DIExpression()), !dbg !15
-  call void @llvm.dbg.value(metadata !DIArgList(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)), metadata !14, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value)), !dbg !15
-  tail call void @a(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #3, !dbg !16
+  call void @llvm.dbg.value(metadata ptr @.str, metadata !11, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.value(metadata !DIArgList(ptr @.str), metadata !14, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value)), !dbg !15
+  tail call void @a(ptr @.str) #3, !dbg !16
   ret void, !dbg !17
 }
 
-declare !dbg !18 dso_local void @a(i8*) local_unnamed_addr
+declare !dbg !18 dso_local void @a(ptr) local_unnamed_addr
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 

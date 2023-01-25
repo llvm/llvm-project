@@ -3,7 +3,7 @@
 ; CHECK: unreachable
 
 declare void @llvm.assume(i1 noundef)
-declare i1 @bar(i8* nonnull dereferenceable(1))
+declare i1 @bar(ptr nonnull dereferenceable(1))
 
 define void  @foo() {
   %a = call i1 null()

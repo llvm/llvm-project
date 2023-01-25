@@ -20,3 +20,13 @@
 #if !__is_target_environment(unknown)
   #error "mismatching environment"
 #endif
+
+// Unknown variant OS is not allowed.
+#if __is_target_variant_os(unknown)
+  #error "mismatching OS"
+#endif
+
+// Unknown variant environment is not allowed.
+#if __is_target_variant_environment(unknown)
+  #error "mismatching environment"
+#endif

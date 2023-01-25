@@ -317,10 +317,9 @@ When bufferizing the above IR, One-Shot Bufferize inserts a `to_memref` ops with
 dynamic offset and strides:
 
 ```mlir
-#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
-%0_m = bufferization.to_memref %0 : memref<?x?xf32, #map>
-%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, #map>
+%0_m = bufferization.to_memref %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 ```
 
 All users of `%0` have fully dynamic layout maps. This ensures that the

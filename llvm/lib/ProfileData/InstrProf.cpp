@@ -506,9 +506,9 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
       if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
-      if (Error E = compression::zlib::uncompress(
-              makeArrayRef(P, CompressedSize), UncompressedNameStrings,
-              UncompressedSize)) {
+      if (Error E = compression::zlib::decompress(ArrayRef(P, CompressedSize),
+                                                  UncompressedNameStrings,
+                                                  UncompressedSize)) {
         consumeError(std::move(E));
         return make_error<InstrProfError>(instrprof_error::uncompress_failed);
       }
@@ -714,10 +714,33 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     return;
   }
 
+  // Special handling of the first count as the PseudoCount.
+  CountPseudoKind OtherKind = Other.getCountPseudoKind();
+  CountPseudoKind ThisKind = getCountPseudoKind();
+  if (OtherKind != NotPseudo || ThisKind != NotPseudo) {
+    // We don't allow the merge of a profile with pseudo counts and
+    // a normal profile (i.e. without pesudo counts).
+    // Profile supplimenation should be done after the profile merge.
+    if (OtherKind == NotPseudo || ThisKind == NotPseudo) {
+      Warn(instrprof_error::count_mismatch);
+      return;
+    }
+    if (OtherKind == PseudoHot || ThisKind == PseudoHot)
+      setPseudoCount(PseudoHot);
+    else
+      setPseudoCount(PseudoWarm);
+    return;
+  }
+
   for (size_t I = 0, E = Other.Counts.size(); I < E; ++I) {
     bool Overflowed;
-    Counts[I] =
+    uint64_t Value =
         SaturatingMultiplyAdd(Other.Counts[I], Weight, Counts[I], &Overflowed);
+    if (Value > getInstrMaxCountValue()) {
+      Value = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    Counts[I] = Value;
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -739,6 +762,10 @@ void InstrProfRecord::scale(uint64_t N, uint64_t D,
   for (auto &Count : this->Counts) {
     bool Overflowed;
     Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+    if (Count > getInstrMaxCountValue()) {
+      Count = getInstrMaxCountValue();
+      Overflowed = true;
+    }
     if (Overflowed)
       Warn(instrprof_error::counter_overflow);
   }
@@ -1183,6 +1210,7 @@ void createProfileFileNameVar(Module &M, StringRef InstrProfileOutput) {
   GlobalVariable *ProfileNameVar = new GlobalVariable(
       M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
       ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
+  ProfileNameVar->setVisibility(GlobalValue::HiddenVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
@@ -1323,7 +1351,7 @@ uint64_t Header::formatVersion() const {
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
-  static_assert(std::is_standard_layout<Header>::value,
+  static_assert(std::is_standard_layout_v<Header>,
                 "The header should be standard layout type since we use offset "
                 "of fields to read.");
   Header H;
@@ -1344,12 +1372,15 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version8,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 9ull:
+    H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
+    [[fallthrough]];
   case 8ull:
     H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
     H.HashType = read(Buffer, offsetOf(&Header::HashType));
     H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));
@@ -1363,10 +1394,12 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version8,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 9ull:
+    return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
   case 8ull:
     return offsetOf(&Header::MemProfOffset) + sizeof(Header::MemProfOffset);
   default: // Version7 (when the backwards compatible header was introduced).

@@ -67,7 +67,7 @@ Lexception%d:
   return func_size
 
 def random_seed():
-  """Generate a seed that can easily be passsed back in via --seed=STRING"""
+  """Generate a seed that can easily be passed back in via --seed=STRING"""
   return ''.join(random.choice(string.ascii_lowercase) for i in range(10))
 
 def main():
@@ -82,7 +82,7 @@ size = 4 KiB.
 
 Use --pages=N or --functions=N to control the size of the output.
 Default is --pages=2, meaning produce at least two full pages of
-compact unwind entries, plus some more. The calculatation is sloppy.
+compact unwind entries, plus some more. The calculation is sloppy.
 """)
   parser.add_argument('--seed', type=str, default=random_seed(),
                       help='Seed the random number generator')

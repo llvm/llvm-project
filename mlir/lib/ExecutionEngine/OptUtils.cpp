@@ -20,11 +20,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 using namespace llvm;
 
-static Optional<OptimizationLevel> mapToLevel(unsigned optLevel,
-                                              unsigned sizeLevel) {
+static std::optional<OptimizationLevel> mapToLevel(unsigned optLevel,
+                                                   unsigned sizeLevel) {
   switch (optLevel) {
   case 0:
     return OptimizationLevel::O0;
@@ -47,7 +48,7 @@ static Optional<OptimizationLevel> mapToLevel(unsigned optLevel,
   case 3:
     return OptimizationLevel::O3;
   }
-  return None;
+  return std::nullopt;
 }
 // Create and return a lambda that uses LLVM pass manager builder to set up
 // optimizations based on the given level.
@@ -55,7 +56,7 @@ std::function<Error(Module *)>
 mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
                                 TargetMachine *targetMachine) {
   return [optLevel, sizeLevel, targetMachine](Module *m) -> Error {
-    Optional<OptimizationLevel> ol = mapToLevel(optLevel, sizeLevel);
+    std::optional<OptimizationLevel> ol = mapToLevel(optLevel, sizeLevel);
     if (!ol) {
       return make_error<StringError>(
           formatv("invalid optimization/size level {0}/{1}", optLevel,
@@ -68,7 +69,13 @@ mlir::makeOptimizingTransformer(unsigned optLevel, unsigned sizeLevel,
     CGSCCAnalysisManager cgam;
     ModuleAnalysisManager mam;
 
-    PassBuilder pb(targetMachine);
+    PipelineTuningOptions tuningOptions;
+    tuningOptions.LoopUnrolling = true;
+    tuningOptions.LoopInterleaving = true;
+    tuningOptions.LoopVectorization = true;
+    tuningOptions.SLPVectorization = true;
+
+    PassBuilder pb(targetMachine, tuningOptions);
 
     pb.registerModuleAnalyses(mam);
     pb.registerCGSCCAnalyses(cgam);

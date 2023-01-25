@@ -1,4 +1,4 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -passes=mergefunc -S < %s | FileCheck %s
 
 ;; Make sure that two different allocas are not treated as equal.
 
@@ -12,25 +12,23 @@ target datalayout = "e-m:w-p:32:32-i64:64-f80:32-n8:16:32-S32"
 
 ; CHECK-LABEL: define void @size1
 ; CHECK-NOT: call void @
-define void @size1(i8 *%f) {
+define void @size1(ptr %f) {
   %v = alloca %kv1, align 8
-  %f_2 = bitcast i8* %f to void (%kv1 *)*
-  call void %f_2(%kv1 * %v)
-  call void %f_2(%kv1 * %v)
-  call void %f_2(%kv1 * %v)
-  call void %f_2(%kv1 * %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
   ret void
 }
 
 ; CHECK-LABEL: define void @size2
 ; CHECK-NOT: call void @
-define void @size2(i8 *%f) {
+define void @size2(ptr %f) {
   %v = alloca %kv2, align 8
-  %f_2 = bitcast i8* %f to void (%kv2 *)*
-  call void %f_2(%kv2 * %v)
-  call void %f_2(%kv2 * %v)
-  call void %f_2(%kv2 * %v)
-  call void %f_2(%kv2 * %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
   ret void
 }
 
@@ -38,24 +36,22 @@ define void @size2(i8 *%f) {
 
 ; CHECK-LABEL: define void @align1
 ; CHECK-NOT: call void @
-define void @align1(i8 *%f) {
+define void @align1(ptr %f) {
   %v = alloca %kv3, align 8
-  %f_2 = bitcast i8* %f to void (%kv3 *)*
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
   ret void
 }
 
 ; CHECK-LABEL: define void @align2
 ; CHECK-NOT: call void @
-define void @align2(i8 *%f) {
+define void @align2(ptr %f) {
   %v = alloca %kv3, align 16
-  %f_2 = bitcast i8* %f to void (%kv3 *)*
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
-  call void %f_2(%kv3 * %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
+  call void %f(ptr %v)
   ret void
 }

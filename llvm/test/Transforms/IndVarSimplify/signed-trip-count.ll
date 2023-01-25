@@ -1,10 +1,10 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "e-p:32:32:32-n8:16:32:64"
 
 
-define void @foo(i64* nocapture %x, i32 %n) nounwind {
+define void @foo(ptr nocapture %x, i32 %n) nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NOT: sext
 ; CHECK: phi
@@ -19,8 +19,8 @@ bb.nph:		; preds = %entry
 bb:		; preds = %bb7, %bb.nph
 	%i.01 = phi i32 [ %tmp6, %bb7 ], [ 0, %bb.nph ]		; <i32> [#uses=3]
 	%tmp1 = sext i32 %i.01 to i64		; <i64> [#uses=1]
-	%tmp4 = getelementptr i64, i64* %x, i32 %i.01		; <i64*> [#uses=1]
-	store i64 %tmp1, i64* %tmp4, align 8
+	%tmp4 = getelementptr i64, ptr %x, i32 %i.01		; <ptr> [#uses=1]
+	store i64 %tmp1, ptr %tmp4, align 8
 	%tmp6 = add i32 %i.01, 1		; <i32> [#uses=2]
 	br label %bb7
 

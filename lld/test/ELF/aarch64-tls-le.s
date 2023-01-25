@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 # RUN: llvm-readobj -S -r %t | FileCheck -check-prefix=RELOC %s
 
 #Local-Dynamic to Local-Exec relax creates no

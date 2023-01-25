@@ -12,12 +12,14 @@
 
 #include "LoongArchTargetMachine.h"
 #include "LoongArch.h"
+#include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -27,6 +29,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   // Register the target.
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
+  auto *PR = PassRegistry::getPassRegistry();
+  initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchDAGToDAGISelPass(*PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -37,14 +42,14 @@ static std::string computeDataLayout(const Triple &TT) {
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
-                                           Optional<Reloc::Model> RM) {
+                                           std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
 LoongArchTargetMachine::LoongArchTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-    const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
+    const TargetOptions &Options, std::optional<Reloc::Model> RM,
+    std::optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
@@ -90,6 +95,13 @@ LoongArchTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *LoongArchTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return LoongArchMachineFunctionInfo::create<LoongArchMachineFunctionInfo>(
+      Allocator, F, STI);
+}
+
 namespace {
 class LoongArchPassConfig : public TargetPassConfig {
 public:
@@ -102,6 +114,9 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreEmitPass() override;
+  void addPreEmitPass2() override;
+  void addPreRegAlloc() override;
 };
 } // end namespace
 
@@ -120,4 +135,17 @@ bool LoongArchPassConfig::addInstSelector() {
   addPass(createLoongArchISelDag(getLoongArchTargetMachine()));
 
   return false;
+}
+
+void LoongArchPassConfig::addPreEmitPass() { addPass(&BranchRelaxationPassID); }
+
+void LoongArchPassConfig::addPreEmitPass2() {
+  // Schedule the expansion of AtomicPseudos at the last possible moment,
+  // avoiding the possibility for other passes to break the requirements for
+  // forward progress in the LL/SC block.
+  addPass(createLoongArchExpandAtomicPseudoPass());
+}
+
+void LoongArchPassConfig::addPreRegAlloc() {
+  addPass(createLoongArchPreRAExpandPseudoPass());
 }

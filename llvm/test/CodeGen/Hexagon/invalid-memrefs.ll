@@ -4,8 +4,8 @@
 
 target triple = "hexagon-unknown--elf"
 
-%s.0 = type { %s.0*, %s.0* }
-%s.1 = type { %s.1*, %s.1** }
+%s.0 = type { ptr, ptr }
+%s.1 = type { ptr, ptr }
 
 @g0 = external global %s.0, align 4
 
@@ -66,18 +66,18 @@ b17:                                              ; preds = %b16
   unreachable
 
 b18:                                              ; preds = %b16
-  %v0 = load %s.0*, %s.0** getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 4
-  %v1 = load %s.0*, %s.0** getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 0), align 4
-  %v2 = select i1 undef, %s.0* %v0, %s.0* %v1
+  %v0 = load ptr, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 1), align 4
+  %v1 = load ptr, ptr @g0, align 4
+  %v2 = select i1 undef, ptr %v0, ptr %v1
   br i1 undef, label %b22, label %b19
 
 b19:                                              ; preds = %b18
-  %v3 = load %s.1*, %s.1** undef, align 4
-  %v4 = icmp eq %s.1* %v3, null
+  %v3 = load ptr, ptr undef, align 4
+  %v4 = icmp eq ptr %v3, null
   br i1 %v4, label %b21, label %b20
 
 b20:                                              ; preds = %b19
-  store %s.1** undef, %s.1*** undef, align 4
+  store ptr undef, ptr undef, align 4
   br label %b21
 
 b21:                                              ; preds = %b20, %b19
@@ -87,7 +87,7 @@ b22:                                              ; preds = %b21, %b18
   br i1 undef, label %b24, label %b23
 
 b23:                                              ; preds = %b22
-  store %s.0* %v2, %s.0** undef, align 4
+  store ptr %v2, ptr undef, align 4
   br label %b24
 
 b24:                                              ; preds = %b23, %b22

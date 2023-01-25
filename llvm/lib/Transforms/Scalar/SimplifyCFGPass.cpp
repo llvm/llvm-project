@@ -108,12 +108,12 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       std::get<1>(I) = PHINode::Create(std::get<0>(I)->getType(),
                                        /*NumReservedValues=*/BBs.size(),
                                        CanonicalBB->getName() + ".op");
-      CanonicalBB->getInstList().push_back(std::get<1>(I));
+      std::get<1>(I)->insertInto(CanonicalBB, CanonicalBB->end());
     }
     // Make it so that this canonical block actually has the right
     // terminator.
     CanonicalTerm = Term->clone();
-    CanonicalBB->getInstList().push_back(CanonicalTerm);
+    CanonicalTerm->insertInto(CanonicalBB, CanonicalBB->end());
     // If the canonical terminator has operands, rewrite it to take PHI's.
     for (auto I : zip(NewOps, CanonicalTerm->operands()))
       std::get<1>(I) = std::get<0>(I);

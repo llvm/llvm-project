@@ -173,7 +173,7 @@ BinaryHolder::ArchiveEntry::getObjectEntry(StringRef Filename,
   // Try the cache first.
   std::lock_guard<std::mutex> Lock(MemberCacheMutex);
   if (MemberCache.count(Key))
-    return *MemberCache[Key].get();
+    return *MemberCache[Key];
 
   // Create a new ObjectEntry, but don't add it to the cache yet. Loading of
   // the archive members might fail and we don't want to lock the whole archive

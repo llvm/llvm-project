@@ -1,6 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func.func(canonicalize)' -split-input-file -allow-unregistered-dialect | FileCheck %s
-
-// -----
+// RUN: mlir-opt %s -canonicalize="test-convergence" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: create_vector_mask_to_constant_mask
 func.func @create_vector_mask_to_constant_mask() -> (vector<4x3xi1>) {
@@ -515,6 +513,18 @@ func.func @fold_extract_transpose(
 //       CHECK:   return %[[A]] : f32
 func.func @fold_extract_broadcast(%a : f32) -> f32 {
   %b = vector.broadcast %a : f32 to vector<1x2x4xf32>
+  %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
+  return %r : f32
+}
+
+// -----
+
+// CHECK-LABEL: fold_extract_broadcast_0dvec
+//  CHECK-SAME:   %[[A:.*]]: vector<f32>
+//       CHECK:   %[[B:.+]] = vector.extractelement %[[A]][] : vector<f32>
+//       CHECK:   return %[[B]] : f32
+func.func @fold_extract_broadcast_0dvec(%a : vector<f32>) -> f32 {
+  %b = vector.broadcast %a : vector<f32> to vector<1x2x4xf32>
   %r = vector.extract %b[0, 1, 2] : vector<1x2x4xf32>
   return %r : f32
 }
@@ -1169,6 +1179,24 @@ func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2
 
 // -----
 
+// CHECK-LABEL: func @transfer_read_of_extract_slice(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
+//   CHECK-DAG:   %[[c4:.*]] = arith.constant 4 : index
+//   CHECK-DAG:   %[[c8:.*]] = arith.constant 8 : index
+//       CHECK:   %[[add:.*]] = arith.addi %[[s1]], %[[c4]]
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[t]][%[[c8]], %[[add]]], %{{.*}} {in_bounds = [true]} : tensor<?x?xf32>, vector<6xf32>
+//       CHECK:   return %[[r]]
+func.func @transfer_read_of_extract_slice(%t : tensor<?x?xf32>, %s1 : index, %s2 : index) -> vector<6xf32> {
+  %c3 = arith.constant 3 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.0 : f32
+  %0 = tensor.extract_slice %t[5, %s1] [10, %s2] [1, 1] : tensor<?x?xf32> to tensor<10x?xf32>
+  %1 = vector.transfer_read %0[%c3, %c4], %cst {in_bounds = [true]} : tensor<10x?xf32>, vector<6xf32>
+  return %1 : vector<6xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @transfer_read_of_extract_slice_rank_reducing(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?xf32>, %[[s1:.*]]: index, %[[s2:.*]]: index
 //   CHECK-DAG:   %[[c3:.*]] = arith.constant 3 : index
@@ -1330,6 +1358,58 @@ func.func @vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %acc: ve
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
+func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast  %[[SOURCE]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : vector<5x4x20xf32>
+    %0 = vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
+
+//       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
+    return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
+// Masked reduction can't be folded.
+
+// CHECK-LABEL: func @masked_vector_multi_reduction_unit_dimensions
+func.func @masked_vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>,
+                                                         %acc: vector<5x4x20xf32>,
+                                                         %mask: vector<5x1x4x1x20xi1>) -> vector<5x4x20xf32> {
+//       CHECK:   vector.mask %{{.*}} { vector.multi_reduction <mul>
+    %0 = vector.mask %mask { vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32> } :
+           vector<5x1x4x1x20xi1> -> vector<5x4x20xf32>
+    return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fail(
+//  CHECK-SAME: %[[SRC:.+]]: vector<5x1x4x1x20xf32>, %[[ACCUM:.+]]: vector<5x1x20xf32>
+func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x1x20xf32>) -> vector<5x1x20xf32> {
+//       CHECK:   %[[RES:.+]] = vector.multi_reduction  <mul>, %[[SRC]], %[[ACCUM]] [1, 2] : vector<5x1x4x1x20xf32> to vector<5x1x20xf32>
+    %0 = vector.multi_reduction <mul>, %source, %acc [1, 2] : vector<5x1x4x1x20xf32> to vector<5x1x20xf32>
+
+//       CHECK:     return %[[RES]] : vector<5x1x20xf32>
+    return %0 : vector<5x1x20xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_single_elem(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<1x1x1xf32>, %[[ACC:.+]]: f32
+func.func @vector_multi_reduction_unit_dimensions_single_elem(%source: vector<1x1x1xf32>, %acc: f32) -> f32 {
+//       CHECK:   %[[CAST:.+]] = vector.extract  %[[SOURCE]][0, 0, 0] : vector<1x1x1xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : f32
+    %0 = vector.multi_reduction <mul>, %source, %acc [0,1,2] : vector<1x1x1xf32> to f32
+
+//       CHECK:     return %[[RESULT]] : f32
+    return %0 : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_strided_slice_full_range
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<16x16xf16>, %{{.+}}: vector<16x16xf16>
 func.func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<16x16xf16>) -> vector<16x16xf16> {
@@ -1367,16 +1447,169 @@ func.func @insert_extract_to_broadcast(%arg0 : vector<1x1x4xf32>,
 
 // -----
 
-// CHECK-LABEL: extract_constant
-//       CHECK-DAG: %[[CST1:.*]] = arith.constant 1 : i32
-//       CHECK-DAG: %[[CST0:.*]] = arith.constant dense<2.000000e+00> : vector<7xf32>
-//       CHECK: return %[[CST0]], %[[CST1]] : vector<7xf32>, i32
-func.func @extract_constant() -> (vector<7xf32>, i32) {
+// CHECK-LABEL: func.func @extract_splat_constant
+//   CHECK-DAG:   %[[CST1:.*]] = arith.constant 1 : i32
+//   CHECK-DAG:   %[[CST0:.*]] = arith.constant dense<2.000000e+00> : vector<7xf32>
+//  CHECK-NEXT:   return %[[CST0]], %[[CST1]] : vector<7xf32>, i32
+func.func @extract_splat_constant() -> (vector<7xf32>, i32) {
   %cst = arith.constant dense<2.000000e+00> : vector<29x7xf32>
   %cst_1 = arith.constant dense<1> : vector<4x37x9xi32>
   %0 = vector.extract %cst[2] : vector<29x7xf32>
   %1 = vector.extract %cst_1[1, 4, 5] : vector<4x37x9xi32>
   return %0, %1 : vector<7xf32>, i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_1d_constant
+//   CHECK-DAG: %[[I32CST:.*]] = arith.constant 3 : i32
+//   CHECK-DAG: %[[IDXCST:.*]] = arith.constant 1 : index
+//   CHECK-DAG: %[[F32CST:.*]] = arith.constant 2.000000e+00 : f32
+//  CHECK-NEXT: return %[[I32CST]], %[[IDXCST]], %[[F32CST]] : i32, index, f32
+func.func @extract_1d_constant() -> (i32, index, f32) {
+  %icst = arith.constant dense<[1, 2, 3, 4]> : vector<4xi32>
+  %e = vector.extract %icst[2] : vector<4xi32>
+  %idx_cst = arith.constant dense<[0, 1, 2]> : vector<3xindex>
+  %f = vector.extract %idx_cst[1] : vector<3xindex>
+  %fcst = arith.constant dense<[2.000000e+00, 3.000000e+00, 4.000000e+00]> : vector<3xf32>
+  %g = vector.extract %fcst[0] : vector<3xf32>
+  return %e, %f, %g : i32, index, f32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant 0 : i32
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant 2 : i32
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant 3 : i32
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant 5 : i32
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]] : i32, i32, i32, i32
+func.func @extract_2d_constant() -> (i32, i32, i32, i32) {
+  %cst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %a = vector.extract %cst[0, 0] : vector<2x3xi32>
+  %b = vector.extract %cst[0, 2] : vector<2x3xi32>
+  %c = vector.extract %cst[1, 0] : vector<2x3xi32>
+  %d = vector.extract %cst[1, 2] : vector<2x3xi32>
+  return %a, %b, %c, %d : i32, i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_vector_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[3, 4, 5]> : vector<3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]] : vector<3xi32>, vector<3xi32>
+func.func @extract_vector_2d_constant() -> (vector<3xi32>, vector<3xi32>) {
+  %cst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %a = vector.extract %cst[0] : vector<2x3xi32>
+  %b = vector.extract %cst[1] : vector<2x3xi32>
+  return %a, %b : vector<3xi32>, vector<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant 0 : i32
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant 1 : i32
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant 9 : i32
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant 10 : i32
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]] : i32, i32, i32, i32
+func.func @extract_3d_constant() -> (i32, i32, i32, i32) {
+  %cst = arith.constant dense<[[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]]> : vector<2x3x2xi32>
+  %a = vector.extract %cst[0, 0, 0] : vector<2x3x2xi32>
+  %b = vector.extract %cst[0, 0, 1] : vector<2x3x2xi32>
+  %c = vector.extract %cst[1, 1, 1] : vector<2x3x2xi32>
+  %d = vector.extract %cst[1, 2, 0] : vector<2x3x2xi32>
+  return %a, %b, %c, %d : i32, i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_vector_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[0, 1\], \[2, 3\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[6, 7\], \[8, 9\], \[10, 11\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<[8, 9]> : vector<2xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<[10, 11]> : vector<2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]] : vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>
+func.func @extract_vector_3d_constant() -> (vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>) {
+  %cst = arith.constant dense<[[[0, 1], [2, 3], [4, 5]], [[6, 7], [8, 9], [10, 11]]]> : vector<2x3x2xi32>
+  %a = vector.extract %cst[0] : vector<2x3x2xi32>
+  %b = vector.extract %cst[1] : vector<2x3x2xi32>
+  %c = vector.extract %cst[1, 1] : vector<2x3x2xi32>
+  %d = vector.extract %cst[1, 2] : vector<2x3x2xi32>
+  return %a, %b, %c, %d : vector<3x2xi32>, vector<3x2xi32>, vector<2xi32>, vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_splat_vector_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<4> : vector<2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<5> : vector<2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<2xi32>, vector<2xi32>, vector<2xi32>
+func.func @extract_splat_vector_3d_constant() -> (vector<2xi32>, vector<2xi32>, vector<2xi32>) {
+  %cst = arith.constant dense<[[[0, 0], [1, 1], [2, 2]], [[3, 3], [4, 4], [5, 5]]]> : vector<2x3x2xi32>
+  %a = vector.extract %cst[0, 0] : vector<2x3x2xi32>
+  %b = vector.extract %cst[1, 1] : vector<2x3x2xi32>
+  %c = vector.extract %cst[1, 2] : vector<2x3x2xi32>
+  return %a, %b, %c : vector<2xi32>, vector<2xi32>, vector<2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_strided_slice_1d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[1, 2]> : vector<2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<2> : vector<1xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<3xi32>, vector<2xi32>, vector<1xi32>
+func.func @extract_strided_slice_1d_constant() -> (vector<3xi32>, vector<2xi32>, vector<1xi32>) {
+  %cst = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+  %a = vector.extract_strided_slice %cst
+   {offsets = [0], sizes = [3], strides = [1]} : vector<3xi32> to vector<3xi32>
+  %b = vector.extract_strided_slice %cst
+   {offsets = [1], sizes = [2], strides = [1]} : vector<3xi32> to vector<2xi32>
+  %c = vector.extract_strided_slice %cst
+   {offsets = [2], sizes = [1], strides = [1]} : vector<3xi32> to vector<1xi32>
+  return %a, %b, %c : vector<3xi32>, vector<2xi32>, vector<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_strided_slice_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<1x1xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[4, 5\]\]}}> : vector<1x2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[1, 2\], \[4, 5\]\]}}> : vector<2x2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<1x1xi32>, vector<1x2xi32>, vector<2x2xi32>
+func.func @extract_strided_slice_2d_constant() -> (vector<1x1xi32>, vector<1x2xi32>, vector<2x2xi32>) {
+  %cst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %a = vector.extract_strided_slice %cst
+   {offsets = [0, 0], sizes = [1, 1], strides = [1, 1]} : vector<2x3xi32> to vector<1x1xi32>
+  %b = vector.extract_strided_slice %cst
+   {offsets = [1, 1], sizes = [1, 2], strides = [1, 1]} : vector<2x3xi32> to vector<1x2xi32>
+  %c = vector.extract_strided_slice %cst
+   {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]} : vector<2x3xi32> to vector<2x2xi32>
+  return %a, %b, %c : vector<1x1xi32>, vector<1x2xi32>, vector<2x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_strided_slice_3d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[\[8, 9\], \[10, 11\]\]\]}}> : vector<1x2x2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[\[2, 3\]\]\]}}> : vector<1x1x2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[\[6, 7\]\], \[\[10, 11\]\]\]}}> : vector<2x1x2xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<11> : vector<1x1x1xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]]
+func.func @extract_strided_slice_3d_constant() -> (vector<1x2x2xi32>, vector<1x1x2xi32>, vector<2x1x2xi32>, vector<1x1x1xi32>) {
+  %cst = arith.constant dense<[[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]]> : vector<3x2x2xi32>
+  %a = vector.extract_strided_slice %cst
+   {offsets = [2], sizes = [1], strides = [1]} : vector<3x2x2xi32> to vector<1x2x2xi32>
+  %b = vector.extract_strided_slice %cst
+   {offsets = [0, 1], sizes = [1, 1], strides = [1, 1]} : vector<3x2x2xi32> to vector<1x1x2xi32>
+  %c = vector.extract_strided_slice %cst
+   {offsets = [1, 1, 0], sizes = [2, 1, 2], strides = [1, 1, 1]} : vector<3x2x2xi32> to vector<2x1x2xi32>
+  %d = vector.extract_strided_slice %cst
+   {offsets = [2, 1, 1], sizes = [1, 1, 1], strides = [1, 1, 1]} : vector<3x2x2xi32> to vector<1x1x1xi32>
+  return %a, %b, %c, %d : vector<1x2x2xi32>, vector<1x1x2xi32>, vector<2x1x2xi32>, vector<1x1x1xi32>
 }
 
 // -----
@@ -1487,6 +1720,13 @@ func.func @shuffle_1d() -> vector<4xi32> {
   return %shuffle : vector<4xi32>
 }
 
+// CHECK-LABEL: func @shuffle_canonicalize_0d
+func.func @shuffle_canonicalize_0d(%v0 : vector<i32>, %v1 : vector<i32>) -> vector<1xi32> {
+  // CHECK: vector.broadcast %{{.*}} : vector<i32> to vector<1xi32>
+  %shuffle = vector.shuffle %v0, %v1 [0] : vector<i32>, vector<i32>
+  return %shuffle : vector<1xi32>
+}
+
 // CHECK-LABEL: func @shuffle_fold1
 //       CHECK:   %arg0 : vector<4xi32>
 func.func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi32> {
@@ -1579,6 +1819,64 @@ func.func @transpose_splat2(%arg : f32) -> vector<3x4xf32> {
 
 // -----
 
+// CHECK-LABEL: func.func @insert_1d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[9, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[0, 9, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<[0, 1, 9]> : vector<3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]] : vector<3xi32>, vector<3xi32>, vector<3xi32>
+func.func @insert_1d_constant() -> (vector<3xi32>, vector<3xi32>, vector<3xi32>) {
+  %vcst = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+  %icst = arith.constant 9 : i32
+  %a = vector.insert %icst, %vcst[0] : i32 into vector<3xi32>
+  %b = vector.insert %icst, %vcst[1] : i32 into vector<3xi32>
+  %c = vector.insert %icst, %vcst[2] : i32 into vector<3xi32>
+  return %a, %b, %c : vector<3xi32>, vector<3xi32>, vector<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @insert_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[99, 1, 2\], \[3, 4, 5\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[0, 1, 2\], \[3, 4, 99\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[90, 91, 92\], \[3, 4, 5\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<{{\[\[0, 1, 2\], \[90, 91, 92\]\]}}> : vector<2x3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]]
+func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>) {
+  %vcst = arith.constant dense<[[0, 1, 2], [3, 4, 5]]> : vector<2x3xi32>
+  %cst_scalar = arith.constant 99 : i32
+  %cst_1d = arith.constant dense<[90, 91, 92]> : vector<3xi32>
+  %a = vector.insert %cst_scalar, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %b = vector.insert %cst_scalar, %vcst[1, 2] : i32 into vector<2x3xi32>
+  %c = vector.insert %cst_1d, %vcst[0] : vector<3xi32> into vector<2x3xi32>
+  %d = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
+  return %a, %b, %c, %d : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @insert_2d_splat_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2x3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[99, 0, 0\], \[0, 0, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[0, 0, 0\], \[0, 99, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<{{\[\[33, 33, 33\], \[0, 0, 0\]\]}}> : vector<2x3xi32>
+//   CHECK-DAG: %[[ECST:.*]] = arith.constant dense<{{\[\[0, 0, 0\], \[33, 33, 33\]\]}}> : vector<2x3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]], %[[ECST]]
+func.func @insert_2d_splat_constant()
+  -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>) {
+  %vcst = arith.constant dense<0> : vector<2x3xi32>
+  %cst_zero = arith.constant 0 : i32
+  %cst_scalar = arith.constant 99 : i32
+  %cst_1d = arith.constant dense<33> : vector<3xi32>
+  %a = vector.insert %cst_zero, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %b = vector.insert %cst_scalar, %vcst[0, 0] : i32 into vector<2x3xi32>
+  %c = vector.insert %cst_scalar, %vcst[1, 1] : i32 into vector<2x3xi32>
+  %d = vector.insert %cst_1d, %vcst[0] : vector<3xi32> into vector<2x3xi32>
+  %e = vector.insert %cst_1d, %vcst[1] : vector<3xi32> into vector<2x3xi32>
+  return %a, %b, %c, %d, %e : vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>, vector<2x3xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_element_fold
 //       CHECK:   %[[V:.+]] = arith.constant dense<[0, 1, 7, 3]> : vector<4xi32>
 //       CHECK:   return %[[V]]
@@ -1632,6 +1930,18 @@ func.func @reduce_one_element_vector_extract(%a : vector<1xf32>) -> f32 {
 //       CHECK:   return %[[S]]
 func.func @reduce_one_element_vector_addf(%a : vector<1xf32>, %b: f32) -> f32 {
   %s = vector.reduction <add>, %a, %b : vector<1xf32> into f32
+  return %s : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @masked_reduce_one_element_vector_addf
+//       CHECK:   vector.mask %{{.*}} { vector.reduction <add>
+func.func @masked_reduce_one_element_vector_addf(%a: vector<1xf32>,
+                                                 %b: f32,
+                                                 %mask: vector<1xi1>) -> f32 {
+  %s = vector.mask %mask { vector.reduction <add>, %a, %b : vector<1xf32> into f32 }
+         : vector<1xi1> -> f32
   return %s : f32
 }
 
@@ -1709,6 +2019,57 @@ func.func @insert_extract_strided_slice(%x: vector<8x16xf32>) -> (vector<8x16xf3
 
 // -----
 
+// CHECK-LABEL: func.func @insert_strided_1d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<[4, 1, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<[0, 1, 4]> : vector<3xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<[5, 6, 2]> : vector<3xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<[0, 5, 6]> : vector<3xi32>
+//   CHECK-DAG: %[[ECST:.*]] = arith.constant dense<[7, 8, 9]> : vector<3xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]], %[[ECST]]
+func.func @insert_strided_1d_constant() ->
+  (vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>) {
+  %vcst = arith.constant dense<[0, 1, 2]> : vector<3xi32>
+  %cst_1 = arith.constant dense<4> : vector<1xi32>
+  %cst_2 = arith.constant dense<[5, 6]> : vector<2xi32>
+  %cst_3 = arith.constant dense<[7, 8, 9]> : vector<3xi32>
+  %a = vector.insert_strided_slice %cst_1, %vcst {offsets = [0], strides = [1]} : vector<1xi32> into vector<3xi32>
+  %b = vector.insert_strided_slice %cst_1, %vcst {offsets = [2], strides = [1]} : vector<1xi32> into vector<3xi32>
+  %c = vector.insert_strided_slice %cst_2, %vcst {offsets = [0], strides = [1]} : vector<2xi32> into vector<3xi32>
+  %d = vector.insert_strided_slice %cst_2, %vcst {offsets = [1], strides = [1]} : vector<2xi32> into vector<3xi32>
+  %e = vector.insert_strided_slice %cst_3, %vcst {offsets = [0], strides = [1]} : vector<3xi32> into vector<3xi32>
+  return %a, %b, %c, %d, %e : vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>, vector<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @insert_strided_2d_constant
+//   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<{{\[\[0, 1\], \[9, 3\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[0, 1\], \[2, 3\], \[4, 9\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[CCST:.*]] = arith.constant dense<{{\[\[18, 19\], \[2, 3\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[DCST:.*]] = arith.constant dense<{{\[\[0, 1\], \[18, 19\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[ECST:.*]] = arith.constant dense<{{\[\[0, 1\], \[2, 3\], \[18, 19\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[FCST:.*]] = arith.constant dense<{{\[\[28, 29\], \[38, 39\], \[4, 5\]\]}}> : vector<3x2xi32>
+//   CHECK-DAG: %[[GCST:.*]] = arith.constant dense<{{\[\[0, 1\], \[28, 29\], \[38, 39\]\]}}> : vector<3x2xi32>
+//  CHECK-NEXT: return %[[ACST]], %[[BCST]], %[[CCST]], %[[DCST]], %[[ECST]], %[[FCST]], %[[GCST]]
+func.func @insert_strided_2d_constant() ->
+  (vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>) {
+  %vcst = arith.constant dense<[[0, 1], [2, 3], [4, 5]]> : vector<3x2xi32>
+  %cst_1 = arith.constant dense<9> : vector<1xi32>
+  %cst_2 = arith.constant dense<[18, 19]> : vector<2xi32>
+  %cst_3 = arith.constant dense<[[28, 29], [38, 39]]> : vector<2x2xi32>
+  %a = vector.insert_strided_slice %cst_1, %vcst {offsets = [1, 0], strides = [1]} : vector<1xi32> into vector<3x2xi32>
+  %b = vector.insert_strided_slice %cst_1, %vcst {offsets = [2, 1], strides = [1]} : vector<1xi32> into vector<3x2xi32>
+  %c = vector.insert_strided_slice %cst_2, %vcst {offsets = [0, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
+  %d = vector.insert_strided_slice %cst_2, %vcst {offsets = [1, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
+  %e = vector.insert_strided_slice %cst_2, %vcst {offsets = [2, 0], strides = [1]} : vector<2xi32> into vector<3x2xi32>
+  %f = vector.insert_strided_slice %cst_3, %vcst {offsets = [0, 0], strides = [1, 1]} : vector<2x2xi32> into vector<3x2xi32>
+  %g = vector.insert_strided_slice %cst_3, %vcst {offsets = [1, 0], strides = [1, 1]} : vector<2x2xi32> into vector<3x2xi32>
+  return %a, %b, %c, %d, %e, %f, %g :
+    vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>, vector<3x2xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @shuffle_splat
 //  CHECK-SAME:   (%[[ARG:.*]]: i32)
 //  CHECK-NEXT:   %[[SPLAT:.*]] = vector.splat %[[ARG]] : vector<4xi32>
@@ -1732,4 +2093,53 @@ func.func @insert_splat(%x : i32) -> vector<2x4x3xi32> {
   %v1 = vector.splat %x : vector<2x4x3xi32>
   %insert = vector.insert %v0, %v1[0] : vector<4x3xi32> into vector<2x4x3xi32>
   return %insert : vector<2x4x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_read_from_rank_reducing_extract_slice
+//       CHECK:   tensor.extract_slice
+//       CHECK:   vector.transfer_read
+func.func @transfer_read_from_rank_reducing_extract_slice(%src: tensor<1x8x8x8xf32>, %i1: index, %i2: index, %i3: index, %i4: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %f0 = arith.constant 0.000000e+00 : f32
+  %0 = tensor.extract_slice %src[0, %i1, %i2, %i3] [1, 4, 1, 4] [1, 1, 1, 1] : tensor<1x8x8x8xf32> to tensor<1x4x4xf32>
+  %1 = vector.transfer_read %0[%c0, %i4, %c0], %f0 {in_bounds = [true]} : tensor<1x4x4xf32>, vector<4xf32>
+  return %1 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @extract_from_broadcast
+func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
+  %0 = vector.broadcast %src : vector<1x1x1xf32> to vector<1x1x32x1xf32>
+
+  //  CHECK-NEXT:   %0 = vector.extract {{.*}}[0, 0] : vector<1x1x1xf32>
+  //  CHECK-NEXT:   return %0 : vector<1xf32>
+  %1 = vector.extract %0[0, 0, 31] : vector<1x1x32x1xf32>
+  return %1: vector<1xf32>
+}
+
+// -----
+// CHECK-LABEL: func.func @extract_strided_slice_of_constant_mask
+func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
+  //  CHECK-NEXT:   %[[RES:.*]] = vector.constant_mask [5, 4] : vector<5x7xi1>
+  //  CHECK-NEXT:   return %[[RES]] : vector<5x7xi1>
+  %c4 = arith.constant 4 : index
+  %c10 = arith.constant 10 : index
+  %mask = vector.create_mask %c10, %c4 : vector<12x7xi1>
+  %res = vector.extract_strided_slice %mask {offsets = [3], sizes = [5], strides = [1]} : vector<12x7xi1> to vector<5x7xi1>
+  return %res : vector<5x7xi1>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fold_extractelement_of_broadcast(
+//  CHECK-SAME:     %[[f:.*]]: f32
+//       CHECK:   return %[[f]]
+func.func @fold_extractelement_of_broadcast(%f: f32) -> f32 {
+  %0 = vector.broadcast %f : f32 to vector<15xf32>
+  %c5 = arith.constant 5 : index
+  %1 = vector.extractelement %0 [%c5 : index] : vector<15xf32>
+  return %1 : f32
 }

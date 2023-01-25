@@ -262,8 +262,8 @@ public:
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   std::unique_ptr<ExecutionSession> ES;
-  Optional<JITTargetMachineBuilder> JTMB;
-  Optional<DataLayout> DL;
+  std::optional<JITTargetMachineBuilder> JTMB;
+  std::optional<DataLayout> DL;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
   PlatformSetupFunction SetUpPlatform;
@@ -305,13 +305,13 @@ public:
 
   /// Return a reference to the JITTargetMachineBuilder.
   ///
-  Optional<JITTargetMachineBuilder> &getJITTargetMachineBuilder() {
+  std::optional<JITTargetMachineBuilder> &getJITTargetMachineBuilder() {
     return impl().JTMB;
   }
 
   /// Set a DataLayout for this instance. If no data layout is specified then
   /// the target's default data layout will be used.
-  SetterImpl &setDataLayout(Optional<DataLayout> DL) {
+  SetterImpl &setDataLayout(std::optional<DataLayout> DL) {
     impl().DL = std::move(DL);
     return impl();
   }
@@ -446,6 +446,9 @@ class LLLazyJITBuilder
     : public LLLazyJITBuilderState,
       public LLLazyJITBuilderSetters<LLLazyJIT, LLLazyJITBuilder,
                                      LLLazyJITBuilderState> {};
+
+/// Configure the LLJIT instance to use orc runtime support. 
+Error setUpOrcPlatform(LLJIT& J);
 
 /// Configure the LLJIT instance to scrape modules for llvm.global_ctors and
 /// llvm.global_dtors variables and (if present) build initialization and

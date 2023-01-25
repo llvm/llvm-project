@@ -71,13 +71,13 @@ void MCWinCOFFStreamer::initSections(bool NoExecStack,
   // This emulates the same behavior of GNU as. This makes it easier
   // to compare the output as the major sections are in the same order.
   switchSection(getContext().getObjectFileInfo()->getTextSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getDataSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getBSSSection());
-  emitCodeAlignment(4, &STI);
+  emitCodeAlignment(Align(4), &STI);
 
   switchSection(getContext().getObjectFileInfo()->getTextSection());
 }
@@ -190,8 +190,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
 
   MCSection *SXData = getContext().getObjectFileInfo()->getSXDataSection();
   getAssembler().registerSection(*SXData);
-  if (SXData->getAlignment() < 4)
-    SXData->setAlignment(Align(4));
+  SXData->ensureMinAlignment(Align(4));
 
   new MCSymbolIdFragment(Symbol, SXData);
 
@@ -207,8 +206,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
 void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   MCSection *Sec = getCurrentSectionOnly();
   getAssembler().registerSection(*Sec);
-  if (Sec->getAlignment() < 4)
-    Sec->setAlignment(Align(4));
+  Sec->ensureMinAlignment(Align(4));
 
   new MCSymbolIdFragment(Symbol, getCurrentSectionOnly());
 
@@ -262,7 +260,7 @@ void MCWinCOFFStreamer::emitCOFFImgRel32(const MCSymbol *Symbol,
 }
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
-                                         unsigned ByteAlignment) {
+                                         Align ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   const Triple &T = getContext().getTargetTriple();
@@ -271,7 +269,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
       report_fatal_error("alignment is limited to 32-bytes");
 
     // Round size up to alignment so that we will honor the alignment request.
-    Size = std::max(Size, static_cast<uint64_t>(ByteAlignment));
+    Size = std::max(Size, ByteAlignment.value());
   }
 
   getAssembler().registerSymbol(*Symbol);
@@ -284,7 +282,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
     const MCObjectFileInfo *MFI = getContext().getObjectFileInfo();
 
     OS << " -aligncomm:\"" << Symbol->getName() << "\","
-       << Log2_32_Ceil(ByteAlignment);
+       << Log2_32_Ceil(ByteAlignment.value());
 
     pushSection();
     switchSection(MFI->getDrectveSection());
@@ -294,7 +292,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
-                                              unsigned ByteAlignment) {
+                                              Align ByteAlignment) {
   auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
@@ -318,13 +316,13 @@ void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
 }
 
 void MCWinCOFFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                     uint64_t Size, unsigned ByteAlignment,
+                                     uint64_t Size, Align ByteAlignment,
                                      SMLoc Loc) {
   llvm_unreachable("not implemented");
 }
 
 void MCWinCOFFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                       uint64_t Size, unsigned ByteAlignment) {
+                                       uint64_t Size, Align ByteAlignment) {
   llvm_unreachable("not implemented");
 }
 

@@ -18,16 +18,25 @@ class DexExpectStepOrder(CommandBase):
     See Commands.md for more info.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args, **kwargs):
         if not args:
             raise TypeError('Need at least one order number')
 
+        if 'on_line' in kwargs:
+            try:
+                on_line = kwargs.pop('on_line')
+                self.on_line = int(on_line)
+            except ValueError:
+                raise ValueError('on_line value \'{0}\' cannot be parsed to an integer'.format(on_line))
         self.sequence = [int(x) for x in args]
         super(DexExpectStepOrder, self).__init__()
 
     @staticmethod
     def get_name():
         return __class__.__name__
+
+    def get_line(self):
+        return self.on_line if hasattr(self, 'on_line') else self.lineno
 
     def eval(self, step_info):
         return {'DexExpectStepOrder': ValueIR(expression=str(step_info.current_location.lineno),

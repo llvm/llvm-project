@@ -157,71 +157,71 @@ define void @PR42833() {
 ; SSE2-LABEL: PR42833:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movl b(%rip), %eax
-; SSE2-NEXT:    movdqa c+144(%rip), %xmm0
-; SSE2-NEXT:    movdqa c+128(%rip), %xmm1
+; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE2-NEXT:    movdqa c+144(%rip), %xmm1
 ; SSE2-NEXT:    addl c+128(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    paddd %xmm1, %xmm3
+; SSE2-NEXT:    paddd %xmm0, %xmm3
 ; SSE2-NEXT:    movdqa d+144(%rip), %xmm4
-; SSE2-NEXT:    psubd %xmm0, %xmm4
-; SSE2-NEXT:    paddd %xmm0, %xmm0
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    paddd %xmm1, %xmm5
+; SSE2-NEXT:    psubd %xmm1, %xmm4
+; SSE2-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    paddd %xmm0, %xmm5
 ; SSE2-NEXT:    movss {{.*#+}} xmm5 = xmm3[0],xmm5[1,2,3]
-; SSE2-NEXT:    movdqa %xmm0, c+144(%rip)
+; SSE2-NEXT:    movdqa %xmm1, c+144(%rip)
 ; SSE2-NEXT:    movaps %xmm5, c+128(%rip)
-; SSE2-NEXT:    movdqa c+160(%rip), %xmm0
+; SSE2-NEXT:    movdqa c+160(%rip), %xmm1
 ; SSE2-NEXT:    movdqa c+176(%rip), %xmm3
 ; SSE2-NEXT:    movdqa d+160(%rip), %xmm5
 ; SSE2-NEXT:    movdqa d+176(%rip), %xmm6
 ; SSE2-NEXT:    movdqa d+128(%rip), %xmm7
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3]
-; SSE2-NEXT:    psubd %xmm1, %xmm7
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
+; SSE2-NEXT:    psubd %xmm0, %xmm7
 ; SSE2-NEXT:    psubd %xmm3, %xmm6
-; SSE2-NEXT:    psubd %xmm0, %xmm5
+; SSE2-NEXT:    psubd %xmm1, %xmm5
 ; SSE2-NEXT:    movdqa %xmm5, d+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm6, d+176(%rip)
 ; SSE2-NEXT:    movdqa %xmm4, d+144(%rip)
 ; SSE2-NEXT:    movdqa %xmm7, d+128(%rip)
 ; SSE2-NEXT:    paddd %xmm3, %xmm3
-; SSE2-NEXT:    paddd %xmm0, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, c+160(%rip)
+; SSE2-NEXT:    paddd %xmm1, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, c+160(%rip)
 ; SSE2-NEXT:    movdqa %xmm3, c+176(%rip)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movl b(%rip), %eax
-; SSE42-NEXT:    movdqa c+144(%rip), %xmm0
-; SSE42-NEXT:    movdqa c+128(%rip), %xmm1
+; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE42-NEXT:    movdqa c+144(%rip), %xmm1
 ; SSE42-NEXT:    addl c+128(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
-; SSE42-NEXT:    paddd %xmm1, %xmm2
+; SSE42-NEXT:    paddd %xmm0, %xmm2
 ; SSE42-NEXT:    movdqa d+144(%rip), %xmm3
-; SSE42-NEXT:    psubd %xmm0, %xmm3
-; SSE42-NEXT:    paddd %xmm0, %xmm0
-; SSE42-NEXT:    movdqa %xmm1, %xmm4
-; SSE42-NEXT:    paddd %xmm1, %xmm4
+; SSE42-NEXT:    psubd %xmm1, %xmm3
+; SSE42-NEXT:    paddd %xmm1, %xmm1
+; SSE42-NEXT:    movdqa %xmm0, %xmm4
+; SSE42-NEXT:    paddd %xmm0, %xmm4
 ; SSE42-NEXT:    pblendw {{.*#+}} xmm4 = xmm2[0,1],xmm4[2,3,4,5,6,7]
-; SSE42-NEXT:    movdqa %xmm0, c+144(%rip)
+; SSE42-NEXT:    movdqa %xmm1, c+144(%rip)
 ; SSE42-NEXT:    movdqa %xmm4, c+128(%rip)
-; SSE42-NEXT:    movdqa c+160(%rip), %xmm0
+; SSE42-NEXT:    movdqa c+160(%rip), %xmm1
 ; SSE42-NEXT:    movdqa c+176(%rip), %xmm2
 ; SSE42-NEXT:    movdqa d+160(%rip), %xmm4
 ; SSE42-NEXT:    movdqa d+176(%rip), %xmm5
 ; SSE42-NEXT:    movdqa d+128(%rip), %xmm6
-; SSE42-NEXT:    pinsrd $0, %eax, %xmm1
-; SSE42-NEXT:    psubd %xmm1, %xmm6
+; SSE42-NEXT:    pinsrd $0, %eax, %xmm0
+; SSE42-NEXT:    psubd %xmm0, %xmm6
 ; SSE42-NEXT:    psubd %xmm2, %xmm5
-; SSE42-NEXT:    psubd %xmm0, %xmm4
+; SSE42-NEXT:    psubd %xmm1, %xmm4
 ; SSE42-NEXT:    movdqa %xmm4, d+160(%rip)
 ; SSE42-NEXT:    movdqa %xmm5, d+176(%rip)
 ; SSE42-NEXT:    movdqa %xmm3, d+144(%rip)
 ; SSE42-NEXT:    movdqa %xmm6, d+128(%rip)
 ; SSE42-NEXT:    paddd %xmm2, %xmm2
-; SSE42-NEXT:    paddd %xmm0, %xmm0
-; SSE42-NEXT:    movdqa %xmm0, c+160(%rip)
+; SSE42-NEXT:    paddd %xmm1, %xmm1
+; SSE42-NEXT:    movdqa %xmm1, c+160(%rip)
 ; SSE42-NEXT:    movdqa %xmm2, c+176(%rip)
 ; SSE42-NEXT:    retq
 ;

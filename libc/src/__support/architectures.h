@@ -9,7 +9,19 @@
 #ifndef LLVM_LIBC_SUPPORT_ARCHITECTURES_H
 #define LLVM_LIBC_SUPPORT_ARCHITECTURES_H
 
-#if defined(__pnacl__) || defined(__CLR_VER)
+#if defined(__AMDGPU__)
+#define LLVM_LIBC_ARCH_AMDGPU
+#endif
+
+#if defined(__NVPTX__)
+#define LLVM_LIBC_ARCH_NVPTX
+#endif
+
+#if defined(LLVM_LIBC_ARCH_NVPTX) || defined(LLVM_LIBC_ARCH_AMDGPU)
+#define LLVM_LIBC_ARCH_GPU
+#endif
+
+#if defined(__pnacl__) || defined(__CLR_VER) || defined(LLVM_LIBC_ARCH_GPU)
 #define LLVM_LIBC_ARCH_VM
 #endif
 
@@ -35,14 +47,6 @@
 
 #if (defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_ARM))
 #define LLVM_LIBC_ARCH_ANY_ARM
-#endif
-
-#if defined(LLVM_LIBC_ARCH_AARCH64)
-#define LIBC_TARGET_HAS_FMA
-#elif defined(LLVM_LIBC_ARCH_X86_64)
-#if (defined(__AVX2__) || defined(__FMA__))
-#define LIBC_TARGET_HAS_FMA
-#endif
 #endif
 
 #endif // LLVM_LIBC_SUPPORT_ARCHITECTURES_H

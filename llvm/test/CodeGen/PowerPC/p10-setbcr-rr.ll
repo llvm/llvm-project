@@ -88,7 +88,7 @@ define dso_local void @setbcr5(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp sge i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -111,7 +111,7 @@ define dso_local void @setbcr6(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp sge i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -160,7 +160,7 @@ define dso_local void @setbcr9(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sge i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -196,7 +196,7 @@ define dso_local void @setbcr11(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sge i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -232,7 +232,7 @@ define dso_local void @setbcr13(i64 %a, i64 %b) {
 entry:
   %cmp = icmp uge i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3
+  store i64 %conv1, ptr @globalVal3
   ret void
 }
 
@@ -268,7 +268,7 @@ define dso_local void @setbcr15(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp sle i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -304,7 +304,7 @@ define dso_local void @setbcr17(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp sle i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -340,7 +340,7 @@ define dso_local void @setbcr19(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sle i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -376,7 +376,7 @@ define dso_local void @setbcr21(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sle i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -412,7 +412,7 @@ define dso_local void @setbcr23(i64 %a, i64 %b) {
 entry:
   %cmp = icmp ule i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3
+  store i64 %conv1, ptr @globalVal3
   ret void
 }
 
@@ -446,7 +446,7 @@ define dso_local void @setbcr25(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp ne i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -468,7 +468,7 @@ define dso_local void @setbcr26(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp ne i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -502,7 +502,7 @@ define dso_local void @setbcr28(i64 %a, i64 %b) {
 entry:
   %cmp = icmp ne i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -536,7 +536,7 @@ define dso_local void @setbcr30(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp ne i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -570,7 +570,7 @@ define dso_local void @setbcr32(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp ne i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -604,7 +604,7 @@ define dso_local void @setbcr34(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp ne i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -638,7 +638,7 @@ define dso_local void @setbcr36(i16 zeroext %a, i16 zeroext %b) {
 entry:
   %cmp = icmp ne i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -672,7 +672,7 @@ define dso_local void @setbcr38(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp sge i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -706,7 +706,7 @@ define dso_local void @setbcr40(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp sge i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -740,7 +740,7 @@ define dso_local void @setbcr42(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sge i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -774,7 +774,7 @@ define dso_local void @setbcr44(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sge i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -810,7 +810,7 @@ define dso_local void @setbcr46(i64 %a, i64 %b) {
 entry:
   %cmp = icmp uge i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3
+  store i64 %conv1, ptr @globalVal3
   ret void
 }
 
@@ -844,7 +844,7 @@ define dso_local void @setbcr48(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp sle i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @globalVal, align 1
+  store i8 %conv3, ptr @globalVal, align 1
   ret void
 }
 
@@ -878,7 +878,7 @@ define dso_local void @setbcr50(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp sle i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @globalVal2, align 4
+  store i32 %conv, ptr @globalVal2, align 4
   ret void
 }
 
@@ -914,7 +914,7 @@ define dso_local void @setbcr52(i64 %a, i64 %b) {
 entry:
   %cmp = icmp sle i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -948,7 +948,7 @@ define dso_local void @setbcr54(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sle i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @globalVal4, align 2
+  store i16 %conv3, ptr @globalVal4, align 2
   ret void
 }
 
@@ -984,7 +984,7 @@ define dso_local void @setbcr56(i64 %a, i64 %b) {
 entry:
   %cmp = icmp ule i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3
+  store i64 %conv1, ptr @globalVal3
   ret void
 }
 
@@ -1018,7 +1018,7 @@ define dso_local void @setbcr58(i64 %a, i64 %b) {
 entry:
   %cmp = icmp ne i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }
 
@@ -1052,6 +1052,6 @@ define dso_local void @setbcr60(i64 %a, i64 %b) {
 entry:
   %cmp = icmp ne i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @globalVal3, align 8
+  store i64 %conv1, ptr @globalVal3, align 8
   ret void
 }

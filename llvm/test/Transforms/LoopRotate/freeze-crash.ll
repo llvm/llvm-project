@@ -1,10 +1,9 @@
-; RUN: opt -loop-rotate -disable-output %s
 ; RUN: opt -passes=loop-rotate -disable-output %s
 
 ; Make sure we don't crash on this test.
-define void @foo(i32* %arg) {
+define void @foo(ptr %arg) {
 bb:
-  %tmp = load i32, i32* %arg, align 4
+  %tmp = load i32, ptr %arg, align 4
   br label %bb1
 
 bb1:                                              ; preds = %bb7, %bb
@@ -18,7 +17,7 @@ bb6:                                              ; preds = %bb1
   ret void
 
 bb7:                                              ; preds = %bb1
-  %tmp8 = getelementptr inbounds i8, i8* undef, i64 8
+  %tmp8 = getelementptr inbounds i8, ptr undef, i64 8
   br label %bb1
 }
 

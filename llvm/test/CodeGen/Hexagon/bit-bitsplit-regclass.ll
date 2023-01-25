@@ -28,7 +28,7 @@ b3:                                               ; preds = %b2, %b1
   %v3 = trunc i64 %v2 to i32
   %v4 = tail call i32 @llvm.hexagon.C2.mux(i32 %v3, i32 undef, i32 undef)
   %v5 = trunc i32 %v4 to i8
-  store i8 %v5, i8* undef, align 1
+  store i8 %v5, ptr undef, align 1
   %v6 = lshr i64 %v1, 1
   br label %b1
 }

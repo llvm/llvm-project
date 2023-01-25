@@ -14,7 +14,7 @@ using namespace llvm;
 using namespace codeview;
 
 #define CV_ENUM_CLASS_ENT(enum_class, enum)                                    \
-  { #enum, std::underlying_type < enum_class > ::type(enum_class::enum) }
+  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
 
 #define CV_ENUM_ENT(ns, enum)                                                  \
   { #enum, ns::enum }
@@ -437,125 +437,125 @@ namespace llvm {
 namespace codeview {
 
 ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames() {
-  return makeArrayRef(SymbolTypeNames);
+  return ArrayRef(SymbolTypeNames);
 }
 
 ArrayRef<EnumEntry<TypeLeafKind>> getTypeLeafNames() {
-  return makeArrayRef(TypeLeafNames);
+  return ArrayRef(TypeLeafNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames(CPUType Cpu) {
   if (Cpu == CPUType::ARMNT) {
-    return makeArrayRef(RegisterNames_ARM);
+    return ArrayRef(RegisterNames_ARM);
   } else if (Cpu == CPUType::ARM64) {
-    return makeArrayRef(RegisterNames_ARM64);
+    return ArrayRef(RegisterNames_ARM64);
   }
-  return makeArrayRef(RegisterNames_X86);
+  return ArrayRef(RegisterNames_X86);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getPublicSymFlagNames() {
-  return makeArrayRef(PublicSymFlagNames);
+  return ArrayRef(PublicSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames() {
-  return makeArrayRef(ProcSymFlagNames);
+  return ArrayRef(ProcSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames() {
-  return makeArrayRef(LocalFlags);
+  return ArrayRef(LocalFlags);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames() {
-  return makeArrayRef(FrameCookieKinds);
+  return ArrayRef(FrameCookieKinds);
 }
 
 ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames() {
-  return makeArrayRef(SourceLanguages);
+  return ArrayRef(SourceLanguages);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames() {
-  return makeArrayRef(CompileSym2FlagNames);
+  return ArrayRef(CompileSym2FlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames() {
-  return makeArrayRef(CompileSym3FlagNames);
+  return ArrayRef(CompileSym3FlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getFileChecksumNames() {
-  return makeArrayRef(FileChecksumNames);
+  return ArrayRef(FileChecksumNames);
 }
 
 ArrayRef<EnumEntry<unsigned>> getCPUTypeNames() {
-  return makeArrayRef(CPUTypeNames);
+  return ArrayRef(CPUTypeNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getFrameProcSymFlagNames() {
-  return makeArrayRef(FrameProcSymFlagNames);
+  return ArrayRef(FrameProcSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getExportSymFlagNames() {
-  return makeArrayRef(ExportSymFlagNames);
+  return ArrayRef(ExportSymFlagNames);
 }
 
 ArrayRef<EnumEntry<uint32_t>> getModuleSubstreamKindNames() {
-  return makeArrayRef(ModuleSubstreamKindNames);
+  return ArrayRef(ModuleSubstreamKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getThunkOrdinalNames() {
-  return makeArrayRef(ThunkOrdinalNames);
+  return ArrayRef(ThunkOrdinalNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getTrampolineNames() {
-  return makeArrayRef(TrampolineNames);
+  return ArrayRef(TrampolineNames);
 }
 
 ArrayRef<EnumEntry<COFF::SectionCharacteristics>>
 getImageSectionCharacteristicNames() {
-  return makeArrayRef(ImageSectionCharacteristicNames);
+  return ArrayRef(ImageSectionCharacteristicNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getClassOptionNames() {
-  return makeArrayRef(ClassOptionNames);
+  return ArrayRef(ClassOptionNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getMemberAccessNames() {
-  return makeArrayRef(MemberAccessNames);
+  return ArrayRef(MemberAccessNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getMethodOptionNames() {
-  return makeArrayRef(MethodOptionNames);
+  return ArrayRef(MethodOptionNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getMemberKindNames() {
-  return makeArrayRef(MemberKindNames);
+  return ArrayRef(MemberKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getPtrKindNames() {
-  return makeArrayRef(PtrKindNames);
+  return ArrayRef(PtrKindNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getPtrModeNames() {
-  return makeArrayRef(PtrModeNames);
+  return ArrayRef(PtrModeNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getPtrMemberRepNames() {
-  return makeArrayRef(PtrMemberRepNames);
+  return ArrayRef(PtrMemberRepNames);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getTypeModifierNames() {
-  return makeArrayRef(TypeModifierNames);
+  return ArrayRef(TypeModifierNames);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getCallingConventions() {
-  return makeArrayRef(CallingConventions);
+  return ArrayRef(CallingConventions);
 }
 
 ArrayRef<EnumEntry<uint8_t>> getFunctionOptionEnum() {
-  return makeArrayRef(FunctionOptionEnum);
+  return ArrayRef(FunctionOptionEnum);
 }
 
 ArrayRef<EnumEntry<uint16_t>> getLabelTypeEnum() {
-  return makeArrayRef(LabelTypeEnum);
+  return ArrayRef(LabelTypeEnum);
 }
 
 } // end namespace codeview

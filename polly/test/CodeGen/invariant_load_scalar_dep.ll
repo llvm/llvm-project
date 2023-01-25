@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly  -polly-codegen -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly  -polly-codegen -polly-invariant-load-hoisting=true -polly-ignore-aliasing -polly-process-unprofitable -S < %s | FileCheck %s
 ;
 ; CHECK-LABEL: polly.preload.begin:
 ; CHECK:    %polly.access.B = getelementptr i32, i32* %B, i64 0

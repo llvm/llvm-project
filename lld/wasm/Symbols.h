@@ -11,9 +11,9 @@
 
 #include "Config.h"
 #include "lld/Common/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -25,6 +25,9 @@ extern const char *defaultModule;
 
 // The name under which to import or export the wasm table.
 extern const char *functionTableName;
+
+// The name under which to import or export the wasm memory.
+extern const char *memoryName;
 
 using llvm::wasm::WasmSymbolType;
 
@@ -175,8 +178,8 @@ public:
 
   uint32_t flags;
 
-  llvm::Optional<StringRef> importName;
-  llvm::Optional<StringRef> importModule;
+  std::optional<StringRef> importName;
+  std::optional<StringRef> importModule;
 };
 
 class FunctionSymbol : public Symbol {
@@ -227,8 +230,8 @@ public:
 
 class UndefinedFunction : public FunctionSymbol {
 public:
-  UndefinedFunction(StringRef name, llvm::Optional<StringRef> importName,
-                    llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedFunction(StringRef name, std::optional<StringRef> importName,
+                    std::optional<StringRef> importModule, uint32_t flags,
                     InputFile *file = nullptr,
                     const WasmSignature *type = nullptr,
                     bool isCalledDirectly = true)
@@ -361,8 +364,8 @@ public:
 
 class UndefinedGlobal : public GlobalSymbol {
 public:
-  UndefinedGlobal(StringRef name, llvm::Optional<StringRef> importName,
-                  llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedGlobal(StringRef name, std::optional<StringRef> importName,
+                  std::optional<StringRef> importModule, uint32_t flags,
                   InputFile *file = nullptr,
                   const WasmGlobalType *type = nullptr)
       : GlobalSymbol(name, UndefinedGlobalKind, flags, file, type) {
@@ -410,8 +413,8 @@ public:
 
 class UndefinedTable : public TableSymbol {
 public:
-  UndefinedTable(StringRef name, llvm::Optional<StringRef> importName,
-                 llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedTable(StringRef name, std::optional<StringRef> importName,
+                 std::optional<StringRef> importModule, uint32_t flags,
                  InputFile *file, const WasmTableType *type)
       : TableSymbol(name, UndefinedTableKind, flags, file, type) {
     this->importName = importName;
@@ -468,8 +471,8 @@ public:
 
 class UndefinedTag : public TagSymbol {
 public:
-  UndefinedTag(StringRef name, llvm::Optional<StringRef> importName,
-               llvm::Optional<StringRef> importModule, uint32_t flags,
+  UndefinedTag(StringRef name, std::optional<StringRef> importName,
+               std::optional<StringRef> importModule, uint32_t flags,
                InputFile *file = nullptr, const WasmSignature *sig = nullptr)
       : TagSymbol(name, UndefinedTagKind, flags, file, sig) {
     this->importName = importName;
@@ -500,7 +503,7 @@ public:
   MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
-  // UndefinedFunction which which case we need to be able to preserve the
+  // UndefinedFunction in which case we need to be able to preserve the
   // signature.
   // TODO(sbc): This repetition of the signature field is inelegant.  Revisit
   // the use of class hierarchy to represent symbol taxonomy.
@@ -516,10 +519,13 @@ struct WasmSym {
   // Symbol marking the start of the global section.
   static DefinedData *globalBase;
 
-  // __stack_pointer
-  // Global that holds the address of the top of the explicit value stack in
-  // linear memory.
+  // __stack_pointer/__stack_low/__stack_high
+  // Global that holds current value of stack pointer and data symbols marking
+  // the start and end of the stack region.  stackPointer is initialized to
+  // stackHigh and grows downwards towards stackLow
   static GlobalSymbol *stackPointer;
+  static DefinedData *stackLow;
+  static DefinedData *stackHigh;
 
   // __tls_base
   // Global that holds the address of the base of the current thread's
@@ -538,11 +544,14 @@ struct WasmSym {
   // Symbol marking the end of the data and bss.
   static DefinedData *dataEnd;
 
-  // __heap_base
-  // Symbol marking the end of the data, bss and explicit stack.  Any linear
-  // memory following this address is not used by the linked code and can
-  // therefore be used as a backing store for brk()/malloc() implementations.
+  // __heap_base/__heap_end
+  // Symbols marking the beginning and end of the "heap". It starts at the end
+  // of the data, bss and explicit stack, and extends to the end of the linear
+  // memory allocated by wasm-ld. This region of memory is not used by the
+  // linked code, so it may be used as a backing store for `sbrk` or `malloc`
+  // implementations.
   static DefinedData *heapBase;
+  static DefinedData *heapEnd;
 
   // __wasm_init_memory_flag
   // Symbol whose contents are nonzero iff memory has already been initialized.
@@ -649,6 +658,7 @@ T *replaceSymbol(Symbol *s, ArgT &&... arg) {
   s2->forceExport = symCopy.forceExport;
   s2->canInline = symCopy.canInline;
   s2->traced = symCopy.traced;
+  s2->referenced = symCopy.referenced;
 
   // Print out a log message if --trace-symbol was specified.
   // This is for debugging.

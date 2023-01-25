@@ -6,6 +6,8 @@ with an aim to replace the previous flang project
 (https://github.com/flang-compiler/flang) and address its various deficiencies.
 F18 was subsequently accepted into the LLVM project and rechristened as Flang.
 
+Please note that flang is not ready yet for production usage.
+
 ## Getting Started
 
 Read more about flang in the [docs directory](docs).
@@ -40,55 +42,120 @@ If you are interested in writing new documentation, follow
 There are two ways to build flang. The first method is to build it at the same
 time that you build all of the projects on which it depends. This is called
 building in tree. The second method is to first do an in tree build to create
-all of the projects on which flang depends, and then only build the flang code
-itself. This is called building standalone. Building standalone has the
-advantage of being smaller and faster. Once you create the base build and base
-install areas, you can create multiple standalone builds using them.
+all of the projects on which flang depends.  Then, after creating this base
+build, only build the flang code itself. This is called building standalone.
+Building standalone has the advantage of being smaller and faster. Once you
+create the base build and base install areas, you can create multiple
+standalone builds using them.
 
 Note that instructions for building LLVM can be found at
 https://llvm.org/docs/GettingStarted.html.
 
+All of the examples below use GCC as the C/C++ compilers and ninja as the build
+tool.
+
 ### Building flang in tree
 Building flang in tree means building flang along with all of the projects on
-which it depends.  These projects include mlir, clang, flang, and compiler-rt.
-Note that compiler-rt is only needed to access libraries that support 16 bit
-floating point numbers.  It's not needed to run the automated tests.
+which it depends.  These projects include mlir, clang, flang, openmp, and
+compiler-rt.  Note that compiler-rt is only needed to access libraries that
+support 16 bit floating point numbers.  It's not needed to run the automated
+tests.  You can use several different C++ compilers for most of the build,
+includig GNU and clang.  But building compiler-rt requres using the clang
+compiler built in the initial part of the build.
+
+Here's a directory structure that works.  Create a root directory for the
+cloned and built files.  Under that root directory, clone the source code
+into a directory called llvm-project.  The build will also
+create subdirectories under the root directory called build (holds most of
+the built files), install (holds the installed files, and compiler-rt (holds
+the result of building compiler-rt).
 
 Here's a complete set of commands to clone all of the necessary source and do
 the build.
 
-First clone the source:
+First, create the root directory and `cd` into it.
 ```bash
-git clone https://github.com/llvm/llvm-project.git my-project
+mkdir root
+cd root
+
+Now clone the source:
+```bash
+git clone https://github.com/llvm/llvm-project.git
 ```
 Once the clone is complete, execute the following commands:
 ```bash
-cd my-project
-
 rm -rf build
-mkdir -p build
+mkdir build
+rm -rf install
+mkdir install
+ROOTDIR=`pwd`
+INSTALLDIR=$ROOTDIR/install
 
 cd build
 
 cmake \
   -G Ninja \
-  ../llvm \
   -DCMAKE_BUILD_TYPE=Release \
-  -DFLANG_ENABLE_WERROR=On \
+  -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
+  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_ENABLE_ASSERTIONS=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
-  -DCMAKE_INSTALL_PREFIX=$INSTALLDIR
   -DLLVM_LIT_ARGS=-v \
-  -DLLVM_ENABLE_PROJECTS="clang;mlir;flang" \
-  -DLLVM_ENABLE_RUNTIMES="compiler-rt"
+  -DLLVM_ENABLE_PROJECTS="clang;mlir;flang;openmp" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+  ../llvm-project/llvm
 
 ninja
 ```
+
+By default flang tests that do not specify an explicit `--target` flag use
+LLVM's default target triple. For these tests, if there is a need to test on a
+different triple by overriding the default, the following needs to be added to
+the cmake command above:
+`-DLLVM_TARGET_TRIPLE_ENV="<some string>" -DFLANG_TEST_TARGET_TRIPLE="<your triple>"`.
 
 To run the flang tests on this build, execute the command in the "build"
 directory:
 ```bash
 ninja check-flang
+```
+
+To create the installed files:
+```bash
+ninja install
+
+echo "latest" > $INSTALLDIR/bin/versionrc
+```
+
+To build compiler-rt:
+```bash
+cd $ROOTDIR
+rm -rf compiler-rt
+mkdir compiler-rt
+cd compiler-rt
+CC=$INSTALLDIR/bin/clang \
+CXX=$INSTALLDIR/bin/clang++ \
+cmake \
+  -G Ninja \
+  ../llvm-project/compiler-rt \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=$INSTALLDIR \
+  -DCMAKE_CXX_STANDARD=11 \
+  -DCMAKE_C_CFLAGS=-mlong-double-128 \
+  -DCMAKE_CXX_CFLAGS=-mlong-double-128 \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DCOMPILER_RT_BUILD_ORC=OFF \
+  -DCOMPILER_RT_BUILD_XRAY=OFF \
+  -DCOMPILER_RT_BUILD_MEMPROF=OFF \
+  -DCOMPILER_RT_BUILD_LIBFUZZER=OFF \
+  -DCOMPILER_RT_BUILD_SANITIZERS=OFF \
+  -DLLVM_CONFIG_PATH=$INSTALLDIR/bin/llvm-config
+
+ninja
+ninja install
 ```
 
 Note that these instructions specify flang as one of the projects to build in
@@ -100,14 +167,13 @@ To do the standalone build, start by building flang in tree as described above.
 This build is base build for subsequent standalone builds.  Start each
 standalone build the same way by cloning the source for llvm-project:
 ```bash
-git clone https://github.com/llvm/llvm-project.git standalone
+mkdir standalone
+cd standalone
+git clone https://github.com/llvm/llvm-project.git
 ```
 Once the clone is complete, execute the following commands:
 ```bash
-cd standalone
-base=<directory that contains the in tree build>
-
-cd flang
+cd llvm-project/flang
 rm -rf build
 mkdir build
 cd build
@@ -115,14 +181,18 @@ cd build
 cmake \
   -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
-  -DFLANG_ENABLE_WERROR=On \
+  -DCMAKE_CXX_STANDARD=17 \
+  -DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$LD_LIBRARY_PATH" \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DFLANG_ENABLE_WERROR=ON \
   -DLLVM_TARGETS_TO_BUILD=host \
-  -DLLVM_ENABLE_ASSERTIONS=On \
-  -DLLVM_BUILD_MAIN_SRC_DIR=$base/build/lib/cmake/llvm \
+  -DLLVM_ENABLE_ASSERTIONS=ON \
+  -DLLVM_BUILD_MAIN_SRC_DIR=$ROOTDIR/build/lib/cmake/llvm \
+  -DLLVM_EXTERNAL_LIT=$ROOTDIR/build/bin/llvm-lit \
   -DLLVM_LIT_ARGS=-v \
-  -DLLVM_DIR=$base/build/lib/cmake/llvm \
-  -DCLANG_DIR=$base/build/lib/cmake/clang \
-  -DMLIR_DIR=$base/build/lib/cmake/mlir \
+  -DLLVM_DIR=$ROOTDIR/build/lib/cmake/llvm \
+  -DCLANG_DIR=$ROOTDIR/build/lib/cmake/clang \
+  -DMLIR_DIR=$ROOTDIR/build/lib/cmake/mlir \
   ..
 
 ninja
@@ -138,17 +208,15 @@ ninja check-flang
 
 Flang is written in C++17.
 
-The code has been compiled and tested with
-GCC versions from 7.2.0 to 9.3.0.
+The code has been compiled and tested with GCC versions from 7.2.0 to 9.3.0.
 
-The code has been compiled and tested with
-clang version 7.0, 8.0, 9.0 and 10.0
+The code has been compiled and tested with clang version 7.0, 8.0, 9.0 and 10.0
 using either GNU's libstdc++ or LLVM's libc++.
 
-The code has been compiled on
-AArch64, x86\_64 and ppc64le servers
-with CentOS7, Ubuntu18.04, Rhel, MacOs, Mojave, XCode and
-Apple Clang version 10.0.1.
+The code has been compiled on AArch64, x86_64 and ppc64le servers with CentOS7,
+Ubuntu18.04, Rhel, MacOs, Mojave, XCode and Apple Clang version 10.0.1.
+
+Note that flang is not supported on 32 bit CPUs.
 
 ### Building flang with GCC
 
@@ -231,7 +299,7 @@ flang_site_config and flang_config. And they can be set as shown below:
 
 Unit tests:
 
-If flang was built with `-DFLANG_INCLUDE_TESTS=On` (`ON` by default), it is possible to generate unittests.
+If flang was built with `-DFLANG_INCLUDE_TESTS=ON` (`ON` by default), it is possible to generate unittests.
 Note: Unit-tests will be skipped for LLVM install for an standalone build as it does not include googletest related headers and libraries.
 
 There are various ways to run unit-tests.
@@ -248,7 +316,7 @@ There are various ways to run unit-tests.
 
 
 ## For in tree builds
-If flang was built with `-DFLANG_INCLUDE_TESTS=On` (`On` by default), it is possible to
+If flang was built with `-DFLANG_INCLUDE_TESTS=ON` (`ON` by default), it is possible to
 generate unittests.
 
 To run all of the flang unit tests use the `check-flang-unit` target:
@@ -263,9 +331,9 @@ ninja check-flang
 # How to Generate Documentation
 
 ## Generate FIR Documentation
-If flang was built with `-DLINK_WITH_FIR=On` (`On` by default), it is possible to
+If flang was built with `-DLINK_WITH_FIR=ON` (`ON` by default), it is possible to
 generate FIR language documentation by running `ninja flang-doc`. This will
-create `docs/Dialect/FIRLangRef.md` in flang build directory.
+create `<build-dir>/tools/flang/docs/Dialect/FIRLangRef.md` in flang build directory.
 
 ## Generate Doxygen-based Documentation
 To generate doxygen-style documentation from source code

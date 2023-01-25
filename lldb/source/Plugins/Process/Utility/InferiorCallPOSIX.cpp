@@ -88,9 +88,11 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
           llvm::consumeError(type_system_or_err.takeError());
           return false;
         }
+        auto ts = *type_system_or_err;
+        if (!ts)
+          return false;
         CompilerType void_ptr_type =
-            type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
-                .GetPointerType();
+            ts->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
         const ArchSpec arch = process->GetTarget().GetArchitecture();
         MmapArgList args =
             process->GetTarget().GetPlatform()->GetMmapArgumentList(

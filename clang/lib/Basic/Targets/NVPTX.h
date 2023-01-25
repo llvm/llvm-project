@@ -18,6 +18,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -42,7 +43,8 @@ static const unsigned NVPTXAddrSpaceMap[] = {
     0, // sycl_private
     0, // ptr32_sptr
     0, // ptr32_uptr
-    0  // ptr64
+    0, // ptr64
+    0, // hlsl_groupshared
 };
 
 /// The DWARF address class. Taken from
@@ -57,7 +59,6 @@ static const int NVPTXDWARFAddrSpaceMap[] = {
 
 class LLVM_LIBRARY_VISIBILITY NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
-  static const Builtin::Info BuiltinInfo[];
   CudaArch GPU;
   uint32_t PTXVersion;
   std::unique_ptr<TargetInfo> HostTarget;
@@ -86,7 +87,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return None;
+    return std::nullopt;
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -155,13 +156,13 @@ public:
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
   ///
-  /// \returns Otherwise return None and no conversion will be emitted in the
-  /// DWARF.
-  Optional<unsigned>
+  /// \returns Otherwise return std::nullopt and no conversion will be emitted
+  /// in the DWARF.
+  std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
-    if (AddressSpace >= llvm::array_lengthof(NVPTXDWARFAddrSpaceMap) ||
+    if (AddressSpace >= std::size(NVPTXDWARFAddrSpaceMap) ||
         NVPTXDWARFAddrSpaceMap[AddressSpace] < 0)
-      return llvm::None;
+      return std::nullopt;
     return NVPTXDWARFAddrSpaceMap[AddressSpace];
   }
 
@@ -176,6 +177,8 @@ public:
   }
 
   bool hasBitIntType() const override { return true; }
+  bool hasBFloat16Type() const override { return true; }
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 } // namespace targets
 } // namespace clang

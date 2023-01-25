@@ -19,12 +19,11 @@
 ; CHECK-FLAG-NOT: memd(r29+#-16) = r17:16
 ; CHECK-FLAG-NOT: allocframe
 
-define dso_local void @test1(i32 %a, %struct.A* %b) local_unnamed_addr #0 {
+define dso_local void @test1(i32 %a, ptr %b) local_unnamed_addr #0 {
 entry:
-  %n = getelementptr inbounds %struct.A, %struct.A* %b, i32 0, i32 0
-  store i32 %a, i32* %n, align 4
+  store i32 %a, ptr %b, align 4
   tail call void @f1() #3
-  tail call void @nrf1(%struct.A* %b) #4
+  tail call void @nrf1(ptr %b) #4
   unreachable
 }
 
@@ -40,9 +39,8 @@ entry:
 define dso_local void @test2() local_unnamed_addr #0 {
 entry:
   %a = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #4
-  call void @f3(i32* nonnull %a) #4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a) #4
+  call void @f3(ptr nonnull %a) #4
   unreachable
 }
 
@@ -73,18 +71,18 @@ entry:
 define dso_local void @test4(i32 %n) local_unnamed_addr #0 {
 entry:
   %vla = alloca i32, i32 %n, align 8
-  call void @f3(i32* nonnull %vla) #4
+  call void @f3(ptr nonnull %vla) #4
   unreachable
 }
 
 
 declare dso_local void @f1() local_unnamed_addr
 declare dso_local void @f2(i32) local_unnamed_addr
-declare dso_local void @f3(i32*) local_unnamed_addr
+declare dso_local void @f3(ptr) local_unnamed_addr
 
-declare dso_local void @nrf1(%struct.A*) local_unnamed_addr #2
+declare dso_local void @nrf1(ptr) local_unnamed_addr #2
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #5
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #5
 
 attributes #0 = { noreturn nounwind }
 attributes #2 = { noreturn }

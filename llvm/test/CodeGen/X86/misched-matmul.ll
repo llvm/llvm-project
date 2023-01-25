@@ -10,7 +10,7 @@
 ; more complex cases.
 ;
 ; CHECK: @wrap_mul4
-; CHECK: 25 regalloc - Number of spills inserted
+; CHECK: 24 regalloc - Number of spills inserted
 
 define void @wrap_mul4(ptr nocapture %Out, ptr nocapture %A, ptr nocapture %B) #0 {
 entry:

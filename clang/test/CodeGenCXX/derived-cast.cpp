@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 class A {
     int a;
@@ -19,9 +19,8 @@ class X : public A, public B {
 A *B::getAsA() {
   return static_cast<X*>(this);
 
-  // CHECK-LABEL: define{{.*}} %class.A* @_ZN1B6getAsAEv
-  // CHECK: %[[THIS:.*]] = load %class.B*, %class.B**
-  // CHECK-NEXT: %[[BC:.*]] = bitcast %class.B* %[[THIS]] to i8*
-  // CHECK-NEXT: getelementptr inbounds i8, i8* %[[BC]], i64 -4
+  // CHECK-LABEL: define{{.*}} ptr @_ZN1B6getAsAEv
+  // CHECK: %[[THIS:.*]] = load ptr, ptr
+  // CHECK-NEXT: getelementptr inbounds i8, ptr %[[THIS]], i64 -4
 }
 

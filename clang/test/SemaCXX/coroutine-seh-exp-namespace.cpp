@@ -34,7 +34,7 @@ template <> struct std::experimental::coroutine_traits<void> {
 void SEH_used() {
   __try {      // expected-error {{cannot use SEH '__try' in a coroutine when C++ exceptions are enabled}}
     co_return; // expected-note {{function is a coroutine due to use of 'co_return' here}}
-               // expected-warning@-1 {{support for std::experimental::coroutine_traits will be removed}}
+               // expected-warning@-1 {{support for 'std::experimental::coroutine_traits' will be removed}}
   } __except (0) {
   }
 }

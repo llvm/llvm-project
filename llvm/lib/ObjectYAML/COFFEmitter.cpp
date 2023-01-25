@@ -25,6 +25,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -49,7 +50,8 @@ struct COFFParser {
   bool isPE() const { return Obj.OptionalHeader.has_value(); }
   bool is64Bit() const {
     return Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
+           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64 ||
+           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64EC;
   }
 
   uint32_t getFileAlignment() const {
@@ -453,10 +455,9 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     }
     for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
          ++I) {
-      const Optional<COFF::DataDirectory> *DataDirectories =
+      const std::optional<COFF::DataDirectory> *DataDirectories =
           CP.Obj.OptionalHeader->DataDirectories;
-      uint32_t NumDataDir = sizeof(CP.Obj.OptionalHeader->DataDirectories) /
-                            sizeof(Optional<COFF::DataDirectory>);
+      uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
       if (I >= NumDataDir || !DataDirectories[I]) {
         OS << zeros(uint32_t(0));
         OS << zeros(uint32_t(0));

@@ -19,8 +19,7 @@ namespace ast_matchers {
 AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 } // namespace ast_matchers
 
-namespace tidy {
-namespace llvm_check {
+namespace tidy::llvm_check {
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -130,6 +129,5 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   }
 }
 
-} // namespace llvm_check
-} // namespace tidy
+} // namespace tidy::llvm_check
 } // namespace clang

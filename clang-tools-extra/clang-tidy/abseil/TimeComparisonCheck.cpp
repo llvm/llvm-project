@@ -12,12 +12,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
   auto Matcher =
@@ -31,7 +30,7 @@ void TimeComparisonCheck::registerMatchers(MatchFinder *Finder) {
 void TimeComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Binop = Result.Nodes.getNodeAs<BinaryOperator>("binop");
 
-  llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(
+  std::optional<DurationScale> Scale = getScaleForTimeInverse(
       Result.Nodes.getNodeAs<FunctionDecl>("function_decl")->getName());
   if (!Scale)
     return;
@@ -56,6 +55,4 @@ void TimeComparisonCheck::check(const MatchFinder::MatchResult &Result) {
                                           .str());
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

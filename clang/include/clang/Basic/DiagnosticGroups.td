@@ -47,7 +47,10 @@ def BinaryLiteral : DiagGroup<"binary-literal", [CXX14BinaryLiteral,
                                                  CXXPre14CompatBinaryLiteral,
                                                  GNUBinaryLiteral]>;
 def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer">;
-def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion">;
+def SingleBitBitFieldConstantConversion :
+  DiagGroup<"single-bit-bitfield-constant-conversion">;
+def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
+                                           [SingleBitBitFieldConstantConversion]>;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
@@ -63,7 +66,10 @@ def DeprecatedCoroutine :
   DiagGroup<"deprecated-coroutine", [DeprecatedExperimentalCoroutine]>;
 def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
-def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine, AlwaysInlineCoroutine]>;
+def CoroNonAlignedAllocationFunction :
+  DiagGroup<"coro-non-aligned-allocation-funciton">;
+def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
+                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -139,6 +145,7 @@ def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
+def C2xCompat : DiagGroup<"c2x-compat">;
 def CXXCompat: DiagGroup<"c++-compat">;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
@@ -166,6 +173,7 @@ def DeleteNonVirtualDtor : DiagGroup<"delete-non-virtual-dtor",
                                       DeleteAbstractNonVirtualDtor]>;
 def AbstractFinalClass : DiagGroup<"abstract-final-class">;
 def FinalDtorNonFinalClass : DiagGroup<"final-dtor-non-final-class">;
+def GNUOffsetofExtensions : DiagGroup<"gnu-offsetof-extensions">;
 
 def CXX11CompatDeprecatedWritableStr :
   DiagGroup<"c++11-compat-deprecated-writable-strings">;
@@ -406,6 +414,8 @@ def DanglingField : DiagGroup<"dangling-field">;
 def DanglingInitializerList : DiagGroup<"dangling-initializer-list">;
 def DanglingGsl : DiagGroup<"dangling-gsl">;
 def ReturnStackAddress : DiagGroup<"return-stack-address">;
+// Name of this warning in GCC
+def : DiagGroup<"return-local-addr", [ReturnStackAddress]>;
 def Dangling : DiagGroup<"dangling", [DanglingField,
                                       DanglingInitializerList,
                                       DanglingGsl,
@@ -531,7 +541,8 @@ def PrivateExtern : DiagGroup<"private-extern">;
 def SelTypeCast : DiagGroup<"cast-of-sel-type">;
 def FunctionDefInObjCContainer : DiagGroup<"function-def-in-objc-container">;
 def BadFunctionCast : DiagGroup<"bad-function-cast">;
-def CastFunctionType : DiagGroup<"cast-function-type">;
+def CastFunctionTypeStrict : DiagGroup<"cast-function-type-strict">;
+def CastFunctionType : DiagGroup<"cast-function-type", [CastFunctionTypeStrict]>;
 def ObjCPropertyImpl : DiagGroup<"objc-property-implementation">;
 def ObjCPropertyNoAttribute : DiagGroup<"objc-property-no-attribute">;
 def ObjCPropertyAssignOnObjectType : DiagGroup<"objc-property-assign-on-object-type">;
@@ -554,7 +565,8 @@ def UnderalignedExceptionObject : DiagGroup<"underaligned-exception-object">;
 def DeprecatedObjCIsaUsage : DiagGroup<"deprecated-objc-isa-usage">;
 def ExplicitInitializeCall : DiagGroup<"explicit-initialize-call">;
 def OrderedCompareFunctionPointers : DiagGroup<"ordered-compare-function-pointers">;
-def Packed : DiagGroup<"packed">;
+def PackedNonPod : DiagGroup<"packed-non-pod">;
+def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def Padded : DiagGroup<"padded">;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
 
@@ -954,6 +966,7 @@ def PointerToEnumCast : DiagGroup<"pointer-to-enum-cast",
                                   [VoidPointerToEnumCast]>;
 def PointerToIntCast : DiagGroup<"pointer-to-int-cast",
                                  [PointerToEnumCast, VoidPointerToIntCast]>;
+def VoidPointerDeref : DiagGroup<"void-ptr-dereference">;
 
 def FUseLdPath : DiagGroup<"fuse-ld-path">;
 
@@ -1127,9 +1140,9 @@ def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
                             GNUFlexibleArrayUnionMember, GNUFoldingConstant,
                             GNUImaginaryConstant, GNUIncludeNext,
                             GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
-                            GNUPointerArith, RedeclaredClassMember,
-                            GNURedeclaredEnum, GNUStatementExpression,
-                            GNUStaticFloatInit,
+                            GNUOffsetofExtensions, GNUPointerArith,
+                            RedeclaredClassMember, GNURedeclaredEnum,
+                            GNUStatementExpression, GNUStaticFloatInit,
                             GNUStringLiteralOperatorTemplate, GNUUnionCast,
                             GNUVariableSizedTypeNotAtEnd, ZeroLengthArray,
                             GNUZeroLineDirective,
@@ -1256,7 +1269,25 @@ def OpenMP : DiagGroup<"openmp", [
 // Backend warnings.
 def BackendInlineAsm : DiagGroup<"inline-asm">;
 def BackendSourceMgr : DiagGroup<"source-mgr">;
-def BackendFrameLargerThan : DiagGroup<"frame-larger-than">;
+def BackendFrameLargerThan : DiagGroup<"frame-larger-than">{
+ code Documentation = [{
+More fine grained information about the stack layout is available by adding the
+`-Rpass-analysis=stack-frame-layout` command-line flag to the compiler
+invocation.
+
+The diagnostic information can be saved to a file in a machine readable format,
+like YAML by adding the `-foptimization-record-file=<file>` command-line flag.
+
+Results can be filtered by function name by passing 
+`-mllvm -filter-print-funcs=foo`, where `foo` is the target function's name.
+
+   .. code-block: console
+      clang -c a.cpp -Rpass-analysis=stack-frame-layout -mllvm -filter-print-funcs=foo
+
+   .. code-block: console
+      clang -c a.cpp -Rpass-analysis=stack-frame-layout -foptimization-record-file=<file>
+}];
+}
 // Compatibility flag name from old versions of Clang.
 def : DiagGroup<"frame-larger-than=", [BackendFrameLargerThan]>;
 def BackendPlugin : DiagGroup<"backend-plugin">;
@@ -1380,3 +1411,9 @@ def BranchProtection : DiagGroup<"branch-protection">;
 // HLSL diagnostic groups
 // Warnings for HLSL Clang extensions
 def HLSLExtension : DiagGroup<"hlsl-extensions">;
+
+// Warnings and notes related to const_var_decl_type attribute checks
+def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
+
+// Warnings and fixes to support the "safe buffers" programming model.
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage">;

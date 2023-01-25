@@ -34,7 +34,7 @@ Missing features or with limited support
   list
   <https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Aopencl>`__.
 
-- Command-line flag :ref:`-cl-ext <opencl_cl_ext>` (used to override extensions/
+- Command-line flag :option:`-cl-ext` (used to override extensions/
   features supported by a target) is missing support of some functionality i.e. that is
   implemented fully through libraries (see :ref:`library-based features and
   extensions <opencl_ext_libs>`).
@@ -235,7 +235,7 @@ Note that by default targets like `SPIR-V`, `SPIR` or `X86` expose all the OpenC
 extensions. For all other targets the configuration has to be made explicitly.
 
 Note that the target extension support performed by clang can be overridden
-with :ref:`-cl-ext <opencl_cl_ext>` command-line flags.
+with :option:`-cl-ext` command-line flags.
 
 .. _opencl_ext_libs:
 
@@ -345,7 +345,7 @@ OpenCL C 3.0 Usage
 OpenCL C 3.0 language standard makes most OpenCL C 2.0 features optional. Optional
 functionality in OpenCL C 3.0 is indicated with the presence of feature-test macros
 (list of feature-test macros is `here <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_C.html#features>`__).
-Command-line flag :ref:`-cl-ext <opencl_cl_ext>` can be used to override features supported by a target.
+Command-line flag :option:`-cl-ext` can be used to override features supported by a target.
 
 For cases when there is an associated extension for a specific feature (fp64 and 3d image writes)
 user should specify both (extension and feature) in command-line flag:

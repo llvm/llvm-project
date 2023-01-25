@@ -4,4 +4,4 @@
 ; verifier. So, a seperate test is needed.
 
 ; CHECK: 'allocsize' indices can't refer to the same parameter
-declare i8* @a(i32, i32) allocsize(0, 0)
+declare ptr @a(i32, i32) allocsize(0, 0)

@@ -36,6 +36,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             self.runCmd(
                 "settings set target.max-children-count 256",
                 check=False)
+            self.runCmd(
+                'settings set auto-one-line-summaries true',
+                check=False)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -47,12 +50,20 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             "corrupt_map", ['%s::unordered_map' %
                     ns, 'size=0 {}'])
 
-        self.look_for_content_and_continue(
-            "map", ['%s::unordered_map' %
-                    ns, 'size=5 {', 'hello', 'world', 'this', 'is', 'me'])
+        # Ensure key/value children, not wrapped in a layer.
+        # This regex depends on auto-one-line-summaries.
+        self.runCmd('settings set auto-one-line-summaries false')
+        children_are_key_value = r'\[0\] = \{\s*first = '
 
         self.look_for_content_and_continue(
-            "mmap", ['%s::unordered_multimap' % ns, 'size=6 {', 'first = 3', 'second = "this"',
+            "map", ['%s::unordered_map' % ns,
+                    children_are_key_value,
+                    'size=5 {', 'hello', 'world', 'this', 'is', 'me'])
+
+        self.look_for_content_and_continue(
+            "mmap", ['%s::unordered_multimap' % ns,
+                     children_are_key_value,
+                     'size=6 {', 'first = 3', 'second = "this"',
                      'first = 2', 'second = "hello"'])
 
         self.look_for_content_and_continue(

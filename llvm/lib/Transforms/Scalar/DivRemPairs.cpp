@@ -26,6 +26,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -49,10 +50,10 @@ struct ExpandedMatch {
 ///   X - ((X ?/ Y) * Y)
 /// which is equivalent to:
 ///   X ?% Y
-static llvm::Optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
+static std::optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
   Value *Dividend, *XroundedDownToMultipleOfY;
   if (!match(&I, m_Sub(m_Value(Dividend), m_Value(XroundedDownToMultipleOfY))))
-    return llvm::None;
+    return std::nullopt;
 
   Value *Divisor;
   Instruction *Div;
@@ -62,7 +63,7 @@ static llvm::Optional<ExpandedMatch> matchExpandedRem(Instruction &I) {
           m_c_Mul(m_CombineAnd(m_IDiv(m_Specific(Dividend), m_Value(Divisor)),
                                m_Instruction(Div)),
                   m_Deferred(Divisor))))
-    return llvm::None;
+    return std::nullopt;
 
   ExpandedMatch M;
   M.Key.SignedOp = Div->getOpcode() == Instruction::SDiv;
@@ -266,12 +267,32 @@ static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
       // DivBB will always reach the Div/Rem, we can hoist Div to PredBB. If
       // we have a DivRem operation we can also hoist Rem. Otherwise we'll leave
       // Rem where it is and rewrite it to mul/sub.
-      // FIXME: We could handle more hoisting cases.
-      if (RemBB->getSingleSuccessor() == DivBB)
+      if (RemBB->getSingleSuccessor() == DivBB) {
         PredBB = RemBB->getUniquePredecessor();
 
-      if (PredBB && IsSafeToHoist(RemInst, RemBB) &&
-          IsSafeToHoist(DivInst, DivBB) &&
+        // Look for something like this
+        //     PredBB
+        //     /    \
+        //   Div   Rem
+        //
+        // If the Rem and Din blocks share a unique predecessor, and all
+        // paths from PredBB go to either RemBB or DivBB, and execution of RemBB
+        // and DivBB will always reach the Div/Rem, we can hoist Div to PredBB.
+        // If we have a DivRem operation we can also hoist Rem. By hoisting both
+        // ops to the same block, we reduce code size and allow the DivRem to
+        // issue sooner. Without a DivRem op, this transformation is
+        // unprofitable because we would end up performing an extra Mul+Sub on
+        // the Rem path.
+      } else if (BasicBlock *RemPredBB = RemBB->getUniquePredecessor()) {
+        // This hoist is only profitable when the target has a DivRem op.
+        if (HasDivRemOp && RemPredBB == DivBB->getUniquePredecessor())
+          PredBB = RemPredBB;
+      }
+      // FIXME: We could handle more hoisting cases.
+
+      if (PredBB && !isa<CatchSwitchInst>(PredBB->getTerminator()) &&
+          isGuaranteedToTransferExecutionToSuccessor(PredBB->getTerminator()) &&
+          IsSafeToHoist(RemInst, RemBB) && IsSafeToHoist(DivInst, DivBB) &&
           all_of(successors(PredBB),
                  [&](BasicBlock *BB) { return BB == DivBB || BB == RemBB; }) &&
           all_of(predecessors(DivBB),

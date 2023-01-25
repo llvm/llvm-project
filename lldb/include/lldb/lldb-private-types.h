@@ -15,6 +15,8 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+#include <type_traits>
+
 namespace llvm {
 namespace sys {
 class DynamicLibrary;
@@ -70,6 +72,8 @@ struct RegisterInfo {
                                           byte_size);
   }
 };
+static_assert(std::is_trivial<RegisterInfo>::value,
+              "RegisterInfo must be trivial.");
 
 /// Registers are grouped into register sets
 struct RegisterSet {

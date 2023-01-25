@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 static void replaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
                                const SourceManager &SM,
@@ -206,6 +204,4 @@ void MoveConstArgCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance

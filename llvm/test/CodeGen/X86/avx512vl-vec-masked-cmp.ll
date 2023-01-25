@@ -1610,6 +1610,37 @@ entry:
 }
 
 
+define i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_i32(i32 %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_i32:
+; VLX:       # %bb.0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_i32:
+; NoVLX:       # %bb.0: # %entry
+; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    andl $15, %eax
+; NoVLX-NEXT:    vzeroupper
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x i32>
+  %1 = bitcast <2 x i64> %__b to <4 x i32>
+  %2 = icmp eq <4 x i32> %0, %1
+  %3 = bitcast i32 %__u to <32 x i1>
+  %extract.i = shufflevector <32 x i1> %3, <32 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = and <4 x i1> %2, %extract.i
+  %5 = bitcast <4 x i1> %4 to i4
+  %6 = zext i4 %5 to i32
+  ret i32 %6
+}
+
+
 define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask(<2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v64i1_mask:
 ; VLX:       # %bb.0: # %entry

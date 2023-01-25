@@ -24,6 +24,12 @@ namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
+  CMPI, // Compare between two signed integer values.
+  CMPU, // Compare between two unsigned integer values.
+  CMPF, // Compare between two floating-point values.
+  CMPQ, // Compare between two quad floating-point values.
+  CMOV, // Select between two values using the result of comparison.
+
   CALL,                   // A call instruction.
   EH_SJLJ_LONGJMP,        // SjLj exception handling longjmp.
   EH_SJLJ_SETJMP,         // SjLj exception handling setjmp.
@@ -35,7 +41,6 @@ enum NodeType : unsigned {
   GLOBAL_BASE_REG,        // Global base reg for PIC.
   Hi,                     // Hi/Lo operations, typically on a global address.
   Lo,                     // Hi/Lo operations, typically on a global address.
-  MEMBARRIER,             // Compiler barrier only; generate a no-op.
   RET_FLAG,               // Return with a flag operand.
   TS1AM,                  // A TS1AM instruction used for 1/2 bytes swap.
   VEC_UNPACK_LO,          // unpack the lo v256 slice of a packed v512 vector.
@@ -200,6 +205,8 @@ public:
   /// Custom DAGCombine {
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  SDValue combineSelect(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSelectCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
   /// } Custom DAGCombine
 
@@ -215,7 +222,7 @@ public:
   /// specified type.
   bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, Align A,
                                       MachineMemOperand::Flags Flags,
-                                      bool *Fast) const override;
+                                      unsigned *Fast) const override;
 
   /// Inline Assembly {
 
@@ -236,7 +243,7 @@ public:
   // VE doesn't have rem.
   bool hasStandaloneRem(EVT) const override { return false; }
   // VE LDZ instruction returns 64 if the input is zero.
-  bool isCheapToSpeculateCtlz() const override { return true; }
+  bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   // VE LDZ instruction is fast.
   bool isCtlzFast() const override { return true; }
   // VE has NND instruction.

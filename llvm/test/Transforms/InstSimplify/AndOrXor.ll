@@ -680,11 +680,45 @@ define i3 @or_xorn_and_commute1(i3 %a, i3 %b) {
 
 define <2 x i32> @or_xorn_and_commute2(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @or_xorn_and_commute2(
-; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 undef, i32 -1>
+; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 -1, i32 -1>
 ; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B:%.*]], [[NEGA]]
 ; CHECK-NEXT:    ret <2 x i32> [[XOR]]
 ;
+  %nega = xor <2 x i32> %a, <i32 -1, i32 -1>
+  %and = and <2 x i32> %b, %a
+  %xor = xor <2 x i32> %b, %nega
+  %or = or <2 x i32> %xor, %and
+  ret <2 x i32> %or
+}
+
+; This is not safe to fold because the extra logic ops limit the undef-ness of the result.
+
+define <2 x i32> @or_xorn_and_commute2_undef(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @or_xorn_and_commute2_undef(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 undef, i32 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B]], [[NEGA]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[XOR]], [[AND]]
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
   %nega = xor <2 x i32> %a, <i32 undef, i32 -1>
+  %and = and <2 x i32> %b, %a
+  %xor = xor <2 x i32> %b, %nega
+  %or = or <2 x i32> %xor, %and
+  ret <2 x i32> %or
+}
+
+; TODO: Unlike the above test, this is safe to fold.
+
+define <2 x i32> @or_xorn_and_commute2_poison(<2 x i32> %a, <2 x i32> %b) {
+; CHECK-LABEL: @or_xorn_and_commute2_poison(
+; CHECK-NEXT:    [[NEGA:%.*]] = xor <2 x i32> [[A:%.*]], <i32 poison, i32 -1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[B:%.*]], [[A]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i32> [[B]], [[NEGA]]
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[XOR]], [[AND]]
+; CHECK-NEXT:    ret <2 x i32> [[OR]]
+;
+  %nega = xor <2 x i32> %a, <i32 poison, i32 -1>
   %and = and <2 x i32> %b, %a
   %xor = xor <2 x i32> %b, %nega
   %or = or <2 x i32> %xor, %and
@@ -1125,4 +1159,18 @@ define i8 @noop_and_t1(i8 %x) {
   %b = lshr i8 %a, 2
   %r = and i8 %b, 126
   ret i8 %r
+}
+
+; hidden simplifydemandedbits constant.
+define i8 @noop_and_t2(i8 %x) {
+; CHECK-LABEL: @noop_and_t2(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A]], 127
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[B]], 62
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = and i8 %x, 2
+  %b = or i8 %a, 127
+  %c = and i8 %b, 62
+  ret i8 %c
 }

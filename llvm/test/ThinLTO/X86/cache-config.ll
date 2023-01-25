@@ -3,7 +3,7 @@
 
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -mcpu=core2
-; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -relax-elf-relocations
+; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -relax-elf-relocations=0
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -function-sections
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -data-sections
 ; RUN: llvm-lto2 run -o %t.o %t.bc -cache-dir %t.cache -r=%t.bc,globalfunc,plx -debugger-tune=sce

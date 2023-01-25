@@ -14,11 +14,11 @@
 #define LLVM_BITCODE_BITCODEANALYZER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
 #include <map>
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -53,7 +53,7 @@ class BitcodeAnalyzer {
   BitstreamCursor Stream;
   BitstreamBlockInfo BlockInfo;
   CurStreamTypeType CurStreamType;
-  Optional<BitstreamCursor> BlockInfoStream;
+  std::optional<BitstreamCursor> BlockInfoStream;
   unsigned NumTopBlocks = 0;
 
   struct PerRecordStats {
@@ -85,18 +85,20 @@ class BitcodeAnalyzer {
   std::map<unsigned, PerBlockIDStats> BlockIDStats;
 
 public:
-  BitcodeAnalyzer(StringRef Buffer, Optional<StringRef> BlockInfoBuffer = None);
+  BitcodeAnalyzer(StringRef Buffer,
+                  std::optional<StringRef> BlockInfoBuffer = std::nullopt);
   /// Analyze the bitcode file.
-  Error analyze(Optional<BCDumpOptions> O = None,
-                Optional<StringRef> CheckHash = None);
+  Error analyze(std::optional<BCDumpOptions> O = std::nullopt,
+                std::optional<StringRef> CheckHash = std::nullopt);
   /// Print stats about the bitcode file.
-  void printStats(BCDumpOptions O, Optional<StringRef> Filename = None);
+  void printStats(BCDumpOptions O,
+                  std::optional<StringRef> Filename = std::nullopt);
 
 private:
   /// Read a block, updating statistics, etc.
   Error parseBlock(unsigned BlockID, unsigned IndentLevel,
-                   Optional<BCDumpOptions> O = None,
-                   Optional<StringRef> CheckHash = None);
+                   std::optional<BCDumpOptions> O = std::nullopt,
+                   std::optional<StringRef> CheckHash = std::nullopt);
 
   Error decodeMetadataStringsBlob(StringRef Indent, ArrayRef<uint64_t> Record,
                                   StringRef Blob, raw_ostream &OS);

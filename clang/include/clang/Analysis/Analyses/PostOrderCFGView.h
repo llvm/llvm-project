@@ -18,7 +18,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include <utility>
 #include <vector>
@@ -48,17 +47,18 @@ public:
 
     /// Set the bit associated with a particular CFGBlock.
     /// This is the important method for the SetType template parameter.
-    std::pair<llvm::NoneType, bool> insert(const CFGBlock *Block) {
+    std::pair<std::nullopt_t, bool> insert(const CFGBlock *Block) {
       // Note that insert() is called by po_iterator, which doesn't check to
       // make sure that Block is non-null.  Moreover, the CFGBlock iterator will
       // occasionally hand out null pointers for pruned edges, so we catch those
       // here.
       if (!Block)
-        return std::make_pair(None, false); // if an edge is trivially false.
+        return std::make_pair(std::nullopt,
+                              false); // if an edge is trivially false.
       if (VisitedBlockIDs.test(Block->getBlockID()))
-        return std::make_pair(None, false);
+        return std::make_pair(std::nullopt, false);
       VisitedBlockIDs.set(Block->getBlockID());
-      return std::make_pair(None, true);
+      return std::make_pair(std::nullopt, true);
     }
 
     /// Check if the bit for a CFGBlock has been already set.

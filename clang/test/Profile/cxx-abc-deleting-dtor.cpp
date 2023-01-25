@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-windows-msvc | FileCheck %s --check-prefix=MSVC
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -std=c++11 -o - -fno-rtti \
+// RUN: %clang_cc1 -emit-llvm %s -std=c++11 -o - -fno-rtti \
 // RUN:     -fprofile-instrument=clang -fcoverage-mapping -disable-llvm-passes \
 // RUN:     -triple=x86_64-linux-gnu | FileCheck %s --check-prefix=LINUX
 
@@ -24,12 +24,12 @@ DerivedABC *useABCVTable() { return new DerivedABC(); }
 // MSVC: @"__profn_??1ABC@@{{.*}}" =
 // MSVC-NOT: @"__profn_??_G{{.*}}" =
 
-// MSVC-LABEL: define linkonce_odr dso_local noundef i8* @"??_GDerivedABC@@UEAAPEAXI@Z"(%struct.DerivedABC* {{[^,]*}} %this, {{.*}})
+// MSVC-LABEL: define linkonce_odr dso_local noundef ptr @"??_GDerivedABC@@UEAAPEAXI@Z"(ptr {{[^,]*}} %this, {{.*}})
 // MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
 // MSVC:   call void @"??1DerivedABC@@UEAA@XZ"({{.*}})
 // MSVC:   ret void
 
-// MSVC-LABEL: define linkonce_odr dso_local noundef i8* @"??_GABC@@UEAAPEAXI@Z"(%struct.ABC* {{[^,]*}} %this, {{.*}})
+// MSVC-LABEL: define linkonce_odr dso_local noundef ptr @"??_GABC@@UEAAPEAXI@Z"(ptr {{[^,]*}} %this, {{.*}})
 // MSVC-NOT:   call void @llvm.instrprof.increment({{.*}})
 // MSVC:   call void @llvm.trap()
 // MSVC-NEXT:   unreachable
@@ -52,32 +52,32 @@ DerivedABC *useABCVTable() { return new DerivedABC(); }
 // LINUX: @__profn__ZN3ABCD2Ev =
 // LINUX-NOT: @__profn_{{.*D[01]Ev}} =
 
-// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD1Ev(%struct.DerivedABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD1Ev(ptr {{[^,]*}} %this)
 // LINUX-NOT:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   call void @_ZN10DerivedABCD2Ev({{.*}})
 // LINUX:   ret void
 
-// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD0Ev(%struct.DerivedABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD0Ev(ptr {{[^,]*}} %this)
 // LINUX-NOT:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   call void @_ZN10DerivedABCD1Ev({{.*}})
 // LINUX:   call void @_ZdlPv({{.*}})
 // LINUX:   ret void
 
-// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD1Ev(%struct.ABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD1Ev(ptr {{[^,]*}} %this)
 // LINUX-NOT:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   call void @llvm.trap()
 // LINUX-NEXT:   unreachable
 
-// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD0Ev(%struct.ABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD0Ev(ptr {{[^,]*}} %this)
 // LINUX-NOT:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   call void @llvm.trap()
 // LINUX-NEXT:   unreachable
 
-// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD2Ev(%struct.DerivedABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN10DerivedABCD2Ev(ptr {{[^,]*}} %this)
 // LINUX:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   call void @_ZN3ABCD2Ev({{.*}})
 // LINUX:   ret void
 
-// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD2Ev(%struct.ABC* {{[^,]*}} %this)
+// LINUX-LABEL: define linkonce_odr void @_ZN3ABCD2Ev(ptr {{[^,]*}} %this)
 // LINUX:   call void @llvm.instrprof.increment({{.*}})
 // LINUX:   ret void

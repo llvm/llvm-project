@@ -11,7 +11,6 @@
 
 #include "Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
@@ -30,7 +29,7 @@ public:
 
   /// Obtain a vfs::FileSystem with an arbitrary initial working directory.
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  view(llvm::NoneType CWD) const {
+  view(std::nullopt_t CWD) const {
     return viewImpl();
   }
 

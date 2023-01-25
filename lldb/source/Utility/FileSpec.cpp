@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <optional>
 #include <system_error>
 #include <vector>
 
@@ -304,7 +305,8 @@ bool FileSpec::Match(const FileSpec &pattern, const FileSpec &file) {
   return true;
 }
 
-llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
+std::optional<FileSpec::Style>
+FileSpec::GuessPathStyle(llvm::StringRef absolute_path) {
   if (absolute_path.startswith("/"))
     return Style::posix;
   if (absolute_path.startswith(R"(\\)"))
@@ -313,7 +315,7 @@ llvm::Optional<FileSpec::Style> FileSpec::GuessPathStyle(llvm::StringRef absolut
       (absolute_path.substr(1, 2) == R"(:\)" ||
        absolute_path.substr(1, 2) == R"(:/)"))
     return Style::windows;
-  return llvm::None;
+  return std::nullopt;
 }
 
 // Dump the object to the supplied stream. If the object contains a valid
@@ -556,20 +558,4 @@ void llvm::format_provider<FileSpec>::format(const FileSpec &F,
 
   if (!file.empty())
     Stream << file;
-}
-
-void llvm::yaml::ScalarEnumerationTraits<FileSpecStyle>::enumeration(
-    IO &io, FileSpecStyle &value) {
-  io.enumCase(value, "windows", FileSpecStyle(FileSpec::Style::windows));
-  io.enumCase(value, "posix", FileSpecStyle(FileSpec::Style::posix));
-  io.enumCase(value, "native", FileSpecStyle(FileSpec::Style::native));
-}
-
-void llvm::yaml::MappingTraits<FileSpec>::mapping(IO &io, FileSpec &f) {
-  io.mapRequired("directory", f.m_directory);
-  io.mapRequired("file", f.m_filename);
-  io.mapRequired("resolved", f.m_is_resolved);
-  FileSpecStyle style = f.m_style;
-  io.mapRequired("style", style);
-  f.m_style = style;
 }

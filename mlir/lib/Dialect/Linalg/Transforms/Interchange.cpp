@@ -67,24 +67,23 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 
   // 2. Compute the interchanged indexing maps.
   SmallVector<AffineMap> newIndexingMaps;
-  for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
-    AffineMap m = genericOp.getTiedIndexingMap(opOperand);
+  for (OpOperand &opOperand : genericOp->getOpOperands()) {
+    AffineMap m = genericOp.getMatchingIndexingMap(&opOperand);
     if (!permutationMap.isEmpty())
       m = m.compose(permutationMap);
     newIndexingMaps.push_back(m);
   }
-  genericOp->setAttr(getIndexingMapsAttrName(),
-                     rewriter.getAffineMapArrayAttr(newIndexingMaps));
+  genericOp.setIndexingMapsAttr(
+      rewriter.getAffineMapArrayAttr(newIndexingMaps));
 
   // 3. Compute the interchanged iterator types.
-  ArrayRef<Attribute> itTypes = genericOp.iterator_types().getValue();
+  ArrayRef<Attribute> itTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<Attribute> itTypesVector;
   llvm::append_range(itTypesVector, itTypes);
   SmallVector<int64_t> permutation(interchangeVector.begin(),
                                    interchangeVector.end());
   applyPermutationToVector(itTypesVector, permutation);
-  genericOp->setAttr(getIteratorTypesAttrName(),
-                     ArrayAttr::get(context, itTypesVector));
+  genericOp.setIteratorTypesAttr(rewriter.getArrayAttr(itTypesVector));
 
   // 4. Transform the index operations by applying the permutation map.
   if (genericOp.hasIndexSemantics()) {
@@ -99,7 +98,7 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                         return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
                       });
       rewriter.replaceOpWithNewOp<AffineApplyOp>(
-          indexOp, permutationMap.getSubMap(indexOp.dim()), allIndices);
+          indexOp, permutationMap.getSubMap(indexOp.getDim()), allIndices);
     }
   }
 

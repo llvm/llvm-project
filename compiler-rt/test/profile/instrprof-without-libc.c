@@ -7,7 +7,7 @@
 
 // This usage of llvm-nm assumes executables have symbol tables. They do not in
 // an MSVC environment, so we can't make this test portable.
-// UNSUPPORTED: msvc
+// UNSUPPORTED: target={{.*msvc.*}}
 
 #include <stdint.h>
 #include <stdlib.h>

@@ -684,9 +684,7 @@ define i1 @or_cmps(float %x) {
 
 define <2 x i1> @or_logic_vector(<2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @or_logic_vector(
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i1> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[A]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> [[X:%.*]]
 ;
   %a = and <2 x i1> %x, %y
   %r = select <2 x i1> %x, <2 x i1> <i1 true, i1 true>, <2 x i1> %a

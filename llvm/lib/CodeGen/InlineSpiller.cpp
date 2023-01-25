@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -104,7 +103,7 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
 
   // Map from pair of (StackSlot and Original VNI) to a set of spills which
   // have the same stackslot and have equal values defined by Original VNI.
-  // These spills are mergeable and are hoist candiates.
+  // These spills are mergeable and are hoist candidates.
   using MergeableSpillsMap =
       MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>;
   MergeableSpillsMap MergeableSpills;
@@ -270,7 +269,7 @@ static Register isFullCopyOf(const MachineInstr &MI, Register Reg) {
 
 static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
   for (const MachineOperand &MO : MI.operands())
-    if (MO.isReg() && MO.isDef() && Register::isVirtualRegister(MO.getReg()))
+    if (MO.isReg() && MO.isDef() && MO.getReg().isVirtual())
       LIS.getInterval(MO.getReg());
 }
 
@@ -281,13 +280,28 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
   Register Reg = Edit->getReg();
 
   // A snippet is a tiny live range with only a single instruction using it
-  // besides copies to/from Reg or spills/fills. We accept:
+  // besides copies to/from Reg or spills/fills.
+  // Exception is done for statepoint instructions which will fold fills
+  // into their operands.
+  // We accept:
   //
   //   %snip = COPY %Reg / FILL fi#
   //   %snip = USE %snip
+  //   %snip = STATEPOINT %snip in var arg area
   //   %Reg = COPY %snip / SPILL %snip, fi#
   //
-  if (SnipLI.getNumValNums() > 2 || !LIS.intervalIsInOneMBB(SnipLI))
+  if (!LIS.intervalIsInOneMBB(SnipLI))
+    return false;
+
+  // Number of defs should not exceed 2 not accounting defs coming from
+  // statepoint instructions.
+  unsigned NumValNums = SnipLI.getNumValNums();
+  for (auto *VNI : SnipLI.vnis()) {
+    MachineInstr *MI = LIS.getInstructionFromIndex(VNI->def);
+    if (MI->getOpcode() == TargetOpcode::STATEPOINT)
+      --NumValNums;
+  }
+  if (NumValNums > 2)
     return false;
 
   MachineInstr *UseMI = nullptr;
@@ -310,6 +324,9 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
 
     // Allow stack slot stores.
     if (SnipLI.reg() == TII.isStoreToStackSlot(MI, FI) && FI == StackSlot)
+      continue;
+
+    if (StatepointOpers::isFoldableReg(&MI, SnipLI.reg()))
       continue;
 
     // Allow a single additional instruction.
@@ -417,7 +434,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
-                          MRI.getRegClass(SrcReg), &TRI);
+                          MRI.getRegClass(SrcReg), &TRI, Register());
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
@@ -894,7 +911,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
     if (!MO->isReg())
       continue;
     Register Reg = MO->getReg();
-    if (!Reg || Register::isVirtualRegister(Reg) || MRI.isReserved(Reg)) {
+    if (!Reg || Reg.isVirtual() || MRI.isReserved(Reg)) {
       continue;
     }
     // Skip non-Defs, including undef uses and internal reads.
@@ -993,7 +1010,7 @@ void InlineSpiller::insertReload(Register NewVReg,
 
   MachineInstrSpan MIS(MI, &MBB);
   TII.loadRegFromStackSlot(MBB, MI, NewVReg, StackSlot,
-                           MRI.getRegClass(NewVReg), &TRI);
+                           MRI.getRegClass(NewVReg), &TRI, Register());
 
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MI);
 
@@ -1030,7 +1047,7 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
 
   if (IsRealSpill)
     TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, isKill, StackSlot,
-                            MRI.getRegClass(NewVReg), &TRI);
+                            MRI.getRegClass(NewVReg), &TRI, Register());
   else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
@@ -1596,7 +1613,7 @@ void HoistSpillHelper::hoistAllSpills() {
       MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
       MachineInstrSpan MIS(MII, BB);
       TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
-                              MRI.getRegClass(LiveReg), &TRI);
+                              MRI.getRegClass(LiveReg), &TRI, Register());
       LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
       for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);
@@ -1613,7 +1630,7 @@ void HoistSpillHelper::hoistAllSpills() {
           RMEnt->removeOperand(i - 1);
       }
     }
-    Edit.eliminateDeadDefs(SpillsToRm, None);
+    Edit.eliminateDeadDefs(SpillsToRm, std::nullopt);
   }
 }
 

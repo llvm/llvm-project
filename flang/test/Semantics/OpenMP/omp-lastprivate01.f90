@@ -16,6 +16,7 @@ program omp_lastprivate
   b = 20
 
   !ERROR: Variable 'k' on the LASTPRIVATE clause is not definable
+  !BECAUSE: 'k' is not a variable
   !$omp parallel do lastprivate(k)
   do i = 1, 10
     c(i) = a(i) + b(i) + k
@@ -23,6 +24,7 @@ program omp_lastprivate
   !$omp end parallel do
 
   !ERROR: Variable 'p' on the LASTPRIVATE clause is not definable
+  !BECAUSE: 'p' is protected in this scope
   !$omp parallel do lastprivate(p)
   do i = 1, 10
     c(i) = a(i) + b(i) + k
@@ -43,6 +45,7 @@ subroutine omp_lastprivate_sb(m)
   b = 20
 
   !ERROR: Variable 'm' on the LASTPRIVATE clause is not definable
+  !BECAUSE: 'm' is an INTENT(IN) dummy argument
   !$omp parallel do lastprivate(m)
   do i = 1, 10
     c(i) = a(i) + b(i) + m

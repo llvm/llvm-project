@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+zfh,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV64IDZFH %s
 
-define half @f16_positive_zero(half *%pf) nounwind {
+define half @f16_positive_zero(ptr %pf) nounwind {
 ; RV32IZFH-LABEL: f16_positive_zero:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    fmv.h.x fa0, zero
@@ -31,7 +31,7 @@ define half @f16_positive_zero(half *%pf) nounwind {
   ret half 0.0
 }
 
-define half @f16_negative_zero(half *%pf) nounwind {
+define half @f16_negative_zero(ptr %pf) nounwind {
 ; RV32IZFH-LABEL: f16_negative_zero:
 ; RV32IZFH:       # %bb.0:
 ; RV32IZFH-NEXT:    fmv.h.x ft0, zero

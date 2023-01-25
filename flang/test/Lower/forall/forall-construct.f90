@@ -73,7 +73,7 @@ end subroutine test_forall_construct
 ! CHECK:               %[[VAL_61:.*]] = arith.subi %[[VAL_60]], %[[VAL_53]] : index
 ! CHECK-DAG:           %[[VAL_62:.*]] = arith.constant 3.140000e+00 : f32
 ! CHECK-DAG:           %[[VAL_63:.*]] = fir.array_fetch %[[VAL_31]], %[[VAL_57]], %[[VAL_61]] : (!fir.array<?x?xf32>, index, index) -> f32
-! CHECK:               %[[VAL_64:.*]] = arith.divf %[[VAL_63]], %[[VAL_62]] : f32
+! CHECK:               %[[VAL_64:.*]] = arith.divf %[[VAL_63]], %[[VAL_62]] {{.*}}: f32
 ! CHECK:               %[[VAL_65:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_66:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_67:.*]] = fir.convert %[[VAL_66]] : (i32) -> i64

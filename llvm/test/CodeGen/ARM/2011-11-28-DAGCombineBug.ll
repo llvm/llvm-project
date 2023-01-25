@@ -15,14 +15,14 @@ define hidden void @foo() {
 ; CHECK: ldr.w
 ; CHECK-NOT: ldm
 entry:
-  %tmp13 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 1, i32 0, i32 0), align 1
-  %tmp15 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 1, i32 0, i32 1), align 1
-  %tmp17 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 1, i32 0, i32 2), align 1
-  %tmp19 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 1, i32 0, i32 3), align 1
-  %tmp = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 2, i32 0, i32 0), align 1
-  %tmp3 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 2, i32 0, i32 1), align 1
-  %tmp4 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 2, i32 0, i32 2), align 1
-  %tmp5 = load i32, i32* getelementptr inbounds (%struct.InformationBlock, %struct.InformationBlock* @infoBlock, i32 0, i32 2, i32 0, i32 3), align 1
+  %tmp13 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 1, i32 0, i32 0), align 1
+  %tmp15 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 1, i32 0, i32 1), align 1
+  %tmp17 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 1, i32 0, i32 2), align 1
+  %tmp19 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 1, i32 0, i32 3), align 1
+  %tmp = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 2, i32 0, i32 0), align 1
+  %tmp3 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 2, i32 0, i32 1), align 1
+  %tmp4 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 2, i32 0, i32 2), align 1
+  %tmp5 = load i32, ptr getelementptr inbounds (%struct.InformationBlock, ptr @infoBlock, i32 0, i32 2, i32 0, i32 3), align 1
   %insert21 = insertvalue [4 x i32] undef, i32 %tmp13, 0
   %insert23 = insertvalue [4 x i32] %insert21, i32 %tmp15, 1
   %insert25 = insertvalue [4 x i32] %insert23, i32 %tmp17, 2

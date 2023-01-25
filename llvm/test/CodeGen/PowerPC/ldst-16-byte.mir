@@ -32,7 +32,7 @@ body: |
     ; CHECK: liveins: $x3, $x4
     ; CHECK: renamable $g8p3 = LQARX $x3, $x4
     ; CHECK: STQCX renamable $g8p3, $x3, $x4, implicit-def dead $cr0
-    ; CHECK: $x3 = OR8 $x7, $x7, implicit killed $g8p3
+    ; CHECK: $x3 = OR8 $x7, killed $x7
     ; CHECK: BLR8 implicit $lr8, implicit undef $rm, implicit $x3
   %0:g8prc = LQARX $x3, $x4
   STQCX %0:g8prc, $x3, $x4, implicit-def $cr0
@@ -51,7 +51,7 @@ body: |
     ; CHECK: liveins: $x3, $x4
     ; CHECK: early-clobber renamable $g8p2 = LQ 128, renamable $x3
     ; CHECK: STQ renamable $g8p2, 160, $x3
-    ; CHECK: $x3 = OR8 $x4, $x4, implicit killed $g8p2
+    ; CHECK: $x3 = OR8 $x4, killed $x4
     ; CHECK: BLR8 implicit $lr8, implicit undef $rm, implicit $x3
   %0:g8rc_nox0 = COPY $x3
   %1:g8prc = LQ 128, %0
@@ -212,7 +212,6 @@ body: |
     ; CHECK: $x4 = OR8 $x16, $x16
     ; CHECK: $x5 = OR8 $x17, $x17
     ; CHECK: $x3 = OR8 $x5, $x5
-    ; CHECK: $x4 = KILL renamable $x4, implicit killed $g8p2
     ; CHECK: BLR8 implicit $lr8, implicit undef $rm, implicit killed $x3, implicit $x4
   %0:g8prc = COPY $g8p8
   $x3 = COPY %0.sub_gp8_x1:g8prc

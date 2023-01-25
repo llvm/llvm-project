@@ -30,8 +30,8 @@ config("cxx_gen_config") {
 
 group("cxx_gen") {
   deps = [
-    ":CXXSymbols.inc",
     ":CXXBNF.inc",
+    ":CXXSymbols.inc",
   ]
 
   # Let targets depending on this find the generated files.

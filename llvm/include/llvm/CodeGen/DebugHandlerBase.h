@@ -14,12 +14,12 @@
 #ifndef LLVM_CODEGEN_DEBUGHANDLERBASE_H
 #define LLVM_CODEGEN_DEBUGHANDLERBASE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/LexicalScopes.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include <optional>
 
 namespace llvm {
 
@@ -37,14 +37,14 @@ struct DbgVariableLocation {
   SmallVector<int64_t, 1> LoadChain;
 
   /// Present if the location is part of a larger variable.
-  llvm::Optional<llvm::DIExpression::FragmentInfo> FragmentInfo;
+  std::optional<llvm::DIExpression::FragmentInfo> FragmentInfo;
 
   /// Extract a VariableLocation from a MachineInstr.
   /// This will only work if Instruction is a debug value instruction
   /// and the associated DIExpression is in one of the supported forms.
   /// If these requirements are not met, the returned Optional will not
   /// have a value.
-  static Optional<DbgVariableLocation>
+  static std::optional<DbgVariableLocation>
   extractFromMachineInstruction(const MachineInstr &Instruction);
 };
 
@@ -71,6 +71,9 @@ protected:
   /// This location indicates end of function prologue and beginning of
   /// function body.
   DebugLoc PrologEndLoc;
+
+  /// This block includes epilogue instructions.
+  const MachineBasicBlock *EpilogBeginBlock;
 
   /// If nonnull, stores the current machine instruction we're processing.
   const MachineInstr *CurMI = nullptr;
@@ -123,8 +126,8 @@ public:
   void beginFunction(const MachineFunction *MF) override;
   void endFunction(const MachineFunction *MF) override;
 
-  void beginBasicBlock(const MachineBasicBlock &MBB) override;
-  void endBasicBlock(const MachineBasicBlock &MBB) override;
+  void beginBasicBlockSection(const MachineBasicBlock &MBB) override;
+  void endBasicBlockSection(const MachineBasicBlock &MBB) override;
 
   /// Return Label preceding the instruction.
   MCSymbol *getLabelBeforeInsn(const MachineInstr *MI);

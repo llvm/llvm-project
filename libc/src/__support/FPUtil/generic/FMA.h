@@ -9,20 +9,19 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/UInt128.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
 namespace fputil {
 namespace generic {
 
-template <typename T> static inline T fma(T x, T y, T z);
+template <typename T> LIBC_INLINE T fma(T x, T y, T z);
 
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
 // The implementation below only is only correct for the default rounding mode,
@@ -79,7 +78,7 @@ namespace internal {
 
 // Extract the sticky bits and shift the `mantissa` to the right by
 // `shift_length`.
-static inline bool shift_mantissa(int shift_length, UInt128 &mant) {
+LIBC_INLINE bool shift_mantissa(int shift_length, UInt128 &mant) {
   if (shift_length >= 128) {
     mant = 0;
     return true; // prod_mant is non-zero.
@@ -259,7 +258,8 @@ template <> inline double fma<double>(double x, double y, double z) {
         (round_mode == FE_UPWARD && prod_sign) ||
         (round_mode == FE_DOWNWARD && !prod_sign)) {
       result = FPBits::MAX_NORMAL;
-      return prod_sign ? -bit_cast<double>(result) : bit_cast<double>(result);
+      return prod_sign ? -cpp::bit_cast<double>(result)
+                       : cpp::bit_cast<double>(result);
     }
     return prod_sign ? static_cast<double>(FPBits::neg_inf())
                      : static_cast<double>(FPBits::inf());
@@ -282,7 +282,7 @@ template <> inline double fma<double>(double x, double y, double z) {
       ++result;
   }
 
-  return bit_cast<double>(result);
+  return cpp::bit_cast<double>(result);
 }
 
 } // namespace generic

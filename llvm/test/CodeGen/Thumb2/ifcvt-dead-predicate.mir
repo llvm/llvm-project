@@ -8,15 +8,15 @@
   target triple = "thumbv7-unknown-linux-android16"
 
   ; Function Attrs: minsize nounwind optsize ssp uwtable
-  define hidden zeroext i1 @branch_entry(i32* %command_set, i8* %requested_filename, i8** %filename_to_use) local_unnamed_addr #0 {
+  define hidden zeroext i1 @branch_entry(ptr %command_set, ptr %requested_filename, ptr %filename_to_use) local_unnamed_addr #0 {
   entry:
-    %0 = load i32, i32* %command_set, align 4
+    %0 = load i32, ptr %command_set, align 4
     %and.i.i = and i32 %0, 128
     %tobool.i.i.not = icmp eq i32 %and.i.i, 0
     br i1 %tobool.i.i.not, label %land.end, label %land.rhs
 
   land.rhs:                                         ; preds = %entry
-    %call1 = tail call zeroext i1 @branch_target(i8* %requested_filename, i8** %filename_to_use)
+    %call1 = tail call zeroext i1 @branch_target(ptr %requested_filename, ptr %filename_to_use)
     ret i1 %call1
 
   land.end:                                         ; preds = %entry
@@ -24,7 +24,7 @@
   }
 
   ; Function Attrs: minsize optsize
-  declare zeroext i1 @branch_target(i8*, i8**) local_unnamed_addr #1
+  declare zeroext i1 @branch_target(ptr, ptr) local_unnamed_addr #1
 
   attributes #0 = { minsize nounwind optsize ssp uwtable }
   attributes #1 = { minsize optsize }

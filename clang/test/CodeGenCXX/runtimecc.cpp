@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
+// RUN: %clang_cc1 %s -triple=armv7-apple-darwin10 -emit-llvm -o - -fexceptions -fcxx-exceptions | FileCheck %s
 
 // Check that we annotate all compiler-synthesized runtime calls and
 // functions with the actual ABI-determined CC.  This usually doesn't
@@ -21,12 +21,12 @@ namespace test0 {
 
   A global;
 // CHECK-LABEL:    define internal void @__cxx_global_var_init()
-// CHECK:      call noundef [[A]]* @_ZN5test01AC1Ev([[A]]* {{[^,]*}} @_ZN5test06globalE)
-// CHECK-NEXT: call i32 @__cxa_atexit(void (i8*)* bitcast ([[A]]* ([[A]]*)* @_ZN5test01AD1Ev to void (i8*)*), i8* bitcast ([[A]]* @_ZN5test06globalE to i8*), i8* @__dso_handle) [[NOUNWIND:#[0-9]+]]
+// CHECK:      call noundef ptr @_ZN5test01AC1Ev(ptr {{[^,]*}} @_ZN5test06globalE)
+// CHECK-NEXT: call i32 @__cxa_atexit(ptr @_ZN5test01AD1Ev, ptr @_ZN5test06globalE, ptr @__dso_handle) [[NOUNWIND:#[0-9]+]]
 // CHECK-NEXT: ret void
 }
 
-// CHECK: declare i32 @__cxa_atexit(void (i8*)*, i8*, i8*) [[NOUNWIND]]
+// CHECK: declare i32 @__cxa_atexit(ptr, ptr, ptr) [[NOUNWIND]]
 
 namespace test1 {
   void test() {
@@ -34,16 +34,15 @@ namespace test1 {
   }
 
 // CHECK-LABEL:    define{{.*}} void @_ZN5test14testEv()
-// CHECK:      [[T0:%.*]] = call i8* @__cxa_allocate_exception(i32 4) [[NOUNWIND]]
-// CHECK-NEXT: [[T1:%.*]] = bitcast i8* [[T0]] to i32*
-// CHECK-NEXT: store i32 0, i32* [[T1]]
-// CHECK-NEXT: call void @__cxa_throw(i8* [[T0]], i8* bitcast (i8** @_ZTIi to i8*), i8* null) [[NORETURN:#[0-9]+]]
+// CHECK:      [[T0:%.*]] = call ptr @__cxa_allocate_exception(i32 4) [[NOUNWIND]]
+// CHECK-NEXT: store i32 0, ptr [[T0]]
+// CHECK-NEXT: call void @__cxa_throw(ptr [[T0]], ptr @_ZTIi, ptr null) [[NORETURN:#[0-9]+]]
 // CHECK-NEXT: unreachable
 }
 
-// CHECK: declare i8* @__cxa_allocate_exception(i32)
+// CHECK: declare ptr @__cxa_allocate_exception(i32)
 
-// CHECK: declare void @__cxa_throw(i8*, i8*, i8*)
+// CHECK: declare void @__cxa_throw(ptr, ptr, ptr)
 
 // CHECK-LABEL: define internal void @_GLOBAL__sub_I_runtimecc.cpp()
 // CHECK:   call void @__cxx_global_var_init()

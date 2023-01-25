@@ -98,8 +98,9 @@ public:
     return str().equals_insensitive(RHS);
   }
 
-  /// Compare two strings; the result is -1, 0, or 1 if this string is
-  /// lexicographically less than, equal to, or greater than the \p RHS.
+  /// compare - Compare two strings; the result is negative, zero, or positive
+  /// if this string is lexicographically less than, equal to, or greater than
+  /// the \p RHS.
   int compare(StringRef RHS) const {
     return str().compare(RHS);
   }

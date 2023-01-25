@@ -65,17 +65,17 @@ define i32 @back_to_back_deopt(i32 %a, i32 %b, i32 %c) #1
 ; CHECK-DAG: movl	%esi, 8(%rsp)
 ; CHECK-DAG: movl	%edx, 4(%rsp)
 ; CHECK: callq
-; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%r14d, 12(%rsp)
 ; CHECK-DAG: movl	%ebp, 8(%rsp)
-; CHECK-DAG: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
 ; CHECK: callq
-; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%r14d, 12(%rsp)
 ; CHECK-DAG: movl	%ebp, 8(%rsp)
-; CHECK-DAG: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
 ; CHECK: callq
-; CHECK-DAG: movl	%ebx, 12(%rsp)
+; CHECK-DAG: movl	%r14d, 12(%rsp)
 ; CHECK-DAG: movl	%ebp, 8(%rsp)
-; CHECK-DAG: movl	%r14d, 4(%rsp)
+; CHECK-DAG: movl	%ebx, 4(%rsp)
 ; CHECK: callq
   call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]
 call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void ()) undef, i32 0, i32 0, i32 0, i32 0) ["deopt" (i32 %a, i32 %b, i32 %c)]

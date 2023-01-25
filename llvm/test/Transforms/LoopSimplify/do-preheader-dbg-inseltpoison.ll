@@ -1,7 +1,7 @@
 ; Confirm that the line number for the do.body.preheader block
 ; branch is the the start of the loop.
 
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -loop-simplify -keep-loops="false" -S <%s | FileCheck %s
+; RUN: opt -passes=simplifycfg,loop-simplify -keep-loops="false" -simplifycfg-require-and-preserve-domtree=1 -S <%s | FileCheck %s
 
 ; CHECK: do.body.preheader:
 ; CHECK-NEXT: phi

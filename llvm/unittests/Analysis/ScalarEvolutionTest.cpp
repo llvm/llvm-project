@@ -58,11 +58,11 @@ protected:
     Test(*F, *LI, SE);
   }
 
-  static Optional<APInt> computeConstantDifference(ScalarEvolution &SE,
-                                                   const SCEV *LHS,
-                                                   const SCEV *RHS) {
-    return SE.computeConstantDifference(LHS, RHS);
-  }
+static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
+                                                      const SCEV *LHS,
+                                                      const SCEV *RHS) {
+  return SE.computeConstantDifference(LHS, RHS);
+}
 
   static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
                         const SCEV *&RHS) {
@@ -1148,10 +1148,10 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     auto *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
     auto *ScevIVNext = SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
 
-    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> Optional<int> {
+    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
       if (!ConstantDiffOrNone)
-        return None;
+        return std::nullopt;
 
       auto ExtDiff = ConstantDiffOrNone->getSExtValue();
       int Diff = ExtDiff;
@@ -1170,9 +1170,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevV0, ScevIV), None);
-    EXPECT_EQ(diff(ScevIVNext, ScevV3), None);
-    EXPECT_EQ(diff(ScevYY, ScevV3), None);
+    EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
+    EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
+    EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);
   });
 }
 

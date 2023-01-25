@@ -19,6 +19,8 @@
 
 #include "CompileUnitIndex.h"
 #include "PdbIndex.h"
+#include "PdbAstBuilder.h"
+#include <optional>
 
 namespace clang {
 class TagDecl;
@@ -37,7 +39,6 @@ struct UnionRecord;
 namespace lldb_private {
 
 namespace npdb {
-class PdbAstBuilder;
 
 class SymbolFileNativePDB : public SymbolFileCommon {
   friend class UdtRecordCompleter;
@@ -115,7 +116,7 @@ public:
   CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override;
 
@@ -130,13 +131,14 @@ public:
   void GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                 TypeList &type_list) override;
 
-  void FindFunctions(ConstString name,
+  void FindFunctions(const Module::LookupInfo &lookup_info,
                      const CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines, SymbolContextList &sc_list) override;
 
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
                      SymbolContextList &sc_list) override;
+
+  std::optional<PdbCompilandSymId> FindSymbolScope(PdbCompilandSymId id);
 
   void FindTypes(ConstString name, const CompilerDeclContext &parent_decl_ctx,
                  uint32_t max_matches,
@@ -147,7 +149,7 @@ public:
                  llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  TypeMap &types) override;
 
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   CompilerDeclContext
@@ -159,7 +161,12 @@ public:
   llvm::pdb::PDBFile &GetPDBFile() { return m_index->pdb(); }
   const llvm::pdb::PDBFile &GetPDBFile() const { return m_index->pdb(); }
 
+  PdbIndex &GetIndex() { return *m_index; };
+
   void DumpClangAST(Stream &s) override;
+
+  std::optional<llvm::codeview::TypeIndex>
+  GetParentType(llvm::codeview::TypeIndex ti);
 
 private:
   struct LineTableEntryComparator {
@@ -180,6 +187,8 @@ private:
     std::vector<lldb_private::LineTable::Entry> line_entries;
     InlineSite(PdbCompilandSymId parent_id) : parent_id(parent_id){};
   };
+
+  void BuildParentMap();
 
   uint32_t CalculateNumCompileUnits() override;
 
@@ -259,11 +268,12 @@ private:
 
   lldb::addr_t m_obj_load_address = 0;
   bool m_done_full_type_scan = false;
+  // UID for anonymous union and anonymous struct as they don't have entities in
+  // pdb debug info.
+  lldb::user_id_t anonymous_id = LLDB_INVALID_UID - 1;
 
   std::unique_ptr<llvm::pdb::PDBFile> m_file_up;
   std::unique_ptr<PdbIndex> m_index;
-
-  std::unique_ptr<PdbAstBuilder> m_ast;
 
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_global_vars;
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_local_variables;
@@ -272,6 +282,8 @@ private:
   llvm::DenseMap<lldb::user_id_t, lldb::CompUnitSP> m_compilands;
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
+  llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
+      m_parent_types;
 };
 
 } // namespace npdb

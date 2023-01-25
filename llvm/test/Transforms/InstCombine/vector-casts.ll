@@ -148,16 +148,16 @@ define <2 x i64> @test7(<4 x float> %a, <4 x float> %b) {
   ret <2 x i64> %conv
 }
 
-define void @convert(<2 x i32>* %dst.addr, <2 x i64> %src) {
+define void @convert(ptr %dst.addr, <2 x i64> %src) {
 ; CHECK-LABEL: @convert(
 ; CHECK-NEXT:    [[VAL:%.*]] = trunc <2 x i64> [[SRC:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[VAL]], <i32 1, i32 1>
-; CHECK-NEXT:    store <2 x i32> [[ADD]], <2 x i32>* [[DST_ADDR:%.*]], align 8
+; CHECK-NEXT:    store <2 x i32> [[ADD]], ptr [[DST_ADDR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %val = trunc <2 x i64> %src to <2 x i32>
   %add = add <2 x i32> %val, <i32 1, i32 1>
-  store <2 x i32> %add, <2 x i32>* %dst.addr
+  store <2 x i32> %add, ptr %dst.addr
   ret void
 }
 
@@ -259,8 +259,8 @@ define <4 x float> @f(i32 %a) {
   %dim31 = insertelement <4 x i32> %dim30, i32 %a, i32 2
   %dim32 = insertelement <4 x i32> %dim31, i32 %a, i32 3
 
-  %offset_ptr = getelementptr <4 x float>, <4 x float>* null, i32 1
-  %offset_int = ptrtoint <4 x float>* %offset_ptr to i64
+  %offset_ptr = getelementptr <4 x float>, ptr null, i32 1
+  %offset_int = ptrtoint ptr %offset_ptr to i64
   %sizeof32 = trunc i64 %offset_int to i32
 
   %smearinsert33 = insertelement <4 x i32> undef, i32 %sizeof32, i32 0

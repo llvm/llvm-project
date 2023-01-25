@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -std=c++11 -fms-extensions -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -std=c++11 -fms-extensions -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM %s
 // RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -std=c++11 -fms-extensions -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=MS --check-prefix=MS-STD %s
 // RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -std=c++11 -fms-extensions -fwhole-program-vtables -flto-visibility-public-std -emit-llvm -o - %s | FileCheck --check-prefix=MS --check-prefix=MS-NOSTD %s
 

@@ -63,7 +63,7 @@ entry:
   ret void
 }
 
-define void ()* @test1(void ()** %x) personality i32 (...)* @__gxx_personality_v0 {
+define ptr @test1(ptr %x) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: Edges in function: test1
 ; CHECK-NEXT: call -> f6
 ; CHECK-NEXT: call -> f10
@@ -86,26 +86,26 @@ dead:
   br label %next
 
 next:
-  phi void ()* [ @f1, %entry ], [ @f2, %dead ]
-  select i1 true, void ()* @f3, void ()* @f4
-  store void ()* @f5, void ()** %x
+  phi ptr [ @f1, %entry ], [ @f2, %dead ]
+  select i1 true, ptr @f3, ptr @f4
+  store ptr @f5, ptr %x
   call void @f6()
-  call void (void ()*, void ()*) bitcast (void ()* @f7 to void (void ()*, void ()*)*)(void ()* @f8, void ()* @f9)
+  call void (ptr, ptr) @f7(ptr @f8, ptr @f9)
   invoke void @f10() to label %exit unwind label %unwind
 
 exit:
-  ret void ()* @f11
+  ret ptr @f11
 
 unwind:
-  %res = landingpad { i8*, i32 }
+  %res = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } { i8* bitcast (void ()* @f12 to i8*), i32 42 }
+  resume { ptr, i32 } { ptr @f12, i32 42 }
 }
 
-@g = global void ()* @f1
-@g1 = global [4 x void ()*] [void ()* @f2, void ()* @f3, void ()* @f4, void ()* @f5]
-@g2 = global {i8, void ()*, i8} {i8 1, void ()* @f6, i8 2}
-@h = constant void ()* @f7
+@g = global ptr @f1
+@g1 = global [4 x ptr] [ptr @f2, ptr @f3, ptr @f4, ptr @f5]
+@g2 = global {i8, ptr, i8} {i8 1, ptr @f6, i8 2}
+@h = constant ptr @f7
 
 define void @test2() {
 ; CHECK-LABEL: Edges in function: test2
@@ -118,14 +118,14 @@ define void @test2() {
 ; CHECK-NEXT: ref -> f1
 ; CHECK-NOT: ->
 
-  load i8*, i8** bitcast (void ()** @g to i8**)
-  load i8*, i8** bitcast (void ()** getelementptr ([4 x void ()*], [4 x void ()*]* @g1, i32 0, i32 2) to i8**)
-  load i8*, i8** bitcast (void ()** getelementptr ({i8, void ()*, i8}, {i8, void ()*, i8}* @g2, i32 0, i32 1) to i8**)
-  load i8*, i8** bitcast (void ()** @h to i8**)
+  load ptr, ptr @g
+  load ptr, ptr getelementptr ([4 x ptr], ptr @g1, i32 0, i32 2)
+  load ptr, ptr getelementptr ({i8, ptr, i8}, ptr @g2, i32 0, i32 1)
+  load ptr, ptr @h
   ret void
 }
 
-@test3_ptr = external global void ()*
+@test3_ptr = external global ptr
 
 define void @test3_aa1() {
 ; CHECK-LABEL: Edges in function: test3_aa1
@@ -135,7 +135,7 @@ define void @test3_aa1() {
 
 entry:
   call void @test3_aa2()
-  store void ()* @test3_ab1, void ()** @test3_ptr
+  store ptr @test3_ab1, ptr @test3_ptr
   ret void
 }
 
@@ -183,7 +183,7 @@ define void @test3_ac1() {
 
 entry:
   call void @test3_ac2()
-  store void ()* @test3_aa2, void ()** @test3_ptr
+  store ptr @test3_aa2, ptr @test3_ptr
   ret void
 }
 
@@ -195,7 +195,7 @@ define void @test3_ac2() {
 
 entry:
   call void @test3_ac1()
-  store void ()* @test3_ba1, void ()** @test3_ptr
+  store ptr @test3_ba1, ptr @test3_ptr
   ret void
 }
 
@@ -207,7 +207,7 @@ define void @test3_ba1() {
 
 entry:
   call void @test3_bb1()
-  store void ()* @test3_ca1, void ()** @test3_ptr
+  store ptr @test3_ca1, ptr @test3_ptr
   ret void
 }
 
@@ -219,7 +219,7 @@ define void @test3_bb1() {
 
 entry:
   call void @test3_ca2()
-  store void ()* @test3_ba1, void ()** @test3_ptr
+  store ptr @test3_ba1, ptr @test3_ptr
   ret void
 }
 

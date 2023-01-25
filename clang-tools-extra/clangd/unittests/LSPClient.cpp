@@ -16,6 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
+#include <optional>
 #include <queue>
 
 namespace clang {
@@ -198,7 +199,7 @@ void LSPClient::didClose(llvm::StringRef Path) {
 
 void LSPClient::sync() { call("sync", nullptr).takeValue(); }
 
-llvm::Optional<std::vector<llvm::json::Value>>
+std::optional<std::vector<llvm::json::Value>>
 LSPClient::diagnostics(llvm::StringRef Path) {
   sync();
   auto Notifications = takeNotifications("textDocument/publishDiagnostics");

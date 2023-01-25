@@ -4,7 +4,7 @@
 
 target triple = "nvptx-unknown-cuda"
 
-declare i32 @__nvvm_reflect(i8*)
+declare i32 @__nvvm_reflect(ptr)
 
 @"$str" = private addrspace(1) constant [8 x i8] c"USE_MUL\00"
 
@@ -17,7 +17,7 @@ define void @used_subfunc(float %a) {
 }
 
 define float @_Z17device_mul_or_addff(float %a, float %b) {
-  %reflect = call i32 @__nvvm_reflect(i8* addrspacecast (i8 addrspace(1)* getelementptr inbounds ([8 x i8], [8 x i8] addrspace(1)* @"$str", i32 0, i32 0) to i8*))
+  %reflect = call i32 @__nvvm_reflect(ptr addrspacecast (ptr addrspace(1) @"$str" to ptr))
   %cmp = icmp ne i32 %reflect, 0
   br i1 %cmp, label %use_mul, label %use_add
 

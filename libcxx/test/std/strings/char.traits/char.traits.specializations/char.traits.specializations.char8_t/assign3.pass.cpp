@@ -21,7 +21,7 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     char8_t s2[3] = {0};
     assert(std::char_traits<char8_t>::assign(s2, 3, char8_t(5)) == s2);
     assert(s2[0] == char8_t(5));

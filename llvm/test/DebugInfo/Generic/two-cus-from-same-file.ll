@@ -13,18 +13,18 @@
 
 define void @foo() nounwind !dbg !5 {
 entry:
-  %puts = tail call i32 @puts(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @str, i32 0, i32 0)), !dbg !23
+  %puts = tail call i32 @puts(ptr @str), !dbg !23
   ret void, !dbg !25
 }
 
-declare i32 @puts(i8* nocapture) nounwind
+declare i32 @puts(ptr nocapture) nounwind
 
-define i32 @main(i32 %argc, i8** nocapture %argv) nounwind !dbg !12 {
+define i32 @main(i32 %argc, ptr nocapture %argv) nounwind !dbg !12 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !21, metadata !DIExpression()), !dbg !26
   ; Avoid talking about the pointer size in debug info because that's target dependent
-  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !22, metadata !DIExpression(DW_OP_deref, DW_OP_deref)), !dbg !27
-  %puts = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str1, i32 0, i32 0)), !dbg !28
+  tail call void @llvm.dbg.value(metadata ptr %argv, metadata !22, metadata !DIExpression(DW_OP_deref, DW_OP_deref)), !dbg !27
+  %puts = tail call i32 @puts(ptr @str1), !dbg !28
   tail call void @foo() nounwind, !dbg !30
   ret i32 0, !dbg !31
 }

@@ -2,8 +2,8 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv7-unknown-linux-gnueabihf"
 
-%Target = type { %Target*, %List* }
-%List = type { i32, i32* }
+%Target = type { ptr, ptr }
+%List = type { i32, ptr }
 
 ; The entry block should be the first block of the function.
 ; CHECK-LABEL: foo
@@ -15,24 +15,23 @@ target triple = "thumbv7-unknown-linux-gnueabihf"
 ; CHECK:       %for.body.i
 ; CHECK:       %return
 
-define i1 @foo(%Target** %ha, i32 %he) !prof !39 {
+define i1 @foo(ptr %ha, i32 %he) !prof !39 {
 entry:
-  %TargetPtr = load %Target*, %Target** %ha, align 4
-  %cmp1 = icmp eq %Target* %TargetPtr, null
+  %TargetPtr = load ptr, ptr %ha, align 4
+  %cmp1 = icmp eq ptr %TargetPtr, null
   br i1 %cmp1, label %return, label %for.body, !prof !50
 
 for.body:
-  %TargetPhi = phi %Target* [ %NextPtr, %for.inc ], [ %TargetPtr, %entry ]
-  %ListAddr = getelementptr inbounds %Target, %Target* %TargetPhi, i32 0, i32 1
-  %ListPtr = load %List*, %List** %ListAddr, align 4
-  %cmp2 = icmp eq %List* %ListPtr, null
+  %TargetPhi = phi ptr [ %NextPtr, %for.inc ], [ %TargetPtr, %entry ]
+  %ListAddr = getelementptr inbounds %Target, ptr %TargetPhi, i32 0, i32 1
+  %ListPtr = load ptr, ptr %ListAddr, align 4
+  %cmp2 = icmp eq ptr %ListPtr, null
   br i1 %cmp2, label %for.inc, label %if.then, !prof !59
 
 if.then:
-  %lenAddr = getelementptr inbounds %List, %List* %ListPtr, i32 0, i32 0
-  %len = load i32, i32* %lenAddr, align 4
-  %ptr = getelementptr inbounds %List, %List* %ListPtr, i32 0, i32 1
-  %ptr2 = load i32*, i32** %ptr, align 4
+  %len = load i32, ptr %ListPtr, align 4
+  %ptr = getelementptr inbounds %List, ptr %ListPtr, i32 0, i32 1
+  %ptr2 = load ptr, ptr %ptr, align 4
   br label %for.cond.i
 
 for.cond.i:
@@ -42,15 +41,14 @@ for.cond.i:
   br i1 %cmp3, label %for.body.i, label %for.inc, !prof !75
 
 for.body.i:
-  %ptr3 = getelementptr inbounds i32, i32* %ptr2, i32 %index
-  %data = load i32, i32* %ptr3, align 4
+  %ptr3 = getelementptr inbounds i32, ptr %ptr2, i32 %index
+  %data = load i32, ptr %ptr3, align 4
   %cmp4 = icmp eq i32 %data, %he
   br i1 %cmp4, label %return, label %for.cond.i, !prof !79
 
 for.inc:
-  %NextAddr = getelementptr inbounds %Target, %Target* %TargetPhi, i32 0, i32 0
-  %NextPtr = load %Target*, %Target** %NextAddr, align 4
-  %cmp5 = icmp eq %Target* %NextPtr, null
+  %NextPtr = load ptr, ptr %TargetPhi, align 4
+  %cmp5 = icmp eq ptr %NextPtr, null
   br i1 %cmp5, label %return, label %for.body, !prof !50
 
 return:

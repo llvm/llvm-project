@@ -22,7 +22,7 @@ false:
   br label %end
 
 end:
-  %a = phi i1 [ icmp ugt (i64 0, i64 ptrtoint (i64* @bar to i64)), %true ],
+  %a = phi i1 [ icmp ugt (i64 0, i64 ptrtoint (ptr @bar to i64)), %true ],
               [ icmp ugt (i64 0, i64 2), %false ]
   ret i1 %a
 }

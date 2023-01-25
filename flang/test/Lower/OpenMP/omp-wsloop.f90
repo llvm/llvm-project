@@ -16,7 +16,7 @@ subroutine simple_loop
   do i=1, 9
   ! CHECK:             fir.store %[[I]] to %[[ALLOCA_IV:.*]] : !fir.ref<i32>
   ! CHECK:             %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield
@@ -39,7 +39,7 @@ subroutine simple_loop_with_step
   ! CHECK:       %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
   !$OMP DO
   do i=1, 9, 2
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield
@@ -62,7 +62,7 @@ subroutine loop_with_schedule_nowait
   do i=1, 9
   ! CHECK:       fir.store %[[I]] to %[[ALLOCA_IV]] : !fir.ref<i32>
   ! CHECK:       %[[LOAD_IV:.*]] = fir.load %[[ALLOCA_IV]] : !fir.ref<i32>
-  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) : (!fir.ref<i8>, i32) -> i1
+  ! CHECK:    fir.call @_FortranAioOutputInteger32({{.*}}, %[[LOAD_IV]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
   end do
   ! CHECK:       omp.yield

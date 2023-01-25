@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple mipsel-unknown-linux -o - -emit-llvm %s \
+// RUN: %clang_cc1 -triple mipsel-unknown-linux -o - -emit-llvm %s \
 // RUN: | FileCheck %s
 
 // This checks that the frontend will accept inline asm memory constraints.
@@ -9,7 +9,7 @@ int foo(void)
  // 'R': An address that can be used in a non-macro load or stor'
  // This test will result in the higher and lower nibbles being
  // switched due to the lwl/lwr instruction pairs.
- // CHECK:   %{{[0-9]+}} = call i32 asm sideeffect  "lwl $0, 1 + $1\0A\09lwr $0, 2 + $1\0A\09", "=r,*R,~{$1}"(i32* elementtype(i32) %{{[0-9,a-f]+}}) #1,
+ // CHECK:   %{{[0-9]+}} = call i32 asm sideeffect  "lwl $0, 1 + $1\0A\09lwr $0, 2 + $1\0A\09", "=r,*R,~{$1}"(ptr elementtype(i32) %{{[0-9,a-f]+}}) #1,
 
   int c = 0xffbbccdd;
 

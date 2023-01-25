@@ -257,6 +257,15 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Pseudo instructions used by KCFI.
+//===----------------------------------------------------------------------===//
+let
+  Defs = [R10, R11, EFLAGS] in {
+def KCFI_CHECK : PseudoI<
+  (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
+}
+
+//===----------------------------------------------------------------------===//
 // Pseudo instructions used by address sanitizer.
 //===----------------------------------------------------------------------===//
 let
@@ -672,11 +681,6 @@ def OR32mi8Locked  : Ii8<0x83, MRM1m, (outs), (ins i32mem:$dst, i32i8imm:$zero),
                          Requires<[Not64BitMode]>, OpSize32, LOCK,
                          Sched<[WriteALURMW]>;
 
-let hasSideEffects = 1, isMeta = 1 in
-def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
-                     "#MEMBARRIER",
-                     [(X86MemBarrier)]>, Sched<[WriteLoad]>;
-
 // RegOpc corresponds to the mr version of the instruction
 // ImmOpc corresponds to the mi version of the instruction
 // ImmOpc8 corresponds to the mi8 version of the instruction
@@ -792,9 +796,9 @@ def X86lock_sub_nocf : PatFrag<(ops node:$lhs, node:$rhs),
   return hasNoCarryFlagUses(SDValue(N, 0));
 }]>;
 
-let Predicates = [UseIncDec] in {
-  let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
-      SchedRW = [WriteALURMW]  in {
+let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+    SchedRW = [WriteALURMW]  in {
+  let Predicates = [UseIncDec] in {
     def LOCK_INC8m  : I<0xFE, MRM0m, (outs), (ins i8mem :$dst),
                         "inc{b}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i8 1)))]>,
@@ -807,10 +811,6 @@ let Predicates = [UseIncDec] in {
                         "inc{l}\t$dst",
                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
-    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
-                         "inc{q}\t$dst",
-                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
-                         LOCK;
 
     def LOCK_DEC8m  : I<0xFE, MRM1m, (outs), (ins i8mem :$dst),
                         "dec{b}\t$dst",
@@ -824,20 +824,33 @@ let Predicates = [UseIncDec] in {
                         "dec{l}\t$dst",
                         [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i32 1)))]>,
                         OpSize32, LOCK;
+  }
+
+  let Predicates = [UseIncDec, In64BitMode] in {
+    def LOCK_INC64m : RI<0xFF, MRM0m, (outs), (ins i64mem:$dst),
+                         "inc{q}\t$dst",
+                         [(set EFLAGS, (X86lock_add_nocf addr:$dst, (i64 1)))]>,
+                         LOCK;
     def LOCK_DEC64m : RI<0xFF, MRM1m, (outs), (ins i64mem:$dst),
                          "dec{q}\t$dst",
                          [(set EFLAGS, (X86lock_sub_nocf addr:$dst, (i64 1)))]>,
                          LOCK;
   }
+}
 
+let Predicates = [UseIncDec] in {
   // Additional patterns for -1 constant.
   def : Pat<(X86lock_add addr:$dst, (i8  -1)), (LOCK_DEC8m  addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i16 -1)), (LOCK_DEC16m addr:$dst)>;
   def : Pat<(X86lock_add addr:$dst, (i32 -1)), (LOCK_DEC32m addr:$dst)>;
-  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i8  -1)), (LOCK_INC8m  addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i16 -1)), (LOCK_INC16m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i32 -1)), (LOCK_INC32m addr:$dst)>;
+}
+
+let Predicates = [UseIncDec, In64BitMode] in {
+  // Additional patterns for -1 constant.
+  def : Pat<(X86lock_add addr:$dst, (i64 -1)), (LOCK_DEC64m addr:$dst)>;
   def : Pat<(X86lock_sub addr:$dst, (i64 -1)), (LOCK_INC64m addr:$dst)>;
 }
 
@@ -850,6 +863,17 @@ def x86btc : SDNode<"X86ISD::LBTC", X86LBTest,
                     [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
 def x86btr : SDNode<"X86ISD::LBTR", X86LBTest,
                     [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+
+def X86LBTestRM : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisPtrTy<1>,
+                                       SDTCisInt<2>]>;
+
+def x86_rm_bts : SDNode<"X86ISD::LBTS_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+def x86_rm_btc : SDNode<"X86ISD::LBTC_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+def x86_rm_btr : SDNode<"X86ISD::LBTR_RM", X86LBTestRM,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMayStore, SDNPMemOperand]>;
+
 
 multiclass ATOMIC_LOGIC_OP<Format Form, string s> {
   let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
@@ -869,9 +893,32 @@ multiclass ATOMIC_LOGIC_OP<Format Form, string s> {
   }
 }
 
+multiclass ATOMIC_LOGIC_OP_RM<bits<8> Opc8, string s> {
+  let Defs = [EFLAGS], mayLoad = 1, mayStore = 1, isCodeGenOnly = 1,
+      SchedRW = [WriteBitTestSetRegRMW]  in {
+    def 16rm : Ii8<Opc8, MRMDestMem, (outs), (ins i16mem:$src1, GR16:$src2),
+                  !strconcat(s, "{w}\t{$src2, $src1|$src1, $src2}"),
+                  [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR16:$src2))]>,
+               OpSize16, TB, LOCK;
+    def 32rm : Ii8<Opc8, MRMDestMem, (outs), (ins i32mem:$src1, GR32:$src2),
+                  !strconcat(s, "{l}\t{$src2, $src1|$src1, $src2}"),
+                  [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR32:$src2))]>,
+               OpSize32, TB, LOCK;
+    def 64rm : RIi8<Opc8, MRMDestMem, (outs), (ins i64mem:$src1, GR64:$src2),
+                   !strconcat(s, "{q}\t{$src2, $src1|$src1, $src2}"),
+                   [(set EFLAGS, (!cast<SDNode>("x86_rm_" # s) addr:$src1, GR64:$src2))]>,
+               TB, LOCK;
+  }
+}
+
+
 defm LOCK_BTS : ATOMIC_LOGIC_OP<MRM5m, "bts">;
 defm LOCK_BTC : ATOMIC_LOGIC_OP<MRM7m, "btc">;
 defm LOCK_BTR : ATOMIC_LOGIC_OP<MRM6m, "btr">;
+
+defm LOCK_BTS_RM : ATOMIC_LOGIC_OP_RM<0xAB, "bts">;
+defm LOCK_BTC_RM : ATOMIC_LOGIC_OP_RM<0xBB, "btc">;
+defm LOCK_BTR_RM : ATOMIC_LOGIC_OP_RM<0xB3, "btr">;
 
 // Atomic compare and swap.
 multiclass LCMPXCHG_BinOp<bits<8> Opc8, bits<8> Opc, Format Form,

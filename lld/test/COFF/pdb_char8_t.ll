@@ -8,10 +8,10 @@
 define dso_local i32 @main() #0 !dbg !9 {
   %1 = alloca i32, align 4
   %2 = alloca i8, align 1
-  store i32 0, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i8* %2, metadata !13, metadata !DIExpression()), !dbg !15
-  store i8 0, i8* %2, align 1, !dbg !15
-  %3 = load i8, i8* %2, align 1, !dbg !16
+  store i32 0, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !13, metadata !DIExpression()), !dbg !15
+  store i8 0, ptr %2, align 1, !dbg !15
+  %3 = load i8, ptr %2, align 1, !dbg !16
   %4 = zext i8 %3 to i32, !dbg !16
   ret i32 %4, !dbg !16
 }

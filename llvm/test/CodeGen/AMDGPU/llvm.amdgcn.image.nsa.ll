@@ -1,15 +1,20 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1010-NSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX1030-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX10-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1010-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX1030-NSA %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-nsa-encoding -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
-; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,GFX11-NSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=32 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NONSA,GFX11-NONSA %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -amdgpu-nsa-threshold=2 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T2 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,NSA,NSA-T3,GFX11-NSA %s
 
+; Default NSA threshold is 3 addresses
 ; GCN-LABEL: {{^}}sample_2d:
-;
-; TODO: use NSA here
-; GCN: v_mov_b32_e32 v2, v0
-;
-; GCN: image_sample v[0:3], v[1:2],
+; NONSA: v_mov_b32_e32 v2, v0
+; NONSA: image_sample v[0:3], v[1:2],
+; NSA-T2: image_sample v[0:3], [v1, v0],
+; NSA-T3: v_mov_b32_e32 v2, v0
+; NSA-T3: image_sample v[0:3], v[1:2],
 define amdgpu_ps <4 x float> @sample_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %t, float %s) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -27,9 +32,9 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}sample_d_3d:
-; GFX1010-NSA: image_sample_d v[0:3], v[7:22],
+; GFX1010-NSA: image_sample_d v[0:3], v[7:15],
 ; GFX1030-NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
-; GFX11-NSA: image_sample_d v[0:3], v[7:22],
+; GFX11-NSA: image_sample_d v[0:3], v[7:15],
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %r, float %t, float %dsdh, float %dtdv, float %dsdv, float %drdv, float %drdh, float %dtdh) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32(i32 15, float %dsdh, float %dtdh, float %drdh, float %dsdv, float %dtdv, float %drdv, float %s, float %t, float %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

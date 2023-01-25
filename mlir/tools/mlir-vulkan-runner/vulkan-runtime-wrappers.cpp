@@ -85,7 +85,7 @@ void bindMemRef(void *vkRuntimeManager, DescriptorSetIndex setIndex,
   uint32_t size = sizeof(T);
   for (unsigned i = 0; i < S; i++)
     size *= ptr->sizes[i];
-  VulkanHostMemoryBuffer memBuffer{ptr->allocated, size};
+  VulkanHostMemoryBuffer memBuffer{ptr->aligned, size};
   reinterpret_cast<VulkanRuntimeManager *>(vkRuntimeManager)
       ->setResourceData(setIndex, bindIndex, memBuffer);
 }

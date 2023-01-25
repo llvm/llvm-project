@@ -33,7 +33,7 @@ define float @constraint_f_float(float %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, ft0
 ; RV64F-NEXT:    ret
-  %1 = load float, float* @gf
+  %1 = load float, ptr @gf
   %2 = tail call float asm "fadd.s $0, $1, $2", "=f,f,f"(float %a, float %1)
   ret float %2
 }
@@ -60,7 +60,7 @@ define float @constraint_f_float_abi_name(float %a) nounwind {
 ; RV64F-NEXT:    #NO_APP
 ; RV64F-NEXT:    fmv.x.w a0, ft0
 ; RV64F-NEXT:    ret
-  %1 = load float, float* @gf
+  %1 = load float, ptr @gf
   %2 = tail call float asm "fadd.s $0, $1, $2", "={ft0},{fa0},{fs0}"(float %a, float %1)
   ret float %2
 }

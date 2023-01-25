@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP32 %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP32 %s
 
 typedef struct objc_class *Class;
 
@@ -64,10 +64,8 @@ id Test2(void) {
     ((id)cat)->isa = dynamicSubclass;
 }
 @end
-// CHECK-LP64: %{{.*}} = load i8*, i8** %
-// CHECK-NEXT: %{{.*}} = bitcast i8* %{{.*}} to i8**
-// CHECK-NEXT: store i8* %{{.*}}, i8** %{{.*}}
+// CHECK-LP64: %{{.*}} = load ptr, ptr %
+// CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}
 
-// CHECK-LP32: %{{.*}} = load i8*, i8** %
-// CHECK-NEXT: %{{.*}} = bitcast i8* %{{.*}} to i8**
-// CHECK-NEXT: store i8* %{{.*}}, i8** %{{.*}}
+// CHECK-LP32: %{{.*}} = load ptr, ptr %
+// CHECK-NEXT: store ptr %{{.*}}, ptr %{{.*}}

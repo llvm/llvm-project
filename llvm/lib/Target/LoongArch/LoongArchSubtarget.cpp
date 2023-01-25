@@ -27,7 +27,7 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
     const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
     StringRef ABIName) {
   bool Is64Bit = TT.isArch64Bit();
-  if (CPU.empty())
+  if (CPU.empty() || CPU == "generic")
     CPU = Is64Bit ? "generic-la64" : "generic-la32";
 
   if (TuneCPU.empty())
@@ -38,6 +38,15 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
     GRLenVT = MVT::i64;
     GRLen = 64;
   }
+
+  if (HasLA32 == HasLA64)
+    report_fatal_error("Please use one feature of 32bit and 64bit.");
+
+  if (Is64Bit && HasLA32)
+    report_fatal_error("Feature 32bit should be used for loongarch32 target.");
+
+  if (!Is64Bit && HasLA64)
+    report_fatal_error("Feature 64bit should be used for loongarch64 target.");
 
   // TODO: ILP32{S,F} LP64{S,F}
   TargetABI = Is64Bit ? LoongArchABI::ABI_LP64D : LoongArchABI::ABI_ILP32D;

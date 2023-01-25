@@ -31,16 +31,16 @@ if.else:                                          ; preds = %entry
 ; CHECK-NEXT: .Lfunc_end
 }
 
-@__const.indirect_branch.ptr = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@indirect_branch, %return), i8* blockaddress(@indirect_branch, %l2)], align 8
+@__const.indirect_branch.ptr = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@indirect_branch, %return), ptr blockaddress(@indirect_branch, %l2)], align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @indirect_branch(i32 %a, i32 %b, i32 %i) {
 ; CHECK-LABEL: indirect_branch:
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds [2 x i8*], [2 x i8*]* @__const.indirect_branch.ptr, i64 0, i64 %idxprom
-  %0 = load i8*, i8** %arrayidx, align 8
-  indirectbr i8* %0, [label %return, label %l2]
+  %arrayidx = getelementptr inbounds [2 x ptr], ptr @__const.indirect_branch.ptr, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
+  indirectbr ptr %0, [label %return, label %l2]
 ; CHECK:       br x
 ; ISBDSB-NEXT: dsb sy
 ; ISBDSB-NEXT: isb
@@ -116,14 +116,12 @@ d:                             ; preds = %asm.fallthrough, %entry
 }
 
 define dso_local i32 @indirect_call(
-i32 (...)* nocapture %f1, i32 (...)* nocapture %f2) {
+ptr nocapture %f1, ptr nocapture %f2) {
 entry:
 ; CHECK-LABEL: indirect_call:
-  %callee.knr.cast = bitcast i32 (...)* %f1 to i32 ()*
-  %call = tail call i32 %callee.knr.cast()
+  %call = tail call i32 %f1()
 ; HARDEN: bl {{__llvm_slsblr_thunk_x[0-9]+$}}
-  %callee.knr.cast1 = bitcast i32 (...)* %f2 to i32 ()*
-  %call2 = tail call i32 %callee.knr.cast1()
+  %call2 = tail call i32 %f2()
 ; HARDEN: bl {{__llvm_slsblr_thunk_x[0-9]+$}}
   %add = add nsw i32 %call2, %call
   ret i32 %add
@@ -131,15 +129,15 @@ entry:
 }
 
 ; verify calling through a function pointer.
-@a = dso_local local_unnamed_addr global i32 (...)* null, align 8
+@a = dso_local local_unnamed_addr global ptr null, align 8
 @b = dso_local local_unnamed_addr global i32 0, align 4
 define dso_local void @indirect_call_global() local_unnamed_addr {
 ; CHECK-LABEL: indirect_call_global:
 entry:
-  %0 = load i32 ()*, i32 ()** bitcast (i32 (...)** @a to i32 ()**), align 8
+  %0 = load ptr, ptr @a, align 8
   %call = tail call i32 %0()  nounwind
 ; HARDEN: bl {{__llvm_slsblr_thunk_x[0-9]+$}}
-  store i32 %call, i32* @b, align 4
+  store i32 %call, ptr @b, align 4
   ret void
 ; CHECK: .Lfunc_end
 }
@@ -148,11 +146,11 @@ entry:
 ; as a linker is allowed to clobber x16 or x17 on calls, which would break the
 ; correct execution of the code sequence produced by the mitigation. The below
 ; test attempts to force *%f into x16 using inline assembly.
-define i64 @check_x16(i64 ()** nocapture readonly %fp, i64 ()** nocapture readonly %fp2) "target-features"="+neon,+reserve-x10,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15,+reserve-x18,+reserve-x20,+reserve-x21,+reserve-x22,+reserve-x23,+reserve-x24,+reserve-x25,+reserve-x26,+reserve-x27,+reserve-x28,+reserve-x30,+reserve-x9" {
+define i64 @check_x16(ptr nocapture readonly %fp, ptr nocapture readonly %fp2) "target-features"="+neon,+reserve-x10,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15,+reserve-x18,+reserve-x20,+reserve-x21,+reserve-x22,+reserve-x23,+reserve-x24,+reserve-x25,+reserve-x26,+reserve-x27,+reserve-x28,+reserve-x30,+reserve-x9" {
 entry:
 ; CHECK-LABEL: check_x16:
-  %f = load i64 ()*, i64 ()** %fp, align 8
-  %x16_f = tail call i64 ()* asm "add $0, $1, #0", "={x16},{x16}"(i64 ()* %f) nounwind
+  %f = load ptr, ptr %fp, align 8
+  %x16_f = tail call ptr asm "add $0, $1, #0", "={x16},{x16}"(ptr %f) nounwind
   %call1 = call i64 %x16_f()
 ; NOHARDEN:   blr x16
 ; ISBDSB-NOT: bl __llvm_slsblr_thunk_x16
@@ -167,30 +165,27 @@ entry:
 ; Since this is sensitive to register allocation choices, only check this with
 ; DAGIsel to avoid too much accidental breaking of this test that is a bit
 ; brittle.
-define i64 @check_x29(i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** nocapture readonly %fp,
-                      i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** nocapture readonly %fp2,
-                      i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** nocapture readonly %fp3)
+define i64 @check_x29(ptr nocapture readonly %fp,
+                      ptr nocapture readonly %fp2,
+                      ptr nocapture readonly %fp3)
 "target-features"="+neon,+reserve-x10,+reserve-x11,+reserve-x12,+reserve-x13,+reserve-x14,+reserve-x15,+reserve-x18,+reserve-x20,+reserve-x21,+reserve-x22,+reserve-x23,+reserve-x24,+reserve-x25,+reserve-x26,+reserve-x27,+reserve-x28,+reserve-x9"
 "frame-pointer"="none"
 {
 entry:
 ; CHECK-LABEL: check_x29:
-  %0 = load i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)*, i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp, align 8
-  %1 = bitcast i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp2 to i8**
-  %2 = load i8*, i8** %1, align 8
-  %3 = load i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)*, i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp2, align 8
-  %4 = bitcast i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp3 to i8**
-  %5 = load i8*, i8** %4, align 8
-  %6 = load i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)*, i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp3, align 8
-  %7 = bitcast i64 (i8*, i8*, i64, i64, i64, i64, i64, i64)** %fp to i8**
-  %8 = load i8*, i8** %7, align 8
-  %call = call i64 %0(i8* %2, i8* %5, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
-  %call1 = call i64 %3(i8* %2, i8* %5, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
+  %0 = load ptr, ptr %fp, align 8
+  %1 = load ptr, ptr %fp2, align 8
+  %2 = load ptr, ptr %fp2, align 8
+  %3 = load ptr, ptr %fp3, align 8
+  %4 = load ptr, ptr %fp3, align 8
+  %5 = load ptr, ptr %fp, align 8
+  %call = call i64 %0(ptr %1, ptr %3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
+  %call1 = call i64 %2(ptr %1, ptr %3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
 ; NOHARDEN:      blr x29
 ; ISBDSBDAGISEL: bl __llvm_slsblr_thunk_x29
 ; SBDAGISEL:     bl __llvm_slsblr_thunk_x29
 ; CHECK
-  %call2 = call i64 %6(i8* %2, i8* %8, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
+  %call2 = call i64 %4(ptr %1, ptr %5, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0)
   %add = add nsw i64 %call1, %call
   %add1 = add nsw i64 %call2, %add
   ret i64 %add1

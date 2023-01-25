@@ -14,7 +14,6 @@
 #include "SymbolTableListTraitsImpl.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -63,6 +62,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ModRef.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -186,11 +186,6 @@ Type *Argument::getPointeeInMemoryValueType() const {
   AttributeSet ParamAttrs =
       getParent()->getAttributes().getParamAttrs(getArgNo());
   return getMemoryParamAllocType(ParamAttrs);
-}
-
-uint64_t Argument::getParamAlignment() const {
-  assert(getType()->isPointerTy() && "Only pointers have alignments");
-  return getParent()->getParamAlignment(getArgNo());
 }
 
 MaybeAlign Argument::getParamAlign() const {
@@ -366,6 +361,23 @@ void Function::removeFromParent() {
 
 void Function::eraseFromParent() {
   getParent()->getFunctionList().erase(getIterator());
+}
+
+void Function::splice(Function::iterator ToIt, Function *FromF,
+                      Function::iterator FromBeginIt,
+                      Function::iterator FromEndIt) {
+#ifdef EXPENSIVE_CHECKS
+  // Check that FromBeginIt is before FromEndIt.
+  auto FromFEnd = FromF->end();
+  for (auto It = FromBeginIt; It != FromEndIt; ++It)
+    assert(It != FromFEnd && "FromBeginIt not before FromEndIt!");
+#endif // EXPENSIVE_CHECKS
+  BasicBlocks.splice(ToIt, FromF->BasicBlocks, FromBeginIt, FromEndIt);
+}
+
+Function::iterator Function::erase(Function::iterator FromIt,
+                                   Function::iterator ToIt) {
+  return BasicBlocks.erase(FromIt, ToIt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -659,6 +671,19 @@ Attribute Function::getFnAttribute(StringRef Kind) const {
   return AttributeSets.getFnAttr(Kind);
 }
 
+uint64_t Function::getFnAttributeAsParsedInteger(StringRef Name,
+                                                 uint64_t Default) const {
+  Attribute A = getFnAttribute(Name);
+  uint64_t Result = Default;
+  if (A.isStringAttribute()) {
+    StringRef Str = A.getValueAsString();
+    if (Str.getAsInteger(0, Result))
+      getContext().emitError("cannot parse integer attribute " + Name);
+  }
+
+  return Result;
+}
+
 /// gets the specified attribute from the list of attributes.
 Attribute Function::getParamAttribute(unsigned ArgNo,
                                       Attribute::AttrKind Kind) const {
@@ -727,6 +752,65 @@ void Function::copyAttributesFrom(const Function *Src) {
     setPrologueData(Src->getPrologueData());
 }
 
+MemoryEffects Function::getMemoryEffects() const {
+  return getAttributes().getMemoryEffects();
+}
+void Function::setMemoryEffects(MemoryEffects ME) {
+  addFnAttr(Attribute::getWithMemoryEffects(getContext(), ME));
+}
+
+/// Determine if the function does not access memory.
+bool Function::doesNotAccessMemory() const {
+  return getMemoryEffects().doesNotAccessMemory();
+}
+void Function::setDoesNotAccessMemory() {
+  setMemoryEffects(MemoryEffects::none());
+}
+
+/// Determine if the function does not access or only reads memory.
+bool Function::onlyReadsMemory() const {
+  return getMemoryEffects().onlyReadsMemory();
+}
+void Function::setOnlyReadsMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::readOnly());
+}
+
+/// Determine if the function does not access or only writes memory.
+bool Function::onlyWritesMemory() const {
+  return getMemoryEffects().onlyWritesMemory();
+}
+void Function::setOnlyWritesMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::writeOnly());
+}
+
+/// Determine if the call can access memmory only using pointers based
+/// on its arguments.
+bool Function::onlyAccessesArgMemory() const {
+  return getMemoryEffects().onlyAccessesArgPointees();
+}
+void Function::setOnlyAccessesArgMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::argMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  inaccessible from the IR.
+bool Function::onlyAccessesInaccessibleMemory() const {
+  return getMemoryEffects().onlyAccessesInaccessibleMem();
+}
+void Function::setOnlyAccessesInaccessibleMemory() {
+  setMemoryEffects(getMemoryEffects() & MemoryEffects::inaccessibleMemOnly());
+}
+
+/// Determine if the function may only access memory that is
+///  either inaccessible from the IR or pointed to by its arguments.
+bool Function::onlyAccessesInaccessibleMemOrArgMem() const {
+  return getMemoryEffects().onlyAccessesInaccessibleOrArgMem();
+}
+void Function::setOnlyAccessesInaccessibleMemOrArgMem() {
+  setMemoryEffects(getMemoryEffects() &
+                   MemoryEffects::inaccessibleOrArgMemOnly());
+}
+
 /// Table of string intrinsic names indexed by enum value.
 static const char * const IntrinsicNameTable[] = {
   "not_intrinsic",
@@ -764,7 +848,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
   // We've either found the target or just fall back to the generic set, which
   // is always first.
   const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
-  return makeArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
+  return ArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
 }
 
 /// This does the actual lookup of an intrinsic ID which
@@ -833,7 +917,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
         HasUnnamedType = true;
     } else {
       Result += "sl_";
-      for (auto Elem : STyp->elements())
+      for (auto *Elem : STyp->elements())
         Result += getMangledTypeStr(Elem, HasUnnamedType);
     }
     // Ensure nested structs are distinguishable.
@@ -852,6 +936,15 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
       Result += "nx";
     Result += "v" + utostr(EC.getKnownMinValue()) +
               getMangledTypeStr(VTy->getElementType(), HasUnnamedType);
+  } else if (TargetExtType *TETy = dyn_cast<TargetExtType>(Ty)) {
+    Result += "t";
+    Result += TETy->getName();
+    for (Type *ParamTy : TETy->type_params())
+      Result += "_" + getMangledTypeStr(ParamTy, HasUnnamedType);
+    for (unsigned IntParam : TETy->int_params())
+      Result += "_" + utostr(IntParam);
+    // Ensure nested target extension types are distinguishable.
+    Result += "t";
   } else if (Ty) {
     switch (Ty->getTypeID()) {
     default: llvm_unreachable("Unhandled type");
@@ -1186,13 +1279,13 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
-  case IIT_STRUCT9: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT8: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT7: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT6: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT5: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT4: ++StructElts; LLVM_FALLTHROUGH;
-  case IIT_STRUCT3: ++StructElts; LLVM_FALLTHROUGH;
+  case IIT_STRUCT9: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT8: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT7: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT6: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT5: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT4: ++StructElts; [[fallthrough]];
+  case IIT_STRUCT3: ++StructElts; [[fallthrough]];
   case IIT_STRUCT2: {
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct,StructElts));
 
@@ -1399,18 +1492,6 @@ bool Intrinsic::isOverloaded(ID id) {
 #define GET_INTRINSIC_OVERLOAD_TABLE
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_OVERLOAD_TABLE
-}
-
-bool Intrinsic::isLeaf(ID id) {
-  switch (id) {
-  default:
-    return true;
-
-  case Intrinsic::experimental_gc_statepoint:
-  case Intrinsic::experimental_patchpoint_void:
-  case Intrinsic::experimental_patchpoint_i64:
-    return false;
-  }
 }
 
 /// This defines the "Intrinsic::getAttributes(ID id)" method.
@@ -1727,7 +1808,7 @@ Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
-  for (auto Ty : FTy->params())
+  for (auto *Ty : FTy->params())
     if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false))
       return MatchIntrinsicTypes_NoMatchArg;
 
@@ -1783,17 +1864,17 @@ bool Intrinsic::getIntrinsicSignature(Function *F,
   return true;
 }
 
-Optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
+std::optional<Function *> Intrinsic::remangleIntrinsicFunction(Function *F) {
   SmallVector<Type *, 4> ArgTys;
   if (!getIntrinsicSignature(F, ArgTys))
-    return None;
+    return std::nullopt;
 
   Intrinsic::ID ID = F->getIntrinsicID();
   StringRef Name = F->getName();
   std::string WantedName =
       Intrinsic::getName(ID, ArgTys, F->getParent(), F->getFunctionType());
   if (Name == WantedName)
-    return None;
+    return std::nullopt;
 
   Function *NewDecl = [&] {
     if (auto *ExistingGV = F->getParent()->getNamedValue(WantedName)) {
@@ -1837,21 +1918,20 @@ bool Function::hasAddressTaken(const User **PutOffender,
 
     const auto *Call = dyn_cast<CallBase>(FU);
     if (!Call) {
-      if (IgnoreAssumeLikeCalls) {
-        if (const auto *FI = dyn_cast<Instruction>(FU)) {
-          if (FI->isCast() && !FI->user_empty() &&
-              llvm::all_of(FU->users(), [](const User *U) {
-                if (const auto *I = dyn_cast<IntrinsicInst>(U))
-                  return I->isAssumeLikeIntrinsic();
-                return false;
-              }))
-            continue;
-        }
+      if (IgnoreAssumeLikeCalls &&
+          isa<BitCastOperator, AddrSpaceCastOperator>(FU) &&
+          all_of(FU->users(), [](const User *U) {
+            if (const auto *I = dyn_cast<IntrinsicInst>(U))
+              return I->isAssumeLikeIntrinsic();
+            return false;
+          })) {
+        continue;
       }
+
       if (IgnoreLLVMUsed && !FU->user_empty()) {
         const User *FUU = FU;
-        if (isa<BitCastOperator>(FU) && FU->hasOneUse() &&
-            !FU->user_begin()->user_empty())
+        if (isa<BitCastOperator, AddrSpaceCastOperator>(FU) &&
+            FU->hasOneUse() && !FU->user_begin()->user_empty())
           FUU = *FU->user_begin();
         if (llvm::all_of(FUU->users(), [](const User *U) {
               if (const auto *GV = dyn_cast<GlobalVariable>(U))
@@ -1866,6 +1946,13 @@ bool Function::hasAddressTaken(const User **PutOffender,
         *PutOffender = FU;
       return true;
     }
+
+    if (IgnoreAssumeLikeCalls) {
+      if (const auto *I = dyn_cast<IntrinsicInst>(Call))
+        if (I->isAssumeLikeIntrinsic())
+          continue;
+    }
+
     if (!Call->isCallee(&U) || Call->getFunctionType() != getFunctionType()) {
       if (IgnoreARCAttachedCall &&
           Call->isOperandBundleOfType(LLVMContext::OB_clang_arc_attachedcall,
@@ -1991,7 +2078,7 @@ void Function::setEntryCount(uint64_t Count, Function::ProfileCountType Type,
   setEntryCount(ProfileCount(Count, Type), Imports);
 }
 
-Optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
+std::optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
   MDNode *MD = getMetadata(LLVMContext::MD_prof);
   if (MD && MD->getOperand(0))
     if (MDString *MDS = dyn_cast<MDString>(MD->getOperand(0))) {
@@ -2001,7 +2088,7 @@ Optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
         // A value of -1 is used for SamplePGO when there were no samples.
         // Treat this the same as unknown.
         if (Count == (uint64_t)-1)
-          return None;
+          return std::nullopt;
         return ProfileCount(Count, PCT_Real);
       } else if (AllowSynthetic &&
                  MDS->getString().equals("synthetic_function_entry_count")) {
@@ -2010,7 +2097,7 @@ Optional<ProfileCount> Function::getEntryCount(bool AllowSynthetic) const {
         return ProfileCount(Count, PCT_Synthetic);
       }
     }
-  return None;
+  return std::nullopt;
 }
 
 DenseSet<GlobalValue::GUID> Function::getImportGUIDs() const {
@@ -2031,7 +2118,7 @@ void Function::setSectionPrefix(StringRef Prefix) {
               MDB.createFunctionSectionPrefix(Prefix));
 }
 
-Optional<StringRef> Function::getSectionPrefix() const {
+std::optional<StringRef> Function::getSectionPrefix() const {
   if (MDNode *MD = getMetadata(LLVMContext::MD_section_prefix)) {
     assert(cast<MDString>(MD->getOperand(0))
                ->getString()
@@ -2039,7 +2126,7 @@ Optional<StringRef> Function::getSectionPrefix() const {
            "Metadata not match");
     return cast<MDString>(MD->getOperand(1))->getString();
   }
-  return None;
+  return std::nullopt;
 }
 
 bool Function::nullPointerIsDefined() const {

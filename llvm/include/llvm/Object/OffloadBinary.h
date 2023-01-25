@@ -151,6 +151,28 @@ private:
   const Entry *TheEntry;
 };
 
+/// A class to contain the binary information for a single OffloadBinary that
+/// owns its memory.
+class OffloadFile : public OwningBinary<OffloadBinary> {
+public:
+  using TargetID = std::pair<StringRef, StringRef>;
+
+  OffloadFile(std::unique_ptr<OffloadBinary> Binary,
+              std::unique_ptr<MemoryBuffer> Buffer)
+      : OwningBinary<OffloadBinary>(std::move(Binary), std::move(Buffer)) {}
+
+  /// We use the Triple and Architecture pair to group linker inputs together.
+  /// This conversion function lets us use these inputs in a hash-map.
+  operator TargetID() const {
+    return std::make_pair(getBinary()->getTriple(), getBinary()->getArch());
+  }
+};
+
+/// Extracts embedded device offloading code from a memory \p Buffer to a list
+/// of \p Binaries.
+Error extractOffloadBinaries(MemoryBufferRef Buffer,
+                             SmallVectorImpl<OffloadFile> &Binaries);
+
 /// Convert a string \p Name to an image kind.
 ImageKind getImageKind(StringRef Name);
 

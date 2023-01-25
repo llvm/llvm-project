@@ -10,9 +10,214 @@
 #include "gtest/gtest.h"
 #include "tools.h"
 #include "flang/Runtime/type-code.h"
+#include <vector>
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
+
+template <int KIND>
+using BesselFuncType = std::function<void(Descriptor &, int32_t, int32_t,
+    CppTypeFor<TypeCategory::Real, KIND>, CppTypeFor<TypeCategory::Real, KIND>,
+    CppTypeFor<TypeCategory::Real, KIND>, const char *, int)>;
+
+template <int KIND>
+using BesselX0FuncType =
+    std::function<void(Descriptor &, int32_t, int32_t, const char *, int)>;
+
+template <int KIND>
+constexpr CppTypeFor<TypeCategory::Real, KIND>
+    besselEpsilon = CppTypeFor<TypeCategory::Real, KIND>(1e-4);
+
+template <int KIND>
+static void testBesselJn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, KIND> x,
+    const std::vector<CppTypeFor<TypeCategory::Real, KIND>> &expected) {
+  StaticDescriptor<1> desc;
+  Descriptor &result{desc.descriptor()};
+  unsigned len = expected.size();
+
+  CppTypeFor<TypeCategory::Real, KIND> anc0 = len > 0 ? expected[len - 1] : 0.0;
+  CppTypeFor<TypeCategory::Real, KIND> anc1 = len > 1 ? expected[len - 2] : 0.0;
+
+  rtFunc(result, n1, n2, x, anc0, anc1, __FILE__, __LINE__);
+
+  EXPECT_EQ(result.type(), (TypeCode{TypeCategory::Real, KIND}));
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(
+      result.ElementBytes(), sizeof(CppTypeFor<TypeCategory::Real, KIND>));
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), len);
+
+  for (size_t j{0}; j < len; ++j) {
+    EXPECT_NEAR(
+        (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
+            j)),
+        expected[j], besselEpsilon<KIND>);
+  }
+}
+
+template <int KIND>
+static void testBesselJnX0(
+    BesselX0FuncType<KIND> rtFunc, int32_t n1, int32_t n2) {
+  StaticDescriptor<1> desc;
+  Descriptor &result{desc.descriptor()};
+
+  rtFunc(result, n1, n2, __FILE__, __LINE__);
+
+  EXPECT_EQ(result.type(), (TypeCode{TypeCategory::Real, KIND}));
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), n2 >= n1 ? n2 - n1 + 1 : 0);
+
+  if (n2 < n1) {
+    return;
+  }
+
+  EXPECT_NEAR(
+      (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
+          0)),
+      (n1 == 0) ? 1.0 : 0.0, 1e-5);
+
+  for (int j{1}; j < (n2 - n1 + 1); ++j) {
+    EXPECT_NEAR(
+        (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
+            j)),
+        0.0, besselEpsilon<KIND>);
+  }
+}
+
+template <int KIND> static void testBesselJn(BesselFuncType<KIND> rtFunc) {
+  testBesselJn<KIND>(rtFunc, 1, 0, 1.0, {});
+  testBesselJn<KIND>(rtFunc, 0, 0, 1.0, {0.765197694});
+  testBesselJn<KIND>(rtFunc, 0, 1, 1.0, {0.765197694, 0.440050572});
+  testBesselJn<KIND>(
+      rtFunc, 0, 2, 1.0, {0.765197694, 0.440050572, 0.114903487});
+  testBesselJn<KIND>(rtFunc, 1, 5, 5.0,
+      {-0.327579111, 0.046565145, 0.364831239, 0.391232371, 0.261140555});
+}
+
+template <int KIND> static void testBesselJnX0(BesselX0FuncType<KIND> rtFunc) {
+  testBesselJnX0<KIND>(rtFunc, 1, 0);
+  testBesselJnX0<KIND>(rtFunc, 0, 0);
+  testBesselJnX0<KIND>(rtFunc, 1, 1);
+  testBesselJnX0<KIND>(rtFunc, 0, 3);
+  testBesselJnX0<KIND>(rtFunc, 1, 4);
+}
+
+static void testBesselJn() {
+  testBesselJn<4>(RTNAME(BesselJn_4));
+  testBesselJn<8>(RTNAME(BesselJn_8));
+#if LDBL_MANT_DIG == 64
+  testBesselJn<10>(RTNAME(BesselJn_10));
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  testBesselJn<16>(RTNAME(BesselJn_16));
+#endif
+
+  testBesselJnX0<4>(RTNAME(BesselJnX0_4));
+  testBesselJnX0<8>(RTNAME(BesselJnX0_8));
+#if LDBL_MANT_DIG == 64
+  testBesselJnX0<10>(RTNAME(BesselJnX0_10));
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  testBesselJnX0<16>(RTNAME(BesselJnX0_16));
+#endif
+}
+
+TEST(Transformational, BesselJn) { testBesselJn(); }
+
+template <int KIND>
+static void testBesselYn(BesselFuncType<KIND> rtFunc, int32_t n1, int32_t n2,
+    CppTypeFor<TypeCategory::Real, KIND> x,
+    const std::vector<CppTypeFor<TypeCategory::Real, KIND>> &expected) {
+  StaticDescriptor<1> desc;
+  Descriptor &result{desc.descriptor()};
+  unsigned len = expected.size();
+
+  CppTypeFor<TypeCategory::Real, KIND> anc0 = len > 0 ? expected[0] : 0.0;
+  CppTypeFor<TypeCategory::Real, KIND> anc1 = len > 1 ? expected[1] : 0.0;
+
+  rtFunc(result, n1, n2, x, anc0, anc1, __FILE__, __LINE__);
+
+  EXPECT_EQ(result.type(), (TypeCode{TypeCategory::Real, KIND}));
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(
+      result.ElementBytes(), sizeof(CppTypeFor<TypeCategory::Real, KIND>));
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), len);
+
+  for (size_t j{0}; j < len; ++j) {
+    EXPECT_NEAR(
+        (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
+            j)),
+        expected[j], besselEpsilon<KIND>);
+  }
+}
+
+template <int KIND>
+static void testBesselYnX0(
+    BesselX0FuncType<KIND> rtFunc, int32_t n1, int32_t n2) {
+  StaticDescriptor<1> desc;
+  Descriptor &result{desc.descriptor()};
+
+  rtFunc(result, n1, n2, __FILE__, __LINE__);
+
+  EXPECT_EQ(result.type(), (TypeCode{TypeCategory::Real, KIND}));
+  EXPECT_EQ(result.rank(), 1);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), n2 >= n1 ? n2 - n1 + 1 : 0);
+
+  if (n2 < n1) {
+    return;
+  }
+
+  for (int j{0}; j < (n2 - n1 + 1); ++j) {
+    EXPECT_EQ(
+        (*result.ZeroBasedIndexedElement<CppTypeFor<TypeCategory::Real, KIND>>(
+            j)),
+        (-std::numeric_limits<
+            CppTypeFor<TypeCategory::Real, KIND>>::infinity()));
+  }
+}
+
+template <int KIND> static void testBesselYn(BesselFuncType<KIND> rtFunc) {
+  testBesselYn<KIND>(rtFunc, 1, 0, 1.0, {});
+  testBesselYn<KIND>(rtFunc, 0, 0, 1.0, {0.08825695});
+  testBesselYn<KIND>(rtFunc, 0, 1, 1.0, {0.08825695, -0.7812128});
+  testBesselYn<KIND>(rtFunc, 0, 2, 1.0, {0.0882569555, -0.7812128, -1.6506826});
+  testBesselYn<KIND>(rtFunc, 1, 5, 1.0,
+      {-0.7812128, -1.6506826, -5.8215175, -33.278423, -260.40588});
+}
+
+template <int KIND> static void testBesselYnX0(BesselX0FuncType<KIND> rtFunc) {
+  testBesselYnX0<KIND>(rtFunc, 1, 0);
+  testBesselYnX0<KIND>(rtFunc, 0, 0);
+  testBesselYnX0<KIND>(rtFunc, 1, 1);
+  testBesselYnX0<KIND>(rtFunc, 0, 3);
+  testBesselYnX0<KIND>(rtFunc, 1, 4);
+}
+
+static void testBesselYn() {
+  testBesselYn<4>(RTNAME(BesselYn_4));
+  testBesselYn<8>(RTNAME(BesselYn_8));
+#if LDBL_MANT_DIG == 64
+  testBesselYn<10>(RTNAME(BesselYn_10));
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  testBesselYn<16>(RTNAME(BesselYn_16));
+#endif
+
+  testBesselYnX0<4>(RTNAME(BesselYnX0_4));
+  testBesselYnX0<8>(RTNAME(BesselYnX0_8));
+#if LDBL_MANT_DIG == 64
+  testBesselYnX0<10>(RTNAME(BesselYnX0_10));
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+  testBesselYnX0<16>(RTNAME(BesselYnX0_16));
+#endif
+}
+
+TEST(Transformational, BesselYn) { testBesselYn(); }
 
 TEST(Transformational, Shifts) {
   // ARRAY  1 3 5
@@ -317,3 +522,31 @@ TEST(Transformational, Unpack) {
   }
   result.Destroy();
 }
+
+#if LDBL_MANT_DIG == 64
+// Make sure the destination descriptor is created by the runtime
+// with proper element size, when REAL*10 maps to 'long double'.
+#define Real10CppType long double
+TEST(Transformational, TransposeReal10) {
+  // ARRAY  1 3 5
+  //        2 4 6
+  auto array{MakeArray<TypeCategory::Real, 10>(std::vector<int>{2, 3},
+      std::vector<Real10CppType>{1.0, 2.0, 3.0, 4.0, 5.0, 6.0},
+      sizeof(Real10CppType))};
+  StaticDescriptor<2, true> statDesc;
+  Descriptor &result{statDesc.descriptor()};
+  RTNAME(Transpose)(result, *array, __FILE__, __LINE__);
+  EXPECT_EQ(result.ElementBytes(), sizeof(Real10CppType));
+  EXPECT_EQ(result.type(), array->type());
+  EXPECT_EQ(result.rank(), 2);
+  EXPECT_EQ(result.GetDimension(0).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(0).Extent(), 3);
+  EXPECT_EQ(result.GetDimension(1).LowerBound(), 1);
+  EXPECT_EQ(result.GetDimension(1).Extent(), 2);
+  static Real10CppType expect[6]{1.0, 3.0, 5.0, 2.0, 4.0, 6.0};
+  for (int j{0}; j < 6; ++j) {
+    EXPECT_EQ(*result.ZeroBasedIndexedElement<Real10CppType>(j), expect[j]);
+  }
+  result.Destroy();
+}
+#endif

@@ -1,4 +1,4 @@
-; RUN: opt -S -licm %s | FileCheck %s
+; RUN: opt -S -passes=licm %s | FileCheck %s
 
 ; Volatile register shouldn't be hoisted ourside loops.
 define i32 @test_read() {

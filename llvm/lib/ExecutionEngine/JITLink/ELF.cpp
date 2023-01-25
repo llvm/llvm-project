@@ -14,6 +14,8 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_i386.h"
+#include "llvm/ExecutionEngine/JITLink/ELF_loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_riscv.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/Object/ELF.h"
@@ -67,10 +69,14 @@ createLinkGraphFromELFObject(MemoryBufferRef ObjectBuffer) {
   switch (*TargetMachineArch) {
   case ELF::EM_AARCH64:
     return createLinkGraphFromELFObject_aarch64(ObjectBuffer);
+  case ELF::EM_LOONGARCH:
+    return createLinkGraphFromELFObject_loongarch(ObjectBuffer);
   case ELF::EM_RISCV:
     return createLinkGraphFromELFObject_riscv(ObjectBuffer);
   case ELF::EM_X86_64:
     return createLinkGraphFromELFObject_x86_64(ObjectBuffer);
+  case ELF::EM_386:
+    return createLinkGraphFromELFObject_i386(ObjectBuffer);
   default:
     return make_error<JITLinkError>(
         "Unsupported target machine architecture in ELF object " +
@@ -84,12 +90,19 @@ void link_ELF(std::unique_ptr<LinkGraph> G,
   case Triple::aarch64:
     link_ELF_aarch64(std::move(G), std::move(Ctx));
     return;
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+    link_ELF_loongarch(std::move(G), std::move(Ctx));
+    return;
   case Triple::riscv32:
   case Triple::riscv64:
     link_ELF_riscv(std::move(G), std::move(Ctx));
     return;
   case Triple::x86_64:
     link_ELF_x86_64(std::move(G), std::move(Ctx));
+    return;
+  case Triple::x86:
+    link_ELF_i386(std::move(G), std::move(Ctx));
     return;
   default:
     Ctx->notifyFailed(make_error<JITLinkError>(

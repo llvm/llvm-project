@@ -1,7 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+multivalue,+tail-call | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
-; RUN: llc < %s --filetype=obj -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
+; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
 
 ; Test that the multivalue calls, returns, function types, and block
 ; types work as expected.
@@ -61,7 +61,7 @@ define %pair @pair_call_return() {
 ; REF:        call_indirect __indirect_function_table, () -> (i32, i64){{$}}
 ; CHECK-NEXT: end_function{{$}}
 ; REGS: call_indirect $push{{[0-9]+}}=, $push{{[0-9]+}}=, $0{{$}}
-define %pair @pair_call_indirect(%pair()* %f) {
+define %pair @pair_call_indirect(ptr %f) {
   %p = call %pair %f()
   ret %pair %p
 }
@@ -242,7 +242,7 @@ define %rpair @pair_pass_through_swap(%pair %p) {
 ; CHECK-NEXT: .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT: end_loop{{$}}
 ; CHECK-NEXT: end_function{{$}}
-define %pair @minimal_loop(i32* %p) {
+define %pair @minimal_loop(ptr %p) {
 entry:
   br label %loop
 loop:

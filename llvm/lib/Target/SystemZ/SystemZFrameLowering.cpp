@@ -301,8 +301,8 @@ SystemZELFFrameLowering::SystemZELFFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the register save area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = array_lengthof(ELFSpillOffsetTable); I != E; ++I)
-    RegSpillOffsets[ELFSpillOffsetTable[I].Reg] = ELFSpillOffsetTable[I].Offset;
+  for (const auto &Entry : ELFSpillOffsetTable)
+    RegSpillOffsets[Entry.Reg] = Entry.Offset;
 }
 
 // Add GPR64 to the save instruction being built by MIB, which is in basic
@@ -370,12 +370,12 @@ bool SystemZELFFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI);
+                               &SystemZ::FP64BitRegClass, TRI, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI);
+                               &SystemZ::VR128BitRegClass, TRI, Register());
     }
   }
 
@@ -399,10 +399,10 @@ bool SystemZELFFrameLowering::restoreCalleeSavedRegisters(
     Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI);
+                                &SystemZ::FP64BitRegClass, TRI, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI);
+                                &SystemZ::VR128BitRegClass, TRI, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -906,9 +906,8 @@ SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the local are area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = array_lengthof(XPLINKSpillOffsetTable); I != E; ++I)
-    RegSpillOffsets[XPLINKSpillOffsetTable[I].Reg] =
-        XPLINKSpillOffsetTable[I].Offset;
+  for (const auto &Entry : XPLINKSpillOffsetTable)
+    RegSpillOffsets[Entry.Reg] = Entry.Offset;
 }
 
 // Checks if the function is a potential candidate for being a XPLeaf routine.
@@ -1114,12 +1113,12 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::FP64BitRegClass, TRI);
+                               &SystemZ::FP64BitRegClass, TRI, Register());
     }
     if (SystemZ::VR128BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
       TII->storeRegToStackSlot(MBB, MBBI, Reg, true, I.getFrameIdx(),
-                               &SystemZ::VR128BitRegClass, TRI);
+                               &SystemZ::VR128BitRegClass, TRI, Register());
     }
   }
 
@@ -1142,14 +1141,14 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs in the normal TargetInstrInfo way.
-  for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-    Register Reg = CSI[I].getReg();
+  for (const CalleeSavedInfo &I : CSI) {
+    Register Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
-                                &SystemZ::FP64BitRegClass, TRI);
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
+                                &SystemZ::FP64BitRegClass, TRI, Register());
     if (SystemZ::VR128BitRegClass.contains(Reg))
-      TII->loadRegFromStackSlot(MBB, MBBI, Reg, CSI[I].getFrameIdx(),
-                                &SystemZ::VR128BitRegClass, TRI);
+      TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),
+                                &SystemZ::VR128BitRegClass, TRI, Register());
   }
 
   // Restore call-saved GPRs (but not call-clobbered varargs, which at
@@ -1176,8 +1175,8 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
       MIB.addImm(Regs.getStackPointerBias() + RestoreGPRs.GPROffset);
 
       // Do a second scan adding regs as being defined by instruction
-      for (unsigned I = 0, E = CSI.size(); I != E; ++I) {
-        Register Reg = CSI[I].getReg();
+      for (const CalleeSavedInfo &I : CSI) {
+        Register Reg = I.getReg();
         if (Reg > RestoreGPRs.LowGPR && Reg < RestoreGPRs.HighGPR)
           MIB.addReg(Reg, RegState::ImplicitDefine);
       }

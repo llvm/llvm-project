@@ -508,7 +508,6 @@ static CallOpenApplicationFunction FBSCallOpenApplicationFunction =
 #define _POSIX_SPAWN_DISABLE_ASLR 0x0100
 #endif
 
-
 MachProcess::MachProcess()
     : m_pid(0), m_cpu_type(0), m_child_stdin(-1), m_child_stdout(-1),
       m_child_stderr(-1), m_path(), m_args(), m_task(this),
@@ -516,8 +515,8 @@ MachProcess::MachProcess()
       m_stdio_mutex(PTHREAD_MUTEX_RECURSIVE), m_stdout_data(),
       m_profile_enabled(false), m_profile_interval_usec(0), m_profile_thread(0),
       m_profile_data_mutex(PTHREAD_MUTEX_RECURSIVE), m_profile_data(),
-      m_profile_events(0, eMachProcessProfileCancel),
-      m_thread_actions(), m_exception_messages(),
+      m_profile_events(0, eMachProcessProfileCancel), m_thread_actions(),
+      m_exception_messages(),
       m_exception_messages_mutex(PTHREAD_MUTEX_RECURSIVE), m_thread_list(),
       m_activities(), m_state(eStateUnloaded),
       m_state_mutex(PTHREAD_MUTEX_RECURSIVE), m_events(0, kAllEventsMask),
@@ -528,7 +527,8 @@ MachProcess::MachProcess()
       m_dyld_process_info_create(nullptr),
       m_dyld_process_info_for_each_image(nullptr),
       m_dyld_process_info_release(nullptr),
-      m_dyld_process_info_get_cache(nullptr) {
+      m_dyld_process_info_get_cache(nullptr),
+      m_dyld_process_info_get_state(nullptr) {
   m_dyld_process_info_create =
       (void *(*)(task_t task, uint64_t timestamp, kern_return_t * kernelError))
           dlsym(RTLD_DEFAULT, "_dyld_process_info_create");
@@ -542,6 +542,8 @@ MachProcess::MachProcess()
       RTLD_DEFAULT, "_dyld_process_info_get_cache");
   m_dyld_process_info_get_platform = (uint32_t (*)(void *info))dlsym(
       RTLD_DEFAULT, "_dyld_process_info_get_platform");
+  m_dyld_process_info_get_state = (void (*)(void *info, void *stateInfo))dlsym(
+      RTLD_DEFAULT, "_dyld_process_info_get_state");
 
   DNBLogThreadedIf(LOG_PROCESS | LOG_VERBOSE, "%s", __PRETTY_FUNCTION__);
 }
@@ -720,7 +722,8 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   return info;
 }
 
-const char *MachProcess::GetPlatformString(unsigned char platform) {
+std::optional<std::string>
+MachProcess::GetPlatformString(unsigned char platform) {
   switch (platform) {
   case PLATFORM_MACOS:
     return "macosx";
@@ -742,8 +745,10 @@ const char *MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
+  default:
+    DNBLogError("Unknown platform %u found for one binary", platform);
+    return std::nullopt;
   }
-  return nullptr;
 }
 
 static bool mach_header_validity_test(uint32_t magic, uint32_t cputype) {
@@ -867,7 +872,8 @@ bool MachProcess::GetMachOInformationFromMemory(
     }
     if (DeploymentInfo deployment_info = GetDeploymentInfo(
             lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
-      const char *lc_platform = GetPlatformString(deployment_info.platform);
+      std::optional<std::string> lc_platform =
+          GetPlatformString(deployment_info.platform);
       if (dyld_platform != PLATFORM_MACCATALYST &&
           inf.min_version_os_name == "macosx") {
         // macCatalyst support.
@@ -882,7 +888,7 @@ bool MachProcess::GetMachOInformationFromMemory(
         // processed, ignore this one, which is presumed to be a
         // PLATFORM_MACCATALYST one.
       } else {
-        inf.min_version_os_name = lc_platform;
+        inf.min_version_os_name = lc_platform.value_or("");
         inf.min_version_os_version = "";
         inf.min_version_os_version +=
             std::to_string(deployment_info.major_version);
@@ -2279,6 +2285,7 @@ task_t MachProcess::ExceptionMessageBundleComplete() {
         m_thread_list.Clear();
         m_activities.Clear();
         m_breakpoints.DisableAll();
+        m_task.ClearAllocations();
       }
 
       if (m_sent_interrupt_signo != 0) {
@@ -2424,6 +2431,84 @@ size_t MachProcess::GetAvailableSTDOUT(char *buf, size_t buf_size) {
 nub_addr_t MachProcess::GetDYLDAllImageInfosAddress() {
   DNBError err;
   return m_task.GetDYLDAllImageInfosAddress(err);
+}
+
+/// From dyld SPI header dyld_process_info.h
+struct dyld_process_state_info {
+  uint64_t timestamp;
+  uint32_t imageCount;
+  uint32_t initialImageCount;
+  // one of dyld_process_state_* values
+  uint8_t dyldState;
+};
+enum {
+  dyld_process_state_not_started = 0x00,
+  dyld_process_state_dyld_initialized = 0x10,
+  dyld_process_state_terminated_before_inits = 0x20,
+  dyld_process_state_libSystem_initialized = 0x30,
+  dyld_process_state_running_initializers = 0x40,
+  dyld_process_state_program_running = 0x50,
+  dyld_process_state_dyld_terminated = 0x60
+};
+
+JSONGenerator::ObjectSP MachProcess::GetDyldProcessState() {
+  JSONGenerator::DictionarySP reply_sp(new JSONGenerator::Dictionary());
+  if (!m_dyld_process_info_get_state) {
+    reply_sp->AddStringItem("error",
+                            "_dyld_process_info_get_state unavailable");
+    return reply_sp;
+  }
+  if (!m_dyld_process_info_create) {
+    reply_sp->AddStringItem("error", "_dyld_process_info_create unavailable");
+    return reply_sp;
+  }
+
+  kern_return_t kern_ret;
+  dyld_process_info info =
+      m_dyld_process_info_create(m_task.TaskPort(), 0, &kern_ret);
+  if (!info || kern_ret != KERN_SUCCESS) {
+    reply_sp->AddStringItem(
+        "error", "Unable to create dyld_process_info for inferior task");
+    return reply_sp;
+  }
+
+  struct dyld_process_state_info state_info;
+  m_dyld_process_info_get_state(info, &state_info);
+  reply_sp->AddIntegerItem("process_state_value", state_info.dyldState);
+  switch (state_info.dyldState) {
+  case dyld_process_state_not_started:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_not_started");
+    break;
+  case dyld_process_state_dyld_initialized:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_dyld_initialized");
+    break;
+  case dyld_process_state_terminated_before_inits:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_terminated_before_inits");
+    break;
+  case dyld_process_state_libSystem_initialized:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_libSystem_initialized");
+    break;
+  case dyld_process_state_running_initializers:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_running_initializers");
+    break;
+  case dyld_process_state_program_running:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_program_running");
+    break;
+  case dyld_process_state_dyld_terminated:
+    reply_sp->AddStringItem("process_state string",
+                            "dyld_process_state_dyld_terminated");
+    break;
+  };
+
+  m_dyld_process_info_release(info);
+
+  return reply_sp;
 }
 
 size_t MachProcess::GetAvailableSTDERR(char *buf, size_t buf_size) { return 0; }
@@ -3303,7 +3388,7 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     return INVALID_NUB_PROCESS;
 
   flags = POSIX_SPAWN_START_SUSPENDED | POSIX_SPAWN_SETSIGDEF |
-          POSIX_SPAWN_SETSIGMASK;
+          POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETPGROUP;
   if (disable_aslr)
     flags |= _POSIX_SPAWN_DISABLE_ASLR;
 

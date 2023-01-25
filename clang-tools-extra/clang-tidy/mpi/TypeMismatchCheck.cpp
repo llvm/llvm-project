@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace mpi {
+namespace clang::tidy::mpi {
 
 /// Check if a BuiltinType::Kind matches the MPI datatype.
 ///
@@ -183,8 +181,10 @@ isCXXComplexTypeMatching(const TemplateSpecializationType *const Template,
   if (Template->getAsCXXRecordDecl()->getName() != "complex")
     return true;
 
-  const auto *Builtin =
-      Template->getArg(0).getAsType().getTypePtr()->getAs<BuiltinType>();
+  const auto *Builtin = Template->template_arguments()[0]
+                            .getAsType()
+                            .getTypePtr()
+                            ->getAs<BuiltinType>();
 
   if (Builtin &&
       !isMPITypeMatching(ComplexCXXMatches, Builtin->getKind(), MPIDatatype)) {
@@ -328,6 +328,4 @@ void TypeMismatchCheck::checkArguments(ArrayRef<const Type *> BufferTypes,
 }
 
 void TypeMismatchCheck::onEndOfTranslationUnit() { FuncClassifier.reset(); }
-} // namespace mpi
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::mpi

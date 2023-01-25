@@ -7,38 +7,23 @@ target triple = "aarch64-unknown-linux-gnu"
 ; bigger than NEON. However, having no support opens us up to a code generator
 ; hang when expanding BUILD_VECTOR. Here we just validate the promblematic case
 ; successfully exits code generation.
-define void @hang_when_merging_stores_after_legalisation(<8 x i32>* %a, <2 x i32> %b) vscale_range(2,2) #0 {
+define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) vscale_range(2,2) #0 {
 ; CHECK-LABEL: hang_when_merging_stores_after_legalisation:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    .cfi_def_cfa w29, 16
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    stp s0, s0, [sp, #24]
-; CHECK-NEXT:    stp s0, s0, [sp, #16]
-; CHECK-NEXT:    stp s0, s0, [sp, #8]
-; CHECK-NEXT:    stp s0, s0, [sp]
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [sp]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
+; CHECK-NEXT:    mov z0.s, s0
 ; CHECK-NEXT:    mov z1.d, z0.d
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #16
 ; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x0]
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <8 x i32> zeroinitializer
   %interleaved.vec = shufflevector <8 x i32> %splat, <8 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
-  store <8 x i32> %interleaved.vec, <8 x i32>* %a, align 4
+  store <8 x i32> %interleaved.vec, ptr %a, align 4
   ret void
 }
 
 ; Ensure we don't crash when trying to lower a shuffle via an extract
-define void @crash_when_lowering_extract_shuffle(<32 x i32>* %dst, i1 %cond) vscale_range(2,2) #0 {
+define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_range(2,2) #0 {
 ; CHECK-LABEL: crash_when_lowering_extract_shuffle:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tbnz w1, #0, .LBB1_2
@@ -123,9 +108,9 @@ define void @crash_when_lowering_extract_shuffle(<32 x i32>* %dst, i1 %cond) vsc
   br i1 %cond, label %exit, label %vector.body
 
 vector.body:
-  %1 = load <32 x i32>, <32 x i32>* %dst, align 16
+  %1 = load <32 x i32>, ptr %dst, align 16
   %predphi = select <32 x i1> %broadcast.splat, <32 x i32> zeroinitializer, <32 x i32> %1
-  store <32 x i32> %predphi, <32 x i32>* %dst, align 16
+  store <32 x i32> %predphi, ptr %dst, align 16
   br label %exit
 
 exit:

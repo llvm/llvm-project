@@ -1,8 +1,8 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck -DPTR=32 %s
 ; RUN: llc < %s --mtriple=wasm64-unknown-unknown -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck -DPTR=64 %s
 
-declare void @ext_func(i64* %ptr)
-declare void @ext_func_i32(i32* %ptr)
+declare void @ext_func(ptr %ptr)
+declare void @ext_func_i32(ptr %ptr)
 
 ; CHECK: .globaltype	__stack_pointer, i[[PTR]]{{$}}
 
@@ -19,7 +19,7 @@ define void @alloca32() noredzone {
  ; CHECK: local.get $push[[L4:.+]]=, [[SP]]{{$}}
  ; CHECK: i32.const $push[[L0:.+]]=, 0
  ; CHECK: i32.store 12($pop[[L4]]), $pop[[L0]]
- store i32 0, i32* %retval
+ store i32 0, ptr %retval
  ; CHECK: local.get $push[[L6:.+]]=, [[SP]]{{$}}
  ; CHECK-NEXT: i[[PTR]].const $push[[L5:.+]]=, 16
  ; CHECK-NEXT: i[[PTR]].add $push[[L7:.+]]=, $pop[[L6]], $pop[[L5]]
@@ -36,8 +36,8 @@ define void @alloca3264() {
  ; CHECK-NEXT: local.tee $push[[L5:.+]]=, [[SP:.+]], $pop[[L6]]
  %r1 = alloca i32
  %r2 = alloca double
- store i32 0, i32* %r1
- store double 0.0, double* %r2
+ store i32 0, ptr %r1
+ store double 0.0, ptr %r2
  ; CHECK-NEXT: i64.const $push[[L1:.+]]=, 0
  ; CHECK-NEXT: i64.store 0($pop[[L5]]), $pop[[L1]]
  ; CHECK-NEXT: local.get $push[[L2:.+]]=, [[SP]]{{$}}
@@ -64,10 +64,9 @@ define void @allocarray() {
  ; CHECK-NEXT: local.get $push[[L4:.+]]=, 0{{$}}
  ; CHECK-NEXT: i32.const $push[[L10:.+]]=, 1{{$}}
  ; CHECK-NEXT: i32.store 12($pop[[L4]]), $pop[[L10]]{{$}}
- %p = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 0
- store i32 1, i32* %p
- %p2 = getelementptr [33 x i32], [33 x i32]* %r, i32 0, i32 3
- store i32 1, i32* %p2
+ store i32 1, ptr %r
+ %p2 = getelementptr [33 x i32], ptr %r, i32 0, i32 3
+ store i32 1, ptr %p2
 
  ; CHECK-NEXT: local.get $push[[L2:.+]]=, [[SP]]{{$}}
  ; CHECK-NEXT: i[[PTR]].const $push[[L7:.+]]=, 144
@@ -77,7 +76,7 @@ define void @allocarray() {
 }
 
 ; CHECK-LABEL: non_mem_use
-define void @non_mem_use(i8** %addr) {
+define void @non_mem_use(ptr %addr) {
  ; CHECK: i[[PTR]].const $push[[L2:.+]]=, 48
  ; CHECK-NEXT: i[[PTR]].sub $push[[L12:.+]]=, {{.+}}, $pop[[L2]]
  ; CHECK-NEXT: local.tee $push[[L11:.+]]=, [[SP:.+]], $pop[[L12]]
@@ -90,19 +89,18 @@ define void @non_mem_use(i8** %addr) {
  ; CHECK: i[[PTR]].const $push[[OFF:.+]]=, 8
  ; CHECK-NEXT: i[[PTR]].add $push[[ARG1:.+]]=, $pop[[L3]], $pop[[OFF]]
  ; CHECK-NEXT: call ext_func, $pop[[ARG1]]
- call void @ext_func(i64* %r)
+ call void @ext_func(ptr %r)
  ; %r2 is at SP+0, no add needed
  ; CHECK: local.get $push[[L4:.+]]=, [[SP]]
  ; CHECK-NEXT: call ext_func, $pop[[L4]]
- call void @ext_func(i64* %r2)
+ call void @ext_func(ptr %r2)
  ; Use as a value, but in a store
  ; %buf is at SP+16
  ; CHECK: local.get $push[[L5:.+]]=, [[SP]]
  ; CHECK: i[[PTR]].const $push[[OFF:.+]]=, 16
  ; CHECK-NEXT: i[[PTR]].add $push[[VAL:.+]]=, $pop[[L5]], $pop[[OFF]]
  ; CHECK-NEXT: i[[PTR]].store 0($pop{{.+}}), $pop[[VAL]]
- %gep = getelementptr inbounds [27 x i8], [27 x i8]* %buf, i32 0, i32 0
- store i8* %gep, i8** %addr
+ store ptr %buf, ptr %addr
  ret void
 }
 
@@ -117,13 +115,12 @@ define void @allocarray_inbounds() {
  %r = alloca [5 x i32]
  ; CHECK: i32.const $push[[L3:.+]]=, 1
  ; CHECK-DAG: i32.store 24(${{.+}}), $pop[[L3]]
- %p = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 0
- store i32 1, i32* %p
+ store i32 1, ptr %r
  ; This store should have both the GEP and the FI folded into it.
  ; CHECK-DAG: i32.store 12(${{.+}}), $pop
- %p2 = getelementptr inbounds [5 x i32], [5 x i32]* %r, i32 0, i32 3
- store i32 1, i32* %p2
- call void @ext_func(i64* null);
+ %p2 = getelementptr inbounds [5 x i32], ptr %r, i32 0, i32 3
+ store i32 1, ptr %p2
+ call void @ext_func(ptr null);
  ; CHECK: call ext_func
  ; CHECK: i[[PTR]].const $push[[L5:.+]]=, 32{{$}}
  ; CHECK-NEXT: i[[PTR]].add $push[[L7:.+]]=, ${{.+}}, $pop[[L5]]
@@ -142,7 +139,7 @@ define void @dynamic_alloca(i32 %alloc) {
  %r = alloca i32, i32 %alloc
  ; Target-independent codegen also calculates the store addr
  ; CHECK: call ext_func_i32
- call void @ext_func_i32(i32* %r)
+ call void @ext_func_i32(ptr %r)
  ; CHECK: global.set __stack_pointer, $pop{{.+}}
  ret void
 }
@@ -158,7 +155,7 @@ define void @dynamic_alloca_redzone(i32 %alloc) {
  ; CHECK: local.get $push[[L7:.+]]=, [[SP2]]{{$}}
  ; CHECK-NEXT: i32.const $push[[L6:.+]]=, 0{{$}}
  ; CHECK-NEXT: i32.store 0($pop[[L7]]), $pop[[L6]]{{$}}
- store i32 0, i32* %r
+ store i32 0, ptr %r
  ; CHECK-NEXT: return
  ret void
 }
@@ -178,7 +175,7 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; CHECK-NEXT: i32.const $push[[L0:.+]]=, 101
  ; CHECK-NEXT: i32.store [[static_offset:.+]]($pop[[pushedFP]]), $pop[[L0]]
  %static = alloca i32
- store volatile i32 101, i32* %static
+ store volatile i32 101, ptr %static
 
  ; Decrement SP in the body by the dynamic amount.
  ; CHECK: i[[PTR]].sub
@@ -197,8 +194,8 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; CHECK-NEXT: local.get $push[[L9:.+]]=, [[dynamic_local]]{{$}}
  ; CHECK-NEXT: i32.const $push[[L8:.+]]=, 103
  ; CHECK-NEXT: i32.store 0($pop[[L9]]), $pop[[L8]]
- store volatile i32 102, i32* %static
- store volatile i32 103, i32* %dynamic
+ store volatile i32 102, ptr %static
+ store volatile i32 103, ptr %dynamic
 
  ; Decrement SP in the body by the dynamic amount.
  ; CHECK: i[[PTR]].sub
@@ -218,9 +215,9 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ; CHECK-NEXT: local.get $push[[L23:.+]]=, [[dynamic2_local]]
  ; CHECK-NEXT: i32.const $push[[L11:.+]]=, 106
  ; CHECK-NEXT: i32.store 0($pop[[L23]]), $pop[[L11]]
- store volatile i32 104, i32* %static
- store volatile i32 105, i32* %dynamic
- store volatile i32 106, i32* %dynamic.2
+ store volatile i32 104, ptr %static
+ store volatile i32 105, ptr %dynamic
+ store volatile i32 106, ptr %dynamic.2
 
  ; Writeback to memory.
  ; CHECK: local.get $push[[L24:.+]]=, [[FP]]{{$}}
@@ -230,15 +227,15 @@ define void @dynamic_static_alloca(i32 %alloc) noredzone {
  ret void
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
 ; CHECK-LABEL: llvm_stack_builtins:
 define void @llvm_stack_builtins(i32 %alloc) noredzone {
  ; CHECK: global.get $push[[L11:.+]]=, __stack_pointer{{$}}
  ; CHECK-NEXT: local.tee $push[[L10:.+]]=, {{.+}}, $pop[[L11]]
  ; CHECK-NEXT: local.set [[STACK:.+]], $pop[[L10]]
- %stack = call i8* @llvm.stacksave()
+ %stack = call ptr @llvm.stacksave()
 
  ; Ensure we don't reassign the stacksave local
  ; CHECK-NOT: local.set [[STACK]],
@@ -246,7 +243,7 @@ define void @llvm_stack_builtins(i32 %alloc) noredzone {
 
  ; CHECK: local.get $push[[L12:.+]]=, [[STACK]]
  ; CHECK-NEXT: global.set __stack_pointer, $pop[[L12]]
- call void @llvm.stackrestore(i8* %stack)
+ call void @llvm.stackrestore(ptr %stack)
 
  ret void
 }
@@ -271,7 +268,7 @@ define void @dynamic_alloca_nouse(i32 %alloc) noredzone {
 ; The use of the alloca in a phi causes a CopyToReg DAG node to be generated,
 ; which has to have special handling because CopyToReg can't have a FI operand
 ; CHECK-LABEL: copytoreg_fi:
-define void @copytoreg_fi(i1 %cond, i32* %b) {
+define void @copytoreg_fi(i1 %cond, ptr %b) {
 entry:
  ; CHECK: i[[PTR]].const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i[[PTR]].sub $push[[L3:.+]]=, {{.+}}, $pop[[L1]]
@@ -281,8 +278,8 @@ entry:
  ; CHECK-NEXT: local.set [[COPY:.+]], $pop[[ADDR]]
  br label %body
 body:
- %a = phi i32* [%addr, %entry], [%b, %body]
- store i32 1, i32* %a
+ %a = phi ptr [%addr, %entry], [%b, %body]
+ store i32 1, ptr %a
  ; CHECK: local.get $push[[L12:.+]]=, [[COPY]]
  ; CHECK: i32.store 0($pop[[L12]]),
  br i1 %cond, label %body, label %exit
@@ -290,8 +287,8 @@ exit:
  ret void
 }
 
-declare void @use_i8_star(i8*)
-declare i8* @llvm.frameaddress(i32)
+declare void @use_i8_star(ptr)
+declare ptr @llvm.frameaddress(i32)
 
 ; Test __builtin_frame_address(0).
 ; CHECK-LABEL: frameaddress_0:
@@ -301,8 +298,8 @@ declare i8* @llvm.frameaddress(i32)
 ; CHECK-NEXT: local.get $push[[L5:.+]]=, [[FP]]
 ; CHECK-NEXT: global.set __stack_pointer, $pop[[L5]]
 define void @frameaddress_0() {
-  %t = call i8* @llvm.frameaddress(i32 0)
-  call void @use_i8_star(i8* %t)
+  %t = call ptr @llvm.frameaddress(i32 0)
+  call void @use_i8_star(ptr %t)
   ret void
 }
 
@@ -313,8 +310,8 @@ define void @frameaddress_0() {
 ; CHECK-NEXT: call use_i8_star, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @frameaddress_1() {
-  %t = call i8* @llvm.frameaddress(i32 1)
-  call void @use_i8_star(i8* %t)
+  %t = call ptr @llvm.frameaddress(i32 1)
+  call void @use_i8_star(ptr %t)
   ret void
 }
 
@@ -326,7 +323,7 @@ define void @frameaddress_1() {
 ; CHECK-NEXT:  #NO_APP
 define void @inline_asm() {
   %tmp = alloca i8
-  call void asm sideeffect "# %0", "r"(i8* %tmp)
+  call void asm sideeffect "# %0", "r"(ptr %tmp)
   ret void
 }
 
@@ -338,10 +335,10 @@ define void @inline_asm() {
 @str = local_unnamed_addr global [3 x i8] c"abc", align 16
 define i8 @frame_offset_with_global_address() {
   %1 = alloca i8, align 4
-  %2 = ptrtoint i8* %1 to i32
+  %2 = ptrtoint ptr %1 to i32
   ;; Here @str is a global address and not an immediate, so cannot be folded
-  %3 = getelementptr [3 x i8], [3 x i8]* @str, i32 0, i32 %2
-  %4 = load i8, i8* %3, align 8
+  %3 = getelementptr [3 x i8], ptr @str, i32 0, i32 %2
+  %4 = load i8, ptr %3, align 8
   %5 = and i8 %4, 67
   ret i8 %5
 }

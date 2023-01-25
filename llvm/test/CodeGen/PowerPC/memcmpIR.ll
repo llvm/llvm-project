@@ -1,5 +1,5 @@
-; RUN: llc -o - -mtriple=powerpc64le-unknown-gnu-linux -stop-after codegenprepare %s | FileCheck %s
-; RUN: llc -o - -mtriple=powerpc64-unknown-gnu-linux -stop-after codegenprepare %s | FileCheck %s --check-prefix=CHECK-BE
+; RUN: llc -opaque-pointers=0 -o - -mtriple=powerpc64le-unknown-gnu-linux -stop-after codegenprepare %s | FileCheck %s
+; RUN: llc -opaque-pointers=0 -o - -mtriple=powerpc64-unknown-gnu-linux -stop-after codegenprepare %s | FileCheck %s --check-prefix=CHECK-BE
 
 define signext i32 @test1(i32* nocapture readonly %buffer1, i32* nocapture readonly %buffer2)  {
 entry:

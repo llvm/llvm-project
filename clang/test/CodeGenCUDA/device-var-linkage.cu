@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,NORDC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=DEV,RDC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux \
+// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux \
 // RUN:   -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=HOST,NORDC-H %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-gnu-linux \
+// RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=HOST,RDC-H %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple nvptx -fcuda-is-device \
+// RUN: %clang_cc1 -triple nvptx -fcuda-is-device \
 // RUN:   -fgpu-rdc -cuid=abc -emit-llvm -o - %s \
 // RUN:   | FileCheck -check-prefixes=CUDA %s
 
@@ -24,9 +24,9 @@ __device__ int v1;
 // NORDC-H-DAG: @v2 = internal global i32 undef
 // RDC-H-DAG: @v2 = global i32 undef
 __constant__ int v2;
-// DEV-DAG: @v3 = addrspace(1) externally_initialized global i32 addrspace(1)* null
-// NORDC-H-DAG: @v3 = internal externally_initialized global i32* null
-// RDC-H-DAG: @v3 = externally_initialized global i32* null
+// DEV-DAG: @v3 = addrspace(1) externally_initialized global ptr addrspace(1) null
+// NORDC-H-DAG: @v3 = internal externally_initialized global ptr null
+// RDC-H-DAG: @v3 = externally_initialized global ptr null
 #if __HIP__
 __managed__ int v3;
 #endif
@@ -37,8 +37,8 @@ extern __device__ int ev1;
 // DEV-DAG: @ev2 = external addrspace(4) global i32
 // HOST-DAG: @ev2 = external global i32
 extern __constant__ int ev2;
-// DEV-DAG: @ev3 = external addrspace(1) externally_initialized global i32 addrspace(1)*
-// HOST-DAG: @ev3 = external externally_initialized global i32*
+// DEV-DAG: @ev3 = external addrspace(1) externally_initialized global ptr addrspace(1)
+// HOST-DAG: @ev3 = external externally_initialized global ptr
 #if __HIP__
 extern __managed__ int ev3;
 #endif
@@ -53,9 +53,9 @@ static __device__ int sv1;
 // HOST-DAG: @_ZL3sv2 = internal global i32 undef
 // CUDA-DAG: @_ZL3sv2__static__[[HASH]] = addrspace(4) externally_initialized global i32 0
 static __constant__ int sv2;
-// NORDC-DAG: @_ZL3sv3 = addrspace(1) externally_initialized global i32 addrspace(1)* null
-// RDC-DAG: @_ZL3sv3.static.[[HASH]] = addrspace(1) externally_initialized global i32 addrspace(1)* null
-// HOST-DAG: @_ZL3sv3 = internal externally_initialized global i32* null
+// NORDC-DAG: @_ZL3sv3 = addrspace(1) externally_initialized global ptr addrspace(1) null
+// RDC-DAG: @_ZL3sv3.static.[[HASH]] = addrspace(1) externally_initialized global ptr addrspace(1) null
+// HOST-DAG: @_ZL3sv3 = internal externally_initialized global ptr null
 #if __HIP__
 static __managed__ int sv3;
 #endif

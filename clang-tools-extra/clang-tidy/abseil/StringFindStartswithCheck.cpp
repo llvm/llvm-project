@@ -17,9 +17,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 StringFindStartswithCheck::StringFindStartswithCheck(StringRef Name,
                                                      ClangTidyContext *Context)
@@ -142,6 +140,4 @@ void StringFindStartswithCheck::storeOptions(
   Options.store(Opts, "AbseilStringsMatchHeader", AbseilStringsMatchHeader);
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

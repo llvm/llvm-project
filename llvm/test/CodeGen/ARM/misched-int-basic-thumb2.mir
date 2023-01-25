@@ -17,11 +17,11 @@
 
   define i64 @foo(i16 signext %a, i16 signext %b) {
   entry:
-    %0 = load i32, i32* @g1, align 4
-    %1 = load i32, i32* @g2, align 4
+    %0 = load i32, ptr @g1, align 4
+    %1 = load i32, ptr @g2, align 4
     %2 = add nuw nsw i32 %0, %0
     %3 = sdiv i32 %2, %1
-    store i32 %3, i32* @g1, align 4
+    store i32 %3, ptr @g1, align 4
     %d = mul nsw i16 %a, %a
     %e = mul nsw i16 %b, %b
     %f = add nuw nsw i16 %e, %d

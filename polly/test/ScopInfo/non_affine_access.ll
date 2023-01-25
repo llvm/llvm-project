@@ -7,7 +7,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ;     A[i * i] = i;
 ;
 
-define void @foo(i64 *%A) nounwind uwtable ssp {
+define void @foo(ptr %A) nounwind uwtable ssp {
 entry:
   br label %entry.split
 
@@ -17,8 +17,8 @@ entry.split:                                      ; preds = %entry
 for.body:                                         ; preds = %entry.split, %for.body
   %indvar = phi i64 [ 0, %entry.split ], [ %indvar.next, %for.body ]
   %mul = mul nsw i64 %indvar, %indvar
-  %arrayidx = getelementptr inbounds i64, i64* %A, i64 %mul
-  store i64 %indvar, i64* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i64, ptr %A, i64 %mul
+  store i64 %indvar, ptr %arrayidx, align 4
   %indvar.next = add nsw i64 %indvar, 1
   %exitcond = icmp ne i64 %indvar.next, 1024
   br i1 %exitcond, label %for.body, label %for.end

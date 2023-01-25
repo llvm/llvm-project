@@ -28,8 +28,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/Optional.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang {
 
@@ -235,8 +235,8 @@ public:
   /// Returns the value of \p E, if it can be determined in a non-path-sensitive
   /// manner.
   ///
-  /// If \p E is not a constant or cannot be modeled, returns \c None.
-  Optional<SVal> getConstantVal(const Expr *E);
+  /// If \p E is not a constant or cannot be modeled, returns \c std::nullopt.
+  std::optional<SVal> getConstantVal(const Expr *E);
 
   NonLoc makeCompoundVal(QualType type, llvm::ImmutableList<SVal> vals) {
     return nonloc::CompoundVal(BasicVals.getCompoundValData(type, vals));
@@ -369,9 +369,9 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
-  /// Return MemRegionVal on success cast, otherwise return None.
-  Optional<loc::MemRegionVal> getCastedMemRegionVal(const MemRegion *region,
-                                                    QualType type);
+  /// Return MemRegionVal on success cast, otherwise return std::nullopt.
+  std::optional<loc::MemRegionVal>
+  getCastedMemRegionVal(const MemRegion *region, QualType type);
 
   /// Make an SVal that represents the given symbol. This follows the convention
   /// of representing Loc-type symbols (symbolic pointers and references)

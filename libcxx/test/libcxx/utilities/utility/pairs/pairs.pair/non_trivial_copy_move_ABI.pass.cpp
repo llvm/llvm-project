@@ -17,6 +17,7 @@
 // Test that we provide the non-trivial copy operations when _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
 // is specified.
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined
 
 #include <utility>
 #include <type_traits>

@@ -215,7 +215,11 @@ entry:
 ; CHECK-DAG: ldb %r[[REG2:[0-9]+]], [%r0,2]
 ; CHECK-DAG: ldb %r[[REG3:[0-9]+]], [%r0,3]
 ; CHECK-DAG: asl %r[[AREG1:[0-9]+]], %r[[REG1]], 8
-; CHECK-DAG: asl %r[[AREG3:[0-9]+]], %r[[REG3]], 8
+; CHECK-DAG: asl %r[[AREG2:[0-9]+]], %r[[REG2]], 16
+; CHECK-DAG: asl %r[[AREG3:[0-9]+]], %r[[REG3]], 24
+; CHECK-DAG: or %r[[AREG01:[0-9]+]], %r[[AREG1]], %r[[REG0]]
+; CHECK-DAG: or %r[[AREG23:[0-9]+]], %r[[AREG3]], %r[[AREG2]]
+; CHECK-DAG: or %r0, %r[[AREG23]], %r[[AREG01]]
 define i32 @align1_load32(i8* %p) nounwind {
 entry:
   %bp = bitcast i8* %p to i32*

@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_MANGLER_H
 
 #include "flang/Evaluate/expression.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
@@ -63,10 +64,12 @@ std::string
 mangleArrayLiteral(const uint8_t *addr, size_t size,
                    const Fortran::evaluate::ConstantSubscripts &shape,
                    Fortran::common::TypeCategory cat, int kind = 0,
-                   Fortran::common::ConstantSubscript charLen = -1);
+                   Fortran::common::ConstantSubscript charLen = -1,
+                   llvm::StringRef derivedName = {});
 
 template <Fortran::common::TypeCategory TC, int KIND>
 std::string mangleArrayLiteral(
+    mlir::Type,
     const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>> &x) {
   return mangleArrayLiteral(
       reinterpret_cast<const uint8_t *>(x.values().data()),
@@ -75,7 +78,8 @@ std::string mangleArrayLiteral(
 
 template <int KIND>
 std::string
-mangleArrayLiteral(const Fortran::evaluate::Constant<Fortran::evaluate::Type<
+mangleArrayLiteral(mlir::Type,
+                   const Fortran::evaluate::Constant<Fortran::evaluate::Type<
                        Fortran::common::TypeCategory::Character, KIND>> &x) {
   return mangleArrayLiteral(
       reinterpret_cast<const uint8_t *>(x.values().data()),
@@ -83,13 +87,23 @@ mangleArrayLiteral(const Fortran::evaluate::Constant<Fortran::evaluate::Type<
       Fortran::common::TypeCategory::Character, KIND, x.LEN());
 }
 
+// FIXME: derived type mangling is safe but not reproducible between two
+// compilation of a same file because `values().data()` is a nontrivial compile
+// time data structure containing pointers and vectors. In particular, this
+// means that similar structure constructors are not "combined" into the same
+// global constant by lowering.
 inline std::string mangleArrayLiteral(
+    mlir::Type eleTy,
     const Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived> &x) {
   return mangleArrayLiteral(
       reinterpret_cast<const uint8_t *>(x.values().data()),
       x.values().size() * sizeof(x.values()[0]), x.shape(),
-      Fortran::common::TypeCategory::Derived);
+      Fortran::common::TypeCategory::Derived, /*kind=*/0, /*charLen=*/-1,
+      eleTy.cast<fir::RecordType>().getName());
 }
+
+/// Return the compiler-generated name of a static namelist variable descriptor.
+std::string globalNamelistDescriptorName(const Fortran::semantics::Symbol &sym);
 
 } // namespace lower::mangle
 } // namespace Fortran

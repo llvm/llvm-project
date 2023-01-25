@@ -21,19 +21,19 @@ declare void @llvm.amdgcn.s.sleep(i32) #0
 ; GCN-NEXT: s_getpc_b64 s[[[PC_LO]]:[[PC_HI]]]
 
 ; GCN: [[BB3]]: ; %bb3
-define amdgpu_kernel void @branch_offset_test(i32 addrspace(1)* %arg, i32 %cnd) #0 {
+define amdgpu_kernel void @branch_offset_test(ptr addrspace(1) %arg, i32 %cnd) #0 {
 bb:
   %cmp = icmp eq i32 %cnd, 0
   br i1 %cmp, label %bb3, label %bb2 ; +8 dword branch
 
 bb2:
-  store i32 1, i32 addrspace(1)* @name1
-  store i32 2, i32 addrspace(1)* @name2
-  store i32 3, i32 addrspace(1)* @name3
+  store i32 1, ptr addrspace(1) @name1
+  store i32 2, ptr addrspace(1) @name2
+  store i32 3, ptr addrspace(1) @name3
   call void @llvm.amdgcn.s.sleep(i32 0)
   br label %bb3
 
 bb3:
-  store volatile i32 %cnd, i32 addrspace(1)* %arg
+  store volatile i32 %cnd, ptr addrspace(1) %arg
   ret void
 }

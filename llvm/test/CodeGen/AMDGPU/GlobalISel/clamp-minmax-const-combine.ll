@@ -205,7 +205,6 @@ define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
-; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 0, 1.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %fmul = fmul float %a, 2.0
@@ -222,7 +221,6 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
-; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

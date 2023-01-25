@@ -132,8 +132,8 @@ public:
     auto It = RVCalls.find(CI);
     if (It != RVCalls.end()) {
       // Remove call to @llvm.objc.clang.arc.noop.use.
-      for (auto U = It->second->user_begin(), E = It->second->user_end(); U != E; ++U)
-        if (auto *CI = dyn_cast<CallInst>(*U))
+      for (User *U : It->second->users())
+        if (auto *CI = dyn_cast<CallInst>(U))
           if (CI->getIntrinsicID() == Intrinsic::objc_clang_arc_noop_use) {
             CI->eraseFromParent();
             break;

@@ -34,7 +34,7 @@ subroutine char_ptr(p)
   ! CHECK: %[[count:.*]] = arith.muli %[[one]], %[[size]] : i64
   ! CHECK: %[[dst:.*]] = fir.convert %[[addr]] : (!fir.ptr<!fir.char<1,12>>) -> !fir.ref<i8>
   ! CHECK: %[[src:.*]] = fir.convert %[[str]] : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %5, %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %5, %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   p = "hello world!"
 
   ! CHECK: %[[boxload2:.*]] = fir.load %[[arg0]]
@@ -42,7 +42,7 @@ subroutine char_ptr(p)
   ! CHECK: %[[count:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
   ! CHECK: %[[dst:.*]] = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,12>>) -> !fir.ref<i8>
   ! CHECK: %[[src:.*]] = fir.convert %[[addr2]] : (!fir.ptr<!fir.char<1,12>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   x = p
 end subroutine
 
@@ -171,7 +171,7 @@ subroutine pointer_result_as_value()
     end function
   end interface
 ! CHECK:  %[[VAL_0:.*]] = fir.alloca !fir.box<!fir.ptr<i32>> {bindc_name = ".result"}
-! CHECK:  %[[VAL_6:.*]] = fir.call @_QPreturns_int_pointer() : () -> !fir.box<!fir.ptr<i32>>
+! CHECK:  %[[VAL_6:.*]] = fir.call @_QPreturns_int_pointer() {{.*}}: () -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.save_result %[[VAL_6]] to %[[VAL_0]] : !fir.box<!fir.ptr<i32>>, !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:  %[[VAL_8:.*]] = fir.box_addr %[[VAL_7]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>

@@ -10,7 +10,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -51,13 +51,13 @@ struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
     Type elementType = getSrcVectorElementType<OpTy>(op);
     unsigned bitwidth = elementType.getIntOrFloatBitWidth();
     if (bitwidth == 32)
-      return LLVM::detail::oneToOneRewrite(op, Intr32OpTy::getOperationName(),
-                                           adaptor.getOperands(),
-                                           getTypeConverter(), rewriter);
+      return LLVM::detail::oneToOneRewrite(
+          op, Intr32OpTy::getOperationName(), adaptor.getOperands(),
+          op->getAttrs(), getTypeConverter(), rewriter);
     if (bitwidth == 64)
-      return LLVM::detail::oneToOneRewrite(op, Intr64OpTy::getOperationName(),
-                                           adaptor.getOperands(),
-                                           getTypeConverter(), rewriter);
+      return LLVM::detail::oneToOneRewrite(
+          op, Intr64OpTy::getOperationName(), adaptor.getOperands(),
+          op->getAttrs(), getTypeConverter(), rewriter);
     return rewriter.notifyMatchFailure(
         op, "expected 'src' to be either f32 or f64");
   }

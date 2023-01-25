@@ -22,7 +22,8 @@ T<1> t1; // expected-note {{in instantiation of template class 'T<1>' requested 
 T<2> t2;
 
 template<typename T> struct S {
-    static_assert(sizeof(T) > sizeof(char), "Type not big enough!"); // expected-error {{static assertion failed due to requirement 'sizeof(char) > sizeof(char)': Type not big enough!}}
+    static_assert(sizeof(T) > sizeof(char), "Type not big enough!"); // expected-error {{static assertion failed due to requirement 'sizeof(char) > sizeof(char)': Type not big enough!}} \
+                                                                     // expected-note {{1 > 1}}
 };
 
 S<char> s1; // expected-note {{in instantiation of template class 'S<char>' requested here}}
@@ -215,3 +216,51 @@ static_assert(notBool, "message");          // expected-error {{value of type 's
 static_assert(constexprNotBool, "message"); // expected-error {{value of type 'const NotBool' is not contextually convertible to 'bool'}}
 
 static_assert(1 , "") // expected-error {{expected ';' after 'static_assert'}}
+
+
+namespace Diagnostics {
+  /// No notes for literals.
+  static_assert(false, ""); // expected-error {{failed}}
+  static_assert(1.0 > 2.0, ""); // expected-error {{failed}}
+  static_assert('c' == 'd', ""); // expected-error {{failed}}
+  static_assert(1 == 2, ""); // expected-error {{failed}}
+
+  /// Simple things are ignored.
+  static_assert(1 == (-(1)), ""); //expected-error {{failed}}
+
+  /// Chars are printed as chars.
+  constexpr char getChar() {
+    return 'c';
+  }
+  static_assert(getChar() == 'a', ""); // expected-error {{failed}} \
+                                       // expected-note {{evaluates to ''c' == 'a''}}
+
+  /// Bools are printed as bools.
+  constexpr bool invert(bool b) {
+    return !b;
+  }
+  static_assert(invert(true) == invert(false), ""); // expected-error {{failed}} \
+                                                    // expected-note {{evaluates to 'false == true'}}
+
+  /// No notes here since we compare a bool expression with a bool literal.
+  static_assert(invert(true) == true, ""); // expected-error {{failed}}
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-extensions"
+  constexpr _Complex float com = {5,6};
+  constexpr _Complex float com2 = {1, 9};
+  static_assert(com == com2, ""); // expected-error {{failed}} \
+                                  // expected-note {{evaluates to '(5 + 6i) == (1 + 9i)'}}
+#pragma clang diagnostic pop
+
+#define CHECK_4(x) ((x) == 4)
+#define A_IS_B (a == b)
+  static_assert(CHECK_4(5), ""); // expected-error {{failed}}
+
+  constexpr int a = 4;
+  constexpr int b = 5;
+  static_assert(CHECK_4(a) && A_IS_B, ""); // expected-error {{failed}} \
+                                           // expected-note {{evaluates to '4 == 5'}}
+
+
+}

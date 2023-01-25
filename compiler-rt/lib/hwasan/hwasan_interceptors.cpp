@@ -75,6 +75,8 @@ InternalLongjmp(__hw_register_buf env, int retval) {
   constexpr size_t kSpIndex = 13;
 #    elif defined(__x86_64__)
   constexpr size_t kSpIndex = 6;
+#    elif SANITIZER_RISCV64
+  constexpr size_t kSpIndex = 13;
 #    endif
 
   // Clear all memory tags on the stack between here and where we're going.
@@ -131,6 +133,49 @@ InternalLongjmp(__hw_register_buf env, int retval) {
       "cmovnz %1,%%rax;"
       "jmp *%%rdx;" ::"r"(env_address),
       "r"(retval_tmp));
+#    elif SANITIZER_RISCV64
+  register long int retval_tmp asm("x11") = retval;
+  register void *env_address asm("x10") = &env[0];
+  asm volatile(
+      "ld     ra,   0<<3(%0);"
+      "ld     s0,   1<<3(%0);"
+      "ld     s1,   2<<3(%0);"
+      "ld     s2,   3<<3(%0);"
+      "ld     s3,   4<<3(%0);"
+      "ld     s4,   5<<3(%0);"
+      "ld     s5,   6<<3(%0);"
+      "ld     s6,   7<<3(%0);"
+      "ld     s7,   8<<3(%0);"
+      "ld     s8,   9<<3(%0);"
+      "ld     s9,   10<<3(%0);"
+      "ld     s10,  11<<3(%0);"
+      "ld     s11,  12<<3(%0);"
+#      if __riscv_float_abi_double
+      "fld    fs0,  14<<3(%0);"
+      "fld    fs1,  15<<3(%0);"
+      "fld    fs2,  16<<3(%0);"
+      "fld    fs3,  17<<3(%0);"
+      "fld    fs4,  18<<3(%0);"
+      "fld    fs5,  19<<3(%0);"
+      "fld    fs6,  20<<3(%0);"
+      "fld    fs7,  21<<3(%0);"
+      "fld    fs8,  22<<3(%0);"
+      "fld    fs9,  23<<3(%0);"
+      "fld    fs10, 24<<3(%0);"
+      "fld    fs11, 25<<3(%0);"
+#      elif __riscv_float_abi_soft
+#      else
+#        error "Unsupported case"
+#      endif
+      "ld     a4, 13<<3(%0);"
+      "mv     sp, a4;"
+      // Return the value requested to return through arguments.
+      // This should be in x11 given what we requested above.
+      "seqz   a0, %1;"
+      "add    a0, a0, %1;"
+      "ret;"
+      : "+r"(env_address)
+      : "r"(retval_tmp));
 #    endif
 }
 
@@ -175,6 +220,10 @@ INTERCEPTOR(void, longjmp, __hw_jmp_buf env, int val) {
 namespace __hwasan {
 
 int OnExit() {
+  if (CAN_SANITIZE_LEAKS && common_flags()->detect_leaks &&
+      __lsan::HasReportedLeaks()) {
+    return common_flags()->exitcode;
+  }
   // FIXME: ask frontend whether we need to return failure.
   return 0;
 }

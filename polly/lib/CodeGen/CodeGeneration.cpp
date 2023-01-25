@@ -153,7 +153,7 @@ static void removeLifetimeMarkers(Region *R) {
         switch (IT->getIntrinsicID()) {
         case Intrinsic::lifetime_start:
         case Intrinsic::lifetime_end:
-          BB->getInstList().erase(InstIt);
+          IT->eraseFromParent();
           break;
         default:
           break;

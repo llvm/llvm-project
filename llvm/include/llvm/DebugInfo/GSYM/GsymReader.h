@@ -137,11 +137,11 @@ public:
   ///
   /// \param Index An index into the file table.
   /// \returns An optional FileInfo that will be valid if the file index is
-  /// valid, or llvm::None if the file index is out of bounds,
-  Optional<FileEntry> getFile(uint32_t Index) const {
+  /// valid, or std::nullopt if the file index is out of bounds,
+  std::optional<FileEntry> getFile(uint32_t Index) const {
     if (Index < Files.size())
       return Files[Index];
-    return llvm::None;
+    return std::nullopt;
   }
 
   /// Dump the entire Gsym data contained in this object.
@@ -191,7 +191,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  void dump(raw_ostream &OS, Optional<FileEntry> FE);
+  void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Get the number of addresses in this Gsym file.
   uint32_t getNumAddresses() const {
@@ -204,8 +204,8 @@ public:
   ///
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
-  /// or llvm::None if Index is out of bounds.
-  Optional<uint64_t> getAddress(size_t Index) const;
+  /// or std::nullopt if Index is out of bounds.
+  std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
 
@@ -236,13 +236,13 @@ protected:
   ///
   /// \param Index An index into the AddrOffsets array.
   /// \returns An virtual address that matches the original object file for the
-  /// address as the specified index, or llvm::None if Index is out of bounds.
-  template <class T> Optional<uint64_t>
-  addressForIndex(size_t Index) const {
+  /// address as the specified index, or std::nullopt if Index is out of bounds.
+  template <class T>
+  std::optional<uint64_t> addressForIndex(size_t Index) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     if (Index < AIO.size())
       return AIO[Index] + Hdr->BaseAddress;
-    return llvm::None;
+    return std::nullopt;
   }
   /// Lookup an address offset in the AddrOffsets table.
   ///
@@ -254,7 +254,8 @@ protected:
   /// \returns The matching address offset index. This index will be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   template <class T>
-  llvm::Optional<uint64_t> getAddressOffsetIndex(const uint64_t AddrOffset) const {
+  std::optional<uint64_t>
+  getAddressOffsetIndex(const uint64_t AddrOffset) const {
     ArrayRef<T> AIO = getAddrOffsets<T>();
     const auto Begin = AIO.begin();
     const auto End = AIO.end();
@@ -262,7 +263,7 @@ protected:
     // Watch for addresses that fall between the gsym::Header::BaseAddress and
     // the first address offset.
     if (Iter == Begin && AddrOffset < *Begin)
-      return llvm::None;
+      return std::nullopt;
     if (Iter == End || AddrOffset < *Iter)
       --Iter;
     return std::distance(Begin, Iter);
@@ -301,7 +302,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  Optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
 };
 
 } // namespace gsym

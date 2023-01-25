@@ -1,21 +1,21 @@
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips2 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS32
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS32
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips32 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS32
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS32
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips32r2 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS32
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS32
 # RUN: llvm-mc -filetype=obj -triple mipsn32 -mcpu=mips3 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPSN32
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPSN32
 # RUN: llvm-mc -filetype=obj -triple mipsn32 -mcpu=mips64r6 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPSN32R6
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPSN32R6
 # RUN: llvm-mc -filetype=obj -triple mips64 -mcpu=mips64 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS64
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS64
 # RUN: llvm-mc -filetype=obj -triple mips64 -mcpu=mips64r2 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS64
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS64
 # RUN: llvm-mc -filetype=obj -triple mips -mcpu=mips32r6 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS32R6
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS32R6
 # RUN: llvm-mc -filetype=obj -triple mips64 -mcpu=mips64r6 %s -o - \
-# RUN:   | llvm-objdump -d -r - | FileCheck %s --check-prefix=MIPS64R6
+# RUN:   | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s --check-prefix=MIPS64R6
 
 sc $2, 128($sp)
 # MIPS32:         e3 a2 00 80  sc     $2, 128($sp)

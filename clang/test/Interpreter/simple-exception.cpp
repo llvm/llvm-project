@@ -1,7 +1,7 @@
 // clang-format off
-// REQUIRES: host-supports-jit, host-supports-exception 
 // UNSUPPORTED: system-aix
-// XFAIL: arm, arm64-apple, windows-msvc, windows-gnu
+// XFAIL for arm, arm64, riscv, or running on Windows.
+// XFAIL: target={{(arm|riscv).*}}, system-windows
 // RUN: cat %s | clang-repl | FileCheck %s
 extern "C" int printf(const char *, ...);
 

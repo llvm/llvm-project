@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
 ; We have to cast %B to "short *" before we create RTCs.
 ;

@@ -87,8 +87,9 @@ public:
 
   void EmitMoveFromReturnSlot(const Expr *E, RValue Src);
 
-  void EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
-                     QualType ArrayQTy, InitListExpr *E);
+  void EmitArrayInit(Address DestPtr, llvm::ArrayType *AType, QualType ArrayQTy,
+                     Expr *ExprToVisit, ArrayRef<Expr *> Args,
+                     Expr *ArrayFiller);
 
   AggValueSlot::NeedsGCBarriers_t needsGC(QualType T) {
     if (CGF.getLangOpts().getGC() && TypeRequiresGCollection(T))
@@ -172,6 +173,9 @@ public:
   void VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO);
   void VisitChooseExpr(const ChooseExpr *CE);
   void VisitInitListExpr(InitListExpr *E);
+  void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
+                                       FieldDecl *InitializedFieldInUnion,
+                                       Expr *ArrayFiller);
   void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E,
                               llvm::Value *outerBegin = nullptr);
   void VisitImplicitValueInitExpr(ImplicitValueInitExpr *E);
@@ -201,10 +205,22 @@ public:
       return EmitFinalDestCopy(E->getType(), LV);
     }
 
-    CGF.EmitPseudoObjectRValue(E, EnsureSlot(E->getType()));
+    AggValueSlot Slot = EnsureSlot(E->getType());
+    bool NeedsDestruction =
+        !Slot.isExternallyDestructed() &&
+        E->getType().isDestructedType() == QualType::DK_nontrivial_c_struct;
+    if (NeedsDestruction)
+      Slot.setExternallyDestructed();
+    CGF.EmitPseudoObjectRValue(E, Slot);
+    if (NeedsDestruction)
+      CGF.pushDestroy(QualType::DK_nontrivial_c_struct, Slot.getAddress(),
+                      E->getType());
   }
 
   void VisitVAArgExpr(VAArgExpr *E);
+  void VisitCXXParenListInitExpr(CXXParenListInitExpr *E);
+  void VisitCXXParenListOrInitListExpr(Expr *ExprToVisit, ArrayRef<Expr *> Args,
+                                       Expr *ArrayFiller);
 
   void EmitInitializationToLValue(Expr *E, LValue Address);
   void EmitNullInitializationToLValue(LValue Address);
@@ -471,10 +487,12 @@ static bool isTrivialFiller(Expr *E) {
   return false;
 }
 
-/// Emit initialization of an array from an initializer list.
+/// Emit initialization of an array from an initializer list. ExprToVisit must
+/// be either an InitListEpxr a CXXParenInitListExpr.
 void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
-                                   QualType ArrayQTy, InitListExpr *E) {
-  uint64_t NumInitElements = E->getNumInits();
+                                   QualType ArrayQTy, Expr *ExprToVisit,
+                                   ArrayRef<Expr *> Args, Expr *ArrayFiller) {
+  uint64_t NumInitElements = Args.size();
 
   uint64_t NumArrayElements = AType->getNumElements();
   assert(NumInitElements <= NumArrayElements);
@@ -503,7 +521,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
     CodeGen::CodeGenModule &CGM = CGF.CGM;
     ConstantEmitter Emitter(CGF);
     LangAS AS = ArrayQTy.getAddressSpace();
-    if (llvm::Constant *C = Emitter.tryEmitForInitializer(E, AS, ArrayQTy)) {
+    if (llvm::Constant *C =
+            Emitter.tryEmitForInitializer(ExprToVisit, AS, ArrayQTy)) {
       auto GV = new llvm::GlobalVariable(
           CGM.getModule(), C->getType(),
           CGM.isTypeConstant(ArrayQTy, /* ExcludeCtorDtor= */ true),
@@ -568,12 +587,11 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
 
     LValue elementLV = CGF.MakeAddrLValue(
         Address(element, llvmElementType, elementAlign), elementType);
-    EmitInitializationToLValue(E->getInit(i), elementLV);
+    EmitInitializationToLValue(Args[i], elementLV);
   }
 
   // Check whether there's a non-trivial array-fill expression.
-  Expr *filler = E->getArrayFiller();
-  bool hasTrivialFiller = isTrivialFiller(filler);
+  bool hasTrivialFiller = isTrivialFiller(ArrayFiller);
 
   // Any remaining elements need to be zero-initialized, possibly
   // using the filler expression.  We can skip this if the we're
@@ -616,8 +634,8 @@ void AggExprEmitter::EmitArrayInit(Address DestPtr, llvm::ArrayType *AType,
       CodeGenFunction::RunCleanupsScope CleanupsScope(CGF);
       LValue elementLV = CGF.MakeAddrLValue(
           Address(currentElement, llvmElementType, elementAlign), elementType);
-      if (filler)
-        EmitInitializationToLValue(filler, elementLV);
+      if (ArrayFiller)
+        EmitInitializationToLValue(ArrayFiller, elementLV);
       else
         EmitNullInitializationToLValue(elementLV);
     }
@@ -850,7 +868,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
       return;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
 
   case CK_NoOp:
@@ -1591,46 +1609,64 @@ void AggExprEmitter::EmitNullInitializationToLValue(LValue lv) {
   }
 }
 
+void AggExprEmitter::VisitCXXParenListInitExpr(CXXParenListInitExpr *E) {
+  VisitCXXParenListOrInitListExpr(E, E->getInitExprs(),
+                                  E->getInitializedFieldInUnion(),
+                                  E->getArrayFiller());
+}
+
 void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
-#if 0
-  // FIXME: Assess perf here?  Figure out what cases are worth optimizing here
-  // (Length of globals? Chunks of zeroed-out space?).
-  //
-  // If we can, prefer a copy from a global; this is a lot less code for long
-  // globals, and it's easier for the current optimizers to analyze.
-  if (llvm::Constant* C = CGF.CGM.EmitConstantExpr(E, E->getType(), &CGF)) {
-    llvm::GlobalVariable* GV =
-    new llvm::GlobalVariable(CGF.CGM.getModule(), C->getType(), true,
-                             llvm::GlobalValue::InternalLinkage, C, "");
-    EmitFinalDestCopy(E->getType(), CGF.MakeAddrLValue(GV, E->getType()));
-    return;
-  }
-#endif
   if (E->hadArrayRangeDesignator())
     CGF.ErrorUnsupported(E, "GNU array range designator extension");
 
   if (E->isTransparent())
     return Visit(E->getInit(0));
 
-  AggValueSlot Dest = EnsureSlot(E->getType());
+  VisitCXXParenListOrInitListExpr(
+      E, E->inits(), E->getInitializedFieldInUnion(), E->getArrayFiller());
+}
 
-  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), E->getType());
+void AggExprEmitter::VisitCXXParenListOrInitListExpr(
+    Expr *ExprToVisit, ArrayRef<Expr *> InitExprs,
+    FieldDecl *InitializedFieldInUnion, Expr *ArrayFiller) {
+#if 0
+  // FIXME: Assess perf here?  Figure out what cases are worth optimizing here
+  // (Length of globals? Chunks of zeroed-out space?).
+  //
+  // If we can, prefer a copy from a global; this is a lot less code for long
+  // globals, and it's easier for the current optimizers to analyze.
+  if (llvm::Constant *C =
+          CGF.CGM.EmitConstantExpr(ExprToVisit, ExprToVisit->getType(), &CGF)) {
+    llvm::GlobalVariable* GV =
+    new llvm::GlobalVariable(CGF.CGM.getModule(), C->getType(), true,
+                             llvm::GlobalValue::InternalLinkage, C, "");
+    EmitFinalDestCopy(ExprToVisit->getType(),
+                      CGF.MakeAddrLValue(GV, ExprToVisit->getType()));
+    return;
+  }
+#endif
+
+  AggValueSlot Dest = EnsureSlot(ExprToVisit->getType());
+
+  LValue DestLV = CGF.MakeAddrLValue(Dest.getAddress(), ExprToVisit->getType());
 
   // Handle initialization of an array.
-  if (E->getType()->isArrayType()) {
+  if (ExprToVisit->getType()->isArrayType()) {
     auto AType = cast<llvm::ArrayType>(Dest.getAddress().getElementType());
-    EmitArrayInit(Dest.getAddress(), AType, E->getType(), E);
+    EmitArrayInit(Dest.getAddress(), AType, ExprToVisit->getType(), ExprToVisit,
+                  InitExprs, ArrayFiller);
     return;
   }
 
-  assert(E->getType()->isRecordType() && "Only support structs/unions here!");
+  assert(ExprToVisit->getType()->isRecordType() &&
+         "Only support structs/unions here!");
 
   // Do struct initialization; this code just sets each individual member
   // to the approprate value.  This makes bitfield support automatic;
   // the disadvantage is that the generated code is more difficult for
   // the optimizer, especially with bitfields.
-  unsigned NumInitElements = E->getNumInits();
-  RecordDecl *record = E->getType()->castAs<RecordType>()->getDecl();
+  unsigned NumInitElements = InitExprs.size();
+  RecordDecl *record = ExprToVisit->getType()->castAs<RecordType>()->getDecl();
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
@@ -1648,7 +1684,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
   // Emit initialization of base classes.
   if (auto *CXXRD = dyn_cast<CXXRecordDecl>(record)) {
-    assert(E->getNumInits() >= CXXRD->getNumBases() &&
+    assert(NumInitElements >= CXXRD->getNumBases() &&
            "missing initializer for base class");
     for (auto &Base : CXXRD->bases()) {
       assert(!Base.isVirtual() && "should not see vbases here");
@@ -1662,7 +1698,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
           AggValueSlot::DoesNotNeedGCBarriers,
           AggValueSlot::IsNotAliased,
           CGF.getOverlapForBaseInit(CXXRD, BaseRD, Base.isVirtual()));
-      CGF.EmitAggExpr(E->getInit(curInitIndex++), AggSlot);
+      CGF.EmitAggExpr(InitExprs[curInitIndex++], AggSlot);
 
       if (QualType::DestructionKind dtorKind =
               Base.getType().isDestructedType()) {
@@ -1678,25 +1714,25 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
   if (record->isUnion()) {
     // Only initialize one field of a union. The field itself is
     // specified by the initializer list.
-    if (!E->getInitializedFieldInUnion()) {
+    if (!InitializedFieldInUnion) {
       // Empty union; we have nothing to do.
 
 #ifndef NDEBUG
       // Make sure that it's really an empty and not a failure of
       // semantic analysis.
       for (const auto *Field : record->fields())
-        assert(Field->isUnnamedBitfield() && "Only unnamed bitfields allowed");
+        assert((Field->isUnnamedBitfield() || Field->isAnonymousStructOrUnion()) && "Only unnamed bitfields or ananymous class allowed");
 #endif
       return;
     }
 
     // FIXME: volatility
-    FieldDecl *Field = E->getInitializedFieldInUnion();
+    FieldDecl *Field = InitializedFieldInUnion;
 
     LValue FieldLoc = CGF.EmitLValueForFieldInitialization(DestLV, Field);
     if (NumInitElements) {
       // Store the initializer into the field
-      EmitInitializationToLValue(E->getInit(0), FieldLoc);
+      EmitInitializationToLValue(InitExprs[0], FieldLoc);
     } else {
       // Default-initialize to null.
       EmitNullInitializationToLValue(FieldLoc);
@@ -1720,7 +1756,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
     // have a zeroed object, and the rest of the fields are
     // zero-initializable.
     if (curInitIndex == NumInitElements && Dest.isZeroed() &&
-        CGF.getTypes().isZeroInitializable(E->getType()))
+        CGF.getTypes().isZeroInitializable(ExprToVisit->getType()))
       break;
 
 
@@ -1730,7 +1766,7 @@ void AggExprEmitter::VisitInitListExpr(InitListExpr *E) {
 
     if (curInitIndex < NumInitElements) {
       // Store the initializer into the field.
-      EmitInitializationToLValue(E->getInit(curInitIndex++), LV);
+      EmitInitializationToLValue(InitExprs[curInitIndex++], LV);
     } else {
       // We're out of initializers; default-initialize to null
       EmitNullInitializationToLValue(LV);
@@ -1926,7 +1962,7 @@ static CharUnits GetNumNonZeroBytesInInit(const Expr *E, CodeGenFunction &CGF) {
         // Reference values are always non-null and have the width of a pointer.
         if (Field->getType()->isReferenceType())
           NumNonZeroBytes += CGF.getContext().toCharUnitsFromBits(
-              CGF.getTarget().getPointerWidth(0));
+              CGF.getTarget().getPointerWidth(LangAS::Default));
         else
           NumNonZeroBytes += GetNumNonZeroBytesInInit(E, CGF);
       }

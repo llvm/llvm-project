@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 import time
 from lldbsuite.test.lldbtest import *

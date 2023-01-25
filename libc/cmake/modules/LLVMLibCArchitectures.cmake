@@ -1,22 +1,172 @@
 # ------------------------------------------------------------------------------
-# Architecture definitions
+# Architecture and OS definitions.
+#
+# The correct target OS and architecture to build the libc for is deduced here.
+# When possible, we also setup appropriate compile options for the target
+# platform.
 # ------------------------------------------------------------------------------
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
-  set(LIBC_TARGET_ARCHITECTURE_IS_MIPS TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "mips")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
-  set(LIBC_TARGET_ARCHITECTURE_IS_ARM TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "arm")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
-  set(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "aarch64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
-  set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "x86_64")
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(powerpc|ppc)")
-  set(LIBC_TARGET_ARCHITECTURE_IS_POWER TRUE)
-  set(LIBC_TARGET_ARCHITECTURE "power")
-else()
-  message(FATAL_ERROR "Unsupported processor ${CMAKE_SYSTEM_PROCESSOR}")
+if(LIBC_GPU_BUILD)
+  # We set the generic target and OS to "gpu" here. More specific defintions
+  # for the exact target GPU are set up in prepare_libc_gpu_build.cmake.
+  set(LIBC_TARGET_OS "gpu")
+  set(LIBC_TARGET_ARCHITECTURE_IS_GPU TRUE)
+  set(LIBC_TARGET_ARCHITECTURE "gpu")
+  if(LIBC_TARGET_TRIPLE)
+    message(WARNING "LIBC_TARGET_TRIPLE is ignored as LIBC_GPU_BUILD is on. ")
+  endif()
+  return()
 endif()
+
+if(MSVC)
+  # If the compiler is visual c++ or equivalent, we will assume a host build.
+  set(LIBC_TARGET_OS ${CMAKE_HOST_SYSTEM_NAME})
+  string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
+  set(LIBC_TARGET_ARCHITECTURE ${CMAKE_HOST_SYSTEM_PROCESSOR})
+  if(LIBC_TARGET_TRIPLE)
+    message(WARNING "libc build: Detected MSVC or equivalent compiler; "
+                    "LIBC_TARGET_TRIPLE is ignored and a host build is assumed.")
+  endif()
+  return()
+endif()
+
+# A helper function to get the architecture and system components from a target
+# triple.
+function(get_arch_and_system_from_triple triple arch_var sys_var)
+  string(REPLACE "-" ";" triple_comps ${triple})
+  list(LENGTH triple_comps triple_size)
+  if(triple_size LESS "3")
+    return()
+  endif()
+  math(EXPR system_index "${triple_size} - 2")
+  list(GET triple_comps 0 target_arch)
+  # The target_arch string can have sub-architecture suffixes which we want to
+  # remove. So, we regex-match the string and set target_arch to a cleaner
+  # value.
+  if(target_arch MATCHES "^mips")
+    set(target_arch "mips")
+  elseif(target_arch MATCHES "^arm")
+    set(target_arch "arm")
+  elseif(target_arch MATCHES "^aarch64")
+    set(target_arch "aarch64")
+  elseif(target_arch MATCHES "(x86_64)|(AMD64|amd64)|(^i.86$)")
+    set(target_arch "x86_64")
+  elseif(target_arch MATCHES "^(powerpc|ppc)")
+    set(target_arch "power")
+  else()
+    return()
+  endif()
+
+  set(${arch_var} ${target_arch} PARENT_SCOPE)
+  list(GET triple_comps ${system_index} target_sys)
+  set(${sys_var} ${target_sys} PARENT_SCOPE)
+endfunction(get_arch_and_system_from_triple)
+
+# Query the default target triple of the compiler.
+set(target_triple_option "-print-target-triple")
+if(CMAKE_COMPILER_IS_GNUCXX)
+  # GCC does not support the "-print-target-triple" option but supports
+  # "-print-multiarch" which clang does not support for all targets.
+  set(target_triple_option "-print-multiarch")
+endif()
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} ${target_triple_option}
+                RESULT_VARIABLE libc_compiler_triple_check
+                OUTPUT_VARIABLE libc_compiler_triple)
+if(NOT (libc_compiler_triple_check EQUAL "0"))
+  message(FATAL_ERROR "libc build: error querying target triple from the "
+                      "compiler: ${libc_compiler_triple}")
+endif()
+get_arch_and_system_from_triple(${libc_compiler_triple}
+                                compiler_arch compiler_sys)
+if(NOT compiler_arch)
+  message(FATAL_ERROR
+          "libc build: Invalid or unknown libc compiler target triple: "
+          "${libc_compiler_triple}")
+endif()
+
+set(LIBC_TARGET_ARCHITECTURE ${compiler_arch})
+set(LIBC_TARGET_OS ${compiler_sys})
+set(LIBC_CROSSBUILD FALSE)
+
+# One should not set LLVM_RUNTIMES_TARGET and LIBC_TARGET_TRIPLE
+if(LLVM_RUNTIMES_TARGET AND LIBC_TARGET_TRIPLE)
+  message(FATAL_ERROR
+          "libc build: Specify only LLVM_RUNTIMES_TARGET if you are doing a "
+          "runtimes/bootstrap build. If you are doing a standalone build, "
+          "specify only LIBC_TARGET_TRIPLE.")
+endif()
+
+set(explicit_target_triple)
+if(LLVM_RUNTIMES_TARGET)
+  set(explicit_target_triple ${LLVM_RUNTIMES_TARGET})
+elseif(LIBC_TARGET_TRIPLE)
+  set(explicit_target_triple ${LIBC_TARGET_TRIPLE})
+endif()
+
+# The libc's target architecture and OS are set to match the compiler's default
+# target triple above. However, one can explicitly set LIBC_TARGET_TRIPLE or
+# LLVM_RUNTIMES_TARGET (for runtimes/bootstrap build). If one of them is set,
+# then we will use that target triple to deduce libc's target OS and
+# architecture.
+if(explicit_target_triple)
+  get_arch_and_system_from_triple(${explicit_target_triple} libc_arch libc_sys)
+  if(NOT libc_arch)
+    message(FATAL_ERROR
+            "libc build: Invalid or unknown triple: ${explicit_target_triple}")
+  endif()
+  set(LIBC_TARGET_ARCHITECTURE ${libc_arch})
+  set(LIBC_TARGET_OS ${libc_sys})
+endif()
+
+if((LIBC_TARGET_OS STREQUAL "unknown") OR (LIBC_TARGET_OS STREQUAL "none"))
+  # We treat "unknown" and "none" systems as baremetal targets.
+  set(LIBC_TARGET_OS "baremetal")
+endif()
+
+# Set up some convenient vars to make conditionals easy to use in other parts of
+# the libc CMake infrastructure. Also, this is where we also check if the target
+# architecture is currently supported.
+if(LIBC_TARGET_ARCHITECTURE STREQUAL "arm")
+  set(LIBC_TARGET_ARCHITECTURE_IS_ARM TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "aarch64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_AARCH64 TRUE)
+elseif(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
+  set(LIBC_TARGET_ARCHITECTURE_IS_X86 TRUE)
+else()
+  message(FATAL_ERROR
+          "Unsupported libc target architecture ${LIBC_TARGET_ARCHITECTURE}")
+endif()
+
+if(LIBC_TARGET_OS STREQUAL "baremetal")
+  set(LIBC_TARGET_OS_IS_BAREMETAL TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "linux")
+  set(LIBC_TARGET_OS_IS_LINUX TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "darwin")
+  set(LIBC_TARGET_OS_IS_DARWIN TRUE)
+elseif(LIBC_TARGET_OS STREQUAL "windows")
+  set(LIBC_TARGET_OS_IS_WINDOWS TRUE)
+else()
+  message(FATAL_ERROR
+          "Unsupported libc target operating system ${LIBC_TARGET_OS}")
+endif()
+
+
+# If the compiler target triple is not the same as the triple specified by
+# LIBC_TARGET_TRIPLE or LLVM_RUNTIMES_TARGET, we will add a --target option
+# if the compiler is clang. If the compiler is GCC we just error out as there
+# is no equivalent of an option like --target.
+if(explicit_target_triple AND
+   (NOT (libc_compiler_triple STREQUAL explicit_target_triple)))
+  set(LIBC_CROSSBUILD TRUE)
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    message(FATAL_ERROR
+            "GCC target triple and the explicity specified target triple do "
+            "not match.")
+  else()
+    list(APPEND
+         LIBC_COMPILE_OPTIONS_DEFAULT "--target=${explicit_target_triple}")
+  endif()
+endif()
+
+message(STATUS
+        "Building libc for ${LIBC_TARGET_ARCHITECTURE} on ${LIBC_TARGET_OS}")

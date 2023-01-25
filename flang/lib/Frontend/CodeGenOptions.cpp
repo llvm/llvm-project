@@ -17,6 +17,7 @@ namespace Fortran::frontend {
 
 CodeGenOptions::CodeGenOptions() {
 #define CODEGENOPT(Name, Bits, Default) Name = Default;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
 #include "flang/Frontend/CodeGenOptions.def"
 }
 

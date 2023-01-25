@@ -160,6 +160,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
       // If so, erase it.
       if (isTriviallyDead(MI, MRI)) {
         LLVM_DEBUG(dbgs() << "Is dead; erasing.\n");
+        salvageDebugInfo(MRI, MI);
         MI.eraseFromParent();
         continue;
       }
@@ -180,6 +181,11 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
                "Must be able to replace dst with src!");
         MI.eraseFromParent();
         MRI.replaceRegWith(DstReg, SrcReg);
+        continue;
+      }
+
+      if (MI.getOpcode() == TargetOpcode::G_INVOKE_REGION_START) {
+        MI.eraseFromParent();
         continue;
       }
 
@@ -229,8 +235,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();
-      if (Register::isVirtualRegister(SrcReg) &&
-          Register::isVirtualRegister(DstReg)) {
+      if (SrcReg.isVirtual() && DstReg.isVirtual()) {
         auto SrcRC = MRI.getRegClass(SrcReg);
         auto DstRC = MRI.getRegClass(DstReg);
         if (SrcRC == DstRC) {
@@ -247,7 +252,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
   // that the size of the now-constrained vreg is unchanged and that it has a
   // register class.
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
-    unsigned VReg = Register::index2VirtReg(I);
+    Register VReg = Register::index2VirtReg(I);
 
     MachineInstr *MI = nullptr;
     if (!MRI.def_empty(VReg))

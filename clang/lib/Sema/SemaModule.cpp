@@ -15,6 +15,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/SemaInternal.h"
+#include <optional>
 
 using namespace clang;
 using namespace sema;
@@ -119,12 +120,12 @@ void Sema::HandleStartOfHeaderUnit() {
   // TODO: Make the C++20 header lookup independent.
   // When the input is pre-processed source, we need a file ref to the original
   // file for the header map.
-  auto F = SourceMgr.getFileManager().getFile(HUName);
+  auto F = SourceMgr.getFileManager().getOptionalFileRef(HUName);
   // For the sake of error recovery (if someone has moved the original header
   // after creating the pre-processed output) fall back to obtaining the file
   // ref for the input file, which must be present.
   if (!F)
-    F = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+    F = SourceMgr.getFileEntryRefForID(SourceMgr.getMainFileID());
   assert(F && "failed to find the header unit source?");
   Module::Header H{HUName.str(), HUName.str(), *F};
   auto &Map = PP.getHeaderSearchInfo().getModuleMap();
@@ -142,6 +143,36 @@ void Sema::HandleStartOfHeaderUnit() {
   auto *TU = Context.getTranslationUnitDecl();
   TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
   TU->setLocalOwningModule(Mod);
+}
+
+/// Tests whether the given identifier is reserved as a module name and
+/// diagnoses if it is. Returns true if a diagnostic is emitted and false
+/// otherwise.
+static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
+                                   SourceLocation Loc) {
+  enum {
+    Valid = -1,
+    Invalid = 0,
+    Reserved = 1,
+  } Reason = Valid;
+
+  if (II->isStr("module") || II->isStr("import"))
+    Reason = Invalid;
+  else if (II->isReserved(S.getLangOpts()) !=
+           ReservedIdentifierStatus::NotReserved)
+    Reason = Reserved;
+
+  // If the identifier is reserved (not invalid) but is in a system header,
+  // we do not diagnose (because we expect system headers to use reserved
+  // identifiers).
+  if (Reason == Reserved && S.getSourceManager().isInSystemHeader(Loc))
+    Reason = Valid;
+
+  if (Reason != Valid) {
+    S.Diag(Loc, diag::err_invalid_module_name) << II << (int)Reason;
+    return true;
+  }
+  return false;
 }
 
 Sema::DeclGroupPtrTy
@@ -195,9 +226,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     Diag(ModuleLoc, diag::err_module_decl_in_module_map_module);
     return nullptr;
 
-  case LangOptions::CMK_HeaderModule:
   case LangOptions::CMK_HeaderUnit:
-    Diag(ModuleLoc, diag::err_module_decl_in_header_module);
+    Diag(ModuleLoc, diag::err_module_decl_in_header_unit);
     return nullptr;
   }
 
@@ -214,14 +244,8 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     return nullptr;
   }
 
-  // Find the global module fragment we're adopting into this module, if any.
-  Module *GlobalModuleFragment = nullptr;
-  if (!ModuleScopes.empty() &&
-      ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment)
-    GlobalModuleFragment = ModuleScopes.back().Module;
-
   assert((!getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS ||
-          SeenGMF == (bool)GlobalModuleFragment) &&
+          SeenGMF == (bool)this->GlobalModuleFragment) &&
          "mismatched global module state");
 
   // In C++20, the module-declaration must be the first declaration if there
@@ -236,6 +260,32 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(BeginLoc, diag::note_global_module_introducer_missing)
           << FixItHint::CreateInsertion(BeginLoc, "module;\n");
     }
+  }
+
+  // C++2b [module.unit]p1: ... The identifiers module and import shall not
+  // appear as identifiers in a module-name or module-partition. All
+  // module-names either beginning with an identifier consisting of std
+  // followed by zero or more digits or containing a reserved identifier
+  // ([lex.name]) are reserved and shall not be specified in a
+  // module-declaration; no diagnostic is required.
+
+  // Test the first part of the path to see if it's std[0-9]+ but allow the
+  // name in a system header.
+  StringRef FirstComponentName = Path[0].first->getName();
+  if (!getSourceManager().isInSystemHeader(Path[0].second) &&
+      (FirstComponentName == "std" ||
+       (FirstComponentName.startswith("std") &&
+        llvm::all_of(FirstComponentName.drop_front(3), &llvm::isDigit)))) {
+    Diag(Path[0].second, diag::err_invalid_module_name)
+        << Path[0].first << /*reserved*/ 1;
+    return nullptr;
+  }
+
+  // Then test all of the components in the path to see if any of them are
+  // using another kind of reserved or invalid identifier.
+  for (auto Part : Path) {
+    if (DiagReservedModuleName(*this, Part.first, Part.second))
+      return nullptr;
   }
 
   // Flatten the dots in a module name. Unlike Clang's hierarchical module map
@@ -271,7 +321,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       Diag(Path[0].second, diag::err_module_redefinition) << ModuleName;
       if (M->DefinitionLoc.isValid())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition);
-      else if (Optional<FileEntryRef> FE = M->getASTFile())
+      else if (OptionalFileEntryRef FE = M->getASTFile())
         Diag(M->DefinitionLoc, diag::note_prev_module_definition_from_ast_file)
             << FE->getName();
       Mod = M;
@@ -279,8 +329,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     }
 
     // Create a Module for the module that we're defining.
-    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
-                                           GlobalModuleFragment);
+    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
     if (MDK == ModuleDeclKind::PartitionInterface)
       Mod->Kind = Module::ModulePartitionInterface;
     assert(Mod && "module creation should not fail");
@@ -300,21 +349,19 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     if (!Mod) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.
-      Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
-                                             GlobalModuleFragment);
+      Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
     }
   } break;
 
   case ModuleDeclKind::PartitionImplementation:
     // Create an interface, but note that it is an implementation
     // unit.
-    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName,
-                                           GlobalModuleFragment);
+    Mod = Map.createModuleForInterfaceUnit(ModuleLoc, ModuleName);
     Mod->Kind = Module::ModulePartitionImplementation;
     break;
   }
 
-  if (!GlobalModuleFragment) {
+  if (!this->GlobalModuleFragment) {
     ModuleScopes.push_back({});
     if (getLangOpts().ModulesLocalVisibility)
       ModuleScopes.back().OuterVisibleModules = std::move(VisibleModules);
@@ -494,7 +541,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
   // of the same top-level module. Until we do, make it an error rather than
   // silently ignoring the import.
   // FIXME: Should we warn on a redundant import of the current module?
-  if (Mod->getTopLevelModuleName() == getLangOpts().CurrentModule &&
+  if (Mod->isForBuilding(getLangOpts()) &&
       (getLangOpts().isCompilingModule() || !getLangOpts().ModulesTS)) {
     Diag(ImportLoc, getLangOpts().isCompilingModule()
                         ? diag::err_module_self_import
@@ -544,9 +591,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
              (ModuleScopes.back().ModuleInterface ||
               (getLangOpts().CPlusPlusModules &&
                ModuleScopes.back().Module->isGlobalModule()))) {
-    assert((!ModuleScopes.back().Module->isGlobalModule() ||
-            Mod->Kind == Module::ModuleKind::ModuleHeaderUnit) &&
-           "should only be importing a header unit into the GMF");
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
@@ -561,11 +605,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Diag(ExportLoc, diag::err_export_not_in_module_interface)
         << (!ModuleScopes.empty() &&
             !ModuleScopes.back().ImplicitGlobalModuleFragment);
-  } else if (getLangOpts().isCompilingModule()) {
-    Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
-        getLangOpts().CurrentModule, ExportLoc, false, false);
-    (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
   }
 
   // In some cases we need to know if an entity was present in a directly-
@@ -785,7 +824,7 @@ enum class UnnamedDeclKind {
 };
 }
 
-static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
+static std::optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
   if (isa<EmptyDecl>(D))
     return UnnamedDeclKind::Empty;
   if (isa<StaticAssertDecl>(D))
@@ -795,7 +834,7 @@ static llvm::Optional<UnnamedDeclKind> getUnnamedDeclKind(Decl *D) {
   if (isa<UsingDirectiveDecl>(D))
     return UnnamedDeclKind::UsingDirective;
   // Everything else either introduces one or more names or is ill-formed.
-  return llvm::None;
+  return std::nullopt;
 }
 
 unsigned getUnnamedDeclDiag(UnnamedDeclKind UDK, bool InBlock) {
@@ -909,6 +948,17 @@ Decl *Sema::ActOnFinishExportDecl(Scope *S, Decl *D, SourceLocation RBraceLoc) {
         // no declarations (transitively), in which case it's ill-formed.
         diagExportedUnnamedDecl(*this, UnnamedDeclKind::Context, Child,
                                 BlockStart);
+      }
+      if (auto *FD = dyn_cast<FunctionDecl>(Child)) {
+        // [dcl.inline]/7
+        // If an inline function or variable that is attached to a named module
+        // is declared in a definition domain, it shall be defined in that
+        // domain.
+        // So, if the current declaration does not have a definition, we must
+        // check at the end of the TU (or when the PMF starts) to see that we
+        // have a definition at that point.
+        if (FD->isInlineSpecified() && !FD->isDefined())
+          PendingInlineFuncDecls.insert(FD);
       }
     }
   }

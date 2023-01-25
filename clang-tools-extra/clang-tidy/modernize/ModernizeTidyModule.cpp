@@ -44,8 +44,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace modernize {
 
 class ModernizeModule : public ClangTidyModule {
@@ -130,5 +129,4 @@ static ClangTidyModuleRegistry::Add<ModernizeModule> X("modernize-module",
 // and thus register the ModernizeModule.
 volatile int ModernizeModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

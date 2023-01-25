@@ -42,10 +42,15 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   switch (short_option) {
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
-    if (language == eLanguageTypeUnknown)
-      error.SetErrorStringWithFormat(
-          "unknown language type: '%s' for expression",
-          option_arg.str().c_str());
+    if (language == eLanguageTypeUnknown) {
+      StreamString sstr;
+      sstr.Printf("unknown language type: '%s' for expression. "
+                  "List of supported languages:\n",
+                  option_arg.str().c_str());
+
+      Language::PrintSupportedLanguagesForExpressions(sstr, "  ", "\n");
+      error.SetErrorString(sstr.GetString());
+    }
     break;
 
   case 'a': {
@@ -172,7 +177,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectExpression::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_expression_options);
+  return llvm::ArrayRef(g_expression_options);
 }
 
 CommandObjectExpression::CommandObjectExpression(
@@ -374,7 +379,7 @@ CommandObjectExpression::GetEvalOptions(const Target &target) {
   if (m_command_options.timeout > 0)
     options.SetTimeout(std::chrono::microseconds(m_command_options.timeout));
   else
-    options.SetTimeout(llvm::None);
+    options.SetTimeout(std::nullopt);
   return options;
 }
 
@@ -461,6 +466,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         result.SetStatus(eReturnStatusFailed);
       }
     }
+  } else {
+    error_stream.Printf("error: unknown error\n");
   }
 
   return (success != eExpressionSetupError &&
@@ -509,7 +516,7 @@ void CommandObjectExpression::GetMultilineExpression() {
                             llvm::StringRef(), // Continuation prompt
                             multiple_lines, color_prompt,
                             1, // Show line numbers starting at 1
-                            *this, nullptr));
+                            *this));
 
   StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
   if (output_sp) {
@@ -538,7 +545,7 @@ GetExprOptions(ExecutionContext &ctx,
   if (command_options.timeout > 0)
     expr_options.SetTimeout(std::chrono::microseconds(command_options.timeout));
   else
-    expr_options.SetTimeout(llvm::None);
+    expr_options.SetTimeout(std::nullopt);
 
   return expr_options;
 }

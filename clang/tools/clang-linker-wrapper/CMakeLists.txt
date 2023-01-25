@@ -1,6 +1,6 @@
 include(GNUInstallDirs)
 
-set(LLVM_LINK_COMPONENTS 
+set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   BitWriter
   Core
@@ -14,8 +14,10 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  TargetParser
   CodeGen
-  LTO)
+  LTO
+  )
 
 set(LLVM_TARGET_DEFINITIONS LinkerWrapperOpts.td)
 tablegen(LLVM LinkerWrapperOpts.inc -gen-opt-parser-defs)

@@ -21,6 +21,7 @@ void test(void) {
   printf("%s", (int) 123);
   printf("abc%0f", "testing testing 123");
   printf("%u", (long) -12);
+  printf("%b", (long) -13);
   printf("%p", 123);
   printf("%c\n", "x");
   printf("%c\n", 1.23);
@@ -160,6 +161,7 @@ void test2(int intSAParm[static 2]) {
   scanf("%f", (my_int_type*)&intVar);
 
   // Preserve the original formatting.
+  scanf("%b", &longVar);
   scanf("%o", &longVar);
   scanf("%u", &longVar);
   scanf("%x", &longVar);
@@ -179,6 +181,7 @@ void test2(int intSAParm[static 2]) {
 // CHECK: printf("%d", (int) 123);
 // CHECK: printf("abc%s", "testing testing 123");
 // CHECK: printf("%ld", (long) -12);
+// CHECK: printf("%ld", (long) -13);
 // CHECK: printf("%d", 123);
 // CHECK: printf("%s\n", "x");
 // CHECK: printf("%f\n", 1.23);
@@ -246,6 +249,7 @@ void test2(int intSAParm[static 2]) {
 // CHECK: scanf("%ju", (my_uintmax_type*)&uIntmaxVar);
 // CHECK: scanf("%td", (my_ptrdiff_type*)&ptrdiffVar);
 // CHECK: scanf("%d", (my_int_type*)&intVar);
+// CHECK: scanf("%ld", &longVar);
 // CHECK: scanf("%lo", &longVar);
 // CHECK: scanf("%lu", &longVar);
 // CHECK: scanf("%lx", &longVar);

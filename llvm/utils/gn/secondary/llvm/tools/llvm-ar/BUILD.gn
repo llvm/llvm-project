@@ -36,6 +36,7 @@ driver_executable("llvm-ar") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/ToolDrivers/llvm-dlltool:DlltoolDriver",
     "//llvm/lib/ToolDrivers/llvm-lib:LibDriver",
   ]

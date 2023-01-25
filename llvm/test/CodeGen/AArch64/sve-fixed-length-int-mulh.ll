@@ -63,7 +63,7 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) 
   ret <16 x i8> %res
 }
 
-define void @smulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
+define void @smulh_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -72,18 +72,18 @@ define void @smulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %1 = sext <32 x i8> %op1 to <32 x i16>
   %2 = sext <32 x i8> %op2 to <32 x i16>
   %mul = mul <32 x i16> %1, %2
   %shr = lshr <32 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <32 x i16> %shr to <32 x i8>
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @smulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
+define void @smulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -134,8 +134,8 @@ define void @smulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; VBITS_GE_512-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
-  %op2 = load <64 x i8>, <64 x i8>* %b
+  %op1 = load <64 x i8>, ptr %a
+  %op2 = load <64 x i8>, ptr %b
   %insert = insertelement <64 x i16> undef, i16 8, i64 0
   %splat = shufflevector <64 x i16> %insert, <64 x i16> undef, <64 x i32> zeroinitializer
   %1 = sext <64 x i8> %op1 to <64 x i16>
@@ -143,11 +143,11 @@ define void @smulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
   %mul = mul <64 x i16> %1, %2
   %shr = lshr <64 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <64 x i16> %shr to <64 x i8>
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @smulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
+define void @smulh_v128i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smulh_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -156,18 +156,18 @@ define void @smulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
-  %op2 = load <128 x i8>, <128 x i8>* %b
+  %op1 = load <128 x i8>, ptr %a
+  %op2 = load <128 x i8>, ptr %b
   %1 = sext <128 x i8> %op1 to <128 x i16>
   %2 = sext <128 x i8> %op2 to <128 x i16>
   %mul = mul <128 x i16> %1, %2
   %shr = lshr <128 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <128 x i16> %shr to <128 x i8>
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @smulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @smulh_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smulh_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -176,14 +176,14 @@ define void @smulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    smulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
-  %op2 = load <256 x i8>, <256 x i8>* %b
+  %op1 = load <256 x i8>, ptr %a
+  %op2 = load <256 x i8>, ptr %b
   %1 = sext <256 x i8> %op1 to <256 x i16>
   %2 = sext <256 x i8> %op2 to <256 x i16>
   %mul = mul <256 x i16> %1, %2
   %shr = lshr <256 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <256 x i16> %shr to <256 x i8>
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -227,7 +227,7 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) 
   ret <8 x i16> %res
 }
 
-define void @smulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
+define void @smulh_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -236,18 +236,18 @@ define void @smulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %1 = sext <16 x i16> %op1 to <16 x i32>
   %2 = sext <16 x i16> %op2 to <16 x i32>
   %mul = mul <16 x i32> %1, %2
   %shr = lshr <16 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <16 x i32> %shr to <16 x i16>
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @smulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
+define void @smulh_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -289,18 +289,18 @@ define void @smulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %1 = sext <32 x i16> %op1 to <32 x i32>
   %2 = sext <32 x i16> %op2 to <32 x i32>
   %mul = mul <32 x i32> %1, %2
   %shr = lshr <32 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <32 x i32> %shr to <32 x i16>
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @smulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0 {
+define void @smulh_v64i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smulh_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -309,18 +309,18 @@ define void @smulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
-  %op2 = load <64 x i16>, <64 x i16>* %b
+  %op1 = load <64 x i16>, ptr %a
+  %op2 = load <64 x i16>, ptr %b
   %1 = sext <64 x i16> %op1 to <64 x i32>
   %2 = sext <64 x i16> %op2 to <64 x i32>
   %mul = mul <64 x i32> %1, %2
   %shr = lshr <64 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <64 x i32> %shr to <64 x i16>
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @smulh_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @smulh_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smulh_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -329,14 +329,14 @@ define void @smulh_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) 
 ; CHECK-NEXT:    smulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
-  %op2 = load <128 x i16>, <128 x i16>* %b
+  %op1 = load <128 x i16>, ptr %a
+  %op2 = load <128 x i16>, ptr %b
   %1 = sext <128 x i16> %op1 to <128 x i32>
   %2 = sext <128 x i16> %op2 to <128 x i32>
   %mul = mul <128 x i32> %1, %2
   %shr = lshr <128 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <128 x i32> %shr to <128 x i16>
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -374,7 +374,7 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) 
   ret <4 x i32> %res
 }
 
-define void @smulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @smulh_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -383,18 +383,18 @@ define void @smulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %1 = sext <8 x i32> %op1 to <8 x i64>
   %2 = sext <8 x i32> %op2 to <8 x i64>
   %mul = mul <8 x i64> %1, %2
   %shr = lshr <8 x i64> %mul,  <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <8 x i64> %shr to <8 x i32>
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @smulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @smulh_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -436,18 +436,18 @@ define void @smulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %1 = sext <16 x i32> %op1 to <16 x i64>
   %2 = sext <16 x i32> %op2 to <16 x i64>
   %mul = mul <16 x i64> %1, %2
   %shr = lshr <16 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <16 x i64> %shr to <16 x i32>
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @smulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @smulh_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smulh_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -456,18 +456,18 @@ define void @smulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
-  %op2 = load <32 x i32>, <32 x i32>* %b
+  %op1 = load <32 x i32>, ptr %a
+  %op2 = load <32 x i32>, ptr %b
   %1 = sext <32 x i32> %op1 to <32 x i64>
   %2 = sext <32 x i32> %op2 to <32 x i64>
   %mul = mul <32 x i64> %1, %2
   %shr = lshr <32 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <32 x i64> %shr to <32 x i32>
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @smulh_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @smulh_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smulh_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -476,14 +476,14 @@ define void @smulh_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    smulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
-  %op2 = load <64 x i32>, <64 x i32>* %b
+  %op1 = load <64 x i32>, ptr %a
+  %op2 = load <64 x i32>, ptr %b
   %1 = sext <64 x i32> %op1 to <64 x i64>
   %2 = sext <64 x i32> %op2 to <64 x i64>
   %mul = mul <64 x i64> %1, %2
   %shr = lshr <64 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <64 x i64> %shr to <64 x i32>
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -525,7 +525,7 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) 
   ret <2 x i64> %res
 }
 
-define void @smulh_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @smulh_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smulh_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -534,18 +534,18 @@ define void @smulh_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %1 = sext <4 x i64> %op1 to <4 x i128>
   %2 = sext <4 x i64> %op2 to <4 x i128>
   %mul = mul <4 x i128> %1, %2
   %shr = lshr <4 x i128> %mul, <i128 64, i128 64, i128 64, i128 64>
   %res = trunc <4 x i128> %shr to <4 x i64>
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @smulh_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+define void @smulh_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smulh_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -609,18 +609,18 @@ define void @smulh_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %1 = sext <8 x i64> %op1 to <8 x i128>
   %2 = sext <8 x i64> %op2 to <8 x i128>
   %mul = mul <8 x i128> %1, %2
   %shr = lshr <8 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <8 x i128> %shr to <8 x i64>
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @smulh_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @smulh_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: smulh_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -629,18 +629,18 @@ define void @smulh_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %1 = sext <16 x i64> %op1 to <16 x i128>
   %2 = sext <16 x i64> %op2 to <16 x i128>
   %mul = mul <16 x i128> %1, %2
   %shr = lshr <16 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <16 x i128> %shr to <16 x i64>
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @smulh_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @smulh_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: smulh_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -649,14 +649,14 @@ define void @smulh_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    smulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %1 = sext <32 x i64> %op1 to <32 x i128>
   %2 = sext <32 x i64> %op2 to <32 x i128>
   %mul = mul <32 x i128> %1, %2
   %shr = lshr <32 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <32 x i128> %shr to <32 x i64>
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 
@@ -713,7 +713,7 @@ define <16 x i8> @umulh_v16i8(<16 x i8> %op1, <16 x i8> %op2) vscale_range(2,0) 
   ret <16 x i8> %res
 }
 
-define void @umulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
+define void @umulh_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -722,18 +722,18 @@ define void @umulh_v32i8(<32 x i8>* %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
-  %op2 = load <32 x i8>, <32 x i8>* %b
+  %op1 = load <32 x i8>, ptr %a
+  %op2 = load <32 x i8>, ptr %b
   %1 = zext <32 x i8> %op1 to <32 x i16>
   %2 = zext <32 x i8> %op2 to <32 x i16>
   %mul = mul <32 x i16> %1, %2
   %shr = lshr <32 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <32 x i16> %shr to <32 x i8>
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @umulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
+define void @umulh_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -784,18 +784,18 @@ define void @umulh_v64i8(<64 x i8>* %a, <64 x i8>* %b) #0 {
 ; VBITS_GE_512-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
-  %op2 = load <64 x i8>, <64 x i8>* %b
+  %op1 = load <64 x i8>, ptr %a
+  %op2 = load <64 x i8>, ptr %b
   %1 = zext <64 x i8> %op1 to <64 x i16>
   %2 = zext <64 x i8> %op2 to <64 x i16>
   %mul = mul <64 x i16> %1, %2
   %shr = lshr <64 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <64 x i16> %shr to <64 x i8>
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @umulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
+define void @umulh_v128i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umulh_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -804,8 +804,8 @@ define void @umulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
-  %op2 = load <128 x i8>, <128 x i8>* %b
+  %op1 = load <128 x i8>, ptr %a
+  %op2 = load <128 x i8>, ptr %b
   %insert = insertelement <128 x i16> undef, i16 8, i64 0
   %splat = shufflevector <128 x i16> %insert, <128 x i16> undef, <128 x i32> zeroinitializer
   %1 = zext <128 x i8> %op1 to <128 x i16>
@@ -813,11 +813,11 @@ define void @umulh_v128i8(<128 x i8>* %a, <128 x i8>* %b) vscale_range(8,0) #0 {
   %mul = mul <128 x i16> %1, %2
   %shr = lshr <128 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <128 x i16> %shr to <128 x i8>
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @umulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @umulh_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umulh_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -826,14 +826,14 @@ define void @umulh_v256i8(<256 x i8>* %a, <256 x i8>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    umulh z0.b, p0/m, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
-  %op2 = load <256 x i8>, <256 x i8>* %b
+  %op1 = load <256 x i8>, ptr %a
+  %op2 = load <256 x i8>, ptr %b
   %1 = zext <256 x i8> %op1 to <256 x i16>
   %2 = zext <256 x i8> %op2 to <256 x i16>
   %mul = mul <256 x i16> %1, %2
   %shr = lshr <256 x i16> %mul, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   %res = trunc <256 x i16> %shr to <256 x i8>
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -877,7 +877,7 @@ define <8 x i16> @umulh_v8i16(<8 x i16> %op1, <8 x i16> %op2) vscale_range(2,0) 
   ret <8 x i16> %res
 }
 
-define void @umulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
+define void @umulh_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -886,18 +886,18 @@ define void @umulh_v16i16(<16 x i16>* %a, <16 x i16>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
-  %op2 = load <16 x i16>, <16 x i16>* %b
+  %op1 = load <16 x i16>, ptr %a
+  %op2 = load <16 x i16>, ptr %b
   %1 = zext <16 x i16> %op1 to <16 x i32>
   %2 = zext <16 x i16> %op2 to <16 x i32>
   %mul = mul <16 x i32> %1, %2
   %shr = lshr <16 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <16 x i32> %shr to <16 x i16>
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @umulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
+define void @umulh_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -939,18 +939,18 @@ define void @umulh_v32i16(<32 x i16>* %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
-  %op2 = load <32 x i16>, <32 x i16>* %b
+  %op1 = load <32 x i16>, ptr %a
+  %op2 = load <32 x i16>, ptr %b
   %1 = zext <32 x i16> %op1 to <32 x i32>
   %2 = zext <32 x i16> %op2 to <32 x i32>
   %mul = mul <32 x i32> %1, %2
   %shr = lshr <32 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <32 x i32> %shr to <32 x i16>
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @umulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0 {
+define void @umulh_v64i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umulh_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -959,18 +959,18 @@ define void @umulh_v64i16(<64 x i16>* %a, <64 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
-  %op2 = load <64 x i16>, <64 x i16>* %b
+  %op1 = load <64 x i16>, ptr %a
+  %op2 = load <64 x i16>, ptr %b
   %1 = zext <64 x i16> %op1 to <64 x i32>
   %2 = zext <64 x i16> %op2 to <64 x i32>
   %mul = mul <64 x i32> %1, %2
   %shr = lshr <64 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <64 x i32> %shr to <64 x i16>
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @umulh_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @umulh_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umulh_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -979,14 +979,14 @@ define void @umulh_v128i16(<128 x i16>* %a, <128 x i16>* %b) vscale_range(16,0) 
 ; CHECK-NEXT:    umulh z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
-  %op2 = load <128 x i16>, <128 x i16>* %b
+  %op1 = load <128 x i16>, ptr %a
+  %op2 = load <128 x i16>, ptr %b
   %1 = zext <128 x i16> %op1 to <128 x i32>
   %2 = zext <128 x i16> %op2 to <128 x i32>
   %mul = mul <128 x i32> %1, %2
   %shr = lshr <128 x i32> %mul, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %res = trunc <128 x i32> %shr to <128 x i16>
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -1024,7 +1024,7 @@ define <4 x i32> @umulh_v4i32(<4 x i32> %op1, <4 x i32> %op2) vscale_range(2,0) 
   ret <4 x i32> %res
 }
 
-define void @umulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @umulh_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -1033,8 +1033,8 @@ define void @umulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
-  %op2 = load <8 x i32>, <8 x i32>* %b
+  %op1 = load <8 x i32>, ptr %a
+  %op2 = load <8 x i32>, ptr %b
   %insert = insertelement <8 x i64> undef, i64 32, i64 0
   %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
   %1 = zext <8 x i32> %op1 to <8 x i64>
@@ -1042,11 +1042,11 @@ define void @umulh_v8i32(<8 x i32>* %a, <8 x i32>* %b) vscale_range(2,0) #0 {
   %mul = mul <8 x i64> %1, %2
   %shr = lshr <8 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <8 x i64> %shr to <8 x i32>
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @umulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
+define void @umulh_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -1088,18 +1088,18 @@ define void @umulh_v16i32(<16 x i32>* %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
-  %op2 = load <16 x i32>, <16 x i32>* %b
+  %op1 = load <16 x i32>, ptr %a
+  %op2 = load <16 x i32>, ptr %b
   %1 = zext <16 x i32> %op1 to <16 x i64>
   %2 = zext <16 x i32> %op2 to <16 x i64>
   %mul = mul <16 x i64> %1, %2
   %shr = lshr <16 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <16 x i64> %shr to <16 x i32>
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @umulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @umulh_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umulh_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1108,18 +1108,18 @@ define void @umulh_v32i32(<32 x i32>* %a, <32 x i32>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
-  %op2 = load <32 x i32>, <32 x i32>* %b
+  %op1 = load <32 x i32>, ptr %a
+  %op2 = load <32 x i32>, ptr %b
   %1 = zext <32 x i32> %op1 to <32 x i64>
   %2 = zext <32 x i32> %op2 to <32 x i64>
   %mul = mul <32 x i64> %1, %2
   %shr = lshr <32 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <32 x i64> %shr to <32 x i32>
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @umulh_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @umulh_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umulh_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -1128,14 +1128,14 @@ define void @umulh_v64i32(<64 x i32>* %a, <64 x i32>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    umulh z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
-  %op2 = load <64 x i32>, <64 x i32>* %b
+  %op1 = load <64 x i32>, ptr %a
+  %op2 = load <64 x i32>, ptr %b
   %1 = zext <64 x i32> %op1 to <64 x i64>
   %2 = zext <64 x i32> %op2 to <64 x i64>
   %mul = mul <64 x i64> %1, %2
   %shr = lshr <64 x i64> %mul, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
   %res = trunc <64 x i64> %shr to <64 x i32>
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -1175,7 +1175,7 @@ define <2 x i64> @umulh_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) 
   ret <2 x i64> %res
 }
 
-define void @umulh_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @umulh_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umulh_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -1184,18 +1184,18 @@ define void @umulh_v4i64(<4 x i64>* %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
-  %op2 = load <4 x i64>, <4 x i64>* %b
+  %op1 = load <4 x i64>, ptr %a
+  %op2 = load <4 x i64>, ptr %b
   %1 = zext <4 x i64> %op1 to <4 x i128>
   %2 = zext <4 x i64> %op2 to <4 x i128>
   %mul = mul <4 x i128> %1, %2
   %shr = lshr <4 x i128> %mul, <i128 64, i128 64, i128 64, i128 64>
   %res = trunc <4 x i128> %shr to <4 x i64>
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @umulh_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
+define void @umulh_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umulh_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -1259,18 +1259,18 @@ define void @umulh_v8i64(<8 x i64>* %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
-  %op2 = load <8 x i64>, <8 x i64>* %b
+  %op1 = load <8 x i64>, ptr %a
+  %op2 = load <8 x i64>, ptr %b
   %1 = zext <8 x i64> %op1 to <8 x i128>
   %2 = zext <8 x i64> %op2 to <8 x i128>
   %mul = mul <8 x i128> %1, %2
   %shr = lshr <8 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <8 x i128> %shr to <8 x i64>
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @umulh_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @umulh_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: umulh_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -1279,18 +1279,18 @@ define void @umulh_v16i64(<16 x i64>* %a, <16 x i64>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
-  %op2 = load <16 x i64>, <16 x i64>* %b
+  %op1 = load <16 x i64>, ptr %a
+  %op2 = load <16 x i64>, ptr %b
   %1 = zext <16 x i64> %op1 to <16 x i128>
   %2 = zext <16 x i64> %op2 to <16 x i128>
   %mul = mul <16 x i128> %1, %2
   %shr = lshr <16 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <16 x i128> %shr to <16 x i64>
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @umulh_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @umulh_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: umulh_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -1299,14 +1299,14 @@ define void @umulh_v32i64(<32 x i64>* %a, <32 x i64>* %b) vscale_range(16,0) #0 
 ; CHECK-NEXT:    umulh z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
-  %op2 = load <32 x i64>, <32 x i64>* %b
+  %op1 = load <32 x i64>, ptr %a
+  %op2 = load <32 x i64>, ptr %b
   %1 = zext <32 x i64> %op1 to <32 x i128>
   %2 = zext <32 x i64> %op2 to <32 x i128>
   %mul = mul <32 x i128> %1, %2
   %shr = lshr <32 x i128> %mul, <i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64, i128 64>
   %res = trunc <32 x i128> %shr to <32 x i64>
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 attributes #0 = { "target-features"="+sve" }

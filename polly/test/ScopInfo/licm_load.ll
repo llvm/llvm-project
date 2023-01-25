@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i32 %n, float* noalias nonnull %A, float* noalias nonnull %B, i32 %j) {
+define void @foo(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B, i32 %j) {
 entry:
   %tmp = sext i32 %n to i64
   br label %for.cond
@@ -25,12 +25,10 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %j to i64
-  %arrayidx = getelementptr inbounds float, float* %B, i64 %idxprom
-  %tmp1 = bitcast float* %arrayidx to i32*
-  %tmp2 = load i32, i32* %tmp1, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %tmp3 = bitcast float* %arrayidx2 to i32*
-  store i32 %tmp2, i32* %tmp3, align 4
+  %arrayidx = getelementptr inbounds float, ptr %B, i64 %idxprom
+  %tmp2 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  store i32 %tmp2, ptr %arrayidx2, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

@@ -3,6 +3,7 @@ static_library("GSYM") {
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "DwarfTransformer.cpp",

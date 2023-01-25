@@ -171,18 +171,18 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) nounwin
 ; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %t
-; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movq %rsi, %r15
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    cmpq %rsi, %rbx
+; CHECK-NEXT:    cmpq %rsi, %r14
 ; CHECK-NEXT:    setb %dil
 ; CHECK-NEXT:    callq call@PLT
-; CHECK-NEXT:    subq %r15, %rbx
+; CHECK-NEXT:    subq %r15, %r14
 ; CHECK-NEXT:    jae .LBB9_2
 ; CHECK-NEXT:  # %bb.4: # %end
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movq %rbx, (%r14)
+; CHECK-NEXT:    movq %r14, (%rbx)
 ; CHECK-NEXT:    jmp .LBB9_3
 ; CHECK-NEXT:  .LBB9_2: # %f
 ; CHECK-NEXT:    movl %ebp, %eax

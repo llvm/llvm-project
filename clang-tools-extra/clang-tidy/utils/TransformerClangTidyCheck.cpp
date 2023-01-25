@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "TransformerClangTidyCheck.h"
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 using transformer::RewriteRuleWith;
 
 #ifndef NDEBUG
@@ -66,12 +66,12 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
 // we would be accessing `getLangOpts` and `Options` before the underlying
 // `ClangTidyCheck` instance was properly initialized.
 TransformerClangTidyCheck::TransformerClangTidyCheck(
-    std::function<Optional<RewriteRuleWith<std::string>>(const LangOptions &,
-                                                         const OptionsView &)>
+    std::function<std::optional<RewriteRuleWith<std::string>>(
+        const LangOptions &, const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
     : TransformerClangTidyCheck(Name, Context) {
-  if (Optional<RewriteRuleWith<std::string>> R =
+  if (std::optional<RewriteRuleWith<std::string>> R =
           MakeRule(getLangOpts(), Options))
     setRule(std::move(*R));
 }
@@ -126,18 +126,28 @@ void TransformerClangTidyCheck::check(
   }
 
   // Associate the diagnostic with the location of the first change.
-  DiagnosticBuilder Diag =
-      diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
-  for (const auto &T : *Edits)
-    switch (T.Kind) {
-    case transformer::EditKind::Range:
-      Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
-      break;
-    case transformer::EditKind::AddInclude:
-      Diag << Inserter.createIncludeInsertion(
-          Result.SourceManager->getFileID(T.Range.getBegin()), T.Replacement);
-      break;
+  {
+    DiagnosticBuilder Diag =
+        diag((*Edits)[0].Range.getBegin(), escapeForDiagnostic(*Explanation));
+    for (const auto &T : *Edits) {
+      switch (T.Kind) {
+      case transformer::EditKind::Range:
+        Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
+        break;
+      case transformer::EditKind::AddInclude:
+        Diag << Inserter.createIncludeInsertion(
+            Result.SourceManager->getFileID(T.Range.getBegin()), T.Replacement);
+        break;
+      }
     }
+  }
+  // Emit potential notes.
+  for (const auto &T : *Edits) {
+    if (!T.Note.empty()) {
+      diag(T.Range.getBegin(), escapeForDiagnostic(T.Note),
+           DiagnosticIDs::Note);
+    }
+  }
 }
 
 void TransformerClangTidyCheck::storeOptions(
@@ -145,6 +155,4 @@ void TransformerClangTidyCheck::storeOptions(
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

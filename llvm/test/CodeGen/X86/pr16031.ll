@@ -4,10 +4,10 @@
 define i64 @main(i1 %tobool1) nounwind {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl $-12, %ecx
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    decl %eax
+; CHECK-NEXT:    orl $-12, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    movl %eax, %edx
 ; CHECK-NEXT:    addl $-1, %edx

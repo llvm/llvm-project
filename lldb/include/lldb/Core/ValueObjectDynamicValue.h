@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 
 namespace lldb_private {
 class DataExtractor;
@@ -34,7 +35,7 @@ class ValueObjectDynamicValue : public ValueObject {
 public:
   ~ValueObjectDynamicValue() override = default;
 
-  llvm::Optional<uint64_t> GetByteSize() override;
+  std::optional<uint64_t> GetByteSize() override;
 
   ConstString GetTypeName() override;
 

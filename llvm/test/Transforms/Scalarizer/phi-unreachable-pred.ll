@@ -6,7 +6,7 @@ define i16 @f1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x i16> [[INSERT]], i16 ptrtoint (i16 ()* @f1 to i16), i32 0
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <4 x i16> [[INSERT]], i16 ptrtoint (ptr @f1 to i16), i32 0
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_BODY:%.*]], label [[FOR_END]]
@@ -18,7 +18,7 @@ entry:
   br label %for.end
 
 for.body:
-  %insert = insertelement <4 x i16> %insert, i16 ptrtoint (i16 () * @f1 to i16), i32 0
+  %insert = insertelement <4 x i16> %insert, i16 ptrtoint (ptr @f1 to i16), i32 0
   br label %for.cond
 
 for.cond:

@@ -44,10 +44,13 @@ struct CanDeduce<Iter, Alloc, decltype((void)
   std::basic_string{std::declval<Iter>(), std::declval<Iter>(), std::declval<Alloc>()}
 )> : std::true_type { };
 
-static_assert( CanDeduce<int*, std::allocator<int>>::value);
+static_assert( CanDeduce<char*, std::allocator<char>>::value);
 static_assert(!CanDeduce<NotAnIterator, std::allocator<char>>::value);
 static_assert(!CanDeduce<NotAnInputIterator, std::allocator<char16_t>>::value);
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+static_assert( CanDeduce<wchar_t*, std::allocator<wchar_t>>::value);
 static_assert(!CanDeduce<wchar_t const*, NotAnAllocator<wchar_t>>::value);
+#endif
 
 TEST_CONSTEXPR_CXX20 bool test() {
   {
@@ -70,6 +73,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
   }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   {
     const wchar_t* s = L"12345678901234";
     std::basic_string s1{s, s+10, test_allocator<wchar_t>{}};
@@ -80,6 +84,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(s1.size() == 10);
     assert(s1.compare(0, s1.size(), s, s1.size()) == 0);
   }
+#endif
   {
     const char16_t* s = u"12345678901234";
     std::basic_string s1{s, s+10, min_allocator<char16_t>{}};

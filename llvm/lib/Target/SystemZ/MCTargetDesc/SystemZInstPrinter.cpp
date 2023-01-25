@@ -9,6 +9,7 @@
 #include "SystemZInstPrinter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -23,8 +24,8 @@ using namespace llvm;
 
 #include "SystemZGenAsmWriter.inc"
 
-void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, unsigned Base,
-                                      const MCOperand &DispMO, unsigned Index,
+void SystemZInstPrinter::printAddress(const MCAsmInfo *MAI, MCRegister Base,
+                                      const MCOperand &DispMO, MCRegister Index,
                                       raw_ostream &O) {
   printOperand(DispMO, MAI, O);
   if (Base || Index) {
@@ -49,7 +50,7 @@ void SystemZInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
       printFormattedRegName(MAI, MO.getReg(), O);
   }
   else if (MO.isImm())
-    O << MO.getImm();
+    O << markup("<imm:") << MO.getImm() << markup(">");
   else if (MO.isExpr())
     MO.getExpr()->print(O, MAI);
   else
@@ -57,14 +58,19 @@ void SystemZInstPrinter::printOperand(const MCOperand &MO, const MCAsmInfo *MAI,
 }
 
 void SystemZInstPrinter::printFormattedRegName(const MCAsmInfo *MAI,
-                                               unsigned RegNo, raw_ostream &O) {
-  const char *RegName = getRegisterName(RegNo);
+                                               MCRegister Reg,
+                                               raw_ostream &O) const {
+  const char *RegName = getRegisterName(Reg);
   if (MAI->getAssemblerDialect() == AD_HLASM) {
     // Skip register prefix so that only register number is left
     assert(isalpha(RegName[0]) && isdigit(RegName[1]));
-    O << (RegName + 1);
+    O << markup("<reg:") << (RegName + 1) << markup(">");
   } else
-    O << '%' << RegName;
+    O << markup("<reg:") << '%' << RegName << markup(">");
+}
+
+void SystemZInstPrinter::printRegName(raw_ostream &O, MCRegister Reg) const {
+  printFormattedRegName(&MAI, Reg, O);
 }
 
 void SystemZInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -75,17 +81,19 @@ void SystemZInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 template <unsigned N>
-static void printUImmOperand(const MCInst *MI, int OpNum, raw_ostream &O) {
+void SystemZInstPrinter::printUImmOperand(const MCInst *MI, int OpNum,
+                                          raw_ostream &O) {
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isUInt<N>(Value) && "Invalid uimm argument");
-  O << Value;
+  O << markup("<imm:") << Value << markup(">");
 }
 
 template <unsigned N>
-static void printSImmOperand(const MCInst *MI, int OpNum, raw_ostream &O) {
+void SystemZInstPrinter::printSImmOperand(const MCInst *MI, int OpNum,
+                                          raw_ostream &O) {
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isInt<N>(Value) && "Invalid simm argument");
-  O << Value;
+  O << markup("<imm:") << Value << markup(">");
 }
 
 void SystemZInstPrinter::printU1ImmOperand(const MCInst *MI, int OpNum,
@@ -157,8 +165,9 @@ void SystemZInstPrinter::printPCRelOperand(const MCInst *MI, int OpNum,
                                            raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isImm()) {
-    O << "0x";
+    O << markup("<imm:") << "0x";
     O.write_hex(MO.getImm());
+    O << markup(">");
   } else
     MO.getExpr()->print(O, &MAI);
 }

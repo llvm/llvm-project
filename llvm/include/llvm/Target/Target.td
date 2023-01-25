@@ -186,6 +186,10 @@ class Register<string n, list<string> altNames = []> {
   bits<16> HWEncoding = 0;
 
   bit isArtificial = false;
+
+  // isConstant - This register always holds a constant value (e.g. the zero
+  // register in architectures such as MIPS)
+  bit isConstant = false;
 }
 
 // RegisterWithSubRegs - This can be used to define instances of Register which
@@ -278,10 +282,13 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // Specify allocation priority for register allocators using a greedy
   // heuristic. Classes with higher priority values are assigned first. This is
   // useful as it is sometimes beneficial to assign registers to highly
-  // constrained classes first. The value has to be in the range [0,63].
-  // Values >= 32 should be used with care since they may overlap with other
-  // fields in the allocator's priority heuristics.
+  // constrained classes first. The value has to be in the range [0,31].
   int AllocationPriority = 0;
+
+  // Force register class to use greedy's global heuristic for all
+  // registers in this class. This should more aggressively try to
+  // avoid spilling in pathological cases.
+  bit GlobalPriority = false;
 
   // Generate register pressure set for this register class and any class
   // synthesized from it. Set to 0 to inhibit unneeded pressure sets.
@@ -311,6 +318,12 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
 
   // Target-specific flags. This becomes the TSFlags field in TargetRegisterClass.
   bits<8> TSFlags = 0;
+
+  // If set then consider this register class to be the base class for registers in
+  // its MemberList.  The base class for registers present in multiple base register
+  // classes will be resolved in the order defined by this value, with lower values
+  // taking precedence over higher ones.  Ties are resolved by enumeration order.
+  int BaseClassOrder = ?;
 }
 
 // The memberList in a RegisterClass is a dag of set operations. TableGen
@@ -1041,24 +1054,42 @@ class InstrInfo {
   bit guessInstructionProperties = true;
 
   // TableGen's instruction encoder generator has support for matching operands
-  // to bit-field variables both by name and by position. While matching by
-  // name is preferred, this is currently not possible for complex operands,
-  // and some targets still reply on the positional encoding rules. When
-  // generating a decoder for such targets, the positional encoding rules must
-  // be used by the decoder generator as well.
+  // to bit-field variables both by name and by position. Support for matching
+  // by position is DEPRECATED, and WILL BE REMOVED. Positional matching is
+  // confusing to use, and makes it very easy to accidentally write buggy
+  // instruction definitions.
   //
-  // This option is temporary; it will go away once the TableGen decoder
-  // generator has better support for complex operands and targets have
-  // migrated away from using positionally encoded operands.
+  // In previous versions of LLVM, the ability to match operands by position was
+  // enabled unconditionally. It is now controllable by this option -- and
+  // disabled by default. The previous behavior can be restored by setting this
+  // option to true.
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
+  //
+  // TODO: clean up and remove these options.
+  bit useDeprecatedPositionallyEncodedOperands = false;
+
+  // If positional encoding rules are used for the encoder generator, they may
+  // also need to be used by the decoder generator -- if so, enable this
+  // variable.
+  //
+  // This option is a no-op unless useDeprecatedPositionallyEncodedOperands is
+  // true.
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
   bit decodePositionallyEncodedOperands = false;
 
   // When set, this indicates that there will be no overlap between those
   // operands that are matched by ordering (positional operands) and those
   // matched by name.
   //
-  // This option is temporary; it will go away once the TableGen decoder
-  // generator has better support for complex operands and targets have
-  // migrated away from using positionally encoded operands.
+  // This is a no-op unless useDeprecatedPositionallyEncodedOperands is true
+  // (though it does modify the "would've used positional operand XXX" error.)
+  //
+  // This option is temporary, and will go away once all in-tree targets have
+  // migrated.
   bit noNamedPositionallyEncodedOperands = false;
 }
 
@@ -1401,6 +1432,14 @@ def ICALL_BRANCH_FUNNEL : StandardPseudoInstruction {
   let AsmString = "";
   let hasSideEffects = true;
 }
+def MEMBARRIER : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = true;
+  let Size = 0;
+  let isMeta = true;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"
@@ -1454,6 +1493,16 @@ class AsmParser {
   // to matching the parsed instruction, so to allow more detailed error
   // messages.
   bit ReportMultipleNearMisses = false;
+
+  // OperandParserMethod - If non-empty, this is the name of a custom
+  // member function of the AsmParser class to call for every instruction
+  // operand to be parsed.
+  string OperandParserMethod = "";
+
+  // CallCustomParserForAllOperands - Set to true if the custom parser
+  // method shall be called for all operands as opposed to only those
+  // that have their own specified custom parsers.
+  bit CallCustomParserForAllOperands = false;
 }
 def DefaultAsmParser : AsmParser;
 

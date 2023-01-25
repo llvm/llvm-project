@@ -14,7 +14,7 @@
 // RUN: cat %t-container.ll | FileCheck %s
 
 // CHECK: distinct !DICompileUnit(
-// CHECK-SAME:                    language: DW_LANG_C99,
+// CHECK-SAME:                    language: DW_LANG_C{{[^,]*}},
 // CHECK-SAME:                    file: ![[FILE:[0-9]+]],
 // CHECK: ![[FILE]] = !DIFile(
 // CHECK-SAME:                filename: "SOURCE/debug-info-limited-struct.h",

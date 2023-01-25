@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-parallel -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
-; RUN: opt %loadPolly -polly-parallel -polly-codegen -S < %s | FileCheck %s -check-prefix=IR
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-parallel -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=AST
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-parallel -polly-codegen -S < %s | FileCheck %s -check-prefix=IR
 ;
 ; float A[100];
 ;

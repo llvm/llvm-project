@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -193,12 +194,10 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   bool Reg2IsInternal = MI.getOperand(Idx2).isInternalRead();
   // Avoid calling isRenamable for virtual registers since we assert that
   // renamable property is only queried/set for physical registers.
-  bool Reg1IsRenamable = Register::isPhysicalRegister(Reg1)
-                             ? MI.getOperand(Idx1).isRenamable()
-                             : false;
-  bool Reg2IsRenamable = Register::isPhysicalRegister(Reg2)
-                             ? MI.getOperand(Idx2).isRenamable()
-                             : false;
+  bool Reg1IsRenamable =
+      Reg1.isPhysical() ? MI.getOperand(Idx1).isRenamable() : false;
+  bool Reg2IsRenamable =
+      Reg2.isPhysical() ? MI.getOperand(Idx2).isRenamable() : false;
   // If destination is tied to either of the commuted source register, then
   // it must be updated.
   if (HasDef && Reg0 == Reg1 &&
@@ -238,9 +237,9 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   CommutedMI->getOperand(Idx1).setIsInternalRead(Reg2IsInternal);
   // Avoid calling setIsRenamable for virtual registers since we assert that
   // renamable property is only queried/set for physical registers.
-  if (Register::isPhysicalRegister(Reg1))
+  if (Reg1.isPhysical())
     CommutedMI->getOperand(Idx2).setIsRenamable(Reg1IsRenamable);
-  if (Register::isPhysicalRegister(Reg2))
+  if (Reg2.isPhysical())
     CommutedMI->getOperand(Idx1).setIsRenamable(Reg2IsRenamable);
   return CommutedMI;
 }
@@ -455,12 +454,12 @@ static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
   Register FoldReg = FoldOp.getReg();
   Register LiveReg = LiveOp.getReg();
 
-  assert(Register::isVirtualRegister(FoldReg) && "Cannot fold physregs");
+  assert(FoldReg.isVirtual() && "Cannot fold physregs");
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   const TargetRegisterClass *RC = MRI.getRegClass(FoldReg);
 
-  if (Register::isPhysicalRegister(LiveOp.getReg()))
+  if (LiveOp.getReg().isPhysical())
     return RC->contains(LiveOp.getReg()) ? RC : nullptr;
 
   if (RC->hasSubClassEq(MRI.getRegClass(LiveReg)))
@@ -641,9 +640,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   MachineBasicBlock::iterator Pos = MI;
 
   if (Flags == MachineMemOperand::MOStore)
-    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI);
+    storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI,
+                        Register());
   else
-    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI);
+    loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI, Register());
   return &*--Pos;
 }
 
@@ -705,13 +705,18 @@ bool TargetInstrInfo::hasReassociableOperands(
   // reassociate.
   MachineInstr *MI1 = nullptr;
   MachineInstr *MI2 = nullptr;
-  if (Op1.isReg() && Register::isVirtualRegister(Op1.getReg()))
+  if (Op1.isReg() && Op1.getReg().isVirtual())
     MI1 = MRI.getUniqueVRegDef(Op1.getReg());
-  if (Op2.isReg() && Register::isVirtualRegister(Op2.getReg()))
+  if (Op2.isReg() && Op2.getReg().isVirtual())
     MI2 = MRI.getUniqueVRegDef(Op2.getReg());
 
-  // And they need to be in the trace (otherwise, they won't have a depth).
-  return MI1 && MI2 && MI1->getParent() == MBB && MI2->getParent() == MBB;
+  // And at least one operand must be defined in MBB.
+  return MI1 && MI2 && (MI1->getParent() == MBB || MI2->getParent() == MBB);
+}
+
+bool TargetInstrInfo::areOpcodesEqualOrInverse(unsigned Opcode1,
+                                               unsigned Opcode2) const {
+  return Opcode1 == Opcode2 || getInverseOpcode(Opcode1) == Opcode2;
 }
 
 bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
@@ -720,33 +725,39 @@ bool TargetInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
   const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   MachineInstr *MI1 = MRI.getUniqueVRegDef(Inst.getOperand(1).getReg());
   MachineInstr *MI2 = MRI.getUniqueVRegDef(Inst.getOperand(2).getReg());
-  unsigned AssocOpcode = Inst.getOpcode();
+  unsigned Opcode = Inst.getOpcode();
 
-  // If only one operand has the same opcode and it's the second source operand,
-  // the operands must be commuted.
-  Commuted = MI1->getOpcode() != AssocOpcode && MI2->getOpcode() == AssocOpcode;
+  // If only one operand has the same or inverse opcode and it's the second
+  // source operand, the operands must be commuted.
+  Commuted = !areOpcodesEqualOrInverse(Opcode, MI1->getOpcode()) &&
+             areOpcodesEqualOrInverse(Opcode, MI2->getOpcode());
   if (Commuted)
     std::swap(MI1, MI2);
 
   // 1. The previous instruction must be the same type as Inst.
-  // 2. The previous instruction must also be associative/commutative (this can
-  //    be different even for instructions with the same opcode if traits like
-  //    fast-math-flags are included).
+  // 2. The previous instruction must also be associative/commutative or be the
+  //    inverse of such an operation (this can be different even for
+  //    instructions with the same opcode if traits like fast-math-flags are
+  //    included).
   // 3. The previous instruction must have virtual register definitions for its
   //    operands in the same basic block as Inst.
   // 4. The previous instruction's result must only be used by Inst.
-  return MI1->getOpcode() == AssocOpcode && isAssociativeAndCommutative(*MI1) &&
+  return areOpcodesEqualOrInverse(Opcode, MI1->getOpcode()) &&
+         (isAssociativeAndCommutative(*MI1) ||
+          isAssociativeAndCommutative(*MI1, /* Invert */ true)) &&
          hasReassociableOperands(*MI1, MBB) &&
          MRI.hasOneNonDBGUse(MI1->getOperand(0).getReg());
 }
 
-// 1. The operation must be associative and commutative.
+// 1. The operation must be associative and commutative or be the inverse of
+//    such an operation.
 // 2. The instruction must have virtual register definitions for its
 //    operands in the same basic block.
 // 3. The instruction must have a reassociable sibling.
 bool TargetInstrInfo::isReassociationCandidate(const MachineInstr &Inst,
                                                bool &Commuted) const {
-  return isAssociativeAndCommutative(Inst) &&
+  return (isAssociativeAndCommutative(Inst) ||
+          isAssociativeAndCommutative(Inst, /* Invert */ true)) &&
          hasReassociableOperands(Inst, Inst.getParent()) &&
          hasReassociableSibling(Inst, Commuted);
 }
@@ -800,6 +811,111 @@ TargetInstrInfo::isThroughputPattern(MachineCombinerPattern Pattern) const {
   return false;
 }
 
+std::pair<unsigned, unsigned>
+TargetInstrInfo::getReassociationOpcodes(MachineCombinerPattern Pattern,
+                                         const MachineInstr &Root,
+                                         const MachineInstr &Prev) const {
+  bool AssocCommutRoot = isAssociativeAndCommutative(Root);
+  bool AssocCommutPrev = isAssociativeAndCommutative(Prev);
+
+  // Early exit if both opcodes are associative and commutative. It's a trivial
+  // reassociation when we only change operands order. In this case opcodes are
+  // not required to have inverse versions.
+  if (AssocCommutRoot && AssocCommutPrev) {
+    assert(Root.getOpcode() == Prev.getOpcode() && "Expected to be equal");
+    return std::make_pair(Root.getOpcode(), Root.getOpcode());
+  }
+
+  // At least one instruction is not associative or commutative.
+  // Since we have matched one of the reassociation patterns, we expect that the
+  // instructions' opcodes are equal or one of them is the inversion of the
+  // other.
+  assert(areOpcodesEqualOrInverse(Root.getOpcode(), Prev.getOpcode()) &&
+         "Incorrectly matched pattern");
+  unsigned AssocCommutOpcode = Root.getOpcode();
+  unsigned InverseOpcode = *getInverseOpcode(Root.getOpcode());
+  if (!AssocCommutRoot)
+    std::swap(AssocCommutOpcode, InverseOpcode);
+
+  // The transformation rule (`+` is any associative and commutative binary
+  // operation, `-` is the inverse):
+  // REASSOC_AX_BY:
+  //   (A + X) + Y => A + (X + Y)
+  //   (A + X) - Y => A + (X - Y)
+  //   (A - X) + Y => A - (X - Y)
+  //   (A - X) - Y => A - (X + Y)
+  // REASSOC_XA_BY:
+  //   (X + A) + Y => (X + Y) + A
+  //   (X + A) - Y => (X - Y) + A
+  //   (X - A) + Y => (X + Y) - A
+  //   (X - A) - Y => (X - Y) - A
+  // REASSOC_AX_YB:
+  //   Y + (A + X) => (Y + X) + A
+  //   Y - (A + X) => (Y - X) - A
+  //   Y + (A - X) => (Y - X) + A
+  //   Y - (A - X) => (Y + X) - A
+  // REASSOC_XA_YB:
+  //   Y + (X + A) => (Y + X) + A
+  //   Y - (X + A) => (Y - X) - A
+  //   Y + (X - A) => (Y + X) - A
+  //   Y - (X - A) => (Y - X) + A
+  switch (Pattern) {
+  default:
+    llvm_unreachable("Unexpected pattern");
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    break;
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    if (!AssocCommutRoot && AssocCommutPrev)
+      return {InverseOpcode, InverseOpcode};
+    if (AssocCommutRoot && !AssocCommutPrev)
+      return {InverseOpcode, AssocCommutOpcode};
+    if (!AssocCommutRoot && !AssocCommutPrev)
+      return {AssocCommutOpcode, InverseOpcode};
+    break;
+  }
+  llvm_unreachable("Unhandled combination");
+}
+
+// Return a pair of boolean flags showing if the new root and new prev operands
+// must be swapped. See visual example of the rule in
+// TargetInstrInfo::getReassociationOpcodes.
+static std::pair<bool, bool> mustSwapOperands(MachineCombinerPattern Pattern) {
+  switch (Pattern) {
+  default:
+    llvm_unreachable("Unexpected pattern");
+  case MachineCombinerPattern::REASSOC_AX_BY:
+    return {false, false};
+  case MachineCombinerPattern::REASSOC_XA_BY:
+    return {true, false};
+  case MachineCombinerPattern::REASSOC_AX_YB:
+    return {true, true};
+  case MachineCombinerPattern::REASSOC_XA_YB:
+    return {true, true};
+  }
+}
+
 /// Attempt the reassociation transformation to reduce critical path length.
 /// See the above comments before getMachineCombinerPatterns().
 void TargetInstrInfo::reassociateOps(
@@ -845,15 +961,15 @@ void TargetInstrInfo::reassociateOps(
   Register RegY = OpY.getReg();
   Register RegC = OpC.getReg();
 
-  if (Register::isVirtualRegister(RegA))
+  if (RegA.isVirtual())
     MRI.constrainRegClass(RegA, RC);
-  if (Register::isVirtualRegister(RegB))
+  if (RegB.isVirtual())
     MRI.constrainRegClass(RegB, RC);
-  if (Register::isVirtualRegister(RegX))
+  if (RegX.isVirtual())
     MRI.constrainRegClass(RegX, RC);
-  if (Register::isVirtualRegister(RegY))
+  if (RegY.isVirtual())
     MRI.constrainRegClass(RegY, RC);
-  if (Register::isVirtualRegister(RegC))
+  if (RegC.isVirtual())
     MRI.constrainRegClass(RegC, RC);
 
   // Create a new virtual register for the result of (X op Y) instead of
@@ -862,21 +978,35 @@ void TargetInstrInfo::reassociateOps(
   Register NewVR = MRI.createVirtualRegister(RC);
   InstrIdxForVirtReg.insert(std::make_pair(NewVR, 0));
 
-  unsigned Opcode = Root.getOpcode();
+  auto [NewRootOpc, NewPrevOpc] = getReassociationOpcodes(Pattern, Root, Prev);
   bool KillA = OpA.isKill();
   bool KillX = OpX.isKill();
   bool KillY = OpY.isKill();
+  bool KillNewVR = true;
+
+  auto [SwapRootOperands, SwapPrevOperands] = mustSwapOperands(Pattern);
+
+  if (SwapPrevOperands) {
+    std::swap(RegX, RegY);
+    std::swap(KillX, KillY);
+  }
 
   // Create new instructions for insertion.
   MachineInstrBuilder MIB1 =
-      BuildMI(*MF, Prev.getDebugLoc(), TII->get(Opcode), NewVR)
+      BuildMI(*MF, MIMetadata(Prev), TII->get(NewPrevOpc), NewVR)
           .addReg(RegX, getKillRegState(KillX))
           .addReg(RegY, getKillRegState(KillY))
           .setMIFlags(Prev.getFlags());
+
+  if (SwapRootOperands) {
+    std::swap(RegA, NewVR);
+    std::swap(KillA, KillNewVR);
+  }
+
   MachineInstrBuilder MIB2 =
-      BuildMI(*MF, Root.getDebugLoc(), TII->get(Opcode), RegC)
+      BuildMI(*MF, MIMetadata(Root), TII->get(NewRootOpc), RegC)
           .addReg(RegA, getKillRegState(KillA))
-          .addReg(NewVR, getKillRegState(true))
+          .addReg(NewVR, getKillRegState(KillNewVR))
           .setMIFlags(Root.getFlags());
 
   setSpecialOperandAttr(Root, Prev, *MIB1, *MIB2);
@@ -910,6 +1040,10 @@ void TargetInstrInfo::genAlternativeCodeSequence(
     break;
   }
 
+  // Don't reassociate if Prev and Root are in different blocks.
+  if (Prev->getParent() != Root.getParent())
+    return;
+
   assert(Prev && "Unknown pattern for machine combiner");
 
   reassociateOps(Root, *Prev, Pattern, InsInstrs, DelInstrs, InstIdxForVirtReg);
@@ -929,7 +1063,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
   // doesn't read the other parts of the register.  Otherwise it is really a
   // read-modify-write operation on the full virtual register which cannot be
   // moved safely.
-  if (Register::isVirtualRegister(DefReg) && MI.getOperand(0).getSubReg() &&
+  if (DefReg.isVirtual() && MI.getOperand(0).getSubReg() &&
       MI.readsVirtualRegister(DefReg))
     return false;
 
@@ -964,7 +1098,7 @@ bool TargetInstrInfo::isReallyTriviallyReMaterializableGeneric(
       continue;
 
     // Check for a well-behaved physical register.
-    if (Register::isPhysicalRegister(Reg)) {
+    if (Reg.isPhysical()) {
       if (MO.isUse()) {
         // If the physreg has no defs anywhere, it's just an ambient register
         // and we can freely move its uses. Alternatively, if it's allocatable,
@@ -1170,7 +1304,7 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   return (DefCycle != -1 && DefCycle <= 1);
 }
 
-Optional<ParamLoadedValue>
+std::optional<ParamLoadedValue>
 TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
                                      Register Reg) const {
   const MachineFunction *MF = MI.getMF();
@@ -1200,7 +1334,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     assert(!TRI->isSuperOrSubRegisterEq(Reg, DestReg) &&
            "TargetInstrInfo::describeLoadedValue can't describe super- or "
            "sub-regs for copy instructions");
-    return None;
+    return std::nullopt;
   } else if (auto RegImm = isAddImmediate(MI, Reg)) {
     Register SrcReg = RegImm->Reg;
     Offset = RegImm->Imm;
@@ -1218,16 +1352,16 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     // If the address points to "special" memory (e.g. a spill slot), it's
     // sufficient to check that it isn't aliased by any high-level IR value.
     if (!PSV || PSV->mayAlias(&MFI))
-      return None;
+      return std::nullopt;
 
     const MachineOperand *BaseOp;
     if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
                                       TRI))
-      return None;
+      return std::nullopt;
 
     // FIXME: Scalable offsets are not yet handled in the offset code below.
     if (OffsetIsScalable)
-      return None;
+      return std::nullopt;
 
     // TODO: Can currently only handle mem instructions with a single define.
     // An example from the x86 target:
@@ -1236,7 +1370,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     //    ...
     //
     if (MI.getNumExplicitDefs() != 1)
-      return None;
+      return std::nullopt;
 
     // TODO: In what way do we need to take Reg into consideration here?
 
@@ -1248,7 +1382,7 @@ TargetInstrInfo::describeLoadedValue(const MachineInstr &MI,
     return ParamLoadedValue(*BaseOp, Expr);
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the
@@ -1411,6 +1545,8 @@ void TargetInstrInfo::mergeOutliningCandidateAttributes(
   const Function &ParentFn = FirstCand.getMF()->getFunction();
   if (ParentFn.hasFnAttribute("target-features"))
     F.addFnAttr(ParentFn.getFnAttribute("target-features"));
+  if (ParentFn.hasFnAttribute("target-cpu"))
+    F.addFnAttr(ParentFn.getFnAttribute("target-cpu"));
 
   // Set nounwind, so we don't generate eh_frame.
   if (llvm::all_of(Candidates, [](const outliner::Candidate &C) {

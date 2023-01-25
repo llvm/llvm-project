@@ -89,7 +89,8 @@ void Prescanner::Prescan(ProvenanceRange range) {
 
 void Prescanner::Statement() {
   TokenSequence tokens;
-  LineClassification line{ClassifyLine(nextLine_)};
+  const char *statementStart{nextLine_};
+  LineClassification line{ClassifyLine(statementStart)};
   switch (line.kind) {
   case LineClassification::Kind::Comment:
     nextLine_ += line.payloadOffset; // advance to '!' or newline
@@ -163,6 +164,11 @@ void Prescanner::Statement() {
   }
 
   while (NextToken(tokens)) {
+  }
+  if (continuationLines_ > 255) {
+    Say(GetProvenance(statementStart),
+        "%d continuation lines is more than the Fortran standard allows"_port_en_US,
+        continuationLines_);
   }
 
   Provenance newlineProvenance{GetCurrentProvenance()};
@@ -299,7 +305,7 @@ void Prescanner::LabelField(TokenSequence &token) {
   token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
-    Say(GetProvenance(at_),
+    Say(GetCurrentProvenance(),
         "Label digit is not in fixed-form label field"_port_en_US);
   }
 }
@@ -406,6 +412,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       mightNeedSpace = *at_ == '\n';
     }
     for (; Continuation(mightNeedSpace); mightNeedSpace = false) {
+      ++continuationLines_;
       if (MustSkipToEndOfLine()) {
         SkipToEndOfLine();
       }
@@ -493,7 +500,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Recognize and skip over classic C style /*comments*/ when
       // outside a character literal.
       if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(GetProvenance(at_),
+        Say(GetCurrentProvenance(),
             "nonstandard usage: C-style comment"_port_en_US);
       }
       SkipCComments();

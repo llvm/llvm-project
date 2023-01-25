@@ -113,17 +113,17 @@ define i128 @test_i128_add_add_idx(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    btl $5, {{[0-9]+}}(%esp)
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    adcl $0, %edi
-; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    movl %edi, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    movl %edx, 12(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl $4

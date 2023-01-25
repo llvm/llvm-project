@@ -68,7 +68,7 @@ private:
         if (CallInst *CI = dyn_cast<CallInst>(I)) {
           if (!CI->use_empty())
             CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
-          CI->getParent()->getInstList().erase(CI);
+          CI->eraseFromParent();
           break;
         }
     return false;

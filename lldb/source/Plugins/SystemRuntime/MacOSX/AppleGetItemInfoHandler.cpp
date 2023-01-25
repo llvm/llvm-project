@@ -162,11 +162,15 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
               eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
         LLDB_LOG_ERROR(log, std::move(err),
-                       "Error inseting get-item-info function");
+                       "Error inserting get-item-info function");
         return args_addr;
       }
+      auto ts = *type_system_or_err;
+      if (!ts)
+        return args_addr;
+      
       CompilerType get_item_info_return_type =
-          type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid)
+          ts->GetBasicTypeFromAST(eBasicTypeVoid)
               .GetPointerType();
 
       Status error;
@@ -174,7 +178,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
           get_item_info_return_type, get_item_info_arglist,
           thread.shared_from_this(), error);
       if (error.Fail() || get_item_info_caller == nullptr) {
-        LLDB_LOGF(log, "Error Inserting get-item-info function: \"%s\".",
+        LLDB_LOGF(log, "Error inserting get-item-info function: \"%s\".",
                   error.AsCString());
         return args_addr;
       }
@@ -217,7 +221,7 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   lldb::StackFrameSP thread_cur_frame = thread.GetStackFrameAtIndex(0);
   ProcessSP process_sp(thread.CalculateProcess());
   TargetSP target_sp(thread.CalculateTarget());
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(*target_sp);
   Log *log = GetLog(LLDBLog::SystemRuntime);
 
@@ -257,18 +261,18 @@ AppleGetItemInfoHandler::GetItemInfo(Thread &thread, uint64_t item,
   // already allocated by lldb in the inferior process.
 
   CompilerType clang_void_ptr_type =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
   Value return_buffer_ptr_value;
   return_buffer_ptr_value.SetValueType(Value::ValueType::Scalar);
   return_buffer_ptr_value.SetCompilerType(clang_void_ptr_type);
 
-  CompilerType clang_int_type = clang_ast_context->GetBasicType(eBasicTypeInt);
+  CompilerType clang_int_type = scratch_ts_sp->GetBasicType(eBasicTypeInt);
   Value debug_value;
   debug_value.SetValueType(Value::ValueType::Scalar);
   debug_value.SetCompilerType(clang_int_type);
 
   CompilerType clang_uint64_type =
-      clang_ast_context->GetBasicType(eBasicTypeUnsignedLongLong);
+      scratch_ts_sp->GetBasicType(eBasicTypeUnsignedLongLong);
   Value item_value;
   item_value.SetValueType(Value::ValueType::Scalar);
   item_value.SetCompilerType(clang_uint64_type);

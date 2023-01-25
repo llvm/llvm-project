@@ -16,12 +16,12 @@ target triple = "thumbv7-apple-ios8.0.0"
 @tr4x4 = external global %struct.RD_8x8DATA, align 4
 
 ; Function Attrs: noreturn
-declare void @foo(i16*, i16*) #0
+declare void @foo(ptr, ptr) #0
 
 ; Function Attrs: minsize
 define i32 @test() #1 {
 bb:
-  call void @foo(i16* getelementptr inbounds (%struct.RD_8x8DATA, %struct.RD_8x8DATA* @tr8x8, i32 0, i32 10, i32 0, i32 0), i16* getelementptr inbounds (%struct.RD_8x8DATA, %struct.RD_8x8DATA* @tr4x4, i32 0, i32 10, i32 0, i32 0))
+  call void @foo(ptr getelementptr inbounds (%struct.RD_8x8DATA, ptr @tr8x8, i32 0, i32 10, i32 0, i32 0), ptr getelementptr inbounds (%struct.RD_8x8DATA, ptr @tr4x4, i32 0, i32 10, i32 0, i32 0))
   unreachable
 }
 

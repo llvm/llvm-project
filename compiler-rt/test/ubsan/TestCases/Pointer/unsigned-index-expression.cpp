@@ -1,5 +1,5 @@
 // RUN: %clangxx -std=c++11 -fsanitize=pointer-overflow %s -o %t
-// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not="error:"
+// RUN: %run %t 2>&1 | FileCheck %s --implicit-check-not="runtime error:"
 
 int main(int argc, char *argv[]) {
   char c;

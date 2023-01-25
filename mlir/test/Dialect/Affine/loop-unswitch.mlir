@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline="func.func(test-affine-loop-unswitch)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(func.func(test-affine-loop-unswitch))" | FileCheck %s
 
 // CHECK-DAG: #[[$SET:.*]] = affine_set<(d0) : (d0 - 2 >= 0)>
 

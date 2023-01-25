@@ -15,9 +15,9 @@ define i32 @call_not_speculatable() {
 @gv = internal unnamed_addr constant i32 0
 
 ; CHECK: speculatable attribute may not apply to call sites
-; CHECK-NEXT: %ret = call float bitcast (i32* @gv to float ()*)() #0
+; CHECK-NEXT: %ret = call float @gv() #0
 define float @call_bitcast_speculatable() {
-  %ret = call float bitcast (i32* @gv to float()*)() #0
+  %ret = call float @gv() #0
   ret float %ret
 }
 

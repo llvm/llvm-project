@@ -437,6 +437,10 @@ def ReturnUndefChecker : Checker<"UndefReturn">,
   HelpText<"Check for uninitialized values being returned to the caller">,
   Documentation<HasDocumentation>;
 
+def UndefinedNewArraySizeChecker : Checker<"NewArraySize">,
+  HelpText<"Check if the size of the array in a new[] expression is undefined">,
+  Documentation<HasDocumentation>;
+
 } // end "core.uninitialized"
 
 //===----------------------------------------------------------------------===//
@@ -584,7 +588,7 @@ def StdCLibraryFunctionArgsChecker : Checker<"StdCLibraryFunctionArgs">,
            "such as whether the parameter of isalpha is in the range [0, 255] "
            "or is EOF.">,
   Dependencies<[StdCLibraryFunctionsChecker]>,
-  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker, StreamChecker]>,
+  WeakDependencies<[CallAndMessageChecker, NonNullParamChecker]>,
   Documentation<HasDocumentation>;
 
 } // end "alpha.unix"

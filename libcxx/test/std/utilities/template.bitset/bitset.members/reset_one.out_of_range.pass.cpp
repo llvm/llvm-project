@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: no-exceptions
 
-// test bitset<N>& reset(size_t pos);
+// bitset<N>& reset(size_t pos); // constexpr since C++23
 
 // Make sure we throw std::out_of_range when calling reset() on an OOB index.
 

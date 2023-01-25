@@ -21,7 +21,6 @@
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -82,8 +81,7 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
     OutStreamer->emitSymbolAttribute(S, MCSA_ELF_TypeFunction);
     OutStreamer->emitLabel(S);
   }
-
-  OutStreamer->emitLabel(CurrentFnSym);
+  AsmPrinter::emitFunctionEntryLabel();
 }
 
 void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
@@ -125,7 +123,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
+  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
 
   // Calculate this function's optimization goal.
@@ -214,7 +212,7 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   default: llvm_unreachable("<unknown operand type>");
   case MachineOperand::MO_Register: {
     Register Reg = MO.getReg();
-    assert(Register::isPhysicalRegister(Reg));
+    assert(Reg.isPhysical());
     assert(!MO.getSubReg() && "Subregs should be eliminated!");
     if(ARM::GPRPairRegClass.contains(Reg)) {
       const MachineFunction &MF = *MI->getParent()->getParent();
@@ -892,7 +890,7 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
 
     return MCSym;
   } else if (Subtarget->isTargetELF()) {
-    return getSymbol(GV);
+    return getSymbolPreferLocal(*GV);
   }
   llvm_unreachable("unexpected target");
 }
@@ -1071,7 +1069,7 @@ void ARMAsmPrinter::emitJumpTableTBInst(const MachineInstr *MI,
   OutStreamer->emitDataRegion(OffsetWidth == 1 ? MCDR_DataRegionJT8
                                                : MCDR_DataRegionJT16);
 
-  for (auto MBB : JTBBs) {
+  for (auto *MBB : JTBBs) {
     const MCExpr *MBBSymbolExpr = MCSymbolRefExpr::create(MBB->getSymbol(),
                                                           OutContext);
     // Otherwise it's an offset from the dispatch instruction. Construct an
@@ -1165,7 +1163,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     case ARM::tPUSH:
       // Special case here: no src & dst reg, but two extra imp ops.
       StartOp = 2; NumOffset = 2;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ARM::STMDB_UPD:
     case ARM::t2STMDB_UPD:
     case ARM::VSTMDDB_UPD:
@@ -1793,7 +1791,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
       // FIXME: Ideally we could vary the LDRB index based on the padding
       // between the sequence and jump table, however that relies on MCExprs
       // for load indexes which are currently not supported.
-      OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
+      OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
       EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::tADDhirr)
                                        .addReg(Idx)
                                        .addReg(Idx)

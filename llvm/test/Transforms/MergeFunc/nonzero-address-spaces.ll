@@ -1,4 +1,4 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
 ; MergeFunctions should respect the default function address
 ; space specified in the data layout.
@@ -17,10 +17,10 @@ entry:
 }
 
 ; CHECK-LABEL: @f1(
-; CHECK: ptrtoint i64*
+; CHECK: ptrtoint ptr
 ; CHECK: tail call addrspace(1) void @f0(i64
 
-define void @f1(i64* %p0) {
+define void @f1(ptr %p0) {
 entry:
   call void @stuff()
   call void @stuff()

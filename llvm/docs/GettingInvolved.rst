@@ -147,6 +147,8 @@ The :doc:`CodeOfConduct` applies to all online sync-ups.
 If you'd like to organize a new sync-up, please add the info in the table
 below. Please also create a calendar event for it and invite calendar@llvm.org
 to the event, so that it'll show up on the :ref:`llvm-community-calendar`. 
+Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
+what to add to your calendar invite.
 
 .. list-table:: LLVM regular sync-up calls
    :widths: 25 25 25 25
@@ -199,10 +201,6 @@ to the event, so that it'll show up on the :ref:`llvm-community-calendar`.
      - Every 4 weeks on Tuesdays
      - `ics <http://lists.llvm.org/pipermail/llvm-dev/attachments/20201103/a3499a67/attachment-0001.ics>`__
      - `Minutes/docs <https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw>`__
-   * - Windows/COFF related developments
-     - Every 2 months on Thursday
-     -
-     - `Minutes/docs <https://docs.google.com/document/d/1A-W0Sas_oHWTEl_x_djZYoRtzAdTONMW_6l1BH9G6Bo/edit?usp=sharing>`__
    * - Vector Predication
      - Every 2 weeks on Tuesdays, 3pm UTC
      -
@@ -225,6 +223,14 @@ to the event, so that it'll show up on the :ref:`llvm-community-calendar`.
      - 1st and 3rd Wednesday of the month
      - `gcal <https://calendar.google.com/calendar/u/0?cid=cW1lZGg0ZXNpMnIyZDN2aTVydGVrdWF1YzRAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ>`__
      - `Minutes/docs <https://docs.google.com/document/d/1x5-RbOC6-jnI_NcJ9Dp4pSmGhhNe7lUevuWUIB46TeM/edit?usp=sharing>`__
+   * - LLVM SPIR-V Backend Working Group
+     - Every week on Thursday
+     -
+     - `Meeting details/agenda <https://docs.google.com/document/d/1UjX-LAwPjJ75Nmb8a5jz-Qrm-pPtKtQw0k1S1Lop9jU/edit?usp=sharing>`__
+   * - SYCL Upstream Working Group
+     - Every 2 weeks on Mondays
+     - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
+     - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
 
 .. _office-hours:
 
@@ -266,18 +272,18 @@ don't find anyone present, chances are they happen to be off that day.
       `gcal <https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
     - English, Romanian
-  * - Aaron Ballman
+  * - Aaron Ballman (he/him)
     - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
-    - Monthly, 2nd Monday of the month at 10:00am Eastern, for 30 minutes.
+    - Monthly, 2nd Monday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 30 minutes (will run longer as needed).
       `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
       `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
     - English, Norwegian (not fluently)
   * - Johannes Doerfert (he/him)
     - OpenMP, LLVM-IR, interprocedural optimizations, Attributor, workshops, research, ...
-    - Every 2 weeks, Wednesdays 10:30am (Chicago Time), for 1 hour.
-      `ics <https://outlook.office365.com/owa/calendar/5c93bae7d8fc48f5bd150f9efda8806f@anl.gov/4929bd0f955b4f9b82b7bc995cb3b1bf665030567582422766/S-1-8-2190330107-3188380388-3000953923-1819937831/reachcalendar.ics>`__
-    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTM2ZDNkNGUtZjg3My00ZDFjLTk5NjctYTIwMmI3MWM4MjFj%40thread.v2/0?context=%7b%22Tid%22%3a%220cfca185-25f7-49e3-8ae7-704d5326e285%22%2c%22Oid%22%3a%220cacfb51-1523-4455-a443-adca936d1af0%22%7d>`__
+    - Every week, Wednesdays 9:30am (Pacific Time), for 1 hour.
+      `ics <https://drive.google.com/file/d/1E_QkRvirmdJzlXf2EKBUX-v8Xj7-eW3v/view?usp=sharing>`__
+    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_MTMxNzU4MWYtYzViNS00OTM2LWJmNWQtMjg5ZWFhNGVjNzgw%40thread.v2/0?context=%7b%22Tid%22%3a%22a722dec9-ae4e-4ae3-9d75-fd66e2680a63%22%2c%22Oid%22%3a%22885bda30-ce8e-46db-aa7e-15de0474831a%22%7d>`__
     - English, German
   * - Tobias Grosser
     - General questions on how to contribute to LLVM/MLIR, Polly, Loop Optimization, FPL, Research in LLVM, PhD in CS, Summer of Code.
@@ -299,6 +305,29 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
     - `Zoom <https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09>`__
     - English, Russian
+  * - Michal Paszkowski
+    - SPIR-V backend, IGC, OpenCL, and IR transformations
+    - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
+    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
+    - English, Polish
+  * - Quentin Colombet (he/him)
+    - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
+      Register allocation, etc.); Optimizations; MCA
+    - Monthly, 1st Wednesday of the month at 8.00am PT, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/48c4ad60290a4df218e51e1ceec1106fe317b0ebc76938d9273592053f38204e%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=48c4ad60290a4df218e51e1ceec1106fe317b0ebc76938d9273592053f38204e%40group.calendar.google.com>`__
+    - `Google meet <https://meet.google.com/cbz-grrp-obs>`__
+    - English, French
+  * - Paulo Matos (he/him)
+    - WebAssembly backend; LLVM IR;
+    - Monthly, 1st Monday of the month at 11:00am Europe/Berlin, for 30 minutes.
+    - `Igalia Jitsi <https://meetings.igalia.com/PauloMatosLLVMOfficeHour>`__
+    - English, Portuguese, German
+  * - Phoebe Wang (she/her)
+    - X86 backend, General questions to X86, women in compilers.
+    - Monthly, 3rd Wednesday of the month at 8:30am Beijing time, for 30 minutes.
+    - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_NWQ0MjU0NjYtZjUyMi00YTU3LThmM2EtY2Y2YTE4NGM3NmFi%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%227b309d9c-a9bb-44c8-a940-ab97eef42d4d%22%7d>`__
+    - English, Chinese
 
 
 Guidance for office hours hosts
@@ -308,6 +337,8 @@ Guidance for office hours hosts
   information to the list above. Please create a calendar event for it and
   invite calendar@llvm.org to the event so that it'll show up on the 
   :ref:`llvm-community-calendar`.
+  Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
+  what to add to your calendar invite.
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
@@ -332,19 +363,16 @@ IRC
 ---
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found in #llvm on `irc.oftc.net <irc://irc.oftc.net/llvm>`_.
+can be found in #llvm on `irc.oftc.net <irc://irc.oftc.net/llvm>`_. The channel
+is actively moderated.
 
-This channel has several bots.
-
-* Buildbot reporters
-
-  * llvmbb - Bot for the main LLVM buildbot master.
-    http://lab.llvm.org/buildbot/#/console
-
-* robot - Bugzilla linker. %bug <number>
-
-* clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
-  near-trunk clang instead of gcc.
+The #llvm-build channel has a bot for
+`LLVM buildbot <http://lab.llvm.org/buildbot/#/console>`_ status changes. The
+bot will post a message with a link to a build bot and a blamelist when a build
+goes from passing to failing and again (without the blamelist) when the build
+goes from failing back to passing. It is a good channel for actively monitoring
+build statuses, but it is a noisy channel due to the automated messages. The
+channel is not actively moderated.
 
 In addition to the traditional IRC there is a
 `Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
@@ -419,3 +447,42 @@ also be seen inline below:
 .. raw:: html
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+
+.. _llvm-community-calendar-host-guidance:
+
+Guidance on what to put into LLVM community calendar invites
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To add your event, create a calendar event for it and invite calendar@llvm.org
+on it. Your event should then show up on the community calendar.
+ 
+Please put the following pieces of information in your calendar invite:
+
+* Write a single paragraph describing what the event is about. Include things
+  such as who the event is for and what sort of topics are discussed.
+* State explicitly that the :doc:`CodeOfConduct` applies to this event.
+* Make it clear who:
+
+  * the organizer is.
+
+  * the person to contact is in case of any code-of-conduct issues.  Typically,
+    this would be the organizer.
+
+* If you have meeting minutes for your event, add a pointer to where those live.
+  A good place for meeting minutes could be as a post on LLVM Discourse.
+
+An example invite looks as follows
+
+.. code-block:: none
+
+  This event is a meetup for all developers of LLDB. Meeting agendas are posted
+  on discourse before the event.
+
+  Attendees are required to adhere to the LLVM Code of Conduct
+  (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
+  please contact the organizers, and also email conduct@llvm.org.
+
+  Agenda/Meeting Minutes: Link to minutes
+
+  Organizer(s): First Surname (name@email.com)
+

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-unroll -unroll-runtime < %s | FileCheck %s
+; RUN: opt -S -passes=loop-unroll -unroll-runtime < %s | FileCheck %s
 
 ; Epilog unroll allows to keep PHI constant value.
 ; For the test this means that after unroll XOR could be deleted.
@@ -8,7 +8,7 @@
 ; CHECK:  for.body.epil
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @const_phi_val(i32 %i0, i32* nocapture %a) {
+define void @const_phi_val(i32 %i0, ptr nocapture %a) {
 entry:
   %cmp6 = icmp slt i32 %i0, 1000
   br i1 %cmp6, label %for.body.preheader, label %for.end
@@ -20,8 +20,8 @@ for.body.preheader:                               ; preds = %entry
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ %tmp, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %s.08 = phi i32 [ 0, %for.body.preheader ], [ %xor, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  store i32 %s.08, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  store i32 %s.08, ptr %arrayidx, align 4
   %xor = xor i32 %s.08, 1
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
@@ -41,7 +41,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK:  for.body.prol
 
 ; Function Attrs: norecurse nounwind uwtable
-define void @var_phi_val(i32 %i0, i32* nocapture %a) {
+define void @var_phi_val(i32 %i0, ptr nocapture %a) {
 entry:
   %cmp6 = icmp slt i32 %i0, 1000
   br i1 %cmp6, label %for.body.preheader, label %for.end
@@ -52,7 +52,7 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ %tmp, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
   %indvars.iv.next = add nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.end.loopexit, label %for.body

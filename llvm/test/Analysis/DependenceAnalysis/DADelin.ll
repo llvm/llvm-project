@@ -10,7 +10,7 @@ target triple = "thumbv8m.main-arm-none-eabi"
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k] =
-define void @t1(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t1(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [0 0 0|<]!
 ; CHECK: da analyze - none!
@@ -43,10 +43,10 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
-  store i32 %add12, i32* %arrayidx, align 4
+  store i32 %add12, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -71,7 +71,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k + 1] =
-define void @t2(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t2(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - anti [* * *|<]!
 ; CHECK: da analyze - output [* * *]!
@@ -104,12 +104,12 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %add111 = add nsw i32 %add11, 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -134,7 +134,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - 1] =
-define void @t3(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t3(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - anti [* * *|<]!
 ; CHECK: da analyze - output [* * *]!
@@ -167,12 +167,12 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %add111 = sub nsw i32 %add11, 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -197,7 +197,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k + o] =
-define void @t4(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t4(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - anti [* * *|<]!
 ; CHECK: da analyze - output [* * *]!
@@ -230,12 +230,12 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %add111 = add nsw i32 %add11, %o
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -260,7 +260,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - o] =
-define void @t5(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t5(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - anti [* * *|<]!
 ; CHECK: da analyze - output [* * *]!
@@ -293,12 +293,12 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %add111 = sub nsw i32 %add11, %o
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -323,7 +323,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k + m*o] =
-define void @t6(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t6(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [-1 0 0]!
 ; CHECK: da analyze - none!
@@ -356,13 +356,13 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %mo = mul i32 %m, %o
   %add111 = add nsw i32 %add11, %mo
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -387,7 +387,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 0; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - m*o] =
-define void @t7(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t7(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [1 0 0]!
 ; CHECK: da analyze - none!
@@ -420,13 +420,13 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 0, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %mo = mul i32 %m, %o
   %add111 = sub nsw i32 %add11, %mo
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -451,7 +451,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 ;;    for (int k = 1; k < o; k++)
 ;;      = A[i*m*o + j*o + k]
 ;;     A[i*m*o + j*o + k - 1] =
-define void @t8(i32 %n, i32 %m, i32 %o, i32* nocapture %A) {
+define void @t8(i32 %n, i32 %m, i32 %o, ptr nocapture %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent anti [0 0 1]!
 ; CHECK: da analyze - none!
@@ -484,12 +484,12 @@ for.body8.lr.ph:                                  ; preds = %for.cond5.preheader
 for.body8:                                        ; preds = %for.body8, %for.body8.lr.ph
   %k.046 = phi i32 [ 1, %for.body8.lr.ph ], [ %inc, %for.body8 ]
   %add11 = add nsw i32 %k.046, %add
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add11
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add11
+  %0 = load i32, ptr %arrayidx, align 4
   %add12 = add nsw i32 %0, 1
   %add111 = sub nsw i32 %add11, 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i32 %add111
-  store i32 %add12, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i32 %add111
+  store i32 %add12, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %k.046, 1
   %exitcond = icmp eq i32 %inc, %o
   br i1 %exitcond, label %for.cond.cleanup7, label %for.body8
@@ -510,7 +510,7 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup3, 
 
 
 ; CHECK-LABEL: test_sizes
-define double @test_sizes(i16 %h, i16 %N, i16* nocapture %array) {
+define double @test_sizes(i16 %h, i16 %N, ptr nocapture %array) {
 ; CHECK: da analyze - consistent input [0 S]!
 ; CHECK: da analyze - anti [* *|<]!
 ; CHECK: da analyze - output [* *]!
@@ -531,16 +531,16 @@ for.body:                                         ; preds = %for.inc10, %for.bod
 
 for.body5.lr.ph:                                  ; preds = %for.body
   %1 = sext i16 %indvars.iv to i32
-  %arrayidx = getelementptr inbounds i16, i16* %array, i32 %indvars.iv32
+  %arrayidx = getelementptr inbounds i16, ptr %array, i32 %indvars.iv32
   br label %for.body5
 
 for.body5:                                        ; preds = %for.body5, %for.body5.lr.ph
   %indvars.iv30 = phi i32 [ %indvars.iv.next31, %for.body5 ], [ %1, %for.body5.lr.ph ]
   %j.027 = phi i16 [ %inc, %for.body5 ], [ 0, %for.body5.lr.ph ]
-  %2 = load i16, i16* %arrayidx, align 4
+  %2 = load i16, ptr %arrayidx, align 4
   %add6 = add nsw i16 %2, %j.027
-  %arrayidx8 = getelementptr inbounds i16, i16* %array, i32 %indvars.iv30
-  store i16 %add6, i16* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i16, ptr %array, i32 %indvars.iv30
+  store i16 %add6, ptr %arrayidx8, align 4
   %inc = add nuw nsw i16 %j.027, 1
   %indvars.iv.next31 = add nsw i32 %indvars.iv30, 1
   %exitcond = icmp eq i16 %inc, %0
@@ -558,7 +558,7 @@ for.end12:                                        ; preds = %for.inc10, %entry
 
 
 ; CHECK-LABEL: nonnegative
-define void @nonnegative(i32* nocapture %A, i32 %N) {
+define void @nonnegative(ptr nocapture %A, i32 %N) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - consistent output [0 0|<]!
 ; CHECK: da analyze - none!
@@ -574,9 +574,9 @@ for.outer:
 for.inner:
   %i.043 = phi i32 [ 0, %for.outer ], [ %add16, %for.inner ]
   %add = add i32 %i.043, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 1, i32* %arrayidx, align 4
-  store i32 2, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  store i32 1, ptr %arrayidx, align 4
+  store i32 2, ptr %arrayidx, align 4
   %add16 = add nuw i32 %i.043, 1
   %exitcond46 = icmp eq i32 %add16, %N
   br i1 %exitcond46, label %for.latch, label %for.inner

@@ -69,11 +69,11 @@ StringRef Attribute::getReturnType() const {
 }
 
 // Return the type constraint corresponding to the type of this attribute, or
-// None if this is not a TypedAttr.
-llvm::Optional<Type> Attribute::getValueType() const {
+// std::nullopt if this is not a TypedAttr.
+std::optional<Type> Attribute::getValueType() const {
   if (auto *defInit = dyn_cast<llvm::DefInit>(def->getValueInit("valueType")))
     return Type(defInit->getDef());
-  return llvm::None;
+  return std::nullopt;
 }
 
 StringRef Attribute::getConvertFromStorageCall() const {
@@ -131,6 +131,8 @@ Dialect Attribute::getDialect() const {
   }
   return Dialect(nullptr);
 }
+
+const llvm::Record &Attribute::getDef() const { return *def; }
 
 ConstantAttr::ConstantAttr(const DefInit *init) : def(init->getDef()) {
   assert(def->isSubClassOf("ConstantAttr") &&

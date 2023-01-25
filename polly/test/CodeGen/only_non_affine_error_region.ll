@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @f(i32 %argc, i32* %A) #0 {
+define void @f(i32 %argc, ptr %A) #0 {
 entry:
   br i1 undef, label %for.end, label %for.body
 
@@ -18,7 +18,7 @@ for.end:                                          ; preds = %for.body, %entry
   br i1 %cmp170, label %if.then172, label %if.end174
 
 if.then172:                                       ; preds = %for.end
-  %0 = load i32, i32* %A
+  %0 = load i32, ptr %A
   tail call void @usage()
   br label %if.end174
 

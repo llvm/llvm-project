@@ -15,6 +15,7 @@
 
 #include "ScriptedPythonInterface.h"
 #include "lldb/Interpreter/ScriptedProcessInterface.h"
+#include <optional>
 
 namespace lldb_private {
 class ScriptedProcessPythonInterface : public ScriptedProcessInterface,
@@ -36,7 +37,7 @@ public:
 
   Status Stop() override;
 
-  llvm::Optional<MemoryRegionInfo>
+  std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address,
                                    Status &error) override;
 
@@ -55,7 +56,9 @@ public:
 
   bool IsAlive() override;
 
-  llvm::Optional<std::string> GetScriptedThreadPluginName() override;
+  std::optional<std::string> GetScriptedThreadPluginName() override;
+
+  StructuredData::DictionarySP GetMetadata() override;
 
 private:
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;

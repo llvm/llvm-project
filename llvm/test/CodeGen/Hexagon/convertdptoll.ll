@@ -11,17 +11,17 @@ entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
   %c = alloca double, align 8
-  store i32 0, i32* %retval
-  store double 1.540000e+01, double* %a, align 8
-  store double 9.100000e+00, double* %b, align 8
-  %0 = load double, double* %a, align 8
-  %1 = load double, double* %b, align 8
+  store i32 0, ptr %retval
+  store double 1.540000e+01, ptr %a, align 8
+  store double 9.100000e+00, ptr %b, align 8
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
   %add = fadd double %0, %1
-  store volatile double %add, double* %c, align 8
-  %2 = load volatile double, double* %c, align 8
+  store volatile double %add, ptr %c, align 8
+  %2 = load volatile double, ptr %c, align 8
   %conv = fptosi double %2 to i64
-  store i64 %conv, i64* %i, align 8
-  %3 = load i64, i64* %i, align 8
+  store i64 %conv, ptr %i, align 8
+  %3 = load i64, ptr %i, align 8
   %conv1 = trunc i64 %3 to i32
   ret i32 %conv1
 }

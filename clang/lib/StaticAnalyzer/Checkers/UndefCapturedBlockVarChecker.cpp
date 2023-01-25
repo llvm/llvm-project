@@ -19,6 +19,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -69,8 +70,8 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
       continue;
 
     // Get the VarRegion associated with VD in the local stack frame.
-    if (Optional<UndefinedVal> V =
-          state->getSVal(I.getOriginalRegion()).getAs<UndefinedVal>()) {
+    if (std::optional<UndefinedVal> V =
+            state->getSVal(I.getOriginalRegion()).getAs<UndefinedVal>()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
         if (!BT)
           BT.reset(

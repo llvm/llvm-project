@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 #define LLVM_DEBUGINFO_DWARF_DWARFVERIFIER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
@@ -60,7 +59,7 @@ public:
     /// This is used for finding overlapping ranges in the DW_AT_ranges
     /// attribute of a DIE. It is also used as a set of address ranges that
     /// children address ranges must all be contained in.
-    Optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
+    std::optional<DWARFAddressRange> insert(const DWARFAddressRange &R);
 
     /// Inserts the address range info. If any of its ranges overlaps with a
     /// range in an existing range info, the range info is *not* added and an

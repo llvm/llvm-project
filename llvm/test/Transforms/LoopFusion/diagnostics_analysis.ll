@@ -1,86 +1,82 @@
-; RUN: opt -S -loop-fusion -pass-remarks-analysis=loop-fusion -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -pass-remarks-analysis=loop-fusion -disable-output < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
 ; CHECK: remark: diagnostics_analysis.c:6:3: [test]: Loop is not a candidate for fusion: Loop contains a volatile access
 ; CHECK: remark: diagnostics_analysis.c:10:3: [test]: Loop is not a candidate for fusion: Loop has unknown trip count
-define void @test(i32* %A, i32 %n) !dbg !15 {
+define void @test(ptr %A, i32 %n) !dbg !15 {
 entry:
-  %A.addr = alloca i32*, align 8
+  %A.addr = alloca ptr, align 8
   %n.addr = alloca i32, align 4
   %i = alloca i32, align 4
   %i1 = alloca i32, align 4
-  store i32* %A, i32** %A.addr, align 8
-  store i32 %n, i32* %n.addr, align 4
-  %0 = bitcast i32* %i to i8*
-  store i32 0, i32* %i, align 4
+  store ptr %A, ptr %A.addr, align 8
+  store i32 %n, ptr %n.addr, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %1 = load i32, i32* %i, align 4
-  %2 = load i32, i32* %n.addr, align 4
-  %cmp = icmp slt i32 %1, %2
+  %0 = load i32, ptr %i, align 4
+  %1 = load i32, ptr %n.addr, align 4
+  %cmp = icmp slt i32 %0, %1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %3 = bitcast i32* %i to i8*, !dbg !42
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %4 = load i32, i32* %i, align 4
-  %sub = sub nsw i32 %4, 3
-  %5 = load i32, i32* %i, align 4
-  %add = add nsw i32 %5, 3
+  %2 = load i32, ptr %i, align 4
+  %sub = sub nsw i32 %2, 3
+  %3 = load i32, ptr %i, align 4
+  %add = add nsw i32 %3, 3
   %mul = mul nsw i32 %sub, %add
-  %6 = load i32, i32* %i, align 4
-  %rem = srem i32 %mul, %6
-  %7 = load i32*, i32** %A.addr, align 8
-  %8 = load i32, i32* %i, align 4
-  %idxprom = sext i32 %8 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %7, i64 %idxprom
-  store volatile i32 %rem, i32* %arrayidx, align 4
+  %4 = load i32, ptr %i, align 4
+  %rem = srem i32 %mul, %4
+  %5 = load ptr, ptr %A.addr, align 8
+  %6 = load i32, ptr %i, align 4
+  %idxprom = sext i32 %6 to i64
+  %arrayidx = getelementptr inbounds i32, ptr %5, i64 %idxprom
+  store volatile i32 %rem, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %9 = load i32, i32* %i, align 4, !dbg !49
-  %inc = add nsw i32 %9, 1, !dbg !49
-  store i32 %inc, i32* %i, align 4, !dbg !49
+  %7 = load i32, ptr %i, align 4, !dbg !49
+  %inc = add nsw i32 %7, 1, !dbg !49
+  store i32 %inc, ptr %i, align 4, !dbg !49
   br label %for.cond, !dbg !42, !llvm.loop !50
 
 for.end:                                          ; preds = %for.cond.cleanup
-  %10 = bitcast i32* %i1 to i8*
-  store i32 0, i32* %i1, align 4
+  store i32 0, ptr %i1, align 4
   br label %for.cond2
 
 for.cond2:                                        ; preds = %for.inc12, %for.end
-  %11 = load i32, i32* %i1, align 4
-  %12 = load i32, i32* %n.addr, align 4
-  %cmp3 = icmp slt i32 %11, %12
+  %8 = load i32, ptr %i1, align 4
+  %9 = load i32, ptr %n.addr, align 4
+  %cmp3 = icmp slt i32 %8, %9
   br i1 %cmp3, label %for.body5, label %for.cond.cleanup4
 
 for.cond.cleanup4:                                ; preds = %for.cond2
-  %13 = bitcast i32* %i1 to i8*
   br label %for.end14
 
 for.body5:                                        ; preds = %for.cond2
-  %14 = load i32, i32* %i1, align 4
-  %sub6 = sub nsw i32 %14, 3
-  %15 = load i32, i32* %i1, align 4
-  %add7 = add nsw i32 %15, 3
+  %10 = load i32, ptr %i1, align 4
+  %sub6 = sub nsw i32 %10, 3
+  %11 = load i32, ptr %i1, align 4
+  %add7 = add nsw i32 %11, 3
   %mul8 = mul nsw i32 %sub6, %add7
-  %16 = load i32, i32* %i1, align 4
-  %rem9 = srem i32 %mul8, %16
-  %17 = load i32, i32* %i1, align 4
-  %idxprom10 = sext i32 %17 to i64
-  %arrayidx11 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %idxprom10
-  store i32 %rem9, i32* %arrayidx11, align 4
+  %12 = load i32, ptr %i1, align 4
+  %rem9 = srem i32 %mul8, %12
+  %13 = load i32, ptr %i1, align 4
+  %idxprom10 = sext i32 %13 to i64
+  %arrayidx11 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %idxprom10
+  store i32 %rem9, ptr %arrayidx11, align 4
   br label %for.inc12
 
 for.inc12:                                        ; preds = %for.body5
-  %18 = load i32, i32* %i1, align 4
-  %inc13 = add nsw i32 %18, 1
-  store i32 %inc13, i32* %i1, align 4
+  %14 = load i32, ptr %i1, align 4
+  %inc13 = add nsw i32 %14, 1
+  store i32 %inc13, ptr %i1, align 4
   br label %for.cond2, !dbg !59, !llvm.loop !67
 
 for.end14:                                        ; preds = %for.cond.cleanup4

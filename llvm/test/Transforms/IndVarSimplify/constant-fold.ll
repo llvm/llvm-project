@@ -1,6 +1,6 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
-define void @test0(i32* %x) {
+define void @test0(ptr %x) {
 entry:
   br label %for.inc
 
@@ -9,7 +9,7 @@ for.inc:                                          ; preds = %for.inc, %entry
   %and = and i32 %i.01, 3
   %cmp1 = icmp eq i32 %and, 0
   %cond = select i1 %cmp1, i32 0, i32 1
-  store i32 %cond, i32* %x, align 4
+  store i32 %cond, ptr %x, align 4
   %add = add i32 %i.01, 4
   %cmp = icmp ult i32 %add, 8
   br i1 %cmp, label %for.inc, label %for.end
@@ -22,7 +22,7 @@ for.end:                                          ; preds = %for.inc
 ; CHECK-LABEL: void @test0(
 ; CHECK:         icmp eq i32 0, 0
 
-define void @test1(i32* %a) {
+define void @test1(ptr %a) {
 entry:
   br label %for.body
 
@@ -31,8 +31,8 @@ for.body:                                         ; preds = %entry, %for.body
   %mul = mul nsw i32 %i.01, 64
   %rem = srem i32 %mul, 8
   %idxprom = sext i32 %rem to i64
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom
-  store i32 %i.01, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
+  store i32 %i.01, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.01, 1
   %cmp = icmp slt i32 %inc, 64
   br i1 %cmp, label %for.body, label %for.end

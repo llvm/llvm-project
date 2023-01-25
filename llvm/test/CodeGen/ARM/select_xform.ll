@@ -283,13 +283,13 @@ define void @pr13628() nounwind uwtable align 2 {
 ; T2-NEXT:    add sp, #256
 ; T2-NEXT:    pop {r7, pc}
   %x3 = alloca i8, i32 256, align 8
-  %x4 = load i8, i8* undef, align 1
+  %x4 = load i8, ptr undef, align 1
   %x5 = icmp ne i8 %x4, 0
-  %x6 = select i1 %x5, i8* %x3, i8* null
-  call void @bar(i8* %x6) nounwind
+  %x6 = select i1 %x5, ptr %x3, ptr null
+  call void @bar(ptr %x6) nounwind
   ret void
 }
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 ; Fold zext i1 into predicated add
 define i32 @t13(i32 %c, i32 %a) nounwind readnone ssp {

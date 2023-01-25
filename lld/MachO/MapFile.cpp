@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the -map option. It shows lists in order and
-// hierarchically the outputFile, arch, input files, output sections and
-// symbol:
+// This file implements the -map option, which maps address ranges to their
+// respective contents, plus the input file these contents were originally from.
+// The contents (typically symbols) are listed in address order. Dead-stripped
+// contents are included as well.
 //
 // # Path: test
 // # Arch: x86_84
@@ -16,23 +17,28 @@
 // [  0] linker synthesized
 // [  1] a.o
 // # Sections:
-// # Address  Size      Segment  Section
-// 0x1000005C0  0x0000004C  __TEXT  __text
+// # Address    Size       Segment  Section
+// 0x1000005C0  0x0000004C __TEXT   __text
 // # Symbols:
-// # Address  File  Name
-// 0x1000005C0  [  1] _main
+// # Address    Size       File  Name
+// 0x1000005C0  0x00000001 [  1] _main
+// # Dead Stripped Symbols:
+// #            Size       File  Name
+// <<dead>>     0x00000001 [  1] _foo
 //
 //===----------------------------------------------------------------------===//
 
 #include "MapFile.h"
+#include "ConcatOutputSection.h"
 #include "Config.h"
 #include "InputFiles.h"
 #include "InputSection.h"
-#include "OutputSection.h"
 #include "OutputSegment.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "lld/Common/ErrorHandler.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -41,69 +47,103 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-using Symbols = std::vector<Defined *>;
-// Returns a pair where the left element is a container of all live Symbols and
-// the right element is a container of all dead symbols.
-static std::pair<Symbols, Symbols> getSymbols() {
-  Symbols liveSymbols, deadSymbols;
-  for (InputFile *file : inputFiles)
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
+struct CStringInfo {
+  uint32_t fileIndex;
+  StringRef str;
+};
+
+struct MapInfo {
+  SmallVector<InputFile *> files;
+  SmallVector<Defined *> deadSymbols;
+  DenseMap<const OutputSection *,
+           SmallVector<std::pair<uint64_t /*addr*/, CStringInfo>>>
+      liveCStringsForSection;
+  SmallVector<CStringInfo> deadCStrings;
+};
+
+static MapInfo gatherMapInfo() {
+  MapInfo info;
+  for (InputFile *file : inputFiles) {
+    bool isReferencedFile = false;
+
+    if (isa<ObjFile>(file) || isa<BitcodeFile>(file)) {
+      uint32_t fileIndex = info.files.size() + 1;
+
+      // Gather the dead symbols. We don't have to bother with the live ones
+      // because we will pick them up as we iterate over the OutputSections
+      // later.
+      for (Symbol *sym : file->symbols) {
         if (auto *d = dyn_cast_or_null<Defined>(sym))
-          if (d->isec && d->getFile() == file) {
-            if (d->isLive()) {
-              assert(!shouldOmitFromOutput(d->isec));
-              liveSymbols.push_back(d);
-            } else {
-              deadSymbols.push_back(d);
-            }
+          // Only emit the prevailing definition of a symbol. Also, don't emit
+          // the symbol if it is part of a cstring section (we use the literal
+          // value instead, similar to ld64)
+          if (d->isec && d->getFile() == file &&
+              !isa<CStringInputSection>(d->isec)) {
+            isReferencedFile = true;
+            if (!d->isLive())
+              info.deadSymbols.push_back(d);
           }
-  parallelSort(liveSymbols.begin(), liveSymbols.end(),
-               [](Defined *a, Defined *b) {
-                 return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
-                                                 : a->getName() < b->getName();
-               });
-  parallelSort(
-      deadSymbols.begin(), deadSymbols.end(),
-      [](Defined *a, Defined *b) { return a->getName() < b->getName(); });
-  return {std::move(liveSymbols), std::move(deadSymbols)};
+      }
+
+      // Gather all the cstrings (both live and dead). A CString(Output)Section
+      // doesn't provide us a way of figuring out which InputSections its
+      // cstring contents came from, so we need to build up that mapping here.
+      for (const Section *sec : file->sections) {
+        for (const Subsection &subsec : sec->subsections) {
+          if (auto isec = dyn_cast<CStringInputSection>(subsec.isec)) {
+            auto &liveCStrings = info.liveCStringsForSection[isec->parent];
+            for (const auto &[i, piece] : llvm::enumerate(isec->pieces)) {
+              if (piece.live)
+                liveCStrings.push_back({isec->parent->addr + piece.outSecOff,
+                                        {fileIndex, isec->getStringRef(i)}});
+              else
+                info.deadCStrings.push_back({fileIndex, isec->getStringRef(i)});
+              isReferencedFile = true;
+            }
+          } else {
+            break;
+          }
+        }
+      }
+    } else if (const auto *dylibFile = dyn_cast<DylibFile>(file)) {
+      isReferencedFile = dylibFile->isReferenced();
+    }
+
+    if (isReferencedFile)
+      info.files.push_back(file);
+  }
+
+  // cstrings are not stored in sorted order in their OutputSections, so we sort
+  // them here.
+  for (auto &liveCStrings : info.liveCStringsForSection)
+    parallelSort(liveCStrings.second, [](const auto &p1, const auto &p2) {
+      return p1.first < p2.first;
+    });
+  return info;
 }
 
-// Construct a map from symbols to their stringified representations.
-// Demangling symbols (which is what toString() does) is slow, so
-// we do that in batch using parallel-for.
-static DenseMap<Symbol *, std::string>
-getSymbolStrings(ArrayRef<Defined *> syms) {
-  std::vector<std::string> str(syms.size());
-  parallelFor(0, syms.size(), [&](size_t i) {
-    raw_string_ostream os(str[i]);
-    Defined *sym = syms[i];
+// For printing the contents of the __stubs and __la_symbol_ptr sections.
+void printStubsEntries(
+    raw_fd_ostream &os,
+    const DenseMap<lld::macho::InputFile *, uint32_t> &readerToFileOrdinal,
+    const OutputSection *osec, size_t entrySize) {
+  for (const Symbol *sym : in.stubs->getEntries())
+    os << format("0x%08llX\t0x%08zX\t[%3u] %s\n",
+                 osec->addr + sym->stubsIndex * entrySize, entrySize,
+                 readerToFileOrdinal.lookup(sym->getFile()),
+                 sym->getName().str().data());
+}
 
-    switch (sym->isec->kind()) {
-    case InputSection::CStringLiteralKind: {
-      // Output "literal string: <string literal>"
-      const auto *isec = cast<CStringInputSection>(sym->isec);
-      const StringPiece &piece = isec->getStringPiece(sym->value);
-      assert(
-          sym->value == piece.inSecOff &&
-          "We expect symbols to always point to the start of a StringPiece.");
-      StringRef str = isec->getStringRef(&piece - &(*isec->pieces.begin()));
-      assert(str.back() == '\000');
-      (os << "literal string: ")
-          // Remove null sequence at the end
-          .write_escaped(str.substr(0, str.size() - 1));
-      break;
-    }
-    case InputSection::ConcatKind:
-    case InputSection::WordLiteralKind:
-      os << toString(*sym);
-    }
-  });
-
-  DenseMap<Symbol *, std::string> ret;
-  for (size_t i = 0, e = syms.size(); i < e; ++i)
-    ret[syms[i]] = std::move(str[i]);
-  return ret;
+void printNonLazyPointerSection(raw_fd_ostream &os,
+                                NonLazyPointerSectionBase *osec) {
+  // ld64 considers stubs to belong to particular files, but considers GOT
+  // entries to be linker-synthesized. Not sure why they made that decision, but
+  // I think we can follow suit unless there's demand for better symbol-to-file
+  // associations.
+  for (const Symbol *sym : osec->getEntries())
+    os << format("0x%08llX\t0x%08zX\t[  0] non-lazy-pointer-to-local: %s\n",
+                 osec->addr + sym->gotIndex * target->wordSize,
+                 target->wordSize, sym->getName().str().data());
 }
 
 void macho::writeMapFile() {
@@ -120,26 +160,21 @@ void macho::writeMapFile() {
     return;
   }
 
-  // Dump output path.
   os << format("# Path: %s\n", config->outputFile.str().c_str());
-
-  // Dump output architecture.
   os << format("# Arch: %s\n",
                getArchitectureName(config->arch()).str().c_str());
 
-  // Dump table of object files.
+  MapInfo info = gatherMapInfo();
+
   os << "# Object files:\n";
   os << format("[%3u] %s\n", 0, (const char *)"linker synthesized");
   uint32_t fileIndex = 1;
   DenseMap<lld::macho::InputFile *, uint32_t> readerToFileOrdinal;
-  for (InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file)) {
-      os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
-      readerToFileOrdinal[file] = fileIndex++;
-    }
+  for (InputFile *file : info.files) {
+    os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
+    readerToFileOrdinal[file] = fileIndex++;
   }
 
-  // Dump table of sections
   os << "# Sections:\n";
   os << "# Address\tSize    \tSegment\tSection\n";
   for (OutputSegment *seg : outputSegments)
@@ -151,30 +186,63 @@ void macho::writeMapFile() {
                    seg->name.str().c_str(), osec->name.str().c_str());
     }
 
-  // Dump table of symbols
-  Symbols liveSymbols, deadSymbols;
-  std::tie(liveSymbols, deadSymbols) = getSymbols();
-
-  DenseMap<Symbol *, std::string> liveSymbolStrings =
-      getSymbolStrings(liveSymbols);
   os << "# Symbols:\n";
-  os << "# Address\t    File  Name\n";
-  for (Symbol *sym : liveSymbols) {
-    assert(sym->isLive());
-    os << format("0x%08llX\t[%3u] %s\n", sym->getVA(),
-                 readerToFileOrdinal[sym->getFile()],
-                 liveSymbolStrings[sym].c_str());
+  os << "# Address\tSize    \tFile  Name\n";
+  for (const OutputSegment *seg : outputSegments) {
+    for (const OutputSection *osec : seg->getSections()) {
+      if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
+        for (const InputSection *isec : concatOsec->inputs) {
+          for (Defined *sym : isec->symbols)
+            os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                         sym->size, readerToFileOrdinal[sym->getFile()],
+                         sym->getName().str().data());
+        }
+      } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
+        const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);
+        uint64_t lastAddr = 0; // strings will never start at address 0, so this
+                               // is a sentinel value
+        for (const auto &[addr, info] : liveCStrings) {
+          uint64_t size = 0;
+          if (addr != lastAddr)
+            size = info.str.size() + 1; // include null terminator
+          lastAddr = addr;
+          os << format("0x%08llX\t0x%08llX\t[%3u] literal string: ", addr, size,
+                       info.fileIndex);
+          os.write_escaped(info.str) << "\n";
+        }
+      } else if (osec == (void *)in.unwindInfo) {
+        os << format("0x%08llX\t0x%08llX\t[  0] compact unwind info\n",
+                     osec->addr, osec->getSize());
+      } else if (osec == in.stubs) {
+        printStubsEntries(os, readerToFileOrdinal, osec, target->stubSize);
+      } else if (osec == in.lazyPointers) {
+        printStubsEntries(os, readerToFileOrdinal, osec, target->wordSize);
+      } else if (osec == in.stubHelper) {
+        // yes, ld64 calls it "helper helper"...
+        os << format("0x%08llX\t0x%08llX\t[  0] helper helper\n", osec->addr,
+                     osec->getSize());
+      } else if (osec == in.got) {
+        printNonLazyPointerSection(os, in.got);
+      } else if (osec == in.tlvPointers) {
+        printNonLazyPointerSection(os, in.tlvPointers);
+      }
+      // TODO print other synthetic sections
+    }
   }
 
   if (config->deadStrip) {
-    DenseMap<Symbol *, std::string> deadSymbolStrings =
-        getSymbolStrings(deadSymbols);
     os << "# Dead Stripped Symbols:\n";
-    os << "# Address\t    File  Name\n";
-    for (Symbol *sym : deadSymbols) {
+    os << "#        \tSize    \tFile  Name\n";
+    for (Defined *sym : info.deadSymbols) {
       assert(!sym->isLive());
-      os << format("<<dead>>\t[%3u] %s\n", readerToFileOrdinal[sym->getFile()],
-                   deadSymbolStrings[sym].c_str());
+      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
+                   readerToFileOrdinal[sym->getFile()],
+                   sym->getName().str().data());
+    }
+    for (CStringInfo &cstrInfo : info.deadCStrings) {
+      os << format("<<dead>>\t0x%08zX\t[%3u] literal string: ",
+                   cstrInfo.str.size() + 1, cstrInfo.fileIndex);
+      os.write_escaped(cstrInfo.str) << "\n";
     }
   }
 }

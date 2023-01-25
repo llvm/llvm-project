@@ -14,13 +14,13 @@ define i64 @ashr_lsh_nsw(i64 %tmp) {
 ; CHECK-LABEL: @ashr_lsh_nsw(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV3:%.*]] = shl i64 [[TMP:%.*]], 32
-; CHECK-NEXT:    store i64 [[CONV3]], i64* @f, align 8
+; CHECK-NEXT:    store i64 [[CONV3]], ptr @f, align 8
 ; CHECK-NEXT:    [[CONV7:%.*]] = ashr exact i64 [[CONV3]], 32
 ; CHECK-NEXT:    ret i64 [[CONV7]]
 ;
 entry:                                          ; preds = %if.then
   %conv3 = shl nsw i64 %tmp, 32
-  store i64 %conv3, i64* @f, align 8
+  store i64 %conv3, ptr @f, align 8
   %sext = shl i64 %tmp, 32
   %conv7 = ashr exact i64 %sext, 32
   ret i64 %conv7
@@ -30,13 +30,13 @@ define i64 @ashr_lsh_nuw(i64 %tmp) {
 ; CHECK-LABEL: @ashr_lsh_nuw(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV3:%.*]] = shl i64 [[TMP:%.*]], 32
-; CHECK-NEXT:    store i64 [[CONV3]], i64* @f, align 8
+; CHECK-NEXT:    store i64 [[CONV3]], ptr @f, align 8
 ; CHECK-NEXT:    [[CONV7:%.*]] = ashr exact i64 [[CONV3]], 32
 ; CHECK-NEXT:    ret i64 [[CONV7]]
 ;
 entry:                                          ; preds = %if.then
   %conv3 = shl nuw i64 %tmp, 32
-  store i64 %conv3, i64* @f, align 8
+  store i64 %conv3, ptr @f, align 8
   %sext = shl i64 %tmp, 32
   %conv7 = ashr exact i64 %sext, 32
   ret i64 %conv7

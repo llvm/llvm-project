@@ -4,8 +4,8 @@
 @y = hidden global i32 0, align 4
 
 define hidden void @f() #0 {
-  store i32 0, i32* @x, align 4
-  store i32 0, i32* @y, align 4
+  store i32 0, ptr @x, align 4
+  store i32 0, ptr @y, align 4
   ret void
 }
 

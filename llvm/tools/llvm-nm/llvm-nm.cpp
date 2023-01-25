@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/Demangle/Demangle.h"
@@ -39,6 +40,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
@@ -62,11 +64,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -78,9 +83,11 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class NmOptTable : public opt::OptTable {
+class NmOptTable : public opt::GenericOptTable {
 public:
-  NmOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  NmOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };
@@ -611,7 +618,7 @@ const struct DarwinStabName DarwinStabNames[] = {
 };
 
 static const char *getDarwinStabString(uint8_t NType) {
-  for (auto I : makeArrayRef(DarwinStabNames))
+  for (auto I : ArrayRef(DarwinStabNames))
     if (I.NType == NType)
       return I.Name;
   return nullptr;
@@ -645,25 +652,25 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
     outs() << format("   %02x", NType);
 }
 
-static Optional<std::string> demangle(StringRef Name) {
+static std::optional<std::string> demangle(StringRef Name) {
   std::string Demangled;
   if (nonMicrosoftDemangle(Name.str().c_str(), Demangled))
     return Demangled;
-  return None;
+  return std::nullopt;
 }
 
-static Optional<std::string> demangleXCOFF(StringRef Name) {
+static std::optional<std::string> demangleXCOFF(StringRef Name) {
   if (Name.empty() || Name[0] != '.')
     return demangle(Name);
 
   Name = Name.drop_front();
-  Optional<std::string> DemangledName = demangle(Name);
+  std::optional<std::string> DemangledName = demangle(Name);
   if (DemangledName)
     return "." + *DemangledName;
-  return None;
+  return std::nullopt;
 }
 
-static Optional<std::string> demangleMachO(StringRef Name) {
+static std::optional<std::string> demangleMachO(StringRef Name) {
   if (!Name.empty() && Name[0] == '_')
     Name = Name.drop_front();
   return demangle(Name);
@@ -760,12 +767,12 @@ static void printSymbolList(SymbolicFile &Obj,
     std::string Name = S.Name;
     MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(&Obj);
     if (Demangle) {
-      function_ref<Optional<std::string>(StringRef)> Fn = ::demangle;
+      function_ref<std::optional<std::string>(StringRef)> Fn = ::demangle;
       if (Obj.isXCOFF())
         Fn = demangleXCOFF;
       if (Obj.isMachO())
         Fn = demangleMachO;
-      if (Optional<std::string> Opt = Fn(S.Name))
+      if (std::optional<std::string> Opt = Fn(S.Name))
         Name = *Opt;
     }
 
@@ -2287,17 +2294,15 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   }
 
   // Delete symbols which should not be printed from SymolList.
-  SymbolList.erase(
-      llvm::remove_if(SymbolList,
-                      [](const NMSymbol &s) { return !s.shouldPrint(); }),
-      SymbolList.end());
+  llvm::erase_if(SymbolList,
+                 [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
   SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
                    SymbolList.end());
   printExportSymbolList(SymbolList);
 }
 
-int main(int argc, char **argv) {
+int llvm_nm_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -2373,17 +2378,32 @@ int main(int argc, char **argv) {
   UndefinedOnly = Args.hasArg(OPT_undefined_only);
   WithoutAliases = Args.hasArg(OPT_without_aliases);
 
-  StringRef Mode = Args.getLastArgValue(OPT_X, "any");
-  if (Mode == "32")
-    BitMode = BitModeTy::Bit32;
-  else if (Mode == "64")
-    BitMode = BitModeTy::Bit64;
-  else if (Mode == "32_64")
-    BitMode = BitModeTy::Bit32_64;
-  else if (Mode == "any")
+  // Get BitMode from enviornment variable "OBJECT_MODE" for AIX OS, if
+  // specified.
+  Triple HostTriple(sys::getProcessTriple());
+  if (HostTriple.isOSAIX()) {
+    BitMode = StringSwitch<BitModeTy>(getenv("OBJECT_MODE"))
+                  .Case("32", BitModeTy::Bit32)
+                  .Case("64", BitModeTy::Bit64)
+                  .Case("32_64", BitModeTy::Bit32_64)
+                  .Case("any", BitModeTy::Any)
+                  .Default(BitModeTy::Bit32);
+  } else
     BitMode = BitModeTy::Any;
-  else
-    error("-X value should be one of: 32, 64, 32_64, (default) any");
+
+  if (Arg *A = Args.getLastArg(OPT_X)) {
+    StringRef Mode = A->getValue();
+    if (Mode == "32")
+      BitMode = BitModeTy::Bit32;
+    else if (Mode == "64")
+      BitMode = BitModeTy::Bit64;
+    else if (Mode == "32_64")
+      BitMode = BitModeTy::Bit32_64;
+    else if (Mode == "any")
+      BitMode = BitModeTy::Any;
+    else
+      error("-X value should be one of: 32, 64, 32_64, (default) any");
+  }
 
   // Mach-O specific options.
   FormatMachOasHex = Args.hasArg(OPT_x);
@@ -2459,4 +2479,5 @@ int main(int argc, char **argv) {
 
   if (HadError)
     return 1;
+  return 0;
 }

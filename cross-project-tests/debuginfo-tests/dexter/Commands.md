@@ -101,13 +101,16 @@ frame.</br>
 
 ---
 ## DexExpectStepOrder
-    DexExpectStepOrder(*order)
+    DexExpectStepOrder(*order [,**on_line])
 
     Arg list:
       order (int): One or more indices.
 
+    Keyword args:
+        on_line (int): Expect this line to be stepped on in the order given.
+
 ### Description
-Expect the line every `DexExpectStepOrder` is found on to be stepped on in
+Expect the line every `DexExpectStepOrder` is found on, or given from `on_line`, to be stepped on in
 `order`. Each instance must have a set of unique ascending indices.
 
 ### Heuristic

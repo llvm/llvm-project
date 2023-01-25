@@ -1,5 +1,4 @@
-; RUN: opt < %s -S -forceattrs | FileCheck %s --check-prefix=CHECK-CONTROL
-; RUN: opt < %s -S -forceattrs -force-attribute foo:noinline | FileCheck %s --check-prefix=CHECK-FOO
+; RUN: opt < %s -S -passes=forceattrs | FileCheck %s --check-prefix=CHECK-CONTROL
 ; RUN: opt < %s -S -passes=forceattrs -force-attribute foo:noinline | FileCheck %s --check-prefix=CHECK-FOO
 ; RUN: opt < %s -S -passes=forceattrs -force-remove-attribute goo:cold | FileCheck %s --check-prefix=REMOVE-COLD
 ; RUN: opt < %s -S -passes=forceattrs -force-remove-attribute goo:noinline | FileCheck %s --check-prefix=REMOVE-NOINLINE

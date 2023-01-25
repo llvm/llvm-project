@@ -2,15 +2,14 @@
 ; RUN: llc -mtriple=armv6m-eabi < %s | FileCheck %s --check-prefix=CHECK-THM
 
 ; Function Attrs: minsize optsize
-declare void @g(i32*) local_unnamed_addr #0
+declare void @g(ptr) local_unnamed_addr #0
 
 ; Function Attrs: minsize optsize
 define void @f() local_unnamed_addr #0 {
 entry:
   %i = alloca i32, align 4
-  %0 = bitcast i32* %i to i8*
-  store i32 1, i32* %i, align 4
-  call void @g(i32* nonnull %i)
+  store i32 1, ptr %i, align 4
+  call void @g(ptr nonnull %i)
   ret void
 }
 
@@ -32,9 +31,8 @@ entry:
 define void @f1() local_unnamed_addr #1 {
 entry:
   %i = alloca i32, align 4
-  %0 = bitcast i32* %i to i8*
-  store i32 1, i32* %i, align 4
-  call void @g(i32* nonnull %i)
+  store i32 1, ptr %i, align 4
+  call void @g(ptr nonnull %i)
   ret void
 }
 

@@ -3,13 +3,13 @@
 ; RUN: llc -march=mips64el -mcpu=mips64r2 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,NOT-R6
 ; RUN: llc -march=mips64el -mcpu=mips64r6 -asm-show-inst -relocation-model=pic < %s | FileCheck %s -check-prefixes=CHECK,R6
 
-declare void @llvm.eh.return.i64(i64, i8*)
+declare void @llvm.eh.return.i64(i64, ptr)
 declare void @foo(...)
 
-define void @f1(i64 %offset, i8* %handler) {
+define void @f1(i64 %offset, ptr %handler) {
 entry:
   call void (...) @foo()
-  call void @llvm.eh.return.i64(i64 %offset, i8* %handler)
+  call void @llvm.eh.return.i64(i64 %offset, ptr %handler)
   unreachable
 
 ; CHECK:    f1:
@@ -49,9 +49,9 @@ entry:
 ; CHECK:        daddu   $sp, $sp, $3
 }
 
-define void @f2(i64 %offset, i8* %handler) {
+define void @f2(i64 %offset, ptr %handler) {
 entry:
-  call void @llvm.eh.return.i64(i64 %offset, i8* %handler)
+  call void @llvm.eh.return.i64(i64 %offset, ptr %handler)
   unreachable
 
 ; CHECK:    f2:

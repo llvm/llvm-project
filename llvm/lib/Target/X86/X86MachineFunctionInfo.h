@@ -117,7 +117,7 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// determine if we should insert tilerelease in frame lowering.
   bool HasVirtualTileReg = false;
 
-  Optional<int> SwiftAsyncContextFrameIdx;
+  std::optional<int> SwiftAsyncContextFrameIdx;
 
   // Preallocated fields are only used during isel.
   // FIXME: Can we find somewhere else to store these?
@@ -132,9 +132,9 @@ private:
 
 public:
   X86MachineFunctionInfo() = default;
+  X86MachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
 
-  explicit X86MachineFunctionInfo(MachineFunction &MF) {}
-  explicit X86MachineFunctionInfo(const X86MachineFunctionInfo &) = default;
+  X86MachineFunctionInfo(const X86MachineFunctionInfo &) = default;
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -222,7 +222,7 @@ public:
   bool hasVirtualTileReg() const { return HasVirtualTileReg; }
   void setHasVirtualTileReg(bool v) { HasVirtualTileReg = v; }
 
-  Optional<int> getSwiftAsyncContextFrameIdx() const {
+  std::optional<int> getSwiftAsyncContextFrameIdx() const {
     return SwiftAsyncContextFrameIdx;
   }
   void setSwiftAsyncContextFrameIdx(int v) { SwiftAsyncContextFrameIdx = v; }

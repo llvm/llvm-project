@@ -14,9 +14,6 @@
 ## Registers don't match (invalid input)
 # CHECK-NEXT: adrp x2
 # CHECK-NEXT: add x0
-## Targets don't match (invalid input)
-# CHECK-NEXT: adrp x3
-# CHECK-NEXT: add x3
 ## Not an adrp instruction (invalid input)
 # CHECK-NEXT: nop
 # CHECK-NEXT: add x4
@@ -56,10 +53,6 @@ L5:
   adrp x2, _before_near@PAGE
 L6:
   add  x0, x0, _before_near@PAGEOFF
-L7:
-  adrp x3, _before_near@PAGE
-L8:
-  add  x3, x3, _after_near@PAGEOFF
 L9:
   nop
 L10:
@@ -90,7 +83,6 @@ _after_far:
 .loh AdrpAdd L1, L2
 .loh AdrpAdd L3, L4
 .loh AdrpAdd L5, L6
-.loh AdrpAdd L7, L8
 .loh AdrpAdd L9, L10
 .loh AdrpAdd L11, L12
 .loh AdrpAdd L13, L14

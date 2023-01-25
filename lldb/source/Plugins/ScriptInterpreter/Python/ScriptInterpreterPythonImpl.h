@@ -202,6 +202,9 @@ public:
                           const TypeSummaryOptions &options,
                           std::string &retval) override;
 
+  bool FormatterCallbackFunction(const char *function_name,
+                                 lldb::TypeImplSP type_impl_sp) override;
+
   bool GetDocumentationForItem(const char *item, std::string &dest) override;
 
   bool GetShortHelpForCommandObject(StructuredData::GenericSP cmd_obj_sp,

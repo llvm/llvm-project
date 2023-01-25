@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
@@ -204,7 +205,7 @@ protected:
   MachineRegisterInfo &MRI;
   MachineFrameInfo &MFI;
   MachineConstantPool &MCP;
-  DebugLoc DbgLoc;
+  MIMetadata MIMD;
   const TargetMachine &TM;
   const DataLayout &DL;
   const TargetInstrInfo &TII;
@@ -212,7 +213,6 @@ protected:
   const TargetRegisterInfo &TRI;
   const TargetLibraryInfo *LibInfo;
   bool SkipTargetIndependentISel;
-  bool UseInstrRefDebugInfo = false;
 
   /// The position of the last instruction for materializing constants
   /// for use in the current block. It resets to EmitStartPt when it makes sense
@@ -247,7 +247,7 @@ public:
   void finishBasicBlock();
 
   /// Return current debug location information.
-  DebugLoc getCurDebugLoc() const { return DbgLoc; }
+  DebugLoc getCurDebugLoc() const { return MIMD.getDL(); }
 
   /// Do "fast" instruction selection for function arguments and append
   /// the machine instructions to the current block. Returns true when
@@ -318,12 +318,6 @@ public:
 
   /// Reset InsertPt to the given old insert position.
   void leaveLocalValueArea(SavePoint Old);
-
-  /// Signal whether instruction referencing variable locations are desired for
-  /// this function's debug-info.
-  void useInstrRefDebugInfo(bool Flag) {
-    UseInstrRefDebugInfo = Flag;
-  }
 
 protected:
   explicit FastISel(FunctionLoweringInfo &FuncInfo,

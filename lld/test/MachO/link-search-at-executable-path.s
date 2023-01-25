@@ -20,7 +20,7 @@
 
 ## It also doesn't help if the needed reexport isn't next to the library.
 # RUN: not %lld -lSystem %t/main.o %t/libbar.dylib -o %t/test 2>&1 | FileCheck --check-prefix=ERR %s
-# ERR: error: unable to locate re-export with install name @executable_path/libfoo.dylib
+# ERR: error: {{.*}}libbar.dylib: unable to locate re-export with install name @executable_path/libfoo.dylib
 
 #--- foo.s
 .globl _foo

@@ -300,7 +300,7 @@ void MipsAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   }
 }
 
-Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
   unsigned Type = llvm::StringSwitch<unsigned>(Name)
                       .Case("BFD_RELOC_NONE", ELF::R_MIPS_NONE)
                       .Case("BFD_RELOC_16", ELF::R_MIPS_16)
@@ -310,7 +310,7 @@ Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
   if (Type != -1u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
 
-  return StringSwitch<Optional<MCFixupKind>>(Name)
+  return StringSwitch<std::optional<MCFixupKind>>(Name)
       .Case("R_MIPS_NONE", FK_NONE)
       .Case("R_MIPS_32", FK_Data_4)
       .Case("R_MIPS_CALL_HI16", (MCFixupKind)Mips::fixup_Mips_CALL_HI16)
@@ -429,7 +429,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                 0,     32,   0 },
     { "fixup_MICROMIPS_JALR",            0,     32,   0 }
   };
-  static_assert(array_lengthof(LittleEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
 
   const static MCFixupKindInfo BigEndianInfos[] = {
@@ -508,7 +508,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                  0,     32,   0 },
     { "fixup_MICROMIPS_JALR",             0,     32,   0 }
   };
-  static_assert(array_lengthof(BigEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
   if (Kind >= FirstLiteralRelocationKind)

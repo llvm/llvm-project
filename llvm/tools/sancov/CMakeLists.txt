@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Object
   Support
+  TargetParser
   Symbolize
   )
 

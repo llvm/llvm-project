@@ -5,24 +5,24 @@
 %struct.X = type opaque
 %struct.Y = type { i32 }
 
-define i32 @foo(%struct.X* %x, %struct.Y* %y) nounwind ssp !dbg !1 {
+define i32 @foo(ptr %x, ptr %y) nounwind ssp !dbg !1 {
 entry:
-  %x_addr = alloca %struct.X*                     ; <%struct.X**> [#uses=1]
-  %y_addr = alloca %struct.Y*                     ; <%struct.Y**> [#uses=1]
-  %retval = alloca i32                            ; <i32*> [#uses=2]
-  %0 = alloca i32                                 ; <i32*> [#uses=2]
+  %x_addr = alloca ptr                     ; <ptr> [#uses=1]
+  %y_addr = alloca ptr                     ; <ptr> [#uses=1]
+  %retval = alloca i32                            ; <ptr> [#uses=2]
+  %0 = alloca i32                                 ; <ptr> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  call void @llvm.dbg.declare(metadata %struct.X** %x_addr, metadata !0, metadata !DIExpression()), !dbg !13
-  store %struct.X* %x, %struct.X** %x_addr
-  call void @llvm.dbg.declare(metadata %struct.Y** %y_addr, metadata !14, metadata !DIExpression()), !dbg !13
-  store %struct.Y* %y, %struct.Y** %y_addr
-  store i32 0, i32* %0, align 4, !dbg !13
-  %1 = load i32, i32* %0, align 4, !dbg !13            ; <i32> [#uses=1]
-  store i32 %1, i32* %retval, align 4, !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %x_addr, metadata !0, metadata !DIExpression()), !dbg !13
+  store ptr %x, ptr %x_addr
+  call void @llvm.dbg.declare(metadata ptr %y_addr, metadata !14, metadata !DIExpression()), !dbg !13
+  store ptr %y, ptr %y_addr
+  store i32 0, ptr %0, align 4, !dbg !13
+  %1 = load i32, ptr %0, align 4, !dbg !13            ; <i32> [#uses=1]
+  store i32 %1, ptr %retval, align 4, !dbg !13
   br label %return, !dbg !13
 
 return:                                           ; preds = %entry
-  %retval1 = load i32, i32* %retval, !dbg !13          ; <i32> [#uses=1]
+  %retval1 = load i32, ptr %retval, !dbg !13          ; <i32> [#uses=1]
   ret i32 %retval1, !dbg !15
 }
 

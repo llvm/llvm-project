@@ -26,7 +26,6 @@
 #define LLVM_SUPPORT_FORMATVARIADIC_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,6 +36,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -103,7 +103,7 @@ public:
   }
   static SmallVector<ReplacementItem, 2> parseFormatString(StringRef Fmt);
 
-  static Optional<ReplacementItem> parseReplacementItem(StringRef Spec);
+  static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec);
 
   std::string str() const {
     std::string Result;
@@ -152,7 +152,7 @@ public:
   formatv_object(StringRef Fmt, Tuple &&Params)
       : formatv_object_base(Fmt, ParameterPointers),
         Parameters(std::move(Params)) {
-    ParameterPointers = apply_tuple(create_adapters(), Parameters);
+    ParameterPointers = std::apply(create_adapters(), Parameters);
   }
 
   formatv_object(formatv_object const &rhs) = delete;
@@ -160,7 +160,7 @@ public:
   formatv_object(formatv_object &&rhs)
       : formatv_object_base(std::move(rhs)),
         Parameters(std::move(rhs.Parameters)) {
-    ParameterPointers = apply_tuple(create_adapters(), Parameters);
+    ParameterPointers = std::apply(create_adapters(), Parameters);
     Adapters = ParameterPointers;
   }
 };

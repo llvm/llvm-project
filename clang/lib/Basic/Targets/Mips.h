@@ -40,7 +40,6 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
       resetDataLayout(("e-" + Layout).str());
   }
 
-  static const Builtin::Info BuiltinInfo[];
   std::string CPU;
   bool IsMips16;
   bool IsMicromips;
@@ -226,7 +225,7 @@ public:
         "$msair", "$msacsr", "$msaaccess", "$msasave", "$msamodify",
         "$msarequest", "$msamap", "$msaunmap"
     };
-    return llvm::makeArrayRef(GCCRegNames);
+    return llvm::ArrayRef(GCCRegNames);
   }
 
   bool validateAsmConstraint(const char *&Name,
@@ -395,8 +394,8 @@ public:
         {{"ra"}, "$31"}
     };
     if (ABI == "o32")
-      return llvm::makeArrayRef(O32RegAliases);
-    return llvm::makeArrayRef(NewABIRegAliases);
+      return llvm::ArrayRef(O32RegAliases);
+    return llvm::ArrayRef(NewABIRegAliases);
   }
 
   bool hasInt128Type() const override {

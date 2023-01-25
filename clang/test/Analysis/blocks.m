@@ -14,6 +14,9 @@ void dispatch_async(dispatch_queue_t queue, dispatch_block_t block);
 __attribute__((visibility("default"))) __attribute__((__malloc__)) __attribute__((__warn_unused_result__)) __attribute__((__nothrow__)) dispatch_queue_t dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
 typedef long dispatch_once_t;
 void dispatch_once(dispatch_once_t *predicate, dispatch_block_t block);
+#if __cplusplus >= 201703L
+__attribute__((__nothrow__))
+#endif
 dispatch_queue_t
 dispatch_queue_create(const char *label, dispatch_queue_attr_t attr);
 

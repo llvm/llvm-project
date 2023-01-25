@@ -14,8 +14,6 @@
 
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
-#include "llvm-c/Initialization.h"
-#include "llvm-c/Transforms/AggressiveInstCombine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -24,22 +22,16 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 using namespace PatternMatch;
-
-namespace llvm {
-class DataLayout;
-}
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
@@ -50,31 +42,9 @@ STATISTIC(NumGuardedFunnelShifts,
           "Number of guarded funnel shifts transformed into funnel shifts");
 STATISTIC(NumPopCountRecognized, "Number of popcount idioms recognized");
 
-namespace {
-/// Contains expression pattern combiner logic.
-/// This class provides both the logic to combine expression patterns and
-/// combine them. It differs from InstCombiner class in that each pattern
-/// combiner runs only once as opposed to InstCombine's multi-iteration,
-/// which allows pattern combiner to have higher complexity than the O(1)
-/// required by the instruction combiner.
-class AggressiveInstCombinerLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  AggressiveInstCombinerLegacyPass() : FunctionPass(ID) {
-    initializeAggressiveInstCombinerLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  /// Run all expression pattern optimizations on the given /p F function.
-  ///
-  /// \param F function to optimize.
-  /// \returns true if the IR is changed.
-  bool runOnFunction(Function &F) override;
-};
-} // namespace
+static cl::opt<unsigned> MaxInstrsToScan(
+    "aggressive-instcombine-max-scan-instrs", cl::init(64), cl::Hidden,
+    cl::desc("Max number of instructions to scan for aggressive instcombine."));
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
 /// against undefined behavior by branching around the funnel-shift/rotation
@@ -473,17 +443,400 @@ foldSqrt(Instruction &I, TargetTransformInfo &TTI, TargetLibraryInfo &TLI) {
   return false;
 }
 
+// Check if this array of constants represents a cttz table.
+// Iterate over the elements from \p Table by trying to find/match all
+// the numbers from 0 to \p InputBits that should represent cttz results.
+static bool isCTTZTable(const ConstantDataArray &Table, uint64_t Mul,
+                        uint64_t Shift, uint64_t InputBits) {
+  unsigned Length = Table.getNumElements();
+  if (Length < InputBits || Length > InputBits * 2)
+    return false;
+
+  APInt Mask = APInt::getBitsSetFrom(InputBits, Shift);
+  unsigned Matched = 0;
+
+  for (unsigned i = 0; i < Length; i++) {
+    uint64_t Element = Table.getElementAsInteger(i);
+    if (Element >= InputBits)
+      continue;
+
+    // Check if \p Element matches a concrete answer. It could fail for some
+    // elements that are never accessed, so we keep iterating over each element
+    // from the table. The number of matched elements should be equal to the
+    // number of potential right answers which is \p InputBits actually.
+    if ((((Mul << Element) & Mask.getZExtValue()) >> Shift) == i)
+      Matched++;
+  }
+
+  return Matched == InputBits;
+}
+
+// Try to recognize table-based ctz implementation.
+// E.g., an example in C (for more cases please see the llvm/tests):
+// int f(unsigned x) {
+//    static const char table[32] =
+//      {0, 1, 28, 2, 29, 14, 24, 3, 30,
+//       22, 20, 15, 25, 17, 4, 8, 31, 27,
+//       13, 23, 21, 19, 16, 7, 26, 12, 18, 6, 11, 5, 10, 9};
+//    return table[((unsigned)((x & -x) * 0x077CB531U)) >> 27];
+// }
+// this can be lowered to `cttz` instruction.
+// There is also a special case when the element is 0.
+//
+// Here are some examples or LLVM IR for a 64-bit target:
+//
+// CASE 1:
+// %sub = sub i32 0, %x
+// %and = and i32 %sub, %x
+// %mul = mul i32 %and, 125613361
+// %shr = lshr i32 %mul, 27
+// %idxprom = zext i32 %shr to i64
+// %arrayidx = getelementptr inbounds [32 x i8], [32 x i8]* @ctz1.table, i64 0,
+// i64 %idxprom %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+//
+// CASE 2:
+// %sub = sub i32 0, %x
+// %and = and i32 %sub, %x
+// %mul = mul i32 %and, 72416175
+// %shr = lshr i32 %mul, 26
+// %idxprom = zext i32 %shr to i64
+// %arrayidx = getelementptr inbounds [64 x i16], [64 x i16]* @ctz2.table, i64
+// 0, i64 %idxprom %0 = load i16, i16* %arrayidx, align 2, !tbaa !8
+//
+// CASE 3:
+// %sub = sub i32 0, %x
+// %and = and i32 %sub, %x
+// %mul = mul i32 %and, 81224991
+// %shr = lshr i32 %mul, 27
+// %idxprom = zext i32 %shr to i64
+// %arrayidx = getelementptr inbounds [32 x i32], [32 x i32]* @ctz3.table, i64
+// 0, i64 %idxprom %0 = load i32, i32* %arrayidx, align 4, !tbaa !8
+//
+// CASE 4:
+// %sub = sub i64 0, %x
+// %and = and i64 %sub, %x
+// %mul = mul i64 %and, 283881067100198605
+// %shr = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @table, i64 0, i64
+// %shr %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
+//
+// All this can be lowered to @llvm.cttz.i32/64 intrinsic.
+static bool tryToRecognizeTableBasedCttz(Instruction &I) {
+  LoadInst *LI = dyn_cast<LoadInst>(&I);
+  if (!LI)
+    return false;
+
+  Type *AccessType = LI->getType();
+  if (!AccessType->isIntegerTy())
+    return false;
+
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP || !GEP->isInBounds() || GEP->getNumIndices() != 2)
+    return false;
+
+  if (!GEP->getSourceElementType()->isArrayTy())
+    return false;
+
+  uint64_t ArraySize = GEP->getSourceElementType()->getArrayNumElements();
+  if (ArraySize != 32 && ArraySize != 64)
+    return false;
+
+  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+    return false;
+
+  ConstantDataArray *ConstData =
+      dyn_cast<ConstantDataArray>(GVTable->getInitializer());
+  if (!ConstData)
+    return false;
+
+  if (!match(GEP->idx_begin()->get(), m_ZeroInt()))
+    return false;
+
+  Value *Idx2 = std::next(GEP->idx_begin())->get();
+  Value *X1;
+  uint64_t MulConst, ShiftConst;
+  // FIXME: 64-bit targets have `i64` type for the GEP index, so this match will
+  // probably fail for other (e.g. 32-bit) targets.
+  if (!match(Idx2, m_ZExtOrSelf(
+                       m_LShr(m_Mul(m_c_And(m_Neg(m_Value(X1)), m_Deferred(X1)),
+                                    m_ConstantInt(MulConst)),
+                              m_ConstantInt(ShiftConst)))))
+    return false;
+
+  unsigned InputBits = X1->getType()->getScalarSizeInBits();
+  if (InputBits != 32 && InputBits != 64)
+    return false;
+
+  // Shift should extract top 5..7 bits.
+  if (InputBits - Log2_32(InputBits) != ShiftConst &&
+      InputBits - Log2_32(InputBits) - 1 != ShiftConst)
+    return false;
+
+  if (!isCTTZTable(*ConstData, MulConst, ShiftConst, InputBits))
+    return false;
+
+  auto ZeroTableElem = ConstData->getElementAsInteger(0);
+  bool DefinedForZero = ZeroTableElem == InputBits;
+
+  IRBuilder<> B(LI);
+  ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
+  Type *XType = X1->getType();
+  auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
+  Value *ZExtOrTrunc = nullptr;
+
+  if (DefinedForZero) {
+    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
+  } else {
+    // If the value in elem 0 isn't the same as InputBits, we still want to
+    // produce the value from the table.
+    auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
+    auto Select =
+        B.CreateSelect(Cmp, ConstantInt::get(XType, ZeroTableElem), Cttz);
+
+    // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
+    // it should be handled as: `cttz(x) & (typeSize - 1)`.
+
+    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  }
+
+  LI->replaceAllUsesWith(ZExtOrTrunc);
+
+  return true;
+}
+
+/// This is used by foldLoadsRecursive() to capture a Root Load node which is
+/// of type or(load, load) and recursively build the wide load. Also capture the
+/// shift amount, zero extend type and loadSize.
+struct LoadOps {
+  LoadInst *Root = nullptr;
+  LoadInst *RootInsert = nullptr;
+  bool FoundRoot = false;
+  uint64_t LoadSize = 0;
+  Value *Shift = nullptr;
+  Type *ZextType;
+  AAMDNodes AATags;
+};
+
+// Identify and Merge consecutive loads recursively which is of the form
+// (ZExt(L1) << shift1) | (ZExt(L2) << shift2) -> ZExt(L3) << shift1
+// (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
+static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
+                               AliasAnalysis &AA) {
+  Value *ShAmt2 = nullptr;
+  Value *X;
+  Instruction *L1, *L2;
+
+  // Go to the last node with loads.
+  if (match(V, m_OneUse(m_c_Or(
+                   m_Value(X),
+                   m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))),
+                                  m_Value(ShAmt2)))))) ||
+      match(V, m_OneUse(m_Or(m_Value(X),
+                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))))))) {
+    if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
+      // Avoid Partial chain merge.
+      return false;
+  } else
+    return false;
+
+  // Check if the pattern has loads
+  LoadInst *LI1 = LOps.Root;
+  Value *ShAmt1 = LOps.Shift;
+  if (LOps.FoundRoot == false &&
+      (match(X, m_OneUse(m_ZExt(m_Instruction(L1)))) ||
+       match(X, m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L1)))),
+                               m_Value(ShAmt1)))))) {
+    LI1 = dyn_cast<LoadInst>(L1);
+  }
+  LoadInst *LI2 = dyn_cast<LoadInst>(L2);
+
+  // Check if loads are same, atomic, volatile and having same address space.
+  if (LI1 == LI2 || !LI1 || !LI2 || !LI1->isSimple() || !LI2->isSimple() ||
+      LI1->getPointerAddressSpace() != LI2->getPointerAddressSpace())
+    return false;
+
+  // Check if Loads come from same BB.
+  if (LI1->getParent() != LI2->getParent())
+    return false;
+
+  // Find the data layout
+  bool IsBigEndian = DL.isBigEndian();
+
+  // Check if loads are consecutive and same size.
+  Value *Load1Ptr = LI1->getPointerOperand();
+  APInt Offset1(DL.getIndexTypeSizeInBits(Load1Ptr->getType()), 0);
+  Load1Ptr =
+      Load1Ptr->stripAndAccumulateConstantOffsets(DL, Offset1,
+                                                  /* AllowNonInbounds */ true);
+
+  Value *Load2Ptr = LI2->getPointerOperand();
+  APInt Offset2(DL.getIndexTypeSizeInBits(Load2Ptr->getType()), 0);
+  Load2Ptr =
+      Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
+                                                  /* AllowNonInbounds */ true);
+
+  // Verify if both loads have same base pointers and load sizes are same.
+  uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
+  uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
+  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+    return false;
+
+  // Support Loadsizes greater or equal to 8bits and only power of 2.
+  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+    return false;
+
+  // Alias Analysis to check for stores b/w the loads.
+  LoadInst *Start = LOps.FoundRoot ? LOps.RootInsert : LI1, *End = LI2;
+  MemoryLocation Loc;
+  if (!Start->comesBefore(End)) {
+    std::swap(Start, End);
+    Loc = MemoryLocation::get(End);
+    if (LOps.FoundRoot)
+      Loc = Loc.getWithNewSize(LOps.LoadSize);
+  } else
+    Loc = MemoryLocation::get(End);
+  unsigned NumScanned = 0;
+  for (Instruction &Inst :
+       make_range(Start->getIterator(), End->getIterator())) {
+    if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
+      return false;
+    if (++NumScanned > MaxInstrsToScan)
+      return false;
+  }
+
+  // Make sure Load with lower Offset is at LI1
+  bool Reverse = false;
+  if (Offset2.slt(Offset1)) {
+    std::swap(LI1, LI2);
+    std::swap(ShAmt1, ShAmt2);
+    std::swap(Offset1, Offset2);
+    std::swap(Load1Ptr, Load2Ptr);
+    std::swap(LoadSize1, LoadSize2);
+    Reverse = true;
+  }
+
+  // Big endian swap the shifts
+  if (IsBigEndian)
+    std::swap(ShAmt1, ShAmt2);
+
+  // Find Shifts values.
+  const APInt *Temp;
+  uint64_t Shift1 = 0, Shift2 = 0;
+  if (ShAmt1 && match(ShAmt1, m_APInt(Temp)))
+    Shift1 = Temp->getZExtValue();
+  if (ShAmt2 && match(ShAmt2, m_APInt(Temp)))
+    Shift2 = Temp->getZExtValue();
+
+  // First load is always LI1. This is where we put the new load.
+  // Use the merged load size available from LI1 for forward loads.
+  if (LOps.FoundRoot) {
+    if (!Reverse)
+      LoadSize1 = LOps.LoadSize;
+    else
+      LoadSize2 = LOps.LoadSize;
+  }
+
+  // Verify if shift amount and load index aligns and verifies that loads
+  // are consecutive.
+  uint64_t ShiftDiff = IsBigEndian ? LoadSize2 : LoadSize1;
+  uint64_t PrevSize =
+      DL.getTypeStoreSize(IntegerType::get(LI1->getContext(), LoadSize1));
+  if ((Shift2 - Shift1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
+    return false;
+
+  // Update LOps
+  AAMDNodes AATags1 = LOps.AATags;
+  AAMDNodes AATags2 = LI2->getAAMetadata();
+  if (LOps.FoundRoot == false) {
+    LOps.FoundRoot = true;
+    AATags1 = LI1->getAAMetadata();
+  }
+  LOps.LoadSize = LoadSize1 + LoadSize2;
+  LOps.RootInsert = Start;
+
+  // Concatenate the AATags of the Merged Loads.
+  LOps.AATags = AATags1.concat(AATags2);
+
+  LOps.Root = LI1;
+  LOps.Shift = ShAmt1;
+  LOps.ZextType = X->getType();
+  return true;
+}
+
+// For a given BB instruction, evaluate all loads in the chain that form a
+// pattern which suggests that the loads can be combined. The one and only use
+// of the loads is to form a wider load.
+static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
+                                 TargetTransformInfo &TTI, AliasAnalysis &AA) {
+  // Only consider load chains of scalar values.
+  if (isa<VectorType>(I.getType()))
+    return false;
+
+  LoadOps LOps;
+  if (!foldLoadsRecursive(&I, LOps, DL, AA) || !LOps.FoundRoot)
+    return false;
+
+  IRBuilder<> Builder(&I);
+  LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
+
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
+  // TTI based checks if we want to proceed with wider load
+  bool Allowed = TTI.isTypeLegal(WiderType);
+  if (!Allowed)
+    return false;
+
+  unsigned AS = LI1->getPointerAddressSpace();
+  unsigned Fast = 0;
+  Allowed = TTI.allowsMisalignedMemoryAccesses(I.getContext(), LOps.LoadSize,
+                                               AS, LI1->getAlign(), &Fast);
+  if (!Allowed || !Fast)
+    return false;
+
+  // Make sure the Load pointer of type GEP/non-GEP is above insert point
+  Instruction *Inst = dyn_cast<Instruction>(LI1->getPointerOperand());
+  if (Inst && Inst->getParent() == LI1->getParent() &&
+      !Inst->comesBefore(LOps.RootInsert))
+    Inst->moveBefore(LOps.RootInsert);
+
+  // New load can be generated
+  Value *Load1Ptr = LI1->getPointerOperand();
+  Builder.SetInsertPoint(LOps.RootInsert);
+  Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
+  NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
+                                      LI1->isVolatile(), "");
+  NewLoad->takeName(LI1);
+  // Set the New Load AATags Metadata.
+  if (LOps.AATags)
+    NewLoad->setAAMetadata(LOps.AATags);
+
+  Value *NewOp = NewLoad;
+  // Check if zero extend needed.
+  if (LOps.ZextType)
+    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+
+  // Check if shift needed. We need to shift with the amount of load1
+  // shift if not zero.
+  if (LOps.Shift)
+    NewOp = Builder.CreateShl(NewOp, LOps.Shift);
+  I.replaceAllUsesWith(NewOp);
+
+  return true;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
-                                TargetLibraryInfo &TLI) {
+                                TargetLibraryInfo &TLI, AliasAnalysis &AA) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(&BB))
       continue;
+
+    const DataLayout &DL = F.getParent()->getDataLayout();
 
     // Walk the block backwards for efficiency. We're matching a chain of
     // use->defs, so we're more likely to succeed by starting from the bottom.
@@ -495,6 +848,11 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       MadeChange |= foldGuardedFunnelShift(I, DT);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToFPToSat(I, TTI);
+      MadeChange |= tryToRecognizeTableBasedCttz(I);
+      MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA);
+      // NOTE: This function introduces erasing of the instruction `I`, so it
+      // needs to be called at the end of this sequence, otherwise we may make
+      // bugs.
       MadeChange |= foldSqrt(I, TTI, TLI);
     }
   }
@@ -510,34 +868,14 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
-                    TargetLibraryInfo &TLI, DominatorTree &DT) {
+                    TargetLibraryInfo &TLI, DominatorTree &DT,
+                    AliasAnalysis &AA) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA);
   return MadeChange;
-}
-
-void AggressiveInstCombinerLegacyPass::getAnalysisUsage(
-    AnalysisUsage &AU) const {
-  AU.setPreservesCFG();
-  AU.addRequired<AssumptionCacheTracker>();
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-  AU.addRequired<TargetTransformInfoWrapperPass>();
-  AU.addPreserved<AAResultsWrapperPass>();
-  AU.addPreserved<BasicAAWrapperPass>();
-  AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-}
-
-bool AggressiveInstCombinerLegacyPass::runOnFunction(Function &F) {
-  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  return runImpl(F, AC, TTI, TLI, DT);
 }
 
 PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
@@ -546,7 +884,8 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  if (!runImpl(F, AC, TTI, TLI, DT)) {
+  auto &AA = AM.getResult<AAManager>(F);
+  if (!runImpl(F, AC, TTI, TLI, DT, AA)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
@@ -554,32 +893,4 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
   return PA;
-}
-
-char AggressiveInstCombinerLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(AggressiveInstCombinerLegacyPass,
-                      "aggressive-instcombine",
-                      "Combine pattern based expressions", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(AggressiveInstCombinerLegacyPass, "aggressive-instcombine",
-                    "Combine pattern based expressions", false, false)
-
-// Initialization Routines
-void llvm::initializeAggressiveInstCombine(PassRegistry &Registry) {
-  initializeAggressiveInstCombinerLegacyPassPass(Registry);
-}
-
-void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R) {
-  initializeAggressiveInstCombinerLegacyPassPass(*unwrap(R));
-}
-
-FunctionPass *llvm::createAggressiveInstCombinerPass() {
-  return new AggressiveInstCombinerLegacyPass();
-}
-
-void LLVMAddAggressiveInstCombinerPass(LLVMPassManagerRef PM) {
-  unwrap(PM)->add(createAggressiveInstCombinerPass());
 }

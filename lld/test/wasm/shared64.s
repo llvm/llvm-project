@@ -52,8 +52,8 @@ extern_struct_internal_ptr:
 .section .text,"",@
 foo:
   # %ptr = alloca i32
-  # %0 = load i32, i32* @data, align 4
-  # %1 = load i32 ()*, i32 ()** @indirect_func, align 4
+  # %0 = load i32, ptr @data, align 4
+  # %1 = load ptr, ptr @indirect_func, align 4
   # call i32 %1()
   # ret i32 %0
   .functype foo () -> (i32)

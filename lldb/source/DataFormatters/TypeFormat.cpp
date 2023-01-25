@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -95,7 +96,7 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
 
         ExecutionContextScope *exe_scope =
             exe_ctx.GetBestExecutionContextScope();
-        llvm::Optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
+        std::optional<uint64_t> size = compiler_type.GetByteSize(exe_scope);
         if (!size)
           return false;
         StreamString sstr;

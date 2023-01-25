@@ -4,7 +4,7 @@
 
 @var = external dso_local global i32, align 4
 
-define dso_local i8* @constraint_S() {
+define dso_local ptr @constraint_S() {
 ; RV32-LABEL: constraint_S:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    #APP
@@ -20,12 +20,12 @@ define dso_local i8* @constraint_S() {
 ; RV64-NEXT:    addi a0, a0, %lo(var)
 ; RV64-NEXT:    #NO_APP
 ; RV64-NEXT:    ret
-  %ret = tail call i8* asm "lui $0, %hi($1)\0Aaddi $0, $0, %lo($1)", "=r,S"(i32* nonnull @var)
-  ret i8* %ret
+  %ret = tail call ptr asm "lui $0, %hi($1)\0Aaddi $0, $0, %lo($1)", "=r,S"(ptr nonnull @var)
+  ret ptr %ret
 }
 
 ; Function Attrs: nofree nosync nounwind readnone
-define dso_local i8* @constraint_S_label() {
+define dso_local ptr @constraint_S_label() {
 ; RV32-LABEL: constraint_S_label:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:  .Ltmp0: # Block address taken
@@ -49,6 +49,6 @@ entry:
   br label %L1
 
 L1:
-  %ret = tail call i8* asm "lui $0, %hi($1)\0Aaddi $0, $0, %lo($1)", "=r,S"(i8* blockaddress(@constraint_S_label, %L1))
-  ret i8* %ret
+  %ret = tail call ptr asm "lui $0, %hi($1)\0Aaddi $0, $0, %lo($1)", "=r,S"(ptr blockaddress(@constraint_S_label, %L1))
+  ret ptr %ret
 }

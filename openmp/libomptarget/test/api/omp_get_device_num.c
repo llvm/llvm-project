@@ -1,24 +1,22 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
-int test_omp_get_device_num()
-{
+int test_omp_get_device_num() {
   /* checks that omp_get_device_num() == omp_get_num_devices() in the host */
   int device_num = omp_get_device_num();
   printf("device_num = %d\n", device_num);
 
-  #pragma omp target
+#pragma omp target
   {}
 
   return (device_num == omp_get_num_devices());
 }
 
-int main()
-{
+int main() {
   int i;
-  int failed=0;
+  int failed = 0;
 
   if (!test_omp_get_device_num()) {
     failed++;

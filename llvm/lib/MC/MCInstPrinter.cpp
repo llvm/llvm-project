@@ -43,7 +43,7 @@ StringRef MCInstPrinter::getOpcodeName(unsigned Opcode) const {
   return MII.getName(Opcode);
 }
 
-void MCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
+void MCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
   llvm_unreachable("Target should implement this");
 }
 

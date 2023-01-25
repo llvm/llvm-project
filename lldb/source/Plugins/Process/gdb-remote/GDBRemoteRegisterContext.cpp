@@ -107,12 +107,12 @@ bool GDBRemoteRegisterContext::ReadRegister(const RegisterInfo *reg_info,
 
       Status error;
       return value.SetFromMemoryData(
-                 reg_info, combined_data.data(), combined_data.size(),
+                 *reg_info, combined_data.data(), combined_data.size(),
                  m_reg_data.GetByteOrder(), error) == combined_data.size();
     } else {
       const bool partial_data_ok = false;
       Status error(value.SetValueFromData(
-          reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
+          *reg_info, m_reg_data, reg_info->byte_offset, partial_data_ok));
       return error.Success();
     }
   }

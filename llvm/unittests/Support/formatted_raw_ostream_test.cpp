@@ -92,34 +92,34 @@ TEST(formatted_raw_ostreamTest, Test_UTF8) {
   formatted_raw_ostream C(B);
 
   // U+00A0 Non-breaking space: encoded as two bytes, but only one column wide.
-  C << u8"\u00a0";
+  C << "\xc2\xa0";
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(1U, C.getColumn());
   EXPECT_EQ(2U, C.GetNumBytesInBuffer());
 
   // U+2468 CIRCLED DIGIT NINE: encoded as three bytes, but only one column
   // wide.
-  C << u8"\u2468";
+  C << reinterpret_cast<const char *>(u8"\u2468");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(2U, C.getColumn());
   EXPECT_EQ(5U, C.GetNumBytesInBuffer());
 
   // U+00010000 LINEAR B SYLLABLE B008 A: encoded as four bytes, but only one
   // column wide.
-  C << u8"\U00010000";
+  C << reinterpret_cast<const char *>(u8"\U00010000");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(3U, C.getColumn());
   EXPECT_EQ(9U, C.GetNumBytesInBuffer());
 
   // U+55B5, CJK character, encodes as three bytes, takes up two columns.
-  C << u8"\u55b5";
+  C << reinterpret_cast<const char *>(u8"\u55b5");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(5U, C.getColumn());
   EXPECT_EQ(12U, C.GetNumBytesInBuffer());
 
   // U+200B, zero-width space, encoded as three bytes but has no effect on the
   // column or line number.
-  C << u8"\u200b";
+  C << reinterpret_cast<const char *>(u8"\u200b");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(5U, C.getColumn());
   EXPECT_EQ(15U, C.GetNumBytesInBuffer());
@@ -137,7 +137,7 @@ TEST(formatted_raw_ostreamTest, Test_UTF8Buffered) {
   // the remaining two bytes are written, at which point we can check the
   // display width. In this case the display width is 1, so we end at column 4,
   // with 6 bytes written into total, 2 of which are in the buffer.
-  C << u8"123\u2468";
+  C << reinterpret_cast<const char *>(u8"123\u2468");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(4U, C.getColumn());
   EXPECT_EQ(2U, C.GetNumBytesInBuffer());
@@ -145,7 +145,7 @@ TEST(formatted_raw_ostreamTest, Test_UTF8Buffered) {
   EXPECT_EQ(6U, A.size());
 
   // Same as above, but with a CJK character which displays as two columns.
-  C << u8"123\u55b5";
+  C << reinterpret_cast<const char *>(u8"123\u55b5");
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(9U, C.getColumn());
   EXPECT_EQ(2U, C.GetNumBytesInBuffer());
@@ -161,7 +161,7 @@ TEST(formatted_raw_ostreamTest, Test_UTF8TinyBuffer) {
 
   // The stream has a one-byte buffer, so it gets flushed multiple times while
   // printing a single Unicode character.
-  C << u8"\u2468";
+  C << "\xe2\x91\xa8";
   EXPECT_EQ(0U, C.getLine());
   EXPECT_EQ(1U, C.getColumn());
   EXPECT_EQ(0U, C.GetNumBytesInBuffer());

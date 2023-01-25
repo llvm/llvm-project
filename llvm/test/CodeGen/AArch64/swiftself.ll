@@ -7,8 +7,8 @@
 ; CHECK-LABEL: swiftself_param:
 ; CHECK: mov x0, x20
 ; CHECK-NEXT: ret
-define i8* @swiftself_param(i8* swiftself %addr0) {
-  ret i8 *%addr0
+define ptr @swiftself_param(ptr swiftself %addr0) {
+  ret ptr %addr0
 }
 
 ; Check that x20 is used to pass a swiftself argument.
@@ -16,9 +16,9 @@ define i8* @swiftself_param(i8* swiftself %addr0) {
 ; CHECK: mov x20, x0
 ; CHECK: bl {{_?}}swiftself_param
 ; CHECK: ret
-define i8 *@call_swiftself(i8* %arg) {
-  %res = call i8 *@swiftself_param(i8* swiftself %arg)
-  ret i8 *%res
+define ptr @call_swiftself(ptr %arg) {
+  %res = call ptr @swiftself_param(ptr swiftself %arg)
+  ret ptr %res
 }
 
 ; x20 should be saved by the callee even if used for swiftself
@@ -27,9 +27,9 @@ define i8 *@call_swiftself(i8* %arg) {
 ; ...
 ; CHECK: {{ldp|ldr}} {{.*}}x20{{.*}}sp
 ; CHECK: ret
-define i8 *@swiftself_clobber(i8* swiftself %addr0) {
+define ptr @swiftself_clobber(ptr swiftself %addr0) {
   call void asm sideeffect "", "~{x20}"()
-  ret i8 *%addr0
+  ret ptr %addr0
 }
 
 ; Demonstrate that we do not need any movs when calling multiple functions
@@ -40,9 +40,9 @@ define i8 *@swiftself_clobber(i8* swiftself %addr0) {
 ; OPT-NOT: mov{{.*}}x20
 ; OPT-NEXT: bl {{_?}}swiftself_param
 ; OPT: ret
-define void @swiftself_passthrough(i8* swiftself %addr0) {
-  call i8 *@swiftself_param(i8* swiftself %addr0)
-  call i8 *@swiftself_param(i8* swiftself %addr0)
+define void @swiftself_passthrough(ptr swiftself %addr0) {
+  call ptr @swiftself_param(ptr swiftself %addr0)
+  call ptr @swiftself_param(ptr swiftself %addr0)
   ret void
 }
 
@@ -52,10 +52,10 @@ define void @swiftself_passthrough(i8* swiftself %addr0) {
 ; OPTAARCH64: b {{_?}}swiftself_param
 ; OPTAARCH64-NOT: ret
 ; OPTARM64_32: b {{_?}}swiftself_param
-define i8* @swiftself_tail(i8* swiftself %addr0) {
+define ptr @swiftself_tail(ptr swiftself %addr0) {
   call void asm sideeffect "", "~{x20}"()
-  %res = musttail call i8* @swiftself_param(i8* swiftself %addr0)
-  ret i8* %res
+  %res = musttail call ptr @swiftself_param(ptr swiftself %addr0)
+  ret ptr %res
 }
 
 ; We can not use a tail call if the callee swiftself is not the same as the
@@ -64,15 +64,15 @@ define i8* @swiftself_tail(i8* swiftself %addr0) {
 ; CHECK: mov x20, x0
 ; CHECK: bl {{_?}}swiftself_param
 ; CHECK: ret
-define i8* @swiftself_notail(i8* swiftself %addr0, i8* %addr1) nounwind {
-  %res = tail call i8* @swiftself_param(i8* swiftself %addr1)
-  ret i8* %res
+define ptr @swiftself_notail(ptr swiftself %addr0, ptr %addr1) nounwind {
+  %res = tail call ptr @swiftself_param(ptr swiftself %addr1)
+  ret ptr %res
 }
 
 ; We cannot pretend that 'x0' is alive across the thisreturn_attribute call as
 ; we normally would. We marked the first parameter with swiftself which means it
 ; will no longer be passed in x0.
-declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
+declare swiftcc ptr @thisreturn_attribute(ptr returned swiftself)
 ; OPTAARCH64-LABEL: swiftself_nothisreturn:
 ; OPTAARCH64-DAG: ldr  x20, [x20]
 ; OPTAARCH64-DAG: mov [[CSREG:x[1-9].*]], x8
@@ -86,10 +86,10 @@ declare swiftcc i8* @thisreturn_attribute(i8* returned swiftself)
 ; OPTARM64_32: bl {{_?}}thisreturn_attribute
 ; OPTARM64_32: str w0, [[[CSREG]]
 ; OPTARM64_32: ret
-define hidden swiftcc void @swiftself_nothisreturn(i8** noalias nocapture sret(i8*), i8** noalias nocapture readonly swiftself) {
+define hidden swiftcc void @swiftself_nothisreturn(ptr noalias nocapture sret(ptr), ptr noalias nocapture readonly swiftself) {
 entry:
-  %2 = load i8*, i8** %1, align 8
-  %3 = tail call swiftcc i8* @thisreturn_attribute(i8* swiftself %2)
-  store i8* %3, i8** %0, align 8
+  %2 = load ptr, ptr %1, align 8
+  %3 = tail call swiftcc ptr @thisreturn_attribute(ptr swiftself %2)
+  store ptr %3, ptr %0, align 8
   ret void
 }

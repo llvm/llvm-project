@@ -42,7 +42,7 @@ define void @test_stack_guard_linux() {
 ; OPENBSD: [[GUARD:%[0-9]+]]:_(p0) = G_LOAD [[GUARD_LOCAL]](p0) :: (dereferenceable load (p0) from @__guard_local)
 ; OPENBSD: G_STORE [[GUARD]](p0), [[GUARD_SLOT]](p0) :: (volatile store (p0) into %stack.0.StackGuardSlot)
 define void @test_stack_guard_openbsd() {
-  %StackGuardSlot = alloca i8*
+  %StackGuardSlot = alloca ptr
   %StackGuard = load ptr, ptr @__guard_local
   call void @llvm.stackprotector(ptr %StackGuard, ptr %StackGuardSlot)
   ret void

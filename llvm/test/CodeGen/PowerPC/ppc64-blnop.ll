@@ -10,9 +10,9 @@
 
 %class.T = type { [2 x i8] }
 
-define void @e_callee(%class.T* %this, i8* %c) { ret void }
-define void @e_caller(%class.T* %this, i8* %c) {
-  call void @e_callee(%class.T* %this, i8* %c)
+define void @e_callee(ptr %this, ptr %c) { ret void }
+define void @e_caller(ptr %this, ptr %c) {
+  call void @e_callee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: e_caller:
@@ -24,9 +24,9 @@ define void @e_caller(%class.T* %this, i8* %c) {
 ; CHECK-FS-NEXT: nop
 }
 
-define void @e_scallee(%class.T* %this, i8* %c) section "different" { ret void }
-define void @e_scaller(%class.T* %this, i8* %c) {
-  call void @e_scallee(%class.T* %this, i8* %c)
+define void @e_scallee(ptr %this, ptr %c) section "different" { ret void }
+define void @e_scaller(ptr %this, ptr %c) {
+  call void @e_scallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: e_scaller:
@@ -34,9 +34,9 @@ define void @e_scaller(%class.T* %this, i8* %c) {
 ; CHECK-NEXT: nop
 }
 
-define void @e_s2callee(%class.T* %this, i8* %c) { ret void }
-define void @e_s2caller(%class.T* %this, i8* %c) section "different" {
-  call void @e_s2callee(%class.T* %this, i8* %c)
+define void @e_s2callee(ptr %this, ptr %c) { ret void }
+define void @e_s2caller(ptr %this, ptr %c) section "different" {
+  call void @e_s2callee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: e_s2caller:
@@ -47,9 +47,9 @@ define void @e_s2caller(%class.T* %this, i8* %c) section "different" {
 $cd1 = comdat any
 $cd2 = comdat any
 
-define void @e_ccallee(%class.T* %this, i8* %c) comdat($cd1) { ret void }
-define void @e_ccaller(%class.T* %this, i8* %c) comdat($cd2) {
-  call void @e_ccallee(%class.T* %this, i8* %c)
+define void @e_ccallee(ptr %this, ptr %c) comdat($cd1) { ret void }
+define void @e_ccaller(ptr %this, ptr %c) comdat($cd2) {
+  call void @e_ccallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: e_ccaller:
@@ -59,9 +59,9 @@ define void @e_ccaller(%class.T* %this, i8* %c) comdat($cd2) {
 
 $cd = comdat any
 
-define void @e_c1callee(%class.T* %this, i8* %c) comdat($cd) { ret void }
-define void @e_c1caller(%class.T* %this, i8* %c) comdat($cd) {
-  call void @e_c1callee(%class.T* %this, i8* %c)
+define void @e_c1callee(ptr %this, ptr %c) comdat($cd) { ret void }
+define void @e_c1caller(ptr %this, ptr %c) comdat($cd) {
+  call void @e_c1callee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: e_c1caller:
@@ -69,9 +69,9 @@ define void @e_c1caller(%class.T* %this, i8* %c) comdat($cd) {
 ; CHECK-NEXT: nop
 }
 
-define weak_odr hidden void @wo_hcallee(%class.T* %this, i8* %c) { ret void }
-define void @wo_hcaller(%class.T* %this, i8* %c) {
-  call void @wo_hcallee(%class.T* %this, i8* %c)
+define weak_odr hidden void @wo_hcallee(ptr %this, ptr %c) { ret void }
+define void @wo_hcaller(ptr %this, ptr %c) {
+  call void @wo_hcallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: wo_hcaller:
@@ -83,9 +83,9 @@ define void @wo_hcaller(%class.T* %this, i8* %c) {
 ; SCM-NEXT:  nop
 }
 
-define weak_odr protected void @wo_pcallee(%class.T* %this, i8* %c) { ret void }
-define void @wo_pcaller(%class.T* %this, i8* %c) {
-  call void @wo_pcallee(%class.T* %this, i8* %c)
+define weak_odr protected void @wo_pcallee(ptr %this, ptr %c) { ret void }
+define void @wo_pcaller(ptr %this, ptr %c) {
+  call void @wo_pcallee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: wo_pcaller:
@@ -97,9 +97,9 @@ define void @wo_pcaller(%class.T* %this, i8* %c) {
 ; SCM-NEXT:    nop
 }
 
-define weak_odr void @wo_callee(%class.T* %this, i8* %c) { ret void }
-define void @wo_caller(%class.T* %this, i8* %c) {
-  call void @wo_callee(%class.T* %this, i8* %c)
+define weak_odr void @wo_callee(ptr %this, ptr %c) { ret void }
+define void @wo_caller(ptr %this, ptr %c) {
+  call void @wo_callee(ptr %this, ptr %c)
   ret void
 
 ; CHECK-LABEL: wo_caller:
@@ -107,9 +107,9 @@ define void @wo_caller(%class.T* %this, i8* %c) {
 ; CHECK-NEXT: nop
 }
 
-define weak protected void @w_pcallee(i8* %ptr) { ret void }
-define void @w_pcaller(i8* %ptr) {
-  call void @w_pcallee(i8* %ptr)
+define weak protected void @w_pcallee(ptr %ptr) { ret void }
+define void @w_pcaller(ptr %ptr) {
+  call void @w_pcallee(ptr %ptr)
   ret void
 
 ; CHECK-LABEL: w_pcaller:
@@ -121,9 +121,9 @@ define void @w_pcaller(i8* %ptr) {
 ; SCM-NEXT:  nop
 }
 
-define weak hidden void @w_hcallee(i8* %ptr) { ret void }
-define void @w_hcaller(i8* %ptr) {
-  call void @w_hcallee(i8* %ptr)
+define weak hidden void @w_hcallee(ptr %ptr) { ret void }
+define void @w_hcaller(ptr %ptr) {
+  call void @w_hcallee(ptr %ptr)
   ret void
 
 ; CHECK-LABEL: w_hcaller:
@@ -135,9 +135,9 @@ define void @w_hcaller(i8* %ptr) {
 ; SCM-NEXT:  nop
 }
 
-define weak void @w_callee(i8* %ptr) { ret void }
-define void @w_caller(i8* %ptr) {
-  call void @w_callee(i8* %ptr)
+define weak void @w_callee(ptr %ptr) { ret void }
+define void @w_caller(ptr %ptr) {
+  call void @w_callee(ptr %ptr)
   ret void
 
 ; CHECK-LABEL: w_caller:

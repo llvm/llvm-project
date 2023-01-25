@@ -16,14 +16,14 @@
     %S = alloca half, align 2
     %tmp.0.extract.trunc = trunc i32 %A.coerce to i16
     %0 = bitcast i16 %tmp.0.extract.trunc to half
-    store volatile float 4.200000e+01, float* %F, align 4
-    store volatile half 0xH3C00, half* %S, align 2
-    %S.0.S.0.142 = load volatile half, half* %S, align 2
+    store volatile float 4.200000e+01, ptr %F, align 4
+    store volatile half 0xH3C00, ptr %S, align 2
+    %S.0.S.0.142 = load volatile half, ptr %S, align 2
     %1 = call i32 @llvm.arm.space(i32 1230, i32 undef)
     %add42 = fadd half %S.0.S.0.142, 0xH2E66
-    store volatile half %add42, half* %S, align 2
+    store volatile half %add42, ptr %S, align 2
     %2 = call i32 @llvm.arm.space(i32 1330, i32 undef)
-    %S.0.S.0.119 = load volatile half, half* %S, align 2
+    %S.0.S.0.119 = load volatile half, ptr %S, align 2
     %3 = bitcast half %add42 to i16
     %tmp87.0.insert.ext = zext i16 %3 to i32
     ret i32 %tmp87.0.insert.ext

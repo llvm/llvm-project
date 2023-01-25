@@ -14,6 +14,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -305,16 +306,16 @@ bool RemoteAwarePlatform::GetRemoteOSVersion() {
   return false;
 }
 
-llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
+std::optional<std::string> RemoteAwarePlatform::GetRemoteOSBuildString() {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetRemoteOSBuildString();
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
+std::optional<std::string> RemoteAwarePlatform::GetRemoteOSKernelDescription() {
   if (m_remote_platform_sp)
     return m_remote_platform_sp->GetRemoteOSKernelDescription();
-  return llvm::None;
+  return std::nullopt;
 }
 
 ArchSpec RemoteAwarePlatform::GetRemoteSystemArchitecture() {

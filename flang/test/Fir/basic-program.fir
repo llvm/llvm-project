@@ -26,6 +26,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: Canonicalizer
 // PASSES-NEXT: SimplifyRegionLite
+// PASSES-NEXT: SimplifyIntrinsics
 // PASSES-NEXT: AlgebraicSimplification
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
@@ -51,8 +52,11 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 // PASSES-NEXT: BoxedProcedurePass
 
-// PASSES-NEXT: 'func.func' Pipeline
-// PASSES-NEXT:   AbstractResultOnFuncOpt
+// PASSES-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+// PASSES-NEXT:   'fir.global' Pipeline
+// PASSES-NEXT:    AbstractResultOnGlobalOpt
+// PASSES-NEXT:  'func.func' Pipeline
+// PASSES-NEXT:    AbstractResultOnFuncOpt
 
 // PASSES-NEXT: CodeGenRewrite
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations eliminated

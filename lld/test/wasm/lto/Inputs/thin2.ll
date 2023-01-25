@@ -6,8 +6,8 @@ target triple = "wasm32-unknown-unknown"
 define i32 @blah(i32 %meh) #0 {
 entry:
   %meh.addr = alloca i32, align 4
-  store i32 %meh, i32* %meh.addr, align 4
-  %0 = load i32, i32* %meh.addr, align 4
+  store i32 %meh, ptr %meh.addr, align 4
+  %0 = load i32, ptr %meh.addr, align 4
   %sub = sub nsw i32 %0, 48
   ret i32 %sub
 }

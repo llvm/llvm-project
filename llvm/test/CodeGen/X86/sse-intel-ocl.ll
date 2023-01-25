@@ -42,14 +42,14 @@ define <16 x float> @testf16_inp(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN64-NEXT:    movaps (%r8), %xmm2
 ; WIN64-NEXT:    movaps (%rdx), %xmm1
 ; WIN64-NEXT:    movaps (%rcx), %xmm0
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
-; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; WIN64-NEXT:    addps (%rax), %xmm0
+; WIN64-NEXT:    movq {{[0-9]+}}(%rsp), %r8
+; WIN64-NEXT:    addps (%r8), %xmm0
 ; WIN64-NEXT:    addps (%rdx), %xmm1
 ; WIN64-NEXT:    addps (%rcx), %xmm2
-; WIN64-NEXT:    addps (%r8), %xmm3
+; WIN64-NEXT:    addps (%rax), %xmm3
 ; WIN64-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; WIN64-NEXT:    callq func_float16_ptr
 ; WIN64-NEXT:    addps {{[0-9]+}}(%rsp), %xmm0

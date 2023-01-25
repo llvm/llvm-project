@@ -10,7 +10,7 @@
 
 // REQUIRES: stable-runtime
 
-// XFAIL: netbsd && !asan
+// XFAIL: target={{.*netbsd.*}} && !asan
 
 volatile int *null = 0;
 

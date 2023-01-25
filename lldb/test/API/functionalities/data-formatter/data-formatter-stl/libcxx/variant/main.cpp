@@ -29,6 +29,34 @@ int main()
     std::variant<int, double, char> v3;
     std::variant<std::variant<int,double,char>> v_v1 ;
     std::variant<int, double, char> v_no_value;
+    // The next variant has 300 types, meaning the type index does not fit in
+    // a byte and must be `unsigned short` instead of `unsigned char` when
+    // using the unstable libc++ ABI. With stable libc++ ABI, the type index
+    // is always just `unsigned int`.
+    std::variant<
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int, int, int, int, int, int, int, int, int,
+        int, int, int, int, int, int>
+        v_300_types_no_value;
 
     v1 = 12; // v contains int
     v_v1 = v1 ;
@@ -54,6 +82,13 @@ int main()
      } catch( ... ) {}
 
      printf( "%zu\n", v_no_value.index() ) ;
+
+     try {
+       v_300_types_no_value.emplace<0>(S());
+     } catch (...) {
+     }
+
+     printf("%zu\n", v_300_types_no_value.index());
 #endif
 
     return 0; // break here

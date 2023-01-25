@@ -332,9 +332,9 @@ AllocatedMemoryCache::AllocatedMemoryCache(Process &process)
 
 AllocatedMemoryCache::~AllocatedMemoryCache() = default;
 
-void AllocatedMemoryCache::Clear() {
+void AllocatedMemoryCache::Clear(bool deallocate_memory) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-  if (m_process.IsAlive()) {
+  if (m_process.IsAlive() && deallocate_memory) {
     PermissionsToBlockMap::iterator pos, end = m_memory_map.end();
     for (pos = m_memory_map.begin(); pos != end; ++pos)
       m_process.DoDeallocateMemory(pos->second->GetBaseAddress());

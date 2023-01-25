@@ -10,15 +10,15 @@
 ; CHECK: {
 ; CHECK-NEXT: = add([[REG2]],[[REG1]])
 
-define i32 @test(i32* nocapture readonly %p) local_unnamed_addr #0 {
+define i32 @test(ptr nocapture readonly %p) local_unnamed_addr #0 {
 entry:
-  %incdec.ptr = getelementptr inbounds i32, i32* %p, i32 1
-  %0 = load i32, i32* %p, align 4
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %p, i32 2
-  %1 = load i32, i32* %incdec.ptr, align 4
-  %incdec.ptr2 = getelementptr inbounds i32, i32* %p, i32 3
-  %2 = load i32, i32* %incdec.ptr1, align 4
-  %3 = load i32, i32* %incdec.ptr2, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %p, i32 1
+  %0 = load i32, ptr %p, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %p, i32 2
+  %1 = load i32, ptr %incdec.ptr, align 4
+  %incdec.ptr2 = getelementptr inbounds i32, ptr %p, i32 3
+  %2 = load i32, ptr %incdec.ptr1, align 4
+  %3 = load i32, ptr %incdec.ptr2, align 4
   %add = add nsw i32 %1, %0
   %add4 = add nsw i32 %3, %2
   %mul = mul nsw i32 %add4, %add
@@ -36,15 +36,15 @@ entry:
 ; CHECK-NEXT: {
 ; CHECK-NEXT: = sub([[REG7]]
 
-define i32 @test1(i32* nocapture readonly %p) local_unnamed_addr #0 {
+define i32 @test1(ptr nocapture readonly %p) local_unnamed_addr #0 {
 entry:
-  %incdec.ptr = getelementptr inbounds i32, i32* %p, i32 1
-  %0 = load i32, i32* %p, align 4
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %p, i32 2
-  %1 = load i32, i32* %incdec.ptr, align 4
-  %incdec.ptr2 = getelementptr inbounds i32, i32* %p, i32 3
-  %2 = load i32, i32* %incdec.ptr1, align 4
-  %3 = load i32, i32* %incdec.ptr2, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %p, i32 1
+  %0 = load i32, ptr %p, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %p, i32 2
+  %1 = load i32, ptr %incdec.ptr, align 4
+  %incdec.ptr2 = getelementptr inbounds i32, ptr %p, i32 3
+  %2 = load i32, ptr %incdec.ptr1, align 4
+  %3 = load i32, ptr %incdec.ptr2, align 4
   %add4.neg = add i32 %1, %0
   %add = sub i32 %add4.neg, %2
   %sub = sub i32 %add, %3
@@ -61,15 +61,15 @@ entry:
 ; CHECK: }
 ; CHECK: = mpyi
 
-define i32 @test2(i32* nocapture readonly %p) local_unnamed_addr #1 {
+define i32 @test2(ptr nocapture readonly %p) local_unnamed_addr #1 {
 entry:
-  %incdec.ptr = getelementptr inbounds i32, i32* %p, i32 1
-  %0 = load i32, i32* %p, align 4
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %p, i32 2
-  %1 = load i32, i32* %incdec.ptr, align 4
-  %incdec.ptr2 = getelementptr inbounds i32, i32* %p, i32 3
-  %2 = load i32, i32* %incdec.ptr1, align 4
-  %3 = load i32, i32* %incdec.ptr2, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %p, i32 1
+  %0 = load i32, ptr %p, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %p, i32 2
+  %1 = load i32, ptr %incdec.ptr, align 4
+  %incdec.ptr2 = getelementptr inbounds i32, ptr %p, i32 3
+  %2 = load i32, ptr %incdec.ptr1, align 4
+  %3 = load i32, ptr %incdec.ptr2, align 4
   %mul = mul nsw i32 %1, %0
   %mul4 = mul nsw i32 %3, %2
   %mul5 = mul nsw i32 %3, %0

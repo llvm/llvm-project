@@ -1,12 +1,12 @@
-; RUN: opt < %s -S -loop-unroll -unroll-count=2 | FileCheck %s -check-prefixes=COUNT,COMMON
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
-; RUN: opt < %s -S -loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-count=2 | FileCheck %s -check-prefixes=COUNT,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=true  | FileCheck %s -check-prefixes=EPILOG,COMMON
+; RUN: opt < %s -S -passes=loop-unroll -unroll-runtime=true -unroll-runtime-epilog=false | FileCheck %s -check-prefixes=PROLOG,COMMON
 ;
 ; Check that followup-attributes are applied after LoopUnroll.
 ;
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define i32 @test(i32* nocapture %a, i32 %n) nounwind uwtable readonly {
+define i32 @test(ptr nocapture %a, i32 %n) nounwind uwtable readonly {
 entry:
   %cmp1 = icmp eq i32 %n, 0
   br i1 %cmp1, label %for.end, label %for.body
@@ -14,8 +14,8 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %sum.02 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %sum.02
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

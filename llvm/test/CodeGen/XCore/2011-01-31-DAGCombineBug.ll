@@ -5,6 +5,6 @@
 
 define i32 @test_entry() nounwind {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.st, %struct.st* @x, i32 0, i32 3), align 2
+  %0 = load i32, ptr getelementptr inbounds (%struct.st, ptr @x, i32 0, i32 3), align 2
   ret i32 %0
 }

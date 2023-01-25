@@ -3,11 +3,11 @@
 ; CHECK: Printing analysis 'Scalar Evolution Analysis' for function 'f':
 
 ; CHECK: Loop %loop: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %loop: max backedge-taken count is 0
+; CHECK: Loop %loop: constant max backedge-taken count is 0
 ; CHECK: Loop %loop: Unpredictable predicated backedge-taken count.
 
 
-define void @f(i32 %n, i32* %ptr) {
+define void @f(i32 %n, ptr %ptr) {
 entry:
   br label %loop
 
@@ -48,7 +48,7 @@ loop:
   br i1 %us.29, label %leave, label %be
 
 be:
-  store volatile i32 0, i32* %ptr
+  store volatile i32 0, ptr %ptr
   %becond = icmp ult i32 %iv.inc, %n
   br i1 %becond, label %leave, label %loop
 

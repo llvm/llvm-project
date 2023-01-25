@@ -22,7 +22,7 @@ TEST(DataAggregatorTest, buildID) {
   opts::ReadPreAggregated = true;
 
   DataAggregator DA("<pseudo input>");
-  Optional<StringRef> FileName;
+  std::optional<StringRef> FileName;
 
   DA.setParsingBuffer("");
   ASSERT_FALSE(DA.hasAllBuildIDs());
@@ -41,11 +41,14 @@ TEST(DataAggregatorTest, buildID) {
 
   StringRef AllValidBuildIDs = "0000 File0\n"
                                "1111 File1\n"
-                               "2222 File2\n";
+                               "2222 File2\n"
+                               "333  File3\n";
   DA.setParsingBuffer(AllValidBuildIDs);
   ASSERT_TRUE(DA.hasAllBuildIDs());
   FileName = DA.getFileNameForBuildID("1234");
   ASSERT_FALSE(FileName);
   FileName = DA.getFileNameForBuildID("2222");
   ASSERT_EQ(*FileName, "File2");
+  FileName = DA.getFileNameForBuildID("333");
+  ASSERT_EQ(*FileName, "File3");
 }

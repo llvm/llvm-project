@@ -368,12 +368,14 @@ int main(int, char**) {
     test("ABCde", 2, 4, "abcde", -1);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     test(L"abcde", 5, 1, L"", 0);
     test(L"abcde", 2, 4, L"", 3);
     test(L"abcde", 2, 4, L"abcde", 2);
     test(L"ABCde", 2, 4, L"abcde", -1);
     }
+#endif
 
 #if TEST_STD_VER >= 11
     {

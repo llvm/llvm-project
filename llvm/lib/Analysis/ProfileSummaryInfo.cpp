@@ -20,15 +20,18 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/CommandLine.h"
+#include <optional>
 using namespace llvm;
 
 // Knobs for profile summary based thresholds.
+namespace llvm {
 extern cl::opt<int> ProfileSummaryCutoffHot;
 extern cl::opt<int> ProfileSummaryCutoffCold;
 extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
 extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
 extern cl::opt<int> ProfileSummaryHotCount;
 extern cl::opt<int> ProfileSummaryColdCount;
+} // namespace llvm
 
 static cl::opt<bool> PartialProfile(
     "partial-profile", cl::Hidden, cl::init(false),
@@ -73,7 +76,7 @@ void ProfileSummaryInfo::refresh() {
   computeThresholds();
 }
 
-Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
+std::optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     const CallBase &Call, BlockFrequencyInfo *BFI, bool AllowSynthetic) const {
   assert((isa<CallInst>(Call) || isa<InvokeInst>(Call)) &&
          "We can only get profile count for call/invoke instruction.");
@@ -81,15 +84,15 @@ Optional<uint64_t> ProfileSummaryInfo::getProfileCount(
     // In sample PGO mode, check if there is a profile metadata on the
     // instruction. If it is present, determine hotness solely based on that,
     // since the sampled entry count may not be accurate. If there is no
-    // annotated on the instruction, return None.
+    // annotated on the instruction, return std::nullopt.
     uint64_t TotalCount;
     if (Call.extractProfTotalWeight(TotalCount))
       return TotalCount;
-    return None;
+    return std::nullopt;
   }
   if (BFI)
     return BFI->getBlockProfileCount(Call.getParent(), AllowSynthetic);
-  return None;
+  return std::nullopt;
 }
 
 /// Returns true if the function's entry is hot. If it returns false, it
@@ -262,10 +265,10 @@ void ProfileSummaryInfo::computeThresholds() {
   }
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
   if (!hasProfileSummary())
-    return None;
+    return std::nullopt;
   auto iter = ThresholdCache.find(PercentileCutoff);
   if (iter != ThresholdCache.end()) {
     return iter->second;
@@ -279,19 +282,19 @@ ProfileSummaryInfo::computeThreshold(int PercentileCutoff) const {
 }
 
 bool ProfileSummaryInfo::hasHugeWorkingSetSize() const {
-  return HasHugeWorkingSetSize && HasHugeWorkingSetSize.value();
+  return HasHugeWorkingSetSize && *HasHugeWorkingSetSize;
 }
 
 bool ProfileSummaryInfo::hasLargeWorkingSetSize() const {
-  return HasLargeWorkingSetSize && HasLargeWorkingSetSize.value();
+  return HasLargeWorkingSetSize && *HasLargeWorkingSetSize;
 }
 
 bool ProfileSummaryInfo::isHotCount(uint64_t C) const {
-  return HotCountThreshold && C >= HotCountThreshold.value();
+  return HotCountThreshold && C >= *HotCountThreshold;
 }
 
 bool ProfileSummaryInfo::isColdCount(uint64_t C) const {
-  return ColdCountThreshold && C <= ColdCountThreshold.value();
+  return ColdCountThreshold && C <= *ColdCountThreshold;
 }
 
 template <bool isHot>
@@ -299,9 +302,9 @@ bool ProfileSummaryInfo::isHotOrColdCountNthPercentile(int PercentileCutoff,
                                                        uint64_t C) const {
   auto CountThreshold = computeThreshold(PercentileCutoff);
   if (isHot)
-    return CountThreshold && C >= CountThreshold.value();
+    return CountThreshold && C >= *CountThreshold;
   else
-    return CountThreshold && C <= CountThreshold.value();
+    return CountThreshold && C <= *CountThreshold;
 }
 
 bool ProfileSummaryInfo::isHotCountNthPercentile(int PercentileCutoff,

@@ -17,6 +17,7 @@
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugRanges.h"
 #include <map>
+#include <optional>
 #include <set>
 #include <vector>
 
@@ -67,6 +68,10 @@ public:
       const DWARFUnit *cu, const dw_attr_t attr, uint64_t fail_value,
       bool check_specification_or_abstract_origin = false) const;
 
+  std::optional<uint64_t> GetAttributeValueAsOptionalUnsigned(
+      const DWARFUnit *cu, const dw_attr_t attr,
+      bool check_specification_or_abstract_origin = false) const;
+
   DWARFDIE GetAttributeValueAsReference(
       const DWARFUnit *cu, const dw_attr_t attr,
       bool check_specification_or_abstract_origin = false) const;
@@ -94,11 +99,6 @@ public:
                              bool substitute_name_allowed = true) const;
 
   const char *GetPubname(const DWARFUnit *cu) const;
-
-  const char *GetQualifiedName(DWARFUnit *cu, std::string &storage) const;
-
-  const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
-                               std::string &storage) const;
 
   bool GetDIENamesAndRanges(
       DWARFUnit *cu, const char *&name, const char *&mangled,

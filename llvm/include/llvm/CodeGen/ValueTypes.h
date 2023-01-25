@@ -346,11 +346,11 @@ namespace llvm {
     /// Return the size of the specified fixed width value type in bits. The
     /// function will assert if the type is scalable.
     uint64_t getFixedSizeInBits() const {
-      return getSizeInBits().getFixedSize();
+      return getSizeInBits().getFixedValue();
     }
 
     uint64_t getScalarSizeInBits() const {
-      return getScalarType().getSizeInBits().getFixedSize();
+      return getScalarType().getSizeInBits().getFixedValue();
     }
 
     /// Return the number of bytes overwritten by a store of the specified value
@@ -361,13 +361,13 @@ namespace llvm {
     /// base size.
     TypeSize getStoreSize() const {
       TypeSize BaseSize = getSizeInBits();
-      return {(BaseSize.getKnownMinSize() + 7) / 8, BaseSize.isScalable()};
+      return {(BaseSize.getKnownMinValue() + 7) / 8, BaseSize.isScalable()};
     }
 
     // Return the number of bytes overwritten by a store of this value type or
     // this value type's element type in the case of a vector.
     uint64_t getScalarStoreSize() const {
-      return getScalarType().getStoreSize().getFixedSize();
+      return getScalarType().getStoreSize().getFixedValue();
     }
 
     /// Return the number of bits overwritten by a store of the specified value
@@ -388,7 +388,7 @@ namespace llvm {
       unsigned BitWidth = getSizeInBits();
       if (BitWidth <= 8)
         return EVT(MVT::i8);
-      return getIntegerVT(Context, 1 << Log2_32_Ceil(BitWidth));
+      return getIntegerVT(Context, llvm::bit_ceil(BitWidth));
     }
 
     /// Finds the smallest simple value type that is greater than or equal to

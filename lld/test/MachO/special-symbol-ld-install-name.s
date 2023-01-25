@@ -23,7 +23,7 @@
 # RUN: %no-fatal-warnings-lld -o %t/libfoo3.dylib %t/libLDInstallNameInvalid.tbd %t/foo.o -dylib \
 # RUN:  -platform_version macos 11.0.0 11.0.0 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
 
-# INVALID-VERSION: failed to parse os version, symbol '$ld$install_name$os11.a$/New' ignored
+# INVALID-VERSION: libLDInstallNameInvalid.tbd(/Old): failed to parse os version, symbol '$ld$install_name$os11.a$/New' ignored
 
 ## Case 3: If there's another library that has '/New' as its original
 ## install_name, we should take current-version and compatibility-version from

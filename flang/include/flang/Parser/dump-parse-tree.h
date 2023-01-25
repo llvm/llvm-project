@@ -37,7 +37,7 @@ public:
   static constexpr const char *GetNodeName(const T &) { return N; }
 #define NODE_ENUM(T, E) \
   static std::string GetNodeName(const T::E &x) { \
-    return #E " = "s + T::EnumToString(x); \
+    return #E " = "s + std::string{T::EnumToString(x)}; \
   }
 #define NODE(T1, T2) NODE_NAME(T1::T2, #T2)
   NODE_NAME(bool, "bool")
@@ -190,6 +190,7 @@ public:
   NODE(CommonStmt, Block)
   NODE(parser, CompilerDirective)
   NODE(CompilerDirective, IgnoreTKR)
+  NODE(CompilerDirective, LoopCount)
   NODE(CompilerDirective, NameValue)
   NODE(parser, ComplexLiteralConstant)
   NODE(parser, ComplexPart)
@@ -525,6 +526,8 @@ public:
   NODE(OmpAllocateClause, Allocator)
   NODE(parser, OmpScheduleClause)
   NODE_ENUM(OmpScheduleClause, ScheduleType)
+  NODE(parser, OmpDeviceClause)
+  NODE_ENUM(OmpDeviceClause, DeviceModifier)
   NODE(parser, OmpScheduleModifier)
   NODE(OmpScheduleModifier, Modifier1)
   NODE(OmpScheduleModifier, Modifier2)
@@ -560,9 +563,12 @@ public:
   NODE(parser, OmpMemoryOrderClause)
   NODE(parser, OmpAtomicClause)
   NODE(parser, OmpAtomicClauseList)
+  NODE(parser, OmpAtomicDefaultMemOrderClause)
+  NODE_ENUM(OmpAtomicDefaultMemOrderClause, Type)
   NODE(parser, OpenMPFlushConstruct)
   NODE(parser, OpenMPLoopConstruct)
   NODE(parser, OpenMPExecutableAllocate)
+  NODE(parser, OpenMPRequiresConstruct)
   NODE(parser, OpenMPSimpleStandaloneConstruct)
   NODE(parser, OpenMPStandaloneConstruct)
   NODE(parser, OpenMPSectionConstruct)

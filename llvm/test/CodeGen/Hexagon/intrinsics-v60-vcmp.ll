@@ -6,11 +6,11 @@
 ; CHECK: q{{[0-9]}} &= vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test1(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqb.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -18,11 +18,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.eq(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test2(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqh.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -30,11 +30,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.eq(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test3(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqw.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -42,11 +42,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test4(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtb.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -54,11 +54,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test5(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgth.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -66,11 +66,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test6(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtw.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -78,11 +78,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.ub,v{{[0-9]+}}.ub)
 define void @test7(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtub.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -90,11 +90,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.uh,v{{[0-9]+}}.uh)
 define void @test8(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuh.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -102,11 +102,11 @@ entry:
 ; CHECK: q{{[0-9]}} &= vcmp.gt(v{{[0-9]+}}.uw,v{{[0-9]+}}.uw)
 define void @test9(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuw.and(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -114,11 +114,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test10(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqb.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -126,11 +126,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.eq(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test11(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqh.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -138,11 +138,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.eq(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test12(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqw.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -150,11 +150,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test13(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtb.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -162,11 +162,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test14(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgth.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -174,11 +174,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test15(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtw.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -186,11 +186,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.ub,v{{[0-9]+}}.ub)
 define void @test16(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtub.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -198,11 +198,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.uh,v{{[0-9]+}}.uh)
 define void @test17(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuh.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -210,11 +210,11 @@ entry:
 ; CHECK: q{{[0-9]}} |= vcmp.gt(v{{[0-9]+}}.uw,v{{[0-9]+}}.uw)
 define void @test18(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuw.or(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -222,11 +222,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.eq(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test19(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqb.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -234,11 +234,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.eq(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test20(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqh.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -246,11 +246,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.eq(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test21(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.veqw.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -258,11 +258,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.b,v{{[0-9]+}}.b)
 define void @test22(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtb.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -270,11 +270,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 define void @test23(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgth.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -282,11 +282,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
 define void @test24(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtw.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -294,11 +294,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.ub,v{{[0-9]+}}.ub)
 define void @test25(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtub.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -306,11 +306,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.uh,v{{[0-9]+}}.uh)
 define void @test26(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuh.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 
@@ -318,11 +318,11 @@ entry:
 ; CHECK: q{{[0-9]}} ^= vcmp.gt(v{{[0-9]+}}.uw,v{{[0-9]+}}.uw)
 define void @test27(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
-  %v0 = load <16 x i32>, <16 x i32>* @d, align 64
+  %v0 = load <16 x i32>, ptr @d, align 64
   %v1 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v0, i32 -1)
   %v2 = tail call <64 x i1> @llvm.hexagon.V6.vgtuw.xor(<64 x i1> %v1, <16 x i32> %a, <16 x i32> %b)
   %v3 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v2, i32 -1)
-  store <16 x i32> %v3, <16 x i32>* @d, align 64
+  store <16 x i32> %v3, ptr @d, align 64
   ret void
 }
 

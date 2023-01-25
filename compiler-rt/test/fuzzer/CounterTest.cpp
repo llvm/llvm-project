@@ -4,6 +4,7 @@
 
 // Test for a fuzzer: must find the case where a particular basic block is
 // executed many times.
+#include <cstdint>
 #include <iostream>
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {

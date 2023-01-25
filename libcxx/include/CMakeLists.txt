@@ -1,6 +1,5 @@
 set(files
   __algorithm/adjacent_find.h
-  __algorithm/algorithm_family.h
   __algorithm/all_of.h
   __algorithm/any_of.h
   __algorithm/binary_search.h
@@ -10,6 +9,7 @@ set(files
   __algorithm/copy.h
   __algorithm/copy_backward.h
   __algorithm/copy_if.h
+  __algorithm/copy_move_common.h
   __algorithm/copy_n.h
   __algorithm/count.h
   __algorithm/count_if.h
@@ -73,6 +73,7 @@ set(files
   __algorithm/ranges_all_of.h
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
+  __algorithm/ranges_clamp.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -97,6 +98,7 @@ set(files
   __algorithm/ranges_is_heap.h
   __algorithm/ranges_is_heap_until.h
   __algorithm/ranges_is_partitioned.h
+  __algorithm/ranges_is_permutation.h
   __algorithm/ranges_is_sorted.h
   __algorithm/ranges_is_sorted_until.h
   __algorithm/ranges_iterator_concept.h
@@ -113,6 +115,7 @@ set(files
   __algorithm/ranges_mismatch.h
   __algorithm/ranges_move.h
   __algorithm/ranges_move_backward.h
+  __algorithm/ranges_next_permutation.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_nth_element.h
   __algorithm/ranges_partial_sort.h
@@ -121,6 +124,7 @@ set(files
   __algorithm/ranges_partition_copy.h
   __algorithm/ranges_partition_point.h
   __algorithm/ranges_pop_heap.h
+  __algorithm/ranges_prev_permutation.h
   __algorithm/ranges_push_heap.h
   __algorithm/ranges_remove.h
   __algorithm/ranges_remove_copy.h
@@ -132,7 +136,9 @@ set(files
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
   __algorithm/ranges_reverse_copy.h
+  __algorithm/ranges_rotate.h
   __algorithm/ranges_rotate_copy.h
+  __algorithm/ranges_sample.h
   __algorithm/ranges_search.h
   __algorithm/ranges_search_n.h
   __algorithm/ranges_set_difference.h
@@ -178,6 +184,7 @@ set(files
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
   __algorithm/transform.h
+  __algorithm/uniform_random_bit_generator_adaptor.h
   __algorithm/unique.h
   __algorithm/unique_copy.h
   __algorithm/unwrap_iter.h
@@ -186,9 +193,19 @@ set(files
   __assert
   __availability
   __bit/bit_cast.h
+  __bit/bit_ceil.h
+  __bit/bit_floor.h
+  __bit/bit_log2.h
+  __bit/bit_width.h
+  __bit/blsr.h
   __bit/byteswap.h
+  __bit/countl.h
+  __bit/countr.h
+  __bit/endian.h
+  __bit/has_single_bit.h
+  __bit/popcount.h
+  __bit/rotate.h
   __bit_reference
-  __bits
   __bsd_locale_defaults.h
   __bsd_locale_fallbacks.h
   __charconv/chars_format.h
@@ -198,15 +215,20 @@ set(files
   __charconv/to_chars_result.h
   __chrono/calendar.h
   __chrono/convert_to_timespec.h
+  __chrono/convert_to_tm.h
   __chrono/day.h
   __chrono/duration.h
   __chrono/file_clock.h
+  __chrono/formatter.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
   __chrono/literals.h
   __chrono/month.h
   __chrono/month_weekday.h
   __chrono/monthday.h
+  __chrono/ostream.h
+  __chrono/parser_std_format_spec.h
+  __chrono/statically_widen.h
   __chrono/steady_clock.h
   __chrono/system_clock.h
   __chrono/time_point.h
@@ -258,6 +280,10 @@ set(files
   __debug
   __debug_utils/randomize_range.h
   __errc
+  __expected/bad_expected_access.h
+  __expected/expected.h
+  __expected/unexpect.h
+  __expected/unexpected.h
   __filesystem/copy_options.h
   __filesystem/directory_entry.h
   __filesystem/directory_iterator.h
@@ -276,13 +302,16 @@ set(files
   __filesystem/u8path.h
   __format/buffer.h
   __format/concepts.h
+  __format/container_adaptor.h
   __format/enable_insertable.h
+  __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
   __format/format_context.h
   __format/format_error.h
+  __format/format_functions.h
   __format/format_fwd.h
   __format/format_parse_context.h
   __format/format_string.h
@@ -296,7 +325,10 @@ set(files
   __format/formatter_output.h
   __format/formatter_pointer.h
   __format/formatter_string.h
+  __format/formatter_tuple.h
   __format/parser_std_format_spec.h
+  __format/range_default_formatter.h
+  __format/range_formatter.h
   __format/unicode.h
   __functional/binary_function.h
   __functional/binary_negate.h
@@ -326,8 +358,16 @@ set(files
   __functional/unary_negate.h
   __functional/unwrap_ref.h
   __functional/weak_result_type.h
+  __fwd/array.h
+  __fwd/get.h
+  __fwd/hash.h
+  __fwd/memory_resource.h
+  __fwd/pair.h
   __fwd/span.h
+  __fwd/string.h
   __fwd/string_view.h
+  __fwd/subrange.h
+  __fwd/tuple.h
   __hash_table
   __ios/fpos.h
   __iterator/access.h
@@ -352,6 +392,7 @@ set(files
   __iterator/iter_swap.h
   __iterator/iterator.h
   __iterator/iterator_traits.h
+  __iterator/iterator_with_data.h
   __iterator/mergeable.h
   __iterator/move_iterator.h
   __iterator/move_sentinel.h
@@ -364,6 +405,7 @@ set(files
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
+  __iterator/segmented_iterator.h
   __iterator/size.h
   __iterator/sortable.h
   __iterator/unreachable_sentinel.h
@@ -371,27 +413,39 @@ set(files
   __locale
   __mbstate_t.h
   __memory/addressof.h
+  __memory/align.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
   __memory/allocator_arg_t.h
+  __memory/allocator_destructor.h
   __memory/allocator_traits.h
   __memory/assume_aligned.h
   __memory/auto_ptr.h
+  __memory/builtin_new_allocator.h
   __memory/compressed_pair.h
   __memory/concepts.h
   __memory/construct_at.h
+  __memory/destruct_n.h
   __memory/pointer_traits.h
   __memory/ranges_construct_at.h
   __memory/ranges_uninitialized_algorithms.h
   __memory/raw_storage_iterator.h
   __memory/shared_ptr.h
   __memory/swap_allocator.h
+  __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
+  __memory/uses_allocator_construction.h
   __memory/voidify.h
+  __memory_resource/memory_resource.h
+  __memory_resource/monotonic_buffer_resource.h
+  __memory_resource/polymorphic_allocator.h
+  __memory_resource/pool_options.h
+  __memory_resource/synchronized_pool_resource.h
+  __memory_resource/unsynchronized_pool_resource.h
   __mutex_base
   __node_handle
   __numeric/accumulate.h
@@ -446,6 +500,7 @@ set(files
   __random/weibull_distribution.h
   __ranges/access.h
   __ranges/all.h
+  __ranges/as_rvalue_view.h
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/copyable_box.h
@@ -453,12 +508,15 @@ set(files
   __ranges/dangling.h
   __ranges/data.h
   __ranges/drop_view.h
+  __ranges/drop_while_view.h
+  __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
   __ranges/filter_view.h
   __ranges/iota_view.h
+  __ranges/istream_view.h
   __ranges/join_view.h
   __ranges/lazy_split_view.h
   __ranges/non_propagating_cache.h
@@ -472,6 +530,7 @@ set(files
   __ranges/size.h
   __ranges/subrange.h
   __ranges/take_view.h
+  __ranges/take_while_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
@@ -492,7 +551,6 @@ set(files
   __support/solaris/floatingpoint.h
   __support/solaris/wchar.h
   __support/solaris/xlocale.h
-  __support/win32/limits_msvc_win32.h
   __support/win32/locale_win32.h
   __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
@@ -501,7 +559,16 @@ set(files
   __thread/timed_backoff_policy.h
   __threading_support
   __tree
-  __tuple
+  __tuple_dir/apply_cv.h
+  __tuple_dir/make_tuple_types.h
+  __tuple_dir/pair_like.h
+  __tuple_dir/sfinae_helpers.h
+  __tuple_dir/tuple_element.h
+  __tuple_dir/tuple_indices.h
+  __tuple_dir/tuple_like.h
+  __tuple_dir/tuple_like_ext.h
+  __tuple_dir/tuple_size.h
+  __tuple_dir/tuple_types.h
   __type_traits/add_const.h
   __type_traits/add_cv.h
   __type_traits/add_lvalue_reference.h
@@ -512,6 +579,7 @@ set(files
   __type_traits/aligned_union.h
   __type_traits/alignment_of.h
   __type_traits/apply_cv.h
+  __type_traits/can_extract_key.h
   __type_traits/common_reference.h
   __type_traits/common_type.h
   __type_traits/conditional.h
@@ -519,6 +587,7 @@ set(files
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
   __type_traits/decay.h
+  __type_traits/dependent_type.h
   __type_traits/disjunction.h
   __type_traits/enable_if.h
   __type_traits/extent.h
@@ -527,12 +596,15 @@ set(files
   __type_traits/integral_constant.h
   __type_traits/is_abstract.h
   __type_traits/is_aggregate.h
+  __type_traits/is_allocator.h
+  __type_traits/is_always_bitcastable.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
   __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
+  __type_traits/is_char_like_type.h
   __type_traits/is_class.h
   __type_traits/is_compound.h
   __type_traits/is_const.h
@@ -550,6 +622,7 @@ set(files
   __type_traits/is_floating_point.h
   __type_traits/is_function.h
   __type_traits/is_fundamental.h
+  __type_traits/is_implicitly_default_constructible.h
   __type_traits/is_integral.h
   __type_traits/is_literal_type.h
   __type_traits/is_member_function_pointer.h
@@ -580,7 +653,9 @@ set(files
   __type_traits/is_scoped_enum.h
   __type_traits/is_signed.h
   __type_traits/is_signed_integer.h
+  __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
+  __type_traits/is_swappable.h
   __type_traits/is_trivial.h
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
@@ -600,20 +675,26 @@ set(files
   __type_traits/is_volatile.h
   __type_traits/lazy.h
   __type_traits/make_32_64_or_128_bit.h
+  __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
   __type_traits/make_unsigned.h
+  __type_traits/maybe_const.h
   __type_traits/nat.h
   __type_traits/negation.h
+  __type_traits/noexcept_move_assign_container.h
   __type_traits/promote.h
   __type_traits/rank.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
+  __type_traits/remove_const_ref.h
   __type_traits/remove_cv.h
   __type_traits/remove_cvref.h
   __type_traits/remove_extent.h
   __type_traits/remove_pointer.h
   __type_traits/remove_reference.h
   __type_traits/remove_volatile.h
+  __type_traits/result_of.h
+  __type_traits/strip_signature.h
   __type_traits/type_identity.h
   __type_traits/type_list.h
   __type_traits/underlying_type.h
@@ -622,9 +703,12 @@ set(files
   __utility/as_const.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/convert_to_integral.h
   __utility/declval.h
+  __utility/exception_guard.h
   __utility/exchange.h
   __utility/forward.h
+  __utility/forward_like.h
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/move.h
@@ -634,9 +718,9 @@ set(files
   __utility/rel_ops.h
   __utility/swap.h
   __utility/to_underlying.h
-  __utility/transaction.h
   __utility/unreachable.h
   __variant/monostate.h
+  __verbose_abort
   algorithm
   any
   array
@@ -683,6 +767,7 @@ set(files
   errno.h
   exception
   execution
+  expected
   experimental/__config
   experimental/__memory
   experimental/algorithm
@@ -724,6 +809,7 @@ set(files
   istream
   iterator
   latch
+  libcxx.imp
   limits
   limits.h
   list
@@ -732,6 +818,7 @@ set(files
   map
   math.h
   memory
+  memory_resource
   mutex
   new
   numbers
@@ -748,6 +835,7 @@ set(files
   set
   setjmp.h
   shared_mutex
+  source_location
   span
   sstream
   stack
@@ -782,7 +870,7 @@ set(files
   wctype.h
   )
 
-foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
+foreach(feature LIBCXX_ENABLE_FILESYSTEM LIBCXX_ENABLE_LOCALIZATION LIBCXX_ENABLE_FSTREAM LIBCXX_ENABLE_THREADS LIBCXX_ENABLE_WIDE_CHARACTERS)
   if (NOT ${${feature}})
     set(requires_${feature} "requires LIBCXX_CONFIGURED_WITHOUT_SUPPORT_FOR_THIS_HEADER")
   endif()

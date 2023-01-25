@@ -55,6 +55,12 @@ class TestCmdContainer(TestBase):
         self.expect("test-multi test-multi-sub welcome friend", "Test command works",
                     substrs=["Hello friend, welcome to LLDB"])
 
+        # Make sure we can make an alias to this:
+        self.runCmd("command alias my-welcome test-multi test-multi-sub welcome", "We can make an alias to multi-word")
+        self.expect("my-welcome friend", "Test command works",
+                    substrs=["Hello friend, welcome to LLDB"])
+        self.runCmd("command unalias my-welcome")
+        
         # Make sure overwriting works on the leaf command.  First using the
         # explicit option so we should not be able to remove extant commands by default:
 

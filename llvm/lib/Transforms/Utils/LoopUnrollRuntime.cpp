@@ -30,6 +30,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -217,7 +218,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
-    // Basicaly it should look like:
+    // Basically it should look like:
     // NewExit:
     //   PN = PHI [I, Latch]
     // ...
@@ -399,10 +400,10 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
   if (UnrollRemainder)
     return NewLoop;
 
-  Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+  std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
   if (NewLoopID) {
-    NewLoop->setLoopID(NewLoopID.value());
+    NewLoop->setLoopID(*NewLoopID);
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
     // explicitly.
@@ -471,7 +472,7 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
   uint64_t TrueWeight, FalseWeight;
   BranchInst *LatchBR =
       cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+  if (!extractBranchWeights(*LatchBR, TrueWeight, FalseWeight))
     return;
   uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
                             ? FalseWeight
@@ -811,10 +812,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     updateLatchBranchWeightsForRemainderLoop(L, remainderLoop, Count);
 
   // Insert the cloned blocks into the function.
-  F->getBasicBlockList().splice(InsertBot->getIterator(),
-                                F->getBasicBlockList(),
-                                NewBlocks[0]->getIterator(),
-                                F->end());
+  F->splice(InsertBot->getIterator(), F, NewBlocks[0]->getIterator(), F->end());
 
   // Now the loop blocks are cloned and the other exiting blocks from the
   // remainder are connected to the original Loop's exit blocks. The remaining

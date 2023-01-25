@@ -1,4 +1,4 @@
-; RUN: opt -hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -hotcoldsplit-threshold=0 -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.14.0"
@@ -8,12 +8,12 @@ target triple = "x86_64-apple-macosx10.14.0"
 declare void @sink() cold
 
 ; CHECK-LABEL: define {{.*}}@in_arg(
-; CHECK: call void @in_arg.cold.1(%swift_error** swifterror
-define void @in_arg(%swift_error** swifterror %error_ptr_ref) {
+; CHECK: call void @in_arg.cold.1(ptr swifterror
+define void @in_arg(ptr swifterror %error_ptr_ref) {
   br i1 undef, label %cold, label %exit
 
 cold:
-  store %swift_error* undef, %swift_error** %error_ptr_ref
+  store ptr undef, ptr %error_ptr_ref
   call void @sink()
   br label %exit
 
@@ -22,13 +22,13 @@ exit:
 }
 
 ; CHECK-LABEL: define {{.*}}@in_alloca(
-; CHECK: call void @in_alloca.cold.1(%swift_error** swifterror
+; CHECK: call void @in_alloca.cold.1(ptr swifterror
 define void @in_alloca() {
-  %err = alloca swifterror %swift_error*
+  %err = alloca swifterror ptr
   br i1 undef, label %cold, label %exit
 
 cold:
-  store %swift_error* undef, %swift_error** %err
+  store ptr undef, ptr %err
   call void @sink()
   br label %exit
 

@@ -53,15 +53,14 @@ define <8 x i16> @concat_2_build_vector(<4 x i16> %in0) {
 ; an equivalent integer vector and BITCAST-ing that. This case checks that
 ; normalizing the vector generates a valid result. The choice of the
 ; constant prevents earlier passes from replacing the BUILD_VECTOR.
-define void @widen_f16_build_vector(half* %addr) {
+define void @widen_f16_build_vector(ptr %addr) {
 ; CHECK-LABEL: widen_f16_build_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #13294
 ; CHECK-NEXT:    movk w8, #13294, lsl #16
 ; CHECK-NEXT:    str w8, [x0]
 ; CHECK-NEXT:    ret
-  %1 = bitcast half* %addr to <2 x half>*
-  store <2 x half> <half 0xH33EE, half 0xH33EE>, <2 x half>* %1, align 2
+  store <2 x half> <half 0xH33EE, half 0xH33EE>, ptr %addr, align 2
   ret void
 }
 

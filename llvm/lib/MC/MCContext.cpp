@@ -8,7 +8,6 @@
 
 #include "llvm/MC/MCContext.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -54,16 +53,11 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdlib>
+#include <optional>
 #include <tuple>
 #include <utility>
 
 using namespace llvm;
-
-static cl::opt<char*>
-AsSecureLogFileName("as-secure-log-file-name",
-        cl::desc("As secure log file name (initialized from "
-                 "AS_SECURE_LOG_FILE env variable)"),
-        cl::init(getenv("AS_SECURE_LOG_FILE")), cl::Hidden);
 
 static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
                                std::vector<const MDNode *> &) {
@@ -80,7 +74,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
       AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
-  SecureLogFile = AsSecureLogFileName;
+  SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
@@ -564,8 +558,39 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
     Kind = SectionKind::getExecuteOnly();
   else if (Flags & ELF::SHF_EXECINSTR)
     Kind = SectionKind::getText();
-  else
+  else if (~Flags & ELF::SHF_WRITE)
     Kind = SectionKind::getReadOnly();
+  else if (Flags & ELF::SHF_TLS)
+    Kind = (Type & ELF::SHT_NOBITS) ? SectionKind::getThreadBSS()
+                                    : SectionKind::getThreadData();
+  else
+    // Default to `SectionKind::getText()`. This is the default for gas as
+    // well. The condition that falls into this case is where we do not have any
+    // section flags and must infer a classification rather than where we have
+    // section flags (i.e. this is not that SHF_EXECINSTR is unset bur rather it
+    // is unknown).
+    Kind = llvm::StringSwitch<SectionKind>(CachedName)
+               .Case(".bss", SectionKind::getBSS())
+               .StartsWith(".bss.", SectionKind::getBSS())
+               .StartsWith(".gnu.linkonce.b.", SectionKind::getBSS())
+               .StartsWith(".llvm.linkonce.b.", SectionKind::getBSS())
+               .Case(".data", SectionKind::getData())
+               .Case(".data1", SectionKind::getData())
+               .Case(".data.rel.ro", SectionKind::getReadOnlyWithRel())
+               .StartsWith(".data.", SectionKind::getData())
+               .Case(".rodata", SectionKind::getReadOnly())
+               .Case(".rodata1", SectionKind::getReadOnly())
+               .StartsWith(".rodata.", SectionKind::getReadOnly())
+               .Case(".tbss", SectionKind::getThreadBSS())
+               .StartsWith(".tbss.", SectionKind::getThreadData())
+               .StartsWith(".gnu.linkonce.tb.", SectionKind::getThreadData())
+               .StartsWith(".llvm.linkonce.tb.", SectionKind::getThreadData())
+               .Case(".tdata", SectionKind::getThreadData())
+               .StartsWith(".tdata.", SectionKind::getThreadData())
+               .StartsWith(".gnu.linkonce.td.", SectionKind::getThreadData())
+               .StartsWith(".llvm.linkonce.td.", SectionKind::getThreadData())
+               .StartsWith(".debug_", SectionKind::getMetadata())
+               .Default(SectionKind::getText());
 
   MCSectionELF *Result =
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
@@ -611,12 +636,13 @@ bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
          ELFSeenGenericMergeableSections.count(SectionName);
 }
 
-Optional<unsigned> MCContext::getELFUniqueIDForEntsize(StringRef SectionName,
-                                                       unsigned Flags,
-                                                       unsigned EntrySize) {
+std::optional<unsigned>
+MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
+                                    unsigned EntrySize) {
   auto I = ELFEntrySizeMap.find(
       MCContext::ELFEntrySizeKey{SectionName, Flags, EntrySize});
-  return (I != ELFEntrySizeMap.end()) ? Optional<unsigned>(I->second) : None;
+  return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
+                                      : std::nullopt;
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(StringRef Section, SectionKind Kind,
@@ -746,17 +772,16 @@ bool MCContext::hasXCOFFSection(StringRef Section,
 
 MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
-    Optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
+    std::optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
     const char *BeginSymName,
-    Optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
+    std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
   bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
   assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
 
   // Do the lookup. If we have a hit, return it.
   auto IterBool = XCOFFUniquingMap.insert(std::make_pair(
-      IsDwarfSec
-          ? XCOFFSectionKey(Section.str(), DwarfSectionSubtypeFlags.value())
-          : XCOFFSectionKey(Section.str(), CsectProp->MappingClass),
+      IsDwarfSec ? XCOFFSectionKey(Section.str(), *DwarfSectionSubtypeFlags)
+                 : XCOFFSectionKey(Section.str(), CsectProp->MappingClass),
       nullptr));
   auto &Entry = *IterBool.first;
   if (!IterBool.second) {
@@ -786,10 +811,9 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
   MCSectionXCOFF *Result = nullptr;
   if (IsDwarfSec)
-    Result = new (XCOFFAllocator.Allocate())
-        MCSectionXCOFF(QualName->getUnqualifiedName(), Kind, QualName,
-                       DwarfSectionSubtypeFlags.value(), Begin, CachedName,
-                       MultiSymbolsAllowed);
+    Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
+        QualName->getUnqualifiedName(), Kind, QualName,
+        *DwarfSectionSubtypeFlags, Begin, CachedName, MultiSymbolsAllowed);
   else
     Result = new (XCOFFAllocator.Allocate())
         MCSectionXCOFF(QualName->getUnqualifiedName(), CsectProp->MappingClass,
@@ -804,6 +828,14 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
 
   if (Begin)
     Begin->setFragment(F);
+
+  // We might miss calculating the symbols difference as absolute value before
+  // adding fixups when symbol_A without the fragment set is the csect itself
+  // and symbol_B is in it.
+  // TODO: Currently we only set the fragment for XMC_PR csects because we don't
+  // have other cases that hit this problem yet.
+  if (!IsDwarfSec && CsectProp->MappingClass == XCOFF::XMC_PR)
+    QualName->setFragment(F);
 
   return Result;
 }
@@ -855,30 +887,35 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
   DebugPrefixMap.insert(std::make_pair(From, To));
 }
 
+void MCContext::remapDebugPath(SmallVectorImpl<char> &Path) {
+  for (const auto &[From, To] : DebugPrefixMap)
+    if (llvm::sys::path::replace_path_prefix(Path, From, To))
+      break;
+}
+
 void MCContext::RemapDebugPaths() {
   const auto &DebugPrefixMap = this->DebugPrefixMap;
   if (DebugPrefixMap.empty())
     return;
 
-  const auto RemapDebugPath = [&DebugPrefixMap](std::string &Path) {
-    SmallString<256> P(Path);
-    for (const auto &Entry : DebugPrefixMap) {
-      if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second)) {
-        Path = P.str().str();
-        break;
-      }
-    }
-  };
-
   // Remap compilation directory.
-  std::string CompDir = std::string(CompilationDir.str());
-  RemapDebugPath(CompDir);
-  CompilationDir = CompDir;
+  remapDebugPath(CompilationDir);
 
-  // Remap MCDwarfDirs in all compilation units.
-  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap)
-    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs())
-      RemapDebugPath(Dir);
+  // Remap MCDwarfDirs and RootFile.Name in all compilation units.
+  SmallString<256> P;
+  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap) {
+    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs()) {
+      P = Dir;
+      remapDebugPath(P);
+      Dir = std::string(P);
+    }
+
+    // Used by DW_TAG_compile_unit's DT_AT_name and DW_TAG_label's
+    // DW_AT_decl_file for DWARF v5 generated for assembly source.
+    P = CUIDTablePair.second.getRootFile().Name;
+    remapDebugPath(P);
+    CUIDTablePair.second.getRootFile().Name = std::string(P);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -894,7 +931,7 @@ EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
   // MCDwarf needs the root file as well as the compilation directory.
   // If we find a '.file 0' directive that will supersede these values.
-  Optional<MD5::MD5Result> Cksum;
+  std::optional<MD5::MD5Result> Cksum;
   if (getDwarfVersion() >= 5) {
     MD5 Hash;
     MD5::MD5Result Sum;
@@ -924,19 +961,18 @@ void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
       FileName = FileName.drop_front();
   assert(!FileName.empty());
   setMCLineTableRootFile(
-      /*CUID=*/0, getCompilationDir(), FileName, Cksum, None);
+      /*CUID=*/0, getCompilationDir(), FileName, Cksum, std::nullopt);
 }
 
 /// getDwarfFile - takes a file name and number to place in the dwarf file and
 /// directory tables.  If the file number has already been allocated it is an
 /// error and zero is returned and the client reports the error, else the
 /// allocated file number is returned.  The file numbers may be in any order.
-Expected<unsigned> MCContext::getDwarfFile(StringRef Directory,
-                                           StringRef FileName,
-                                           unsigned FileNumber,
-                                           Optional<MD5::MD5Result> Checksum,
-                                           Optional<StringRef> Source,
-                                           unsigned CUID) {
+Expected<unsigned>
+MCContext::getDwarfFile(StringRef Directory, StringRef FileName,
+                        unsigned FileNumber,
+                        std::optional<MD5::MD5Result> Checksum,
+                        std::optional<StringRef> Source, unsigned CUID) {
   MCDwarfLineTable &Table = MCDwarfLineTablesCUMap[CUID];
   return Table.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
                           FileNumber);

@@ -44,18 +44,20 @@ void tester() {
 }
 
 template<typename T> struct S : T {
-  constexpr S() = default;
-  constexpr S(const S&) = default;
-  constexpr S(S&&) = default;
+  constexpr S() = default;         // expected-note {{previous declaration is here}}
+  constexpr S(const S&) = default; // expected-note {{previous declaration is here}}
+  constexpr S(S&&) = default;      // expected-note {{previous declaration is here}}
 };
 struct lit { constexpr lit() {} };
 S<lit> s_lit; // ok
 S<bar> s_bar; // ok
 
 struct Friends {
-  friend S<bar>::S();
-  friend S<bar>::S(const S&);
-  friend S<bar>::S(S&&);
+  // FIXME: these error may or may not be correct; there is an open question on
+  // the CWG reflectors about this.
+  friend S<bar>::S();          // expected-error {{non-constexpr declaration of 'S' follows constexpr declaration}}
+  friend S<bar>::S(const S&);  // expected-error {{non-constexpr declaration of 'S' follows constexpr declaration}}
+  friend S<bar>::S(S&&);       // expected-error {{non-constexpr declaration of 'S' follows constexpr declaration}}
 };
 
 namespace DefaultedFnExceptionSpec {

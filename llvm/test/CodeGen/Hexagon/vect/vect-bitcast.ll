@@ -48,7 +48,7 @@ if.then155:                                       ; preds = %if.else150
   %0 = sext <2 x i16> %_p_splat.1 to <2 x i32>
   %mul198p_vec.1 = mul <2 x i32> %0, <i32 4, i32 4>
   %1 = extractelement <2 x i32> %mul198p_vec.1, i32 0
-  store i32 %1, i32* undef, align 4
+  store i32 %1, ptr undef, align 4
   br label %while.body
 
 if.else208:                                       ; preds = %if.else150

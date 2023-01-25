@@ -336,7 +336,7 @@ class FI8_MOVR3216<dag outs, dag ins, string asmstr,
                    list<dag> pattern, InstrItinClass itin>:
   MipsInst16<outs, ins, asmstr, pattern, itin>
 {
-
+  // FIXME: this seems wrong? 'ry' should be 3 bits, and 'r32' 5?
   bits<4> ry;
   bits<4> r32;
 

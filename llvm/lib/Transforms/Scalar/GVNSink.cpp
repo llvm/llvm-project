@@ -37,8 +37,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -288,7 +286,7 @@ public:
   ArrayRef<Value *> getValues() const { return Values; }
 
   bool areAllIncomingValuesSame() const {
-    return llvm::all_of(Values, [&](Value *V) { return V == Values[0]; });
+    return llvm::all_equal(Values);
   }
 
   bool areAllIncomingValuesSameType() const {
@@ -599,8 +597,8 @@ private:
 
   /// The main heuristic function. Analyze the set of instructions pointed to by
   /// LRI and return a candidate solution if these instructions can be sunk, or
-  /// None otherwise.
-  Optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
+  /// std::nullopt otherwise.
+  std::optional<SinkingInstructionCandidate> analyzeInstructionForSinking(
       LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
       ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents);
 
@@ -634,15 +632,18 @@ private:
       if (PN->getIncomingValue(0) != PN)
         PN->replaceAllUsesWith(PN->getIncomingValue(0));
       else
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
       PN->eraseFromParent();
     }
   }
 };
 
-Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
-  LockstepReverseIterator &LRI, unsigned &InstNum, unsigned &MemoryInstNum,
-  ModelledPHISet &NeededPHIs, SmallPtrSetImpl<Value *> &PHIContents) {
+std::optional<SinkingInstructionCandidate>
+GVNSink::analyzeInstructionForSinking(LockstepReverseIterator &LRI,
+                                      unsigned &InstNum,
+                                      unsigned &MemoryInstNum,
+                                      ModelledPHISet &NeededPHIs,
+                                      SmallPtrSetImpl<Value *> &PHIContents) {
   auto Insts = *LRI;
   LLVM_DEBUG(dbgs() << " -- Analyzing instruction set: [\n"; for (auto *I
                                                                   : Insts) {
@@ -654,7 +655,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     uint32_t N = VN.lookupOrAdd(I);
     LLVM_DEBUG(dbgs() << " VN=" << Twine::utohexstr(N) << " for" << *I << "\n");
     if (N == ~0U)
-      return None;
+      return std::nullopt;
     VNums[N]++;
   }
   unsigned VNumToSink =
@@ -662,7 +663,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
 
   if (VNums[VNumToSink] == 1)
     // Can't sink anything!
-    return None;
+    return std::nullopt;
 
   // Now restrict the number of incoming blocks down to only those with
   // VNumToSink.
@@ -677,7 +678,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
   }
   for (auto *I : NewInsts)
     if (shouldAvoidSinkingInstruction(I))
-      return None;
+      return std::nullopt;
 
   // If we've restricted the incoming blocks, restrict all needed PHIs also
   // to that set.
@@ -715,7 +716,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
       // V exists in this PHI, but the whole PHI is different to NewPHI
       // (else it would have been removed earlier). We cannot continue
       // because this isn't representable.
-      return None;
+      return std::nullopt;
 
   // Which operands need PHIs?
   // FIXME: If any of these fail, we should partition up the candidates to
@@ -728,7 +729,7 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
     return I->getNumOperands() != I0->getNumOperands();
   };
   if (any_of(NewInsts, hasDifferentNumOperands))
-    return None;
+    return std::nullopt;
 
   for (unsigned OpNum = 0, E = I0->getNumOperands(); OpNum != E; ++OpNum) {
     ModelledPHI PHI(NewInsts, OpNum, ActivePreds);
@@ -736,15 +737,15 @@ Optional<SinkingInstructionCandidate> GVNSink::analyzeInstructionForSinking(
       continue;
     if (!canReplaceOperandWithVariable(I0, OpNum))
       // We can 't create a PHI from this instruction!
-      return None;
+      return std::nullopt;
     if (NeededPHIs.count(PHI))
       continue;
     if (!PHI.areAllIncomingValuesSameType())
-      return None;
+      return std::nullopt;
     // Don't create indirect calls! The called value is the final operand.
     if ((isa<CallInst>(I0) || isa<InvokeInst>(I0)) && OpNum == E - 1 &&
         PHI.areAnyIncomingValuesConstant())
-      return None;
+      return std::nullopt;
 
     NeededPHIs.reserve(NeededPHIs.size());
     NeededPHIs.insert(PHI);

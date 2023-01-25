@@ -44,9 +44,9 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
 entry:
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
   %sub1 = sub i32 0, %x.i
-  %tmp0 = getelementptr [256 x i32], [256 x i32] addrspace(3)* @lds.obj, i32 0, i32 %sub1
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(3)* %tmp0, i32 3
-  store i32 123, i32 addrspace(3)* %arrayidx
+  %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 3
+  store i32 123, ptr addrspace(3) %arrayidx
   ret void
 }
 
@@ -123,11 +123,11 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 entry:
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
   %sub1 = sub i32 0, %x.i
-  %tmp0 = getelementptr [256 x i32], [256 x i32] addrspace(3)* @lds.obj, i32 0, i32 %sub1
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(3)* %tmp0, i32 3
-  store i32 123, i32 addrspace(3)* %arrayidx
+  %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 3
+  store i32 123, ptr addrspace(3) %arrayidx
   %fmas = call float @llvm.amdgcn.div.fmas.f32(float %dummy.val, float %dummy.val, float %dummy.val, i1 false)
-  store volatile float %fmas, float addrspace(1)* null
+  store volatile float %fmas, ptr addrspace(1) null
   ret void
 }
 
@@ -203,11 +203,11 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
   %sub1 = sub i32 -1, %x.i
-  %tmp0 = getelementptr [256 x i32], [256 x i32] addrspace(3)* @lds.obj, i32 0, i32 %sub1
-  %arrayidx = getelementptr inbounds i32, i32 addrspace(3)* %tmp0, i32 16383
-  store i32 123, i32 addrspace(3)* %arrayidx
+  %tmp0 = getelementptr [256 x i32], ptr addrspace(3) @lds.obj, i32 0, i32 %sub1
+  %arrayidx = getelementptr inbounds i32, ptr addrspace(3) %tmp0, i32 16383
+  store i32 123, ptr addrspace(3) %arrayidx
   %fmas = call float @llvm.amdgcn.div.fmas.f32(float %dummy.val, float %dummy.val, float %dummy.val, i1 false)
-  store volatile float %fmas, float addrspace(1)* null
+  store volatile float %fmas, ptr addrspace(1) null
   ret void
 }
 
@@ -243,8 +243,8 @@ define amdgpu_kernel void @add_x_shl_max_offset() #1 {
   %shl = shl i32 %x.i, 4
   %add = add i32 %shl, 65535
   %z = zext i32 %add to i64
-  %ptr = inttoptr i64 %z to i8 addrspace(3)*
-  store i8 13, i8 addrspace(3)* %ptr, align 1
+  %ptr = inttoptr i64 %z to ptr addrspace(3)
+  store i8 13, ptr addrspace(3) %ptr, align 1
   ret void
 }
 
@@ -287,8 +287,8 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_alt() #1 {
   %.neg = mul i32 %x.i, -4
   %add = add i32 %.neg, 65535
   %z = zext i32 %add to i64
-  %ptr = inttoptr i64 %z to i8 addrspace(3)*
-  store i8 13, i8 addrspace(3)* %ptr, align 1
+  %ptr = inttoptr i64 %z to ptr addrspace(3)
+  store i8 13, ptr addrspace(3) %ptr, align 1
   ret void
 }
 
@@ -331,8 +331,8 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_not_canonical() #1 {
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65535, %shl
-  %ptr = inttoptr i32 %add to i8 addrspace(3)*
-  store i8 13, i8 addrspace(3)* %ptr
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store i8 13, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -373,8 +373,8 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_max_offset_p1() #1 {
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 65536, %shl
-  %ptr = inttoptr i32 %add to i8 addrspace(3)*
-  store i8 13, i8 addrspace(3)* %ptr
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store i8 13, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -420,10 +420,10 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use() #1 {
   %shl = shl i32 %neg, 2
   %add0 = add i32 123, %shl
   %add1 = add i32 456, %shl
-  %ptr0 = inttoptr i32 %add0 to i32 addrspace(3)*
-  store volatile i32 13, i32 addrspace(3)* %ptr0
-  %ptr1 = inttoptr i32 %add1 to i32 addrspace(3)*
-  store volatile i32 13, i32 addrspace(3)* %ptr1
+  %ptr0 = inttoptr i32 %add0 to ptr addrspace(3)
+  store volatile i32 13, ptr addrspace(3) %ptr0
+  %ptr1 = inttoptr i32 %add1 to ptr addrspace(3)
+  store volatile i32 13, ptr addrspace(3) %ptr1
   ret void
 }
 
@@ -468,9 +468,9 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_multi_use_same_offset() #1 {
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 123, %shl
-  %ptr = inttoptr i32 %add to i32 addrspace(3)*
-  store volatile i32 13, i32 addrspace(3)* %ptr
-  store volatile i32 13, i32 addrspace(3)* %ptr
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store volatile i32 13, ptr addrspace(3) %ptr
+  store volatile i32 13, ptr addrspace(3) %ptr
   ret void
 }
 
@@ -516,8 +516,8 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset() #1 {
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1019, %shl
-  %ptr = inttoptr i32 %add to i64 addrspace(3)*
-  store i64 123, i64 addrspace(3)* %ptr, align 4
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store i64 123, ptr addrspace(3) %ptr, align 4
   ret void
 }
 
@@ -600,10 +600,10 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1019, %shl
-  %ptr = inttoptr i32 %add to i64 addrspace(3)*
-  store i64 123, i64 addrspace(3)* %ptr, align 4
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store i64 123, ptr addrspace(3) %ptr, align 4
   %fmas = call float @llvm.amdgcn.div.fmas.f32(float %dummy.val, float %dummy.val, float %dummy.val, i1 false)
-  store volatile float %fmas, float addrspace(1)* null
+  store volatile float %fmas, ptr addrspace(1) null
   ret void
 }
 
@@ -649,8 +649,8 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_p1() #
   %neg = sub i32 0, %x.i
   %shl = shl i32 %neg, 2
   %add = add i32 1020, %shl
-  %ptr = inttoptr i32 %add to i64 addrspace(3)*
-  store i64 123, i64 addrspace(3)* %ptr, align 4
+  %ptr = inttoptr i32 %add to ptr addrspace(3)
+  store i64 123, ptr addrspace(3) %ptr, align 4
   ret void
 }
 

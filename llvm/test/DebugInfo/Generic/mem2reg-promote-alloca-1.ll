@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%param.addr, DIExpression(DW_OP_deref...))
 ;; when promoting the alloca %param.addr.
@@ -29,12 +29,12 @@ define dso_local void @fun(i32 %param) !dbg !12 {
 entry:
   %param.addr = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %param, metadata !16, metadata !DIExpression()), !dbg !17
-  store i32 %param, i32* %param.addr, align 4
-  call void @llvm.dbg.value(metadata i32* %param.addr, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !17
-  call void @llvm.dbg.value(metadata i32* %param.addr, metadata !22, metadata !DIExpression()), !dbg !28
-  call void @llvm.dbg.value(metadata i32* %param.addr, metadata !22, metadata !DIExpression()), !dbg !28
-  %0 = load i32, i32* %param.addr, align 4, !dbg !30
-  store i32 %0, i32* @g, align 4, !dbg !31
+  store i32 %param, ptr %param.addr, align 4
+  call void @llvm.dbg.value(metadata ptr %param.addr, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !17
+  call void @llvm.dbg.value(metadata ptr %param.addr, metadata !22, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.value(metadata ptr %param.addr, metadata !22, metadata !DIExpression()), !dbg !28
+  %0 = load i32, ptr %param.addr, align 4, !dbg !30
+  store i32 %0, ptr @g, align 4, !dbg !31
   ret void, !dbg !32
 }
 

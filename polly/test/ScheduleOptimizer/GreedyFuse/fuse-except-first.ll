@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-reschedule=0 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s --check-prefixes=CHECK,RAW
 ; RUN: opt %loadPolly -polly-reschedule=1 -polly-loopfusion-greedy=1 -polly-postopts=0 -polly-print-opt-isl -disable-output < %s | FileCheck %s --check-prefixes=CHECK,OPT
 
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B, i32 %k) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B, i32 %k) {
 entry:
   br label %for1
 
@@ -13,8 +13,8 @@ for1:
 
     body1:
       %idx1 = add i32 %j1, %k
-      %arrayidx1 = getelementptr inbounds double, double* %B, i32 %idx1
-      store double 21.0, double* %arrayidx1
+      %arrayidx1 = getelementptr inbounds double, ptr %B, i32 %idx1
+      store double 21.0, ptr %arrayidx1
       br label %inc1
 
 inc1:
@@ -31,8 +31,8 @@ for2:
   br i1 %j2.cmp, label %body2, label %exit2
 
     body2:
-      %arrayidx2 = getelementptr inbounds double, double* %B, i32 %j2
-      store double 42.0, double* %arrayidx2
+      %arrayidx2 = getelementptr inbounds double, ptr %B, i32 %j2
+      store double 42.0, ptr %arrayidx2
       br label %inc2
 
 inc2:
@@ -49,8 +49,8 @@ for3:
   br i1 %j3.cmp, label %body3, label %exit3
 
     body3:
-      %arrayidx3 = getelementptr inbounds double, double* %A, i32 %j3
-      store double 84.0, double* %arrayidx3
+      %arrayidx3 = getelementptr inbounds double, ptr %A, i32 %j3
+      store double 84.0, ptr %arrayidx3
       br label %inc3
 
 inc3:

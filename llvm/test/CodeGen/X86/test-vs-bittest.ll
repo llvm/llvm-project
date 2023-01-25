@@ -640,8 +640,8 @@ define i16 @is_bit_clear_i16(i16 %x) {
 ; CHECK-LABEL: is_bit_clear_i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb $-128, %dil
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    setns %al
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %sh = lshr i16 %x, 7

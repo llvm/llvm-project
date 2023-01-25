@@ -3,42 +3,38 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-define void @func(i8* %i) nounwind ssp {
+define void @func(ptr %i) nounwind ssp {
 ; CHECK-LABEL: @func(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [32 x i8], align 16
-; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [32 x i8], [32 x i8]* [[S]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @__strcpy_chk(i8* nonnull [[ARRAYDECAY]], i8* [[I:%.*]], i64 32)
-; CHECK-NEXT:    call void @func2(i8* nonnull [[ARRAYDECAY]]) [[ATTR2:#.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @__strcpy_chk(ptr nonnull [[S]], ptr [[I:%.*]], i64 32)
+; CHECK-NEXT:    call void @func2(ptr nonnull [[S]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %s = alloca [32 x i8], align 16
-  %arraydecay = getelementptr inbounds [32 x i8], [32 x i8]* %s, i32 0, i32 0
-  %call = call i8* @__strcpy_chk(i8* %arraydecay, i8* %i, i64 32)
-  call void @func2(i8* %arraydecay)
+  %call = call ptr @__strcpy_chk(ptr %s, ptr %i, i64 32)
+  call void @func2(ptr %s)
   ret void
 }
 
-define void @func_no_null_opt(i8* %i) nounwind ssp #0 {
+define void @func_no_null_opt(ptr %i) nounwind ssp #0 {
 ; CHECK-LABEL: @func_no_null_opt(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = alloca [32 x i8], align 16
-; CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [32 x i8], [32 x i8]* [[S]], i64 0, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @__strcpy_chk(i8* [[ARRAYDECAY]], i8* [[I:%.*]], i64 32)
-; CHECK-NEXT:    call void @func2(i8* [[ARRAYDECAY]]) [[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @__strcpy_chk(ptr nonnull [[S]], ptr [[I:%.*]], i64 32)
+; CHECK-NEXT:    call void @func2(ptr nonnull [[S]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %s = alloca [32 x i8], align 16
-  %arraydecay = getelementptr inbounds [32 x i8], [32 x i8]* %s, i32 0, i32 0
-  %call = call i8* @__strcpy_chk(i8* %arraydecay, i8* %i, i64 32)
-  call void @func2(i8* %arraydecay)
+  %call = call ptr @__strcpy_chk(ptr %s, ptr %i, i64 32)
+  call void @func2(ptr %s)
   ret void
 }
 
-declare i8* @__strcpy_chk(i8*, i8*, i64) nounwind
+declare ptr @__strcpy_chk(ptr, ptr, i64) nounwind
 
-declare void @func2(i8*)
+declare void @func2(ptr)
 
 attributes #0 = { null_pointer_is_valid }

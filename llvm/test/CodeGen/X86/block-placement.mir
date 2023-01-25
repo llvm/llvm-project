@@ -5,31 +5,31 @@
   source_filename = "test.ll"
   target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
   
-  declare void @stub(i32*)
+  declare void @stub(ptr)
   
-  define i32 @f(i32* %ptr, i1 %cond) {
+  define i32 @f(ptr %ptr, i1 %cond) {
   entry:
     br i1 %cond, label %left, label %right
   
   left:                                             ; preds = %entry
-    %is_null = icmp eq i32* %ptr, null
+    %is_null = icmp eq ptr %ptr, null
     br i1 %is_null, label %null, label %not_null, !prof !0, !make.implicit !1
   
   not_null:                                         ; preds = %left
-    %val = load i32, i32* %ptr
+    %val = load i32, ptr %ptr
     ret i32 %val
   
   null:                                             ; preds = %left
-    call void @stub(i32* %ptr)
+    call void @stub(ptr %ptr)
     unreachable
   
   right:                                            ; preds = %entry
-    call void @stub(i32* null)
+    call void @stub(ptr null)
     unreachable
   }
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
   
   attributes #0 = { nounwind }
   

@@ -18,6 +18,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/Edit/Commit.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 using namespace clang;
 using namespace edit;
@@ -691,7 +692,7 @@ static bool getLiteralInfo(SourceRange literalRange,
   if (text.empty())
     return false;
 
-  Optional<bool> UpperU, UpperL;
+  std::optional<bool> UpperU, UpperL;
   bool UpperF = false;
 
   struct Suff {
@@ -775,8 +776,8 @@ static bool rewriteToNumberLiteral(const ObjCMessageExpr *Msg,
 
   ASTContext &Ctx = NS.getASTContext();
   Selector Sel = Msg->getSelector();
-  Optional<NSAPI::NSNumberLiteralMethodKind>
-    MKOpt = NS.getNSNumberLiteralMethodKind(Sel);
+  std::optional<NSAPI::NSNumberLiteralMethodKind> MKOpt =
+      NS.getNSNumberLiteralMethodKind(Sel);
   if (!MKOpt)
     return false;
   NSAPI::NSNumberLiteralMethodKind MK = *MKOpt;
@@ -796,28 +797,28 @@ static bool rewriteToNumberLiteral(const ObjCMessageExpr *Msg,
   case NSAPI::NSNumberWithUnsignedInt:
   case NSAPI::NSNumberWithUnsignedInteger:
     CallIsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NSAPI::NSNumberWithInt:
   case NSAPI::NSNumberWithInteger:
     break;
 
   case NSAPI::NSNumberWithUnsignedLong:
     CallIsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NSAPI::NSNumberWithLong:
     CallIsLong = true;
     break;
 
   case NSAPI::NSNumberWithUnsignedLongLong:
     CallIsUnsigned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NSAPI::NSNumberWithLongLong:
     CallIsLongLong = true;
     break;
 
   case NSAPI::NSNumberWithDouble:
     CallIsDouble = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NSAPI::NSNumberWithFloat:
     CallIsFloating = true;
     break;
@@ -983,8 +984,8 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
 
   ASTContext &Ctx = NS.getASTContext();
   Selector Sel = Msg->getSelector();
-  Optional<NSAPI::NSNumberLiteralMethodKind>
-    MKOpt = NS.getNSNumberLiteralMethodKind(Sel);
+  std::optional<NSAPI::NSNumberLiteralMethodKind> MKOpt =
+      NS.getNSNumberLiteralMethodKind(Sel);
   if (!MKOpt)
     return false;
   NSAPI::NSNumberLiteralMethodKind MK = *MKOpt;

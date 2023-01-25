@@ -1,4 +1,3 @@
-; RUN: opt -lcssa -S < %s | FileCheck %s
 ; RUN: opt -passes=lcssa -S < %s | FileCheck %s
 
 ; This test is based on the following C++ code:
@@ -22,7 +21,7 @@
 ; analysis, the LCSSA pass wants to create a PHI node in the catchpad block
 ; for the catchswitch value, but this is a token, so it can't.
 
-define void @f() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define void @f() personality ptr @__CxxFrameHandler3 {
 entry:
   %tmp = alloca i32, align 4
   %i7 = alloca i32, align 4
@@ -38,20 +37,19 @@ for.body:                                         ; preds = %for.cond
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  store i32 %i.0, i32* %tmp, align 4
-  %tmp1 = bitcast i32* %tmp to i8*
-  invoke void @_CxxThrowException(i8* %tmp1, %eh.ThrowInfo* nonnull @_TI1H) #1
+  store i32 %i.0, ptr %tmp, align 4
+  invoke void @_CxxThrowException(ptr %tmp, ptr nonnull @_TI1H) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %if.then
   %tmp2 = catchswitch within none [label %catch, label %catch2] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %tmp3 = catchpad within %tmp2 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %i7]
+  %tmp3 = catchpad within %tmp2 [ptr @"\01??_R0H@8", i32 0, ptr %i7]
   catchret from %tmp3 to label %for.inc
 
 catch2:                                           ; preds = %catch.dispatch
-  %tmp4 = catchpad within %tmp2 [i8* null, i32 64, i8* null]
+  %tmp4 = catchpad within %tmp2 [ptr null, i32 64, ptr null]
   catchret from %tmp4 to label %for.end
 
 for.inc:                                          ; preds = %catch, %for.body
@@ -71,7 +69,7 @@ unreachable:                                      ; preds = %if.then
 ; CHECK:   %tmp4 = catchpad within %tmp2
 ; CHECK:   catchret from %tmp4 to label %for.end
 
-%rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
+%rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 %eh.CatchableType = type { i32, i32, i32, i32, i32, i32, i32 }
 %eh.CatchableTypeArray.1 = type { i32, [1 x i32] }
 %eh.ThrowInfo = type { i32, i32, i32, i32 }
@@ -84,13 +82,13 @@ $_CTA1H = comdat any
 
 $_TI1H = comdat any
 
-@"\01??_7type_info@@6B@" = external constant i8*
-@"\01??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"\01??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }, comdat
+@"\01??_7type_info@@6B@" = external constant ptr
+@"\01??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { ptr @"\01??_7type_info@@6B@", ptr null, [3 x i8] c".H\00" }, comdat
 @__ImageBase = external constant i8
-@"_CT??_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.TypeDescriptor2* @"\01??_R0H@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 4, i32 0 }, section ".xdata", comdat
-@_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%eh.CatchableType* @"_CT??_R0H@84" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
-@_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%eh.CatchableTypeArray.1* @_CTA1H to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, section ".xdata", comdat
+@"_CT??_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"\01??_R0H@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 4, i32 0 }, section ".xdata", comdat
+@_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"_CT??_R0H@84" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
+@_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @_CTA1H to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, section ".xdata", comdat
 
-declare void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare void @_CxxThrowException(ptr, ptr)
 
 declare i32 @__CxxFrameHandler3(...)

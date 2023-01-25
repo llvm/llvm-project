@@ -5,6 +5,6 @@ define <2 x i32> @f() {
 }
 
 define i32 @g() {
-	%x = call i32 bitcast (<2 x i32> ()* @f to i32 ()*)( )		; <i32> [#uses=1]
+	%x = call i32 @f( )		; <i32> [#uses=1]
 	ret i32 %x
 }

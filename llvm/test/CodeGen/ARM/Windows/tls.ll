@@ -9,7 +9,7 @@
 @o = thread_local global i8 0
 
 define i32 @f() {
-  %1 = load i32, i32* @i
+  %1 = load i32, ptr @i
   ret i32 %1
 }
 
@@ -29,7 +29,7 @@ define i32 @f() {
 ; CHECK-NEXT: .long i(SECREL32)
 
 define i32 @e() {
-  %1 = load i32, i32* @j
+  %1 = load i32, ptr @j
   ret i32 %1
 }
 
@@ -49,7 +49,7 @@ define i32 @e() {
 ; CHECK-NEXT: .long j(SECREL32)
 
 define i32 @d() {
-  %1 = load i32, i32* @k
+  %1 = load i32, ptr @k
   ret i32 %1
 }
 
@@ -69,7 +69,7 @@ define i32 @d() {
 ; CHECK-NEXT: .long k(SECREL32)
 
 define i32 @c() {
-  %1 = load i32, i32* @l
+  %1 = load i32, ptr @l
   ret i32 %1
 }
 
@@ -89,7 +89,7 @@ define i32 @c() {
 ; CHECK-NEXT: .long l(SECREL32)
 
 define i32 @b() {
-  %1 = load i32, i32* @m
+  %1 = load i32, ptr @m
   ret i32 %1
 }
 
@@ -109,7 +109,7 @@ define i32 @b() {
 ; CHECK: .long m(SECREL32)
 
 define i16 @a() {
-  %1 = load i16, i16* @n
+  %1 = load i16, ptr @n
   ret i16 %1
 }
 
@@ -129,7 +129,7 @@ define i16 @a() {
 ; CHECK: .long n(SECREL32)
 
 define i8 @Z() {
-  %1 = load i8, i8* @o
+  %1 = load i8, ptr @o
   ret i8 %1
 }
 

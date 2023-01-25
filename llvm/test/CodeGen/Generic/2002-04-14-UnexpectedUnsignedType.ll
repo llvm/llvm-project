@@ -4,10 +4,10 @@
 ; SparcInstrInfo.cpp:103: failed assertion `0 && "Unexpected unsigned type"'
 ;
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 define void @foo() {
-        %cast225 = inttoptr i64 123456 to i8*           ; <i8*> [#uses=1]
-        call void @bar( i8* %cast225 )
+        %cast225 = inttoptr i64 123456 to ptr           ; <ptr> [#uses=1]
+        call void @bar( ptr %cast225 )
         ret void
 }

@@ -22,11 +22,11 @@
 #include <mutex>
 #include <set>
 #include <thread>
-#include <vector>
 
 #include "ExclusiveAccess.h"
 #include "omptarget.h"
 #include "rtl.h"
+#include "llvm/ADT/SmallVector.h"
 
 // Forward declarations.
 struct RTLInfoTy;
@@ -61,8 +61,7 @@ private:
   struct StatesTy {
     StatesTy(uint64_t DRC, uint64_t HRC)
         : DynRefCount(DRC), HoldRefCount(HRC),
-          MayContainAttachedPointers(false), DeleteThreadId(std::thread::id()) {
-    }
+          MayContainAttachedPointers(false) {}
     /// The dynamic reference count is the standard reference count as of OpenMP
     /// 4.5.  The hold reference count is an OpenMP extension for the sake of
     /// OpenACC support.
@@ -101,13 +100,10 @@ private:
     /// should be written as <tt>void *Event[2]</tt>.
     void *Event = nullptr;
 
-    /// The id of the thread responsible for deleting this entry. This thread
-    /// set the reference count to zero *last*. Other threads might reuse the
-    /// entry while it is marked for deletion but not yet deleted (e.g., the
-    /// data is still being moved back). If another thread reuses the entry we
-    /// will have a non-zero reference count *or* the thread will have changed
-    /// this id, effectively taking over deletion responsibility.
-    std::thread::id DeleteThreadId;
+    /// Number of threads currently holding a reference to the entry at a
+    /// targetDataEnd. This is used to ensure that only the last thread that
+    /// references this entry will actually delete it.
+    int32_t DataEndThreadCount = 0;
   };
   // When HostDataToTargetTy is used by std::set, std::set::iterator is const
   // use unique_ptr to make States mutable.
@@ -148,13 +144,17 @@ public:
   /// Returns OFFLOAD_FAIL if something went wrong, OFFLOAD_SUCCESS otherwise.
   int addEventIfNecessary(DeviceTy &Device, AsyncInfoTy &AsyncInfo) const;
 
-  /// Indicate that the current thread expected to delete this entry.
-  void setDeleteThreadId() const {
-    States->DeleteThreadId = std::this_thread::get_id();
+  /// Functions that manages the number of threads referencing the entry in a
+  /// targetDataEnd.
+  void incDataEndThreadCount() { ++States->DataEndThreadCount; }
+
+  [[nodiscard]] int32_t decDataEndThreadCount() {
+    return --States->DataEndThreadCount;
   }
 
-  /// Return the thread id of the thread expected to delete this entry.
-  std::thread::id getDeleteThreadId() const { return States->DeleteThreadId; }
+  [[nodiscard]] int32_t getDataEndThreadCount() const {
+    return States->DataEndThreadCount;
+  }
 
   /// Set the event bound to this data map.
   void setEvent(void *Event) const { States->Event = Event; }
@@ -281,7 +281,13 @@ struct TargetPointerResultTy {
     unsigned IsNewEntry : 1;
     /// If the pointer is actually a host pointer (when unified memory enabled)
     unsigned IsHostPointer : 1;
-  } Flags = {0, 0};
+    /// If the pointer is present in the mapping table.
+    unsigned IsPresent : 1;
+  } Flags = {0, 0, 0};
+
+  bool isPresent() const { return Flags.IsPresent; }
+
+  bool isHostPointer() const { return Flags.IsHostPointer; }
 
   /// The corresponding map table entry which is stable.
   HostDataToTargetTy *Entry = nullptr;
@@ -334,10 +340,6 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx, ShadowMtx;
 
-  // NOTE: Once libomp gains full target-task support, this state should be
-  // moved into the target task in libomp.
-  std::map<int32_t, uint64_t> LoopTripCnt;
-
   DeviceTy(RTLInfoTy *RTL);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;
@@ -375,20 +377,37 @@ struct DeviceTy {
   void *getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
                        int64_t Size);
 
-  TargetPointerResultTy getTgtPtrBegin(void *HstPtrBegin, int64_t Size,
-                                       bool &IsLast, bool UpdateRefCount,
-                                       bool UseHoldRefCount, bool &IsHostPtr,
-                                       bool MustContain = false,
-                                       bool ForceDelete = false);
+  /// Return the target pointer begin (where the data will be moved).
+  /// Used by targetDataBegin, targetDataEnd, targetDataUpdate and target.
+  /// - \p UpdateRefCount and \p UseHoldRefCount controls which and if the entry
+  /// reference counters will be decremented.
+  /// - \p MustContain enforces that the query must not extend beyond an already
+  /// mapped entry to be valid.
+  /// - \p ForceDelete deletes the entry regardless of its reference counting
+  /// (unless it is infinite).
+  /// - \p FromDataEnd tracks the number of threads referencing the entry at
+  /// targetDataEnd for delayed deletion purpose.
+  [[nodiscard]] TargetPointerResultTy
+  getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
+                 bool UpdateRefCount, bool UseHoldRefCount, bool &IsHostPtr,
+                 bool MustContain = false, bool ForceDelete = false,
+                 bool FromDataEnd = false);
 
-  /// Deallocate \p LR and remove the entry. Assume the total reference count is
-  /// zero and the calling thread is the deleting thread for \p LR. \p HDTTMap
-  /// ensure the caller holds exclusive access and can modify the map. Return \c
-  /// OFFLOAD_SUCCESS if the map entry existed, and return \c OFFLOAD_FAIL if
-  /// not. It is the caller's responsibility to skip calling this function if
-  /// the map entry is not expected to exist because \p HstPtrBegin uses shared
-  /// memory.
-  int deallocTgtPtr(HDTTMapAccessorTy &HDTTMap, LookupResult LR, int64_t Size);
+  /// Remove the \p Entry from the data map. Expect the entry's total reference
+  /// count to be zero and the caller thread to be the last one using it. \p
+  /// HDTTMap ensure the caller holds exclusive access and can modify the map.
+  /// Return \c OFFLOAD_SUCCESS if the map entry existed, and return \c
+  /// OFFLOAD_FAIL if not. It is the caller's responsibility to skip calling
+  /// this function if the map entry is not expected to exist because \p
+  /// HstPtrBegin uses shared memory.
+  [[nodiscard]] int eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
+                                  HostDataToTargetTy *Entry, int64_t Size);
+
+  /// Deallocate the \p Entry from the device memory and delete it. Return \c
+  /// OFFLOAD_SUCCESS if the deallocation operations executed successfully, and
+  /// return \c OFFLOAD_FAIL otherwise.
+  [[nodiscard]] int deallocTgtPtrAndEntry(HostDataToTargetTy *Entry,
+                                          int64_t Size);
 
   int associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size);
   int disassociatePtr(void *HstPtrBegin);
@@ -409,8 +428,9 @@ struct DeviceTy {
   void *allocData(int64_t Size, void *HstPtr = nullptr,
                   int32_t Kind = TARGET_ALLOC_DEFAULT);
   /// Deallocates memory which \p TgtPtrBegin points at and returns
-  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
-  int32_t deleteData(void *TgtPtrBegin);
+  /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails. p Kind dictates what
+  /// allocator should be used (host, shared, device).
+  int32_t deleteData(void *TgtPtrBegin, int32_t Kind = TARGET_ALLOC_DEFAULT);
 
   // Data transfer. When AsyncInfo is nullptr, the transfer will be
   // synchronous.
@@ -424,16 +444,20 @@ struct DeviceTy {
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
 
-  int32_t runRegion(void *TgtEntryPtr, void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
-                    int32_t TgtVarsSize, AsyncInfoTy &AsyncInfo);
-  int32_t runTeamRegion(void *TgtEntryPtr, void **TgtVarsPtr,
-                        ptrdiff_t *TgtOffsets, int32_t TgtVarsSize,
-                        int32_t NumTeams, int32_t ThreadLimit,
-                        uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
+  // Launch the kernel identified by \p TgtEntryPtr with the given arguments.
+  int32_t launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
+                       ptrdiff_t *TgtOffsets, const KernelArgsTy &KernelArgs,
+                       AsyncInfoTy &AsyncInfo);
 
   /// Synchronize device/queue/event based on \p AsyncInfo and return
   /// OFFLOAD_SUCCESS/OFFLOAD_FAIL when succeeds/fails.
   int32_t synchronize(AsyncInfoTy &AsyncInfo);
+
+  /// Query for device/queue/event based completion on \p AsyncInfo in a
+  /// non-blocking manner and return OFFLOAD_SUCCESS/OFFLOAD_FAIL when
+  /// succeeds/fails. Must be called multiple times until AsyncInfo is
+  /// completed and AsyncInfo.isDone() returns true.
+  int32_t queryAsync(AsyncInfoTy &AsyncInfo);
 
   /// Calls the corresponding print in the \p RTLDEVID
   /// device RTL to obtain the information of the specific device.
@@ -484,14 +508,14 @@ struct PluginManager {
   std::list<std::pair<__tgt_device_image, __tgt_image_info>> Images;
 
   /// Devices associated with RTLs
-  std::vector<std::unique_ptr<DeviceTy>> Devices;
+  llvm::SmallVector<std::unique_ptr<DeviceTy>> Devices;
   std::mutex RTLsMtx; ///< For RTLs and Devices
 
   /// Translation table retreived from the binary
   HostEntriesBeginToTransTableTy HostEntriesBeginToTransTable;
   std::mutex TrlTblMtx; ///< For Translation Table
   /// Host offload entries in order of image registration
-  std::vector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
+  llvm::SmallVector<__tgt_offload_entry *> HostEntriesBeginRegistrationOrder;
 
   /// Map from ptrs on the host to an entry in the Translation Table
   HostPtrToTableMapTy HostPtrToTableMap;
@@ -504,6 +528,31 @@ struct PluginManager {
   /// Flag to indicate if we use events to ensure the atomicity of
   /// map clauses or not. Can be modified with an environment variable.
   const bool UseEventsForAtomicTransfers;
+
+  // Work around for plugins that call dlopen on shared libraries that call
+  // tgt_register_lib during their initialisation. Stash the pointers in a
+  // vector until the plugins are all initialised and then register them.
+  bool maybeDelayRegisterLib(__tgt_bin_desc *Desc) {
+    if (!RTLsLoaded) {
+      // Only reachable from libomptarget constructor
+      DelayedBinDesc.push_back(Desc);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  void registerDelayedLibraries() {
+    // Only called by libomptarget constructor
+    RTLsLoaded = true;
+    for (auto *Desc : DelayedBinDesc)
+      __tgt_register_lib(Desc);
+    DelayedBinDesc.clear();
+  }
+
+private:
+  bool RTLsLoaded = false;
+  llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 };
 
 extern PluginManager *PM;

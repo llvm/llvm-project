@@ -1,4 +1,4 @@
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 
 ; CHECK-LABEL: @speculatable_attribute
 ; CHECK: select
@@ -25,18 +25,18 @@ define i32 @func() #0 {
 ; Since the function is speculatable, the nonnull attribute need not be dropped
 ; since it propagates poison (and call executes fine) if the parameter is indeed
 ; null.
-define i32 @strip_attr(i32 * %p) {
-; CHECK-LABEL: strip_attr  
+define i32 @strip_attr(ptr %p) {
+; CHECK-LABEL: strip_attr
 ; CHECK-LABEL: entry:
-; CHECK:         %nullchk = icmp ne i32* %p, null
-; CHECK:         %val = call i32 @func_nonnull(i32* nonnull %p)
-; CHECK:         select 
+; CHECK:         %nullchk = icmp ne ptr %p, null
+; CHECK:         %val = call i32 @func_nonnull(ptr nonnull %p)
+; CHECK:         select
 entry:
-  %nullchk = icmp ne i32* %p, null
+  %nullchk = icmp ne ptr %p, null
   br i1 %nullchk, label %if, label %end
 
 if:
-  %val = call i32 @func_nonnull(i32* nonnull %p) #1
+  %val = call i32 @func_nonnull(ptr nonnull %p) #1
   br label %end
 
 end:
@@ -46,18 +46,18 @@ end:
 
 ; We should strip the deref attribute since it can cause UB when the
 ; speculatable call is moved.
-define i32 @strip_attr2(i32 * %p) {
-; CHECK-LABEL: strip_attr2  
+define i32 @strip_attr2(ptr %p) {
+; CHECK-LABEL: strip_attr2
 ; CHECK-LABEL: entry:
-; CHECK:         %nullchk = icmp ne i32* %p, null
-; CHECK:         %val = call i32 @func_nonnull(i32* %p)
-; CHECK:         select 
+; CHECK:         %nullchk = icmp ne ptr %p, null
+; CHECK:         %val = call i32 @func_nonnull(ptr %p)
+; CHECK:         select
 entry:
-  %nullchk = icmp ne i32* %p, null
+  %nullchk = icmp ne ptr %p, null
   br i1 %nullchk, label %if, label %end
 
 if:
-  %val = call i32 @func_nonnull(i32* dereferenceable(12) %p) #1
+  %val = call i32 @func_nonnull(ptr dereferenceable(12) %p) #1
   br label %end
 
 end:
@@ -65,7 +65,7 @@ end:
   ret i32 %ret
 }
 
-declare i32 @func_nonnull(i32*) #1
+declare i32 @func_nonnull(ptr) #1
 
 attributes #0 = { nounwind readnone speculatable }
 attributes #1 = { nounwind argmemonly speculatable }

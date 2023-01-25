@@ -14,18 +14,21 @@ set(LIBC_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 # The top-level directory in which libc is being built.
 set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
+# For a runtimes build we need to manually include tablgen and LLVM directories.
+if ("libc" IN_LIST LLVM_ENABLE_RUNTIMES)
+  include(TableGen)
+  set(LLVM_LIBC_INCLUDE_DIRS ${LLVM_MAIN_INCLUDE_DIR} ${LLVM_BINARY_DIR}/include)
+endif()
+
 # Path libc/scripts directory.
 set(LIBC_BUILD_SCRIPTS_DIR "${LIBC_SOURCE_DIR}/utils/build_scripts")
 
-set(LIBC_TARGET_OS ${CMAKE_SYSTEM_NAME})
-string(TOLOWER ${LIBC_TARGET_OS} LIBC_TARGET_OS)
-
-# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
-include(LLVMLibCArchitectures)
-include(LLVMLibCCheckMPFR)
-
 # Flags to pass down to the compiler while building the libc functions.
 set(LIBC_COMPILE_OPTIONS_DEFAULT "" CACHE STRING "Architecture to tell clang to optimize for (e.g. -march=... or -mcpu=...)")
+
+include(common_libc_tuners.cmake)
+
+list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
 # Check --print-resource-dir to find the compiler resource dir if this flag
 # is supported by the compiler.
@@ -49,8 +52,20 @@ else()
 endif()
 
 option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
-
+option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+
+option(LIBC_GPU_BUILD "Build libc for the GPU. All CPU build options will be ignored." OFF)
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
+
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+include(LLVMLibCArchitectures)
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  include(prepare_libc_gpu_build)
+endif()
+
+include(LLVMLibCCheckMPFR)
 
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
@@ -141,22 +156,51 @@ if(LLVM_LIBC_FULL_BUILD)
   add_subdirectory(utils/HdrGen)
 endif()
 
+set(LIBC_TARGET)
+set(LIBC_COMPONENT)
+set(LIBC_INSTALL_DEPENDS)
+set(LIBC_INSTALL_TARGET)
+if(LLVM_LIBC_FULL_BUILD)
+  set(LIBC_TARGET libc)
+  set(LIBC_COMPONENT libc)
+  set(LIBC_INSTALL_DEPENDS "install-libc-static-archives;install-libc-headers")
+  if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
+    # For now we will disable libc-startup installation for baremetal. The
+    # correct way to do it would be to make a hookable startup for baremetal
+    # and install it as part of the libc installation.
+    list(APPEND LIBC_INSTALL_DEPENDS "libc-startup")
+  endif()
+  set(LIBC_INSTALL_TARGET install-libc)
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    set(LIBC_ARCHIVE_NAME cgpu)
+  else()
+    set(LIBC_ARCHIVE_NAME c)
+  endif()
+else()
+  set(LIBC_TARGET llvmlibc)
+  set(LIBC_COMPONENT llvmlibc)
+  set(LIBC_INSTALL_DEPENDS install-libc-static-archives)
+  set(LIBC_INSTALL_TARGET install-llvmlibc)
+  set(LIBC_ARCHIVE_NAME llvmlibc)
+endif()
+
 add_subdirectory(include)
 add_subdirectory(config)
 add_subdirectory(src)
 add_subdirectory(utils)
 
 if(LLVM_LIBC_FULL_BUILD)
-  # The loader can potentially depend on the library components so add it
-  # after the library implementation directories.
-  add_subdirectory(loader)
+  # The startup system can potentially depend on the library components so add
+  # it after the library implementation directories.
+  add_subdirectory(startup)
 endif()
 
 # The lib and test directories are added at the very end as tests
 # and libraries potentially draw from the components present in all
 # of the other directories.
+# TODO: Add testing support for the libc GPU target.
 add_subdirectory(lib)
-if(LLVM_INCLUDE_TESTS)
+if(LLVM_INCLUDE_TESTS AND NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
   add_subdirectory(test)
   add_subdirectory(fuzzing)
 endif()
@@ -168,3 +212,18 @@ endif()
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
+
+
+if(LLVM_LIBC_FULL_BUILD)
+  add_llvm_install_targets(
+    install-libc-headers
+    DEPENDS libc-headers
+    COMPONENT libc-headers
+  )
+endif()
+
+add_llvm_install_targets(
+  ${LIBC_INSTALL_TARGET}
+  DEPENDS ${LIBC_INSTALL_DEPENDS}
+  COMPONENT ${LIBC_COMPONENT}
+)

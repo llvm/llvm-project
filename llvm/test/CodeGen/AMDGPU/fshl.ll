@@ -10,52 +10,51 @@ declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
 declare <2 x i32> @llvm.fshl.v2i32(<2 x i32>, <2 x i32>, <2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone
 
-define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %z) {
+define amdgpu_kernel void @fshl_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z) {
 ; SI-LABEL: fshl_i32:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0xb
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; SI-NEXT:    s_load_dword s0, s[0:1], 0xd
-; SI-NEXT:    s_mov_b32 s7, 0xf000
-; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dword s8, s[0:1], 0xd
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s3
-; SI-NEXT:    v_alignbit_b32 v0, s2, v0, 1
-; SI-NEXT:    s_not_b32 s0, s0
-; SI-NEXT:    s_lshr_b32 s1, s2, 1
-; SI-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NEXT:    v_alignbit_b32 v0, s1, v0, v1
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_mov_b32 s1, s5
+; SI-NEXT:    v_mov_b32_e32 v0, s7
+; SI-NEXT:    s_not_b32 s5, s8
+; SI-NEXT:    s_mov_b32 s0, s4
+; SI-NEXT:    v_alignbit_b32 v0, s6, v0, 1
+; SI-NEXT:    s_lshr_b32 s4, s6, 1
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    v_alignbit_b32 v0, s4, v0, v1
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: fshl_i32:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; VI-NEXT:    s_load_dword s4, s[0:1], 0x34
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dword s0, s[0:1], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    v_mov_b32_e32 v0, s3
-; VI-NEXT:    s_not_b32 s4, s4
-; VI-NEXT:    s_lshr_b32 s3, s2, 1
-; VI-NEXT:    v_alignbit_b32 v0, s2, v0, 1
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_alignbit_b32 v2, s3, v0, v1
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s7
+; VI-NEXT:    s_not_b32 s0, s0
+; VI-NEXT:    s_lshr_b32 s1, s6, 1
+; VI-NEXT:    v_alignbit_b32 v0, s6, v0, 1
+; VI-NEXT:    v_mov_b32_e32 v1, s0
+; VI-NEXT:    v_alignbit_b32 v2, s1, v0, v1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: fshl_i32:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
-; GFX9-NEXT:    s_load_dword s6, s[0:1], 0x34
+; GFX9-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, s3
-; GFX9-NEXT:    s_lshr_b32 s0, s2, 1
-; GFX9-NEXT:    s_not_b32 s1, s6
-; GFX9-NEXT:    v_alignbit_b32 v1, s2, v1, 1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s7
+; GFX9-NEXT:    s_not_b32 s1, s2
+; GFX9-NEXT:    s_lshr_b32 s0, s6, 1
+; GFX9-NEXT:    v_alignbit_b32 v1, s6, v1, 1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9-NEXT:    v_alignbit_b32 v1, s0, v1, v2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
@@ -77,58 +76,56 @@ define amdgpu_kernel void @fshl_i32(i32 addrspace(1)* %in, i32 %x, i32 %y, i32 %
 ;
 ; GFX10-LABEL: fshl_i32:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GFX10-NEXT:    s_load_dword s6, s[0:1], 0x34
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dword s2, s[0:1], 0x34
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_alignbit_b32 v0, s2, s3, 1
-; GFX10-NEXT:    s_lshr_b32 s0, s2, 1
-; GFX10-NEXT:    s_not_b32 s1, s6
+; GFX10-NEXT:    v_alignbit_b32 v0, s6, s7, 1
+; GFX10-NEXT:    s_lshr_b32 s0, s6, 1
+; GFX10-NEXT:    s_not_b32 s1, s2
 ; GFX10-NEXT:    v_alignbit_b32 v0, s0, v0, s1
 ; GFX10-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fshl_i32:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x2c
-; GFX11-NEXT:    s_load_b32 s4, s[0:1], 0x34
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x34
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    v_alignbit_b32 v0, s2, s3, 1
-; GFX11-NEXT:    s_lshr_b32 s2, s2, 1
-; GFX11-NEXT:    s_not_b32 s3, s4
+; GFX11-NEXT:    v_alignbit_b32 v0, s6, s7, 1
+; GFX11-NEXT:    s_lshr_b32 s1, s6, 1
+; GFX11-NEXT:    s_not_b32 s0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_alignbit_b32 v0, s2, v0, s3
-; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    v_alignbit_b32 v0, s1, v0, s0
+; GFX11-NEXT:    global_store_b32 v1, v0, s[4:5]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
-  store i32 %0, i32 addrspace(1)* %in
+  store i32 %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
+define amdgpu_kernel void @fshl_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; SI-LABEL: fshl_i32_imm:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v0, s5
-; SI-NEXT:    v_alignbit_b32 v0, s4, v0, 25
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    v_mov_b32_e32 v0, s3
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    v_alignbit_b32 v0, s2, v0, 25
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: fshl_i32_imm:
 ; VI:       ; %bb.0: ; %entry
-; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s3
 ; VI-NEXT:    v_alignbit_b32 v2, s2, v0, 25
@@ -139,13 +136,12 @@ define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 ;
 ; GFX9-LABEL: fshl_i32_imm:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX9-NEXT:    v_alignbit_b32 v1, s2, v1, 25
-; GFX9-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
 ; R600-LABEL: fshl_i32_imm:
@@ -162,20 +158,16 @@ define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 ;
 ; GFX10-LABEL: fshl_i32_imm:
 ; GFX10:       ; %bb.0: ; %entry
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_alignbit_b32 v1, s2, s3, 25
-; GFX10-NEXT:    global_store_dword v0, v1, s[4:5]
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fshl_i32_imm:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b64 s[2:3], s[0:1], 0x2c
-; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_alignbit_b32 v1, s2, s3, 25
@@ -184,11 +176,11 @@ define amdgpu_kernel void @fshl_i32_imm(i32 addrspace(1)* %in, i32 %x, i32 %y) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
-  store i32 %0, i32 addrspace(1)* %in
+  store i32 %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
+define amdgpu_kernel void @fshl_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i32> %y, <2 x i32> %z) {
 ; SI-LABEL: fshl_v2i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -315,11 +307,11 @@ define amdgpu_kernel void @fshl_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x,
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %z)
-  store <2 x i32> %0, <2 x i32> addrspace(1)* %in
+  store <2 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v2i32_imm(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @fshl_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2 x i32> %y) {
 ; SI-LABEL: fshl_v2i32_imm:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xb
@@ -401,11 +393,11 @@ define amdgpu_kernel void @fshl_v2i32_imm(<2 x i32> addrspace(1)* %in, <2 x i32>
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> <i32 7, i32 9>)
-  store <2 x i32> %0, <2 x i32> addrspace(1)* %in
+  store <2 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
+define amdgpu_kernel void @fshl_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; SI-LABEL: fshl_v4i32:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0xd
@@ -592,11 +584,11 @@ define amdgpu_kernel void @fshl_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x,
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z)
-  store <4 x i32> %0, <4 x i32> addrspace(1)* %in
+  store <4 x i32> %0, ptr addrspace(1) %in
   ret void
 }
 
-define amdgpu_kernel void @fshl_v4i32_imm(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @fshl_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4 x i32> %y) {
 ; SI-LABEL: fshl_v4i32_imm:
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    s_load_dwordx8 s[4:11], s[0:1], 0xd
@@ -698,6 +690,102 @@ define amdgpu_kernel void @fshl_v4i32_imm(<4 x i32> addrspace(1)* %in, <4 x i32>
 ; GFX11-NEXT:    s_endpgm
 entry:
   %0 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> <i32 1, i32 7, i32 9, i32 33>)
-  store <4 x i32> %0, <4 x i32> addrspace(1)* %in
+  store <4 x i32> %0, ptr addrspace(1) %in
+  ret void
+}
+
+; (a ^ b) | a --> a | b
+define amdgpu_kernel void @orxor2or1(ptr addrspace(1) %in, i32 %a, i32 %b) {
+; SI-LABEL: orxor2or1:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_lshl_b32 s0, s2, 7
+; SI-NEXT:    s_or_b32 s0, s3, s0
+; SI-NEXT:    s_cmp_eq_u32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, s2, s3
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: orxor2or1:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_lshl_b32 s4, s2, 7
+; VI-NEXT:    s_or_b32 s4, s3, s4
+; VI-NEXT:    s_cmp_eq_u32 s4, 0
+; VI-NEXT:    s_cselect_b32 s2, s2, s3
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s2
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: orxor2or1:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_lshl_b32 s4, s2, 7
+; GFX9-NEXT:    s_or_b32 s4, s3, s4
+; GFX9-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX9-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; R600-LABEL: orxor2or1:
+; R600:       ; %bb.0:
+; R600-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
+; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
+; R600-NEXT:    CF_END
+; R600-NEXT:    PAD
+; R600-NEXT:    ALU clause starting at 4:
+; R600-NEXT:     LSHL * T0.W, KC0[2].Z, literal.x,
+; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
+; R600-NEXT:     OR_INT * T0.W, KC0[2].W, PV.W,
+; R600-NEXT:     CNDE_INT T0.X, PV.W, KC0[2].Z, KC0[2].W,
+; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
+; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+;
+; GFX10-LABEL: orxor2or1:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_lshl_b32 s4, s2, 7
+; GFX10-NEXT:    s_or_b32 s4, s3, s4
+; GFX10-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX10-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: orxor2or1:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_lshl_b32 s4, s2, 7
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_or_b32 s4, s3, s4
+; GFX11-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX11-NEXT:    s_cselect_b32 s2, s2, s3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s2
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %shl = shl i32 %a, 7
+  %xor = xor i32 %shl, %b
+  %or = or i32 %a, %xor
+  %fshl = call i32 @llvm.fshl.i32(i32 %or, i32 %xor, i32 7)
+  %cond = icmp eq i32 %fshl, 0
+  %r = select i1 %cond, i32 %a, i32 %b
+  store i32 %r, ptr addrspace(1) %in
   ret void
 }

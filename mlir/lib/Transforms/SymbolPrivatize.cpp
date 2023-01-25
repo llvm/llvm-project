@@ -11,14 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/Passes.h"
+
+#include "mlir/IR/SymbolTable.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SYMBOLPRIVATIZE
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct SymbolPrivatize : public SymbolPrivatizeBase<SymbolPrivatize> {
+struct SymbolPrivatize : public impl::SymbolPrivatizeBase<SymbolPrivatize> {
   explicit SymbolPrivatize(ArrayRef<std::string> excludeSymbols);
   LogicalResult initialize(MLIRContext *context) override;
   void runOnOperation() override;

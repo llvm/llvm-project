@@ -168,18 +168,11 @@ public:
   /// \returns an iterator pointing to the next element that followed the
   /// element erased. This is the end of the SetVector if the last element is
   /// erased.
-  iterator erase(iterator I) {
+  iterator erase(const_iterator I) {
     const key_type &V = *I;
     assert(set_.count(V) && "Corrupted SetVector instances!");
     set_.erase(V);
-
-    // FIXME: No need to use the non-const iterator when built with
-    // std::vector.erase(const_iterator) as defined in C++11. This is for
-    // compatibility with non-standard libstdc++ up to 4.8 (fixed in 4.9).
-    auto NI = vector_.begin();
-    std::advance(NI, std::distance<iterator>(NI, I));
-
-    return vector_.erase(NI);
+    return vector_.erase(I);
   }
 
   /// Remove items from the set vector based on a predicate function.
@@ -229,7 +222,7 @@ public:
     vector_.pop_back();
   }
 
-  LLVM_NODISCARD T pop_back_val() {
+  [[nodiscard]] T pop_back_val() {
     T Ret = back();
     pop_back();
     return Ret;

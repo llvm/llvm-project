@@ -242,7 +242,7 @@ HANDLE_DW_TAG(0x420d, SUN_fortran_vax_structure, 0, SUN, DW_KIND_NONE)
 HANDLE_DW_TAG(0x42ff, SUN_hi, 0, SUN, DW_KIND_NONE)
 
 // LLVM
-HANDLE_DW_TAG(0x4300, LLVM_ptrauth_type, 0, LLVM, DW_KIND_NONE)
+HANDLE_DW_TAG(0x4300, LLVM_ptrauth_type, 0, LLVM, DW_KIND_TYPE)
 
 // DSP-C/Starcore __circ, _rev
 HANDLE_DW_TAG(0x5101, ALTIUM_circ_type, 0, ALTIUM, DW_KIND_NONE)
@@ -915,10 +915,21 @@ HANDLE_DW_LANG(0x0022, Fortran03, 1, 5, DWARF)
 HANDLE_DW_LANG(0x0023, Fortran08, 1, 5, DWARF)
 HANDLE_DW_LANG(0x0024, RenderScript, 0, 5, DWARF)
 HANDLE_DW_LANG(0x0025, BLISS, 0, 5, DWARF)
+// New since DWARF v5:
+HANDLE_DW_LANG(0x0026, Kotlin, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0027, Zig, 0, 0, DWARF)
+HANDLE_DW_LANG(0x0028, Crystal, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002a, C_plus_plus_17, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002b, C_plus_plus_20, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002c, C17, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002d, Fortran18, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002e, Ada2005, 0, 0, DWARF)
+HANDLE_DW_LANG(0x002f, Ada2012, 0, 0, DWARF)
 // Vendor extensions:
-HANDLE_DW_LANG(0x8001, Mips_Assembler, None, 0, MIPS)
+HANDLE_DW_LANG(0x8001, Mips_Assembler, std::nullopt, 0, MIPS)
 HANDLE_DW_LANG(0x8e57, GOOGLE_RenderScript, 0, 0, GOOGLE)
 HANDLE_DW_LANG(0xb000, BORLAND_Delphi, 0, 0, BORLAND)
+
 
 // DWARF attribute type encodings.
 HANDLE_DW_ATE(0x01, address, 2, DWARF)
@@ -1207,6 +1218,8 @@ HANDLE_DW_IDX(0x02, type_unit)
 HANDLE_DW_IDX(0x03, die_offset)
 HANDLE_DW_IDX(0x04, parent)
 HANDLE_DW_IDX(0x05, type_hash)
+HANDLE_DW_IDX(0x2000, GNU_internal)
+HANDLE_DW_IDX(0x2001, GNU_external)
 
 // DWARF package file section identifiers.
 // DWARFv5, section 7.3.5.3, table 7.1.

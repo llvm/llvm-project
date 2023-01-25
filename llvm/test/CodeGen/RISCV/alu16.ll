@@ -210,7 +210,7 @@ define i16 @sll(i16 %a, i16 %b) nounwind {
 }
 
 ; Test the pattern we get from C integer promotion.
-define void @sll_ext(i16 %a, i32 signext %b, i16* %p) nounwind {
+define void @sll_ext(i16 %a, i32 signext %b, ptr %p) nounwind {
 ; RV32I-LABEL: sll_ext:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -225,13 +225,13 @@ define void @sll_ext(i16 %a, i32 signext %b, i16* %p) nounwind {
   %1 = zext i16 %a to i32
   %2 = shl i32 %1, %b
   %3 = trunc i32 %2 to i16
-  store i16 %3, i16* %p
+  store i16 %3, ptr %p
   ret void
 }
 
 ; Test the pattern we get from C integer promotion. This time with poison
 ; generating flags.
-define void @sll_ext_drop_poison(i16 %a, i32 signext %b, i16* %p) nounwind {
+define void @sll_ext_drop_poison(i16 %a, i32 signext %b, ptr %p) nounwind {
 ; RV32I-LABEL: sll_ext_drop_poison:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sll a0, a0, a1
@@ -246,7 +246,7 @@ define void @sll_ext_drop_poison(i16 %a, i32 signext %b, i16* %p) nounwind {
   %1 = zext i16 %a to i32
   %2 = shl nuw nsw i32 %1, %b
   %3 = trunc i32 %2 to i16
-  store i16 %3, i16* %p
+  store i16 %3, ptr %p
   ret void
 }
 

@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <ctime>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -54,7 +55,7 @@ public:
 
 protected:
   // FIXME: The pointer here is a non-owning/optional reference to the
-  // unique_ptr. Optional<unique_ptr<vfs::File>&> might be nicer, but
+  // unique_ptr. std::optional<unique_ptr<vfs::File>&> might be nicer, but
   // Optional needs some work to support references so this isn't possible yet.
   virtual std::error_code getStat(StringRef Path, llvm::vfs::Status &Status,
                                   bool isFile,

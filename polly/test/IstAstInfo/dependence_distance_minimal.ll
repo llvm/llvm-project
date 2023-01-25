@@ -19,7 +19,7 @@
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-define void @foo(i32* nocapture %arg, i32* nocapture %arg1) {
+define void @foo(ptr nocapture %arg, ptr nocapture %arg1) {
 bb:
   br label %bb2
 
@@ -31,7 +31,7 @@ bb3:                                              ; preds = %bb6
 
 bb4:                                              ; preds = %bb6, %bb2
   %tmp = phi i32 [ 0, %bb2 ], [ %tmp7, %bb6 ]
-  %tmp5 = getelementptr inbounds i32, i32* %arg1, i32 %tmp
+  %tmp5 = getelementptr inbounds i32, ptr %arg1, i32 %tmp
   br label %bb9
 
 bb6:                                              ; preds = %bb9
@@ -41,16 +41,16 @@ bb6:                                              ; preds = %bb9
 
 bb9:                                              ; preds = %bb9, %bb4
   %tmp10 = phi i32 [ 1, %bb4 ], [ %tmp19, %bb9 ]
-  %tmp11 = load i32, i32* %tmp5, align 4
+  %tmp11 = load i32, ptr %tmp5, align 4
   %tmp12 = add nsw i32 %tmp11, 1
-  store i32 %tmp12, i32* %tmp5, align 4
+  store i32 %tmp12, ptr %tmp5, align 4
   %tmp13 = urem i32 %tmp10, 250
-  %tmp14 = getelementptr inbounds i32, i32* %arg, i32 %tmp13
-  %tmp15 = load i32, i32* %tmp14, align 4
-  %tmp16 = getelementptr inbounds i32, i32* %arg, i32 %tmp10
-  %tmp17 = load i32, i32* %tmp16, align 4
+  %tmp14 = getelementptr inbounds i32, ptr %arg, i32 %tmp13
+  %tmp15 = load i32, ptr %tmp14, align 4
+  %tmp16 = getelementptr inbounds i32, ptr %arg, i32 %tmp10
+  %tmp17 = load i32, ptr %tmp16, align 4
   %tmp18 = add nsw i32 %tmp17, %tmp15
-  store i32 %tmp18, i32* %tmp16, align 4
+  store i32 %tmp18, ptr %tmp16, align 4
   %tmp19 = add nuw nsw i32 %tmp10, 1
   %tmp20 = icmp eq i32 %tmp19, 1000
   br i1 %tmp20, label %bb6, label %bb9

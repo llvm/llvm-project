@@ -761,11 +761,7 @@ SDValue LanaiTargetLowering::LowerCCCCallTo(
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(
-      Chain,
-      DAG.getConstant(NumBytes, DL, getPointerTy(DAG.getDataLayout()), true),
-      DAG.getConstant(0, DL, getPointerTy(DAG.getDataLayout()), true), InFlag,
-      DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, DL);
   InFlag = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
@@ -955,8 +951,7 @@ SDValue LanaiTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
 
   // Assemble multiplication from shift, add, sub using NAF form and running
   // sum.
-  for (unsigned int I = 0; I < sizeof(SignedDigit) / sizeof(SignedDigit[0]);
-       ++I) {
+  for (unsigned int I = 0; I < std::size(SignedDigit); ++I) {
     if (SignedDigit[I] == 0)
       continue;
 

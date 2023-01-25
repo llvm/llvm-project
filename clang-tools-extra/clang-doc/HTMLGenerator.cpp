@@ -11,10 +11,12 @@
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -307,8 +309,8 @@ static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
 
 static std::unique_ptr<HTMLNode>
 genReference(const Reference &Type, StringRef CurrentDirectory,
-             llvm::Optional<StringRef> JumpToSection = None) {
-  if (Type.Path.empty() && !Type.IsInGlobalNamespace) {
+             std::optional<StringRef> JumpToSection = std::nullopt) {
+  if (Type.Path.empty()) {
     if (!JumpToSection)
       return std::make_unique<TextNode>(Type.Name);
     else
@@ -361,13 +363,14 @@ genEnumsBlock(const std::vector<EnumInfo> &Enums,
 }
 
 static std::unique_ptr<TagNode>
-genEnumMembersBlock(const llvm::SmallVector<SmallString<16>, 4> &Members) {
+genEnumMembersBlock(const llvm::SmallVector<EnumValueInfo, 4> &Members) {
   if (Members.empty())
     return nullptr;
 
   auto List = std::make_unique<TagNode>(HTMLTag::TAG_UL);
   for (const auto &M : Members)
-    List->Children.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_LI, M));
+    List->Children.emplace_back(
+        std::make_unique<TagNode>(HTMLTag::TAG_LI, M.Name));
   return List;
 }
 
@@ -435,7 +438,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
 static std::unique_ptr<TagNode>
 writeFileDefinition(const Location &L,
-                    llvm::Optional<StringRef> RepositoryUrl = None) {
+                    std::optional<StringRef> RepositoryUrl = std::nullopt) {
   if (!L.IsFileInRootDir || !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
@@ -653,10 +656,10 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -702,10 +705,10 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -733,28 +736,29 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
 
   std::vector<std::unique_ptr<TagNode>> ChildNamespaces =
-      genReferencesBlock(I.ChildNamespaces, "Namespaces", BasePath);
+      genReferencesBlock(I.Children.Namespaces, "Namespaces", BasePath);
   AppendVector(std::move(ChildNamespaces), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.ChildRecords, "Records", BasePath);
+      genReferencesBlock(I.Children.Records, "Records", BasePath);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions, CDCtx, BasePath);
+      genFunctionsBlock(I.Children.Functions, CDCtx, BasePath);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.ChildEnums, CDCtx);
+      genEnumsBlock(I.Children.Enums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
-  if (!I.ChildNamespaces.empty())
+  if (!I.Children.Namespaces.empty())
     InfoIndex.Children.emplace_back("Namespaces", "Namespaces");
-  if (!I.ChildRecords.empty())
+  if (!I.Children.Records.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.ChildFunctions.empty())
+  if (!I.Children.Functions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.ChildFunctions, "Functions"));
-  if (!I.ChildEnums.empty())
-    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+        genInfoIndexItem(I.Children.Functions, "Functions"));
+  if (!I.Children.Enums.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.Children.Enums, "Enums"));
 
   return Out;
 }
@@ -768,10 +772,10 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
 
   if (I.DefLoc) {
     if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(I.DefLoc.value()));
+      Out.emplace_back(writeFileDefinition(*I.DefLoc));
     else
       Out.emplace_back(writeFileDefinition(
-          I.DefLoc.value(), StringRef{CDCtx.RepositoryUrl.value()}));
+          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
   }
 
   std::string Description;
@@ -801,27 +805,35 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
       genRecordMembersBlock(I.Members, I.Path);
   AppendVector(std::move(Members), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.ChildRecords, "Records", I.Path);
+      genReferencesBlock(I.Children.Records, "Records", I.Path);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions, CDCtx, I.Path);
+      genFunctionsBlock(I.Children.Functions, CDCtx, I.Path);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.ChildEnums, CDCtx);
+      genEnumsBlock(I.Children.Enums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
   if (!I.Members.empty())
     InfoIndex.Children.emplace_back("Members", "Members");
-  if (!I.ChildRecords.empty())
+  if (!I.Children.Records.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.ChildFunctions.empty())
+  if (!I.Children.Functions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.ChildFunctions, "Functions"));
-  if (!I.ChildEnums.empty())
-    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+        genInfoIndexItem(I.Children.Functions, "Functions"));
+  if (!I.Children.Enums.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.Children.Enums, "Enums"));
 
   return Out;
+}
+
+static std::vector<std::unique_ptr<TagNode>>
+genHTML(const TypedefInfo &I, const ClangDocContext &CDCtx,
+        std::string &InfoTitle) {
+  // TODO support typedefs in HTML.
+  return {};
 }
 
 /// Generator for HTML documentation.
@@ -829,12 +841,68 @@ class HTMLGenerator : public Generator {
 public:
   static const char *Format;
 
+  llvm::Error generateDocs(StringRef RootDir,
+                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                           const ClangDocContext &CDCtx) override;
+  llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
-  llvm::Error createResources(ClangDocContext &CDCtx) override;
 };
 
 const char *HTMLGenerator::Format = "html";
+
+llvm::Error
+HTMLGenerator::generateDocs(StringRef RootDir,
+                            llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+                            const ClangDocContext &CDCtx) {
+  // Track which directories we already tried to create.
+  llvm::StringSet<> CreatedDirs;
+
+  // Collect all output by file name and create the nexessary directories.
+  llvm::StringMap<std::vector<doc::Info *>> FileToInfos;
+  for (const auto &Group : Infos) {
+    doc::Info *Info = Group.getValue().get();
+
+    llvm::SmallString<128> Path;
+    llvm::sys::path::native(RootDir, Path);
+    llvm::sys::path::append(Path, Info->getRelativeFilePath(""));
+    if (CreatedDirs.find(Path) == CreatedDirs.end()) {
+      if (std::error_code Err = llvm::sys::fs::create_directories(Path);
+          Err != std::error_code()) {
+        return llvm::createStringError(Err, "Failed to create directory '%s'.",
+                                       Path.c_str());
+      }
+      CreatedDirs.insert(Path);
+    }
+
+    llvm::sys::path::append(Path, Info->getFileBaseName() + ".html");
+    FileToInfos[Path].push_back(Info);
+  }
+
+  for (const auto &Group : FileToInfos) {
+    std::error_code FileErr;
+    llvm::raw_fd_ostream InfoOS(Group.getKey(), FileErr,
+                                llvm::sys::fs::OF_None);
+    if (FileErr) {
+      return llvm::createStringError(FileErr, "Error opening file '%s'",
+                                     Group.getKey().str().c_str());
+    }
+
+    // TODO: https://github.com/llvm/llvm-project/issues/59073
+    // If there are multiple Infos for this file name (for example, template
+    // specializations), this will generate multiple complete web pages (with
+    // <DOCTYPE> and <title>, etc.) concatenated together. This generator needs
+    // some refactoring to be able to output the headers separately from the
+    // contents.
+    for (const auto &Info : Group.getValue()) {
+      if (llvm::Error Err = generateDocForInfo(Info, InfoOS, CDCtx)) {
+        return Err;
+      }
+    }
+  }
+
+  return llvm::Error::success();
+}
 
 llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                               const ClangDocContext &CDCtx) {
@@ -856,6 +924,10 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   case InfoType::IT_function:
     MainContentNodes =
         genHTML(*static_cast<clang::doc::FunctionInfo *>(I), CDCtx, "");
+    break;
+  case InfoType::IT_typedef:
+    MainContentNodes =
+        genHTML(*static_cast<clang::doc::TypedefInfo *>(I), CDCtx, InfoTitle);
     break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -881,6 +953,8 @@ static std::string getRefType(InfoType IT) {
     return "function";
   case InfoType::IT_enum:
     return "enum";
+  case InfoType::IT_typedef:
+    return "typedef";
   }
   llvm_unreachable("Unknown InfoType");
 }

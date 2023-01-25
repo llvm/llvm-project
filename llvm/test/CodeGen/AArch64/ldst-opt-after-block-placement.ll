@@ -4,7 +4,7 @@
 ; Run at O3 to make sure we can optimize load/store instructions after Machine
 ; Block Placement takes place using Tail Duplication Threshold = 4.
 
-define void @foo(i1 %cond, i64* %ptr) {
+define void @foo(i1 %cond, ptr %ptr) {
 ; CHECK-LABEL: foo:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    tbz w0, #0, .LBB0_2
@@ -26,24 +26,24 @@ entry:
   br i1 %cond, label %if.then, label %if.else
 
 if.then:
-  %0 = getelementptr inbounds i64, i64* %ptr, i64 2
-  %1 = load i64, i64* %0, align 8
-  store i64 0, i64* %0, align 8
+  %0 = getelementptr inbounds i64, ptr %ptr, i64 2
+  %1 = load i64, ptr %0, align 8
+  store i64 0, ptr %0, align 8
   br label %if.end
 
 if.else:
-  %2 = load i64, i64* %ptr, align 8
+  %2 = load i64, ptr %ptr, align 8
   br label %if.end
 
 if.end:
   %3 = phi i64 [ %1, %if.then ], [ %2, %if.else ]
-  %4 = getelementptr inbounds i64, i64* %ptr, i64 1
-  %5 = load i64, i64* %4, align 8
+  %4 = getelementptr inbounds i64, ptr %ptr, i64 1
+  %5 = load i64, ptr %4, align 8
   %6 = icmp slt i64 %3, %5
   br i1 %6, label %exit1, label %exit2
 
 exit1:
-  store i64 0, i64* %4, align 8
+  store i64 0, ptr %4, align 8
   ret void
 
 exit2:

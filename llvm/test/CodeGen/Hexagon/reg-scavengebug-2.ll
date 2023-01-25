@@ -4,25 +4,23 @@
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define void @f0(i16* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
   br i1 undef, label %b1, label %b5
 
 b1:                                               ; preds = %b0
-  %v0 = bitcast i16* %a0 to <16 x i32>*
   br label %b2
 
 b2:                                               ; preds = %b4, %b1
   %v1 = phi i32 [ 0, %b1 ], [ %v50, %b4 ]
-  %v2 = phi <16 x i32>* [ %v0, %b1 ], [ undef, %b4 ]
+  %v2 = phi ptr [ %a0, %b1 ], [ undef, %b4 ]
   br label %b3
 
 b3:                                               ; preds = %b3, %b2
   %v3 = phi i32 [ -4, %b2 ], [ %v40, %b3 ]
   %v4 = add i32 0, -64
-  %v5 = getelementptr inbounds i8, i8* null, i32 %v4
-  %v6 = bitcast i8* %v5 to <16 x i32>*
-  %v7 = load <16 x i32>, <16 x i32>* %v6, align 64, !tbaa !0
+  %v5 = getelementptr inbounds i8, ptr null, i32 %v4
+  %v7 = load <16 x i32>, ptr %v5, align 64, !tbaa !0
   %v8 = tail call <16 x i32> @llvm.hexagon.V6.vlalignbi(<16 x i32> undef, <16 x i32> %v7, i32 4)
   %v9 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v8, <16 x i32> zeroinitializer)
   %v10 = tail call <64 x i1> @llvm.hexagon.V6.vgtub(<16 x i32> %v9, <16 x i32> undef)
@@ -66,10 +64,10 @@ b4:                                               ; preds = %b3
   %v45 = tail call <32 x i32> @llvm.hexagon.V6.vshuffvdd(<16 x i32> zeroinitializer, <16 x i32> %v44, i32 -2)
   %v46 = tail call <32 x i32> @llvm.hexagon.V6.vunpackub(<16 x i32> %v42)
   %v47 = tail call <16 x i32> @llvm.hexagon.V6.lo(<32 x i32> %v45)
-  store <16 x i32> %v47, <16 x i32>* %v2, align 64, !tbaa !0
-  %v48 = getelementptr inbounds <16 x i32>, <16 x i32>* null, i32 1
+  store <16 x i32> %v47, ptr %v2, align 64, !tbaa !0
+  %v48 = getelementptr inbounds <16 x i32>, ptr null, i32 1
   %v49 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v46)
-  store <16 x i32> %v49, <16 x i32>* %v48, align 64, !tbaa !0
+  store <16 x i32> %v49, ptr %v48, align 64, !tbaa !0
   %v50 = add nsw i32 %v1, 1
   %v51 = icmp slt i32 %v50, 0
   br i1 %v51, label %b2, label %b5

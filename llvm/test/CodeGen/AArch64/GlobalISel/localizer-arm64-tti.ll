@@ -50,15 +50,15 @@ define i32 @foo() {
   ; CHECK-NEXT:   $w0 = COPY [[C6]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %0 = load i32, i32* @var1, align 4
+  %0 = load i32, ptr @var1, align 4
   %cmp = icmp eq i32 %0, 1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i32 2, i32* @var2, align 4
-  store i32 3, i32* @var1, align 4
-  store i32 2, i32* @var3, align 4
-  store i32 3, i32* @var1, align 4
+  store i32 2, ptr @var2, align 4
+  store i32 3, ptr @var1, align 4
+  store i32 2, ptr @var3, align 4
+  store i32 3, ptr @var1, align 4
   br label %if.end
 
 if.end:
@@ -101,13 +101,13 @@ define i32 @darwin_tls() {
   ; CHECK-NEXT:   $w0 = COPY [[C2]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %0 = load i32, i32* @var1, align 4
+  %0 = load i32, ptr @var1, align 4
   %cmp = icmp eq i32 %0, 1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %tls = load i32, i32* @tls_gv, align 4
-  store i32 %tls, i32* @var2, align 4
+  %tls = load i32, ptr @tls_gv, align 4
+  store i32 %tls, ptr @var2, align 4
   br label %if.end
 
 if.end:
@@ -152,21 +152,21 @@ define i32 @imm_cost_too_large_cost_of_2() {
   ; CHECK-NEXT:   $w0 = COPY [[C3]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
 entry:
-  %0 = load i32, i32* @var1, align 4
+  %0 = load i32, ptr @var1, align 4
   %cst1 = bitcast i32 -2228259 to i32
   %cmp = icmp eq i32 %0, 1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i32 %cst1, i32* @var2
+  store i32 %cst1, ptr @var2
   br label %if.then2
 
 if.then2:
-  store i32 %cst1, i32* @var1
+  store i32 %cst1, ptr @var1
   br label %if.end
 
 if.end:
-  store i32 %cst1, i32* @var3
+  store i32 %cst1, ptr @var3
   ret i32 0
 }
 
@@ -209,21 +209,21 @@ define i64 @imm_cost_too_large_cost_of_4() {
   ; CHECK-NEXT:   $x0 = COPY [[C4]](s64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
 entry:
-  %0 = load i64, i64* @var1_64, align 4
+  %0 = load i64, ptr @var1_64, align 4
   %cst1 = bitcast i64 -2228259 to i64
   %cmp = icmp eq i64 %0, 1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i64 %cst1, i64* @var2_64
+  store i64 %cst1, ptr @var2_64
   br label %if.then2
 
 if.then2:
-  store i64 %cst1, i64* @var1_64
+  store i64 %cst1, ptr @var1_64
   br label %if.end
 
 if.end:
-  store i64 %cst1, i64* @var3_64
+  store i64 %cst1, ptr @var3_64
   ret i64 0
 }
 

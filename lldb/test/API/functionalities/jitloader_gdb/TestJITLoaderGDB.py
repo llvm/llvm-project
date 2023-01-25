@@ -1,7 +1,6 @@
 """Test for the JITLoaderGDB interface"""
 
 
-import unittest2
 import os
 import lldb
 from lldbsuite.test import lldbutil

@@ -16,6 +16,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=bool -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=dataflow -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=thread -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // RUN: %clang -target x86_64-linux-gnu                     -fsanitize-coverage=func,trace-pc %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FUNC
 // CHECK-SANITIZE-COVERAGE-FUNC: fsanitize-coverage-type=1
@@ -36,7 +37,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=func %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=bb %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge %s -### 2>&1 | FileCheck %s --check-prefix=CHECK_FUNC_BB_EDGE_DEPRECATED
-// CHECK_FUNC_BB_EDGE_DEPRECATED: warning: argument '-fsanitize-coverage=[func|bb|edge]' is deprecated, use '-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc]' instead
+// CHECK_FUNC_BB_EDGE_DEPRECATED: warning: argument '-fsanitize-coverage=[func|bb|edge]' is deprecated, use '-fsanitize-coverage=[func|bb|edge],[trace-pc-guard|trace-pc],[control-flow]' instead
 
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-coverage=edge,indirect-calls,trace-pc,trace-cmp,trace-loads,trace-stores,trace-div,trace-gep %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANITIZE-COVERAGE-FEATURES
 // CHECK-SANITIZE-COVERAGE-FEATURES: -fsanitize-coverage-type=3

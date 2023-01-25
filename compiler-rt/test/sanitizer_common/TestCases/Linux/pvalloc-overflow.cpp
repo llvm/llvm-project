@@ -6,7 +6,7 @@
 
 // REQUIRES: stable-runtime
 
-// UNSUPPORTED: android, freebsd, netbsd, ubsan
+// UNSUPPORTED: android, target={{.*(freebsd|netbsd).*}}, ubsan
 
 // Checks that pvalloc overflows are caught. If the allocator is allowed to
 // return null, the errno should be set to ENOMEM.

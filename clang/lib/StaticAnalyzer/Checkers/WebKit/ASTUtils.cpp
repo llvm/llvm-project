@@ -12,8 +12,8 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include <optional>
 
-using llvm::Optional;
 namespace clang {
 
 std::pair<const Expr *, bool>
@@ -34,8 +34,7 @@ tryToFindPtrOrigin(const Expr *E, bool StopAtFirstRefCountedObj) {
     }
     if (auto *call = dyn_cast<CallExpr>(E)) {
       if (auto *memberCall = dyn_cast<CXXMemberCallExpr>(call)) {
-        Optional<bool> IsGetterOfRefCt =
-            isGetterOfRefCounted(memberCall->getMethodDecl());
+        std::optional<bool> IsGetterOfRefCt = isGetterOfRefCounted(memberCall->getMethodDecl());
         if (IsGetterOfRefCt && *IsGetterOfRefCt) {
           E = memberCall->getImplicitObjectArgument();
           if (StopAtFirstRefCountedObj) {

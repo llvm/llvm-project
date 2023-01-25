@@ -32,52 +32,50 @@
 ; SCOP-NEXT: }
 
 ; // Check that polly_mallocManaged is declared and used correctly.
-; HOST-IR: %call = tail call i8* @polly_mallocManaged(i64 400)
-; HOST-IR: declare i8* @polly_mallocManaged(i64)
+; HOST-IR: %call = tail call ptr @polly_mallocManaged(i64 400)
+; HOST-IR: declare ptr @polly_mallocManaged(i64)
 
 ; // Check that polly_freeManaged is declared and used correctly.
 ; HOST-IR  %toFreeBitcast = bitcast i32* %toFree to i8*
 ; HOST-IR  call void @polly_freeManaged(i8* %toFreeBitcast)
-; HOST-IR: declare void @polly_freeManaged(i8*)
+; HOST-IR: declare void @polly_freeManaged(ptr)
 
 ; // Check that we remove the original malloc,free
-; HOST-IR-NOT: declare i8* @malloc(i64)
-; HOST-IR-NOT: declare void @free(i8*)
+; HOST-IR-NOT: declare ptr @malloc(i64)
+; HOST-IR-NOT: declare void @free(ptr)
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define i32* @f(i32 *%toFree) {
+define ptr @f(ptr %toFree) {
 entry:
-  %toFreeBitcast = bitcast i32* %toFree to i8*
-  call void @free(i8* %toFreeBitcast)
+  call void @free(ptr %toFree)
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %call = tail call i8* @malloc(i64 400)
-  %tmp = bitcast i8* %call to i32*
+  %call = tail call ptr @malloc(i64 400)
   br label %for.body
 
 for.body:                                         ; preds = %entry.split, %for.body
   %indvars.iv1 = phi i64 [ 0, %entry.split ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %tmp, i64 %indvars.iv1
-  store i32 42, i32* %arrayidx, align 4, !tbaa !3
+  %arrayidx = getelementptr inbounds i32, ptr %call, i64 %indvars.iv1
+  store i32 42, ptr %arrayidx, align 4, !tbaa !3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv1, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 100
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body
-  ret i32* %tmp
+  ret ptr %call
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #0
 
-declare i8* @malloc(i64)
-declare void @free(i8*)
+declare ptr @malloc(i64)
+declare void @free(ptr)
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #0
 
 attributes #0 = { argmemonly nounwind }
 

@@ -84,26 +84,27 @@ LogicalResult emitc::CallOp::verify() {
   if (getCallee().empty())
     return emitOpError("callee must not be empty");
 
-  if (Optional<ArrayAttr> argsAttr = getArgs()) {
+  if (std::optional<ArrayAttr> argsAttr = getArgs()) {
     for (Attribute arg : *argsAttr) {
-      if (arg.getType().isa<IndexType>()) {
-        int64_t index = arg.cast<IntegerAttr>().getInt();
+      auto intAttr = arg.dyn_cast<IntegerAttr>();
+      if (intAttr && intAttr.getType().isa<IndexType>()) {
+        int64_t index = intAttr.getInt();
         // Args with elements of type index must be in range
         // [0..operands.size).
         if ((index < 0) || (index >= static_cast<int64_t>(getNumOperands())))
           return emitOpError("index argument is out of range");
 
         // Args with elements of type ArrayAttr must have a type.
-      } else if (arg.isa<ArrayAttr>() && arg.getType().isa<NoneType>()) {
+      } else if (arg.isa<ArrayAttr>() /*&& arg.getType().isa<NoneType>()*/) {
+        // FIXME: Array attributes never have types
         return emitOpError("array argument has no type");
       }
     }
   }
 
-  if (Optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
+  if (std::optional<ArrayAttr> templateArgsAttr = getTemplateArgs()) {
     for (Attribute tArg : *templateArgsAttr) {
-      if (!tArg.isa<TypeAttr>() && !tArg.isa<IntegerAttr>() &&
-          !tArg.isa<FloatAttr>() && !tArg.isa<emitc::OpaqueAttr>())
+      if (!tArg.isa<TypeAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>())
         return emitOpError("template argument has invalid type");
     }
   }
@@ -117,7 +118,10 @@ LogicalResult emitc::CallOp::verify() {
 
 /// The constant op requires that the attribute's type matches the return type.
 LogicalResult emitc::ConstantOp::verify() {
-  Attribute value = getValueAttr();
+  if (getValueAttr().isa<emitc::OpaqueAttr>())
+    return success();
+
+  TypedAttr value = getValueAttr();
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
@@ -125,8 +129,7 @@ LogicalResult emitc::ConstantOp::verify() {
   return success();
 }
 
-OpFoldResult emitc::ConstantOp::fold(ArrayRef<Attribute> operands) {
-  assert(operands.empty() && "constant has no operands");
+OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) {
   return getValue();
 }
 
@@ -151,7 +154,7 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr include;
   OptionalParseResult includeParseResult =
       parser.parseOptionalAttribute(include, "include", result.attributes);
-  if (!includeParseResult.hasValue())
+  if (!includeParseResult.has_value())
     return parser.emitError(parser.getNameLoc()) << "expected string attribute";
 
   if (standardInclude && parser.parseOptionalGreater())
@@ -171,7 +174,10 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
 
 /// The variable op requires that the attribute's type matches the return type.
 LogicalResult emitc::VariableOp::verify() {
-  Attribute value = getValueAttr();
+  if (getValueAttr().isa<emitc::OpaqueAttr>())
+    return success();
+
+  TypedAttr value = getValueAttr();
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
     return emitOpError() << "requires attribute's type (" << value.getType()
@@ -204,6 +210,7 @@ Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
   }
   if (parser.parseGreater())
     return Attribute();
+
   return get(parser.getContext(), value);
 }
 

@@ -10,10 +10,10 @@
 #include "src/string/memory_utils/memcpy_implementations.h"
 #include "src/string/string_utils.h"
 
+#include "src/__support/CPP/new.h"
 #include "src/__support/common.h"
 
 #include <stddef.h>
-#include <stdlib.h>
 
 namespace __llvm_libc {
 
@@ -23,8 +23,9 @@ LLVM_LIBC_FUNCTION(char *, strndup, (const char *src, size_t size)) {
   size_t len = internal::string_length(src);
   if (len > size)
     len = size;
-  char *dest = reinterpret_cast<char *>(::malloc(len + 1));
-  if (dest == nullptr)
+  AllocChecker ac;
+  char *dest = new (ac) char[len + 1];
+  if (!ac)
     return nullptr;
   inline_memcpy(dest, src, len + 1);
   dest[len] = '\0';

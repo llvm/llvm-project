@@ -19,7 +19,7 @@
 ;;       a[i][j] = a[i+1][j-2];
 ;; }
 
-define void @t1(i32 signext %n, i32 signext %m, i32* %a) {
+define void @t1(i32 signext %n, i32 signext %m, ptr %a) {
 entry:
   %0 = zext i32 %m to i64
   %1 = sext i32 %m to i64
@@ -37,14 +37,14 @@ for.body4:                                        ; preds = %for.body, %for.body
   %indvars.iv6 = phi i64 [ %indvars.iv.next, %for.body4 ], [ 2, %for.body ]
   %3 = add nuw nsw i64 %indvars.iv28, 1
   %4 = mul nuw nsw i64 %3, %0
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %4
   %5 = add nsw i64 %indvars.iv6, -2
-  %arrayidx7 = getelementptr inbounds i32, i32* %arrayidx, i64 %5
-  %6 = load i32, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %arrayidx, i64 %5
+  %6 = load i32, ptr %arrayidx7, align 4
   %7 = mul nuw nsw i64 %indvars.iv28, %0
-  %arrayidx9 = getelementptr inbounds i32, i32* %a, i64 %7
-  %arrayidx11 = getelementptr inbounds i32, i32* %arrayidx9, i64 %indvars.iv6
-  store i32 %6, i32* %arrayidx11, align 4
+  %arrayidx9 = getelementptr inbounds i32, ptr %a, i64 %7
+  %arrayidx11 = getelementptr inbounds i32, ptr %arrayidx9, i64 %indvars.iv6
+  store i32 %6, ptr %arrayidx11, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv6, 1
   %cmp2 = icmp slt i64 %indvars.iv.next, %1
   br i1 %cmp2, label %for.body4, label %for.inc12
@@ -78,7 +78,7 @@ for.end14:                                        ; preds = %entry, %for.inc12
 ;;             a[i1][i2][i3][i4][i5] = a[i1+1][i2-2][i3][i4-3][i5+2];
 ;; }
 
-define void @t2(i32 signext %n, i32 signext %m, i32* %a) {
+define void @t2(i32 signext %n, i32 signext %m, ptr %a) {
 entry:
   %0 = zext i32 %n to i64
   %1 = zext i32 %n to i64
@@ -121,37 +121,37 @@ for.body17:                                       ; preds = %for.body12, %for.bo
   %9 = mul nuw i64 %8, %2
   %10 = mul nuw i64 %9, %3
   %11 = mul nsw i64 %10, %7
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %11
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %11
   %12 = add nsw i64 %indvars.iv924, -2
   %13 = mul nuw i64 %1, %2
   %14 = mul nuw i64 %13, %3
   %15 = mul nsw i64 %14, %12
-  %arrayidx20 = getelementptr inbounds i32, i32* %arrayidx, i64 %15
+  %arrayidx20 = getelementptr inbounds i32, ptr %arrayidx, i64 %15
   %16 = mul nuw i64 %2, %3
   %17 = mul nsw i64 %16, %indvars.iv521
-  %arrayidx22 = getelementptr inbounds i32, i32* %arrayidx20, i64 %17
+  %arrayidx22 = getelementptr inbounds i32, ptr %arrayidx20, i64 %17
   %18 = add nsw i64 %indvars.iv218, -3
   %19 = mul nuw nsw i64 %18, %3
-  %arrayidx25 = getelementptr inbounds i32, i32* %arrayidx22, i64 %19
+  %arrayidx25 = getelementptr inbounds i32, ptr %arrayidx22, i64 %19
   %20 = add nuw nsw i64 %indvars.iv16, 2
-  %arrayidx28 = getelementptr inbounds i32, i32* %arrayidx25, i64 %20
-  %21 = load i32, i32* %arrayidx28, align 4
+  %arrayidx28 = getelementptr inbounds i32, ptr %arrayidx25, i64 %20
+  %21 = load i32, ptr %arrayidx28, align 4
   %22 = mul nuw i64 %0, %1
   %23 = mul nuw i64 %22, %2
   %24 = mul nuw i64 %23, %3
   %25 = mul nsw i64 %24, %indvars.iv1227
-  %arrayidx30 = getelementptr inbounds i32, i32* %a, i64 %25
+  %arrayidx30 = getelementptr inbounds i32, ptr %a, i64 %25
   %26 = mul nuw i64 %1, %2
   %27 = mul nuw i64 %26, %3
   %28 = mul nsw i64 %27, %indvars.iv924
-  %arrayidx32 = getelementptr inbounds i32, i32* %arrayidx30, i64 %28
+  %arrayidx32 = getelementptr inbounds i32, ptr %arrayidx30, i64 %28
   %29 = mul nuw i64 %2, %3
   %30 = mul nsw i64 %29, %indvars.iv521
-  %arrayidx34 = getelementptr inbounds i32, i32* %arrayidx32, i64 %30
+  %arrayidx34 = getelementptr inbounds i32, ptr %arrayidx32, i64 %30
   %31 = mul nuw nsw i64 %indvars.iv218, %3
-  %arrayidx36 = getelementptr inbounds i32, i32* %arrayidx34, i64 %31
-  %arrayidx38 = getelementptr inbounds i32, i32* %arrayidx36, i64 %indvars.iv16
-  store i32 %21, i32* %arrayidx38, align 4
+  %arrayidx36 = getelementptr inbounds i32, ptr %arrayidx34, i64 %31
+  %arrayidx38 = getelementptr inbounds i32, ptr %arrayidx36, i64 %indvars.iv16
+  store i32 %21, ptr %arrayidx38, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv16, 1
   %cmp15 = icmp slt i64 %indvars.iv.next, %6
   br i1 %cmp15, label %for.body17, label %for.inc39
@@ -202,7 +202,7 @@ for.end50:                                        ; preds = %entry, %for.inc48
 ;;       a[i][j] = a[i+1][j-2];
 ;; }
 
-define void @t3(i64 %n, i64 %m, i64 %lb, float* %a) {
+define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 entry:
   %0 = add i64 %n, -1
   %exitcond3 = icmp ne i64 0, %0
@@ -223,16 +223,14 @@ for.body4:                                        ; preds = %for.body4.preheader
   %j.02 = phi i64 [ %inc, %for.body4 ], [ %lb, %for.body4.preheader ]
   %add = add i64 %i.04, 1
   %1 = mul nsw i64 %add, %m
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %1
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %1
   %sub5 = add i64 %j.02, -2
-  %arrayidx6 = getelementptr inbounds float, float* %arrayidx, i64 %sub5
-  %2 = bitcast float* %arrayidx6 to i32*
-  %3 = load i32, i32* %2, align 4
-  %4 = mul nsw i64 %i.04, %m
-  %arrayidx7 = getelementptr inbounds float, float* %a, i64 %4
-  %arrayidx8 = getelementptr inbounds float, float* %arrayidx7, i64 %j.02
-  %5 = bitcast float* %arrayidx8 to i32*
-  store i32 %3, i32* %5, align 4
+  %arrayidx6 = getelementptr inbounds float, ptr %arrayidx, i64 %sub5
+  %2 = load i32, ptr %arrayidx6, align 4
+  %3 = mul nsw i64 %i.04, %m
+  %arrayidx7 = getelementptr inbounds float, ptr %a, i64 %3
+  %arrayidx8 = getelementptr inbounds float, ptr %arrayidx7, i64 %j.02
+  store i32 %2, ptr %arrayidx8, align 4
   %inc = add i64 %j.02, 1
   %cmp2 = icmp ult i64 %inc, %m
   br i1 %cmp2, label %for.body4, label %for.inc9.loopexit

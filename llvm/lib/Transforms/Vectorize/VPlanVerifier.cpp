@@ -14,6 +14,7 @@
 
 #include "VPlanVerifier.h"
 #include "VPlan.h"
+#include "VPlanCFG.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -43,9 +44,7 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 /// \p Region. Checks in this function are generic for VPBlockBases. They are
 /// not specific for VPBasicBlocks or VPRegionBlocks.
 static void verifyBlocksInRegion(const VPRegionBlock *Region) {
-  for (const VPBlockBase *VPB : make_range(
-           df_iterator<const VPBlockBase *>::begin(Region->getEntry()),
-           df_iterator<const VPBlockBase *>::end(Region->getExiting()))) {
+  for (const VPBlockBase *VPB : vp_depth_first_shallow(Region->getEntry())) {
     // Check block's parent.
     assert(VPB->getParent() == Region && "VPBlockBase has wrong parent");
 
@@ -133,17 +132,38 @@ void VPlanVerifier::verifyHierarchicalCFG(
   verifyRegionRec(TopRegion);
 }
 
-static bool
-verifyVPBasicBlock(const VPBasicBlock *VPBB,
-                   DenseMap<const VPBlockBase *, unsigned> &BlockNumbering) {
-  // Verify that phi-like recipes are at the beginning of the block, with no
-  // other recipes in between.
+// Verify that phi-like recipes are at the beginning of \p VPBB, with no
+// other recipes in between. Also check that only header blocks contain
+// VPHeaderPHIRecipes.
+static bool verifyPhiRecipes(const VPBasicBlock *VPBB) {
   auto RecipeI = VPBB->begin();
   auto End = VPBB->end();
   unsigned NumActiveLaneMaskPhiRecipes = 0;
+  const VPRegionBlock *ParentR = VPBB->getParent();
+  bool IsHeaderVPBB = ParentR && !ParentR->isReplicator() &&
+                      ParentR->getEntryBasicBlock() == VPBB;
   while (RecipeI != End && RecipeI->isPhi()) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
+
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe>(*RecipeI)) {
+      errs() << "Found non-header PHI recipe in header VPBB";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      errs() << ": ";
+      RecipeI->dump();
+#endif
+      return false;
+    }
+
+    if (!IsHeaderVPBB && isa<VPHeaderPHIRecipe>(*RecipeI)) {
+      errs() << "Found header PHI recipe in non-header VPBB";
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      errs() << ": ";
+      RecipeI->dump();
+#endif
+      return false;
+    }
+
     RecipeI++;
   }
 
@@ -166,6 +186,14 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
     }
     RecipeI++;
   }
+  return true;
+}
+
+static bool
+verifyVPBasicBlock(const VPBasicBlock *VPBB,
+                   DenseMap<const VPBlockBase *, unsigned> &BlockNumbering) {
+  if (!verifyPhiRecipes(VPBB))
+    return false;
 
   // Verify that defs in VPBB dominate all their uses. The current
   // implementation is still incomplete.
@@ -224,8 +252,7 @@ verifyVPBasicBlock(const VPBasicBlock *VPBB,
 bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
   DenseMap<const VPBlockBase *, unsigned> BlockNumbering;
   unsigned Cnt = 0;
-  auto Iter = depth_first(
-      VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(Plan.getEntry()));
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
   for (const VPBlockBase *VPB : Iter) {
     BlockNumbering[VPB] = Cnt++;
     auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
@@ -270,8 +297,7 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
 
   for (const VPRegionBlock *Region :
        VPBlockUtils::blocksOnly<const VPRegionBlock>(
-           depth_first(VPBlockRecursiveTraversalWrapper<const VPBlockBase *>(
-               Plan.getEntry())))) {
+           vp_depth_first_deep(Plan.getEntry()))) {
     if (Region->getEntry()->getNumPredecessors() != 0) {
       errs() << "region entry block has predecessors\n";
       return false;
@@ -282,7 +308,7 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
     }
   }
 
-  for (auto &KV : Plan.getLiveOuts())
+  for (const auto &KV : Plan.getLiveOuts())
     if (KV.second->getNumOperands() != 1) {
       errs() << "live outs must have a single operand\n";
       return false;

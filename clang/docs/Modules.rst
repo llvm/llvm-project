@@ -102,6 +102,11 @@ Using Modules
 =============
 To enable modules, pass the command-line flag ``-fmodules``. This will make any modules-enabled software libraries available as modules as well as introducing any modules-specific syntax. Additional `command-line parameters`_ are described in a separate section later.
 
+Standard C++ Modules
+--------------------
+.. note::
+  Modules are adopted into C++20 Standard. And its semantic and command line interface are very different from the Clang C++ modules. See `StandardCPlusPlusModules <StandardCPlusPlusModules.html>`_ for details.
+
 Objective-C Import declaration
 ------------------------------
 Objective-C provides syntax for importing a module via an *@import declaration*, which imports the named module:

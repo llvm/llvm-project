@@ -13,7 +13,7 @@ define arm_aapcs_vfpcc <4 x i32> @vector_add_by_value(<4 x i32> %lhs, <4 x i32>%
   ret <4 x i32> %result
 }
 
-define void @vector_add_by_reference(<4 x i32>* %resultp, <4 x i32>* %lhsp, <4 x i32>* %rhsp) {
+define void @vector_add_by_reference(ptr %resultp, ptr %lhsp, ptr %rhsp) {
 ; CHECK-LABEL: vector_add_by_reference:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -23,21 +23,21 @@ define void @vector_add_by_reference(<4 x i32>* %resultp, <4 x i32>* %lhsp, <4 x
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
-  %lhs = load <4 x i32>, <4 x i32>* %lhsp, align 16
-  %rhs = load <4 x i32>, <4 x i32>* %rhsp, align 16
+  %lhs = load <4 x i32>, ptr %lhsp, align 16
+  %rhs = load <4 x i32>, ptr %rhsp, align 16
   %result = tail call <4 x i32> asm "vadd.i32 $0,$1,$2", "=t,t,t"(<4 x i32> %lhs, <4 x i32> %rhs)
-  store <4 x i32> %result, <4 x i32>* %resultp, align 16
+  store <4 x i32> %result, ptr %resultp, align 16
   ret void
 }
 
-define void @vector_f64_copy(<2 x double>* %from, <2 x double>* %to) {
+define void @vector_f64_copy(ptr %from, ptr %to) {
 ; CHECK-LABEL: vector_f64_copy:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
-  %v = load <2 x double>, <2 x double>* %from, align 16
-  store <2 x double> %v, <2 x double>* %to, align 16
+  %v = load <2 x double>, ptr %from, align 16
+  store <2 x double> %v, ptr %to, align 16
   ret void
 }
 
@@ -52,8 +52,8 @@ define arm_aapcs_vfpcc <16 x i8> @stack_slot_handling(<16 x i8> %a) #0 {
 ; CHECK-NEXT:    bx lr
 entry:
   %a.addr = alloca <16 x i8>, align 8
-  store <16 x i8> %a, <16 x i8>* %a.addr, align 8
-  %0 = load <16 x i8>, <16 x i8>* %a.addr, align 8
+  store <16 x i8> %a, ptr %a.addr, align 8
+  %0 = load <16 x i8>, ptr %a.addr, align 8
   ret <16 x i8> %0
 }
 

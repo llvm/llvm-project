@@ -1,0 +1,14 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+# Tool-specific config options.
+config.clang = "@METADATA_TEST_TARGET_CC@"
+config.target_cflags = "@METADATA_TEST_TARGET_CFLAGS@"
+config.target_arch = "x86_64"
+
+# Load common config for all compiler-rt lit tests.
+lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
+
+# Load tool-specific config that would do the real work.
+lit_config.load_config(config, "@METADATA_LIT_SOURCE_DIR@/lit.cfg.py")
+
+config.substitutions.append(("%clangxx ", " " + config.clang + " " + config.target_cflags + " "))

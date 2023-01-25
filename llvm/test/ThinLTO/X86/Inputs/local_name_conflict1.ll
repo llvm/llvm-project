@@ -15,6 +15,6 @@ entry:
 ; Function Attrs: noinline nounwind uwtable
 define internal i32 @foo() {
 entry:
-  %0 = load i32, i32* @baz, align 4
+  %0 = load i32, ptr @baz, align 4
   ret i32 %0
 }

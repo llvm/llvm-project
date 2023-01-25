@@ -13,6 +13,15 @@
 using namespace llvm;
 using namespace llvm::objcopy::macho;
 
+Section::Section(StringRef SegName, StringRef SectName)
+    : Segname(SegName), Sectname(SectName),
+      CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
+
+Section::Section(StringRef SegName, StringRef SectName, StringRef Content)
+    : Segname(SegName), Sectname(SectName),
+      CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
+      Content(Content) {}
+
 const SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) const {
   assert(Index < Symbols.size() && "invalid symbol index");
   return Symbols[Index].get();
@@ -66,6 +75,9 @@ void Object::updateLoadCommandIndexes() {
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
       break;
+    case MachO::LC_DYLIB_CODE_SIGN_DRS:
+      DylibCodeSignDRsIndex = Index;
+      break;
     case MachO::LC_DYLD_CHAINED_FIXUPS:
       ChainedFixupsCommandIndex = Index;
       break;
@@ -103,7 +115,7 @@ Error Object::removeSections(
   }
 
   auto IsDead = [&](const std::unique_ptr<SymbolEntry> &S) -> bool {
-    Optional<uint32_t> Section = S->section();
+    std::optional<uint32_t> Section = S->section();
     return (Section && !OldIndexToSection.count(*Section));
   };
 
@@ -189,7 +201,7 @@ static StringRef extractSegmentName(const char *SegName) {
                    strnlen(SegName, sizeof(MachO::segment_command::segname)));
 }
 
-Optional<StringRef> LoadCommand::getSegmentName() const {
+std::optional<StringRef> LoadCommand::getSegmentName() const {
   const MachO::macho_load_command &MLC = MachOLoadCommand;
   switch (MLC.load_command_data.cmd) {
   case MachO::LC_SEGMENT:
@@ -197,11 +209,11 @@ Optional<StringRef> LoadCommand::getSegmentName() const {
   case MachO::LC_SEGMENT_64:
     return extractSegmentName(MLC.segment_command_64_data.segname);
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
-Optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
+std::optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
   const MachO::macho_load_command &MLC = MachOLoadCommand;
   switch (MLC.load_command_data.cmd) {
   case MachO::LC_SEGMENT:
@@ -209,6 +221,6 @@ Optional<uint64_t> LoadCommand::getSegmentVMAddr() const {
   case MachO::LC_SEGMENT_64:
     return MLC.segment_command_64_data.vmaddr;
   default:
-    return None;
+    return std::nullopt;
   }
 }

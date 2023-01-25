@@ -20,33 +20,53 @@
 #include "index/SymbolLocation.h"
 #include "index/SymbolOrigin.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
+#include <optional>
+
+namespace {
+struct YIncludeHeaderWithReferences;
+}
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Symbol::IncludeHeaderWithReferences)
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::clangd::Ref)
+LLVM_YAML_IS_SEQUENCE_VECTOR(YIncludeHeaderWithReferences)
 
 namespace {
 using RefBundle =
     std::pair<clang::clangd::SymbolID, std::vector<clang::clangd::Ref>>;
 // This is a pale imitation of std::variant<Symbol, RefBundle, Relation>
 struct VariantEntry {
-  llvm::Optional<clang::clangd::Symbol> Symbol;
-  llvm::Optional<RefBundle> Refs;
-  llvm::Optional<clang::clangd::Relation> Relation;
-  llvm::Optional<clang::clangd::IncludeGraphNode> Source;
-  llvm::Optional<clang::tooling::CompileCommand> Cmd;
+  std::optional<clang::clangd::Symbol> Symbol;
+  std::optional<RefBundle> Refs;
+  std::optional<clang::clangd::Relation> Relation;
+  std::optional<clang::clangd::IncludeGraphNode> Source;
+  std::optional<clang::tooling::CompileCommand> Cmd;
 };
 // A class helps YAML to serialize the 32-bit encoded position (Line&Column),
 // as YAMLIO can't directly map bitfields.
 struct YPosition {
   uint32_t Line;
   uint32_t Column;
+};
+// A class helps YAML to serialize the IncludeHeaderWithReferences as YAMLIO
+// can't directly map bitfields.
+struct YIncludeHeaderWithReferences {
+  llvm::StringRef IncludeHeader;
+  uint32_t References;
+  clang::clangd::Symbol::IncludeDirective SupportedDirectives;
+
+  YIncludeHeaderWithReferences() = default;
+
+  YIncludeHeaderWithReferences(
+      llvm::StringRef IncludeHeader, uint32_t References,
+      clang::clangd::Symbol::IncludeDirective SupportedDirectives)
+      : IncludeHeader(IncludeHeader), References(References),
+        SupportedDirectives(SupportedDirectives) {}
 };
 
 // avoid ODR violation of specialization for non-owned CompileCommand
@@ -165,13 +185,40 @@ template <> struct MappingTraits<SymbolInfo> {
   }
 };
 
-template <>
-struct MappingTraits<clang::clangd::Symbol::IncludeHeaderWithReferences> {
-  static void mapping(IO &IO,
-                      clang::clangd::Symbol::IncludeHeaderWithReferences &Inc) {
+template <> struct ScalarBitSetTraits<clang::clangd::Symbol::IncludeDirective> {
+  static void bitset(IO &IO, clang::clangd::Symbol::IncludeDirective &Value) {
+    IO.bitSetCase(Value, "Include", clang::clangd::Symbol::Include);
+    IO.bitSetCase(Value, "Import", clang::clangd::Symbol::Import);
+  }
+};
+
+template <> struct MappingTraits<YIncludeHeaderWithReferences> {
+  static void mapping(IO &IO, YIncludeHeaderWithReferences &Inc) {
     IO.mapRequired("Header", Inc.IncludeHeader);
     IO.mapRequired("References", Inc.References);
+    IO.mapOptional("Directives", Inc.SupportedDirectives,
+                   clang::clangd::Symbol::Include);
   }
+};
+
+struct NormalizedIncludeHeaders {
+  using IncludeHeader = clang::clangd::Symbol::IncludeHeaderWithReferences;
+  NormalizedIncludeHeaders(IO &) {}
+  NormalizedIncludeHeaders(
+      IO &, const llvm::SmallVector<IncludeHeader, 1> &IncludeHeaders) {
+    for (auto &I : IncludeHeaders) {
+      Headers.emplace_back(I.IncludeHeader, I.References,
+                           I.supportedDirectives());
+    }
+  }
+
+  llvm::SmallVector<IncludeHeader, 1> denormalize(IO &) {
+    llvm::SmallVector<IncludeHeader, 1> Result;
+    for (auto &H : Headers)
+      Result.emplace_back(H.IncludeHeader, H.References, H.SupportedDirectives);
+    return Result;
+  }
+  llvm::SmallVector<YIncludeHeaderWithReferences, 1> Headers;
 };
 
 template <> struct MappingTraits<Symbol> {
@@ -179,6 +226,10 @@ template <> struct MappingTraits<Symbol> {
     MappingNormalization<NormalizedSymbolID, SymbolID> NSymbolID(IO, Sym.ID);
     MappingNormalization<NormalizedSymbolFlag, Symbol::SymbolFlag> NSymbolFlag(
         IO, Sym.Flags);
+    MappingNormalization<
+        NormalizedIncludeHeaders,
+        llvm::SmallVector<Symbol::IncludeHeaderWithReferences, 1>>
+        NIncludeHeaders(IO, Sym.IncludeHeaders);
     IO.mapRequired("ID", NSymbolID->HexString);
     IO.mapRequired("Name", Sym.Name);
     IO.mapRequired("Scope", Sym.Scope);
@@ -195,7 +246,7 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
     IO.mapOptional("Type", Sym.Type);
-    IO.mapOptional("IncludeHeaders", Sym.IncludeHeaders);
+    IO.mapOptional("IncludeHeaders", NIncludeHeaders->Headers);
   }
 };
 
@@ -428,7 +479,7 @@ llvm::Expected<IndexFileIn> readYAML(llvm::StringRef Data,
   llvm::UniqueStringSaver Strings(Arena);
   llvm::yaml::Input Yin(Data, &Strings);
   IncludeGraph Sources;
-  llvm::Optional<tooling::CompileCommand> Cmd;
+  std::optional<tooling::CompileCommand> Cmd;
   while (Yin.setCurrentDocument()) {
     llvm::yaml::EmptyContext Ctx;
     VariantEntry Variant;

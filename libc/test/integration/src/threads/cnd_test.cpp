@@ -77,7 +77,7 @@ void wait_notify_broadcast_test() {
 
   for (unsigned int i = 0; i < THRD_COUNT; ++i) {
     int retval = 0xBAD;
-    __llvm_libc::thrd_join(&threads[i], &retval);
+    __llvm_libc::thrd_join(threads[i], &retval);
     ASSERT_EQ(retval, 0);
   }
 
@@ -134,7 +134,7 @@ void single_waiter_test() {
   ASSERT_EQ(__llvm_libc::mtx_unlock(&waiter_mtx), int(thrd_success));
 
   int retval;
-  __llvm_libc::thrd_join(&waiter_thread, &retval);
+  __llvm_libc::thrd_join(waiter_thread, &retval);
   ASSERT_EQ(retval, 0x600D);
 
   __llvm_libc::mtx_destroy(&waiter_mtx);
@@ -145,7 +145,7 @@ void single_waiter_test() {
 
 } // namespace single_waiter_test
 
-int main() {
+TEST_MAIN() {
   wait_notify_broadcast_test::wait_notify_broadcast_test();
   single_waiter_test::single_waiter_test();
   return 0;

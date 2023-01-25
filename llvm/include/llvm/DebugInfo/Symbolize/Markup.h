@@ -16,9 +16,6 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_MARKUP_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_MARKUP_H
 
-#include <iostream>
-
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -81,18 +78,18 @@ public:
   /// Calling nextNode() may invalidate the contents of the node returned by the
   /// previous call.
   ///
-  /// \returns the next markup node or None if none remain.
-  Optional<MarkupNode> nextNode();
+  /// \returns the next markup node or std::nullopt if none remain.
+  std::optional<MarkupNode> nextNode();
 
   bool isSGR(const MarkupNode &Node) const {
     return SGRSyntax.match(Node.Text);
   }
 
 private:
-  Optional<MarkupNode> parseElement(StringRef Line);
+  std::optional<MarkupNode> parseElement(StringRef Line);
   void parseTextOutsideMarkup(StringRef Text);
-  Optional<StringRef> parseMultiLineBegin(StringRef Line);
-  Optional<StringRef> parseMultiLineEnd(StringRef Line);
+  std::optional<StringRef> parseMultiLineBegin(StringRef Line);
+  std::optional<StringRef> parseMultiLineEnd(StringRef Line);
 
   // Tags of elements that can span multiple lines.
   const StringSet<> MultilineTags;

@@ -1,9 +1,9 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --triple=armv5-none-linux-gnueabi | FileCheck %s
 // RUN: ld.lld %t -o %t3 --shared
-// RUN: llvm-objdump -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t3 --triple=armv5-none-linux-gnueabi | FileCheck --check-prefix=CHECK-PI %s
 
 // Test ARM Thumb Interworking on older Arm architectures using Thunks that do
 // not use MOVT/MOVW instructions.
@@ -27,7 +27,7 @@ _start:
         bx lr
 
 // CHECK: <_start>:
-// CHECK-NEXT: 21000: ea000003        b       0x21014 <__ARMv5ABSLongThunk_thumb_func>
+// CHECK-NEXT: 21000: ea000003        b       0x21014 <__ARMv5LongLdrPcThunk_thumb_func>
 // CHECK-NEXT: 21004: fa000001        blx     0x21010 <thumb_func>
 // CHECK-NEXT: 21008: fa000000        blx     0x21010 <thumb_func>
 // CHECK-NEXT: 2100c: e12fff1e        bx      lr
@@ -35,13 +35,13 @@ _start:
 // CHECK: <thumb_func>:
 // CHECK-NEXT: 21010: 4770    bx      lr
 
-// CHECK: <__ARMv5ABSLongThunk_thumb_func>:
+// CHECK: <__ARMv5LongLdrPcThunk_thumb_func>:
 // CHECK-NEXT: 21014: e51ff004        ldr     pc, [pc, #-4]
 // CHECK: <$d>:
 // CHECK-NEXT: 21018: 11 10 02 00     .word   0x00021011
 
 // CHECK-PI: <_start>:
-// CHECK-PI-NEXT: 11000: ea000003        b       0x11014 <__ARMV5PILongThunk_thumb_func>
+// CHECK-PI-NEXT: 11000: ea000003        b       0x11014 <__ARMv4PILongBXThunk_thumb_func>
 // CHECK-PI-NEXT: 11004: fa000001        blx     0x11010 <thumb_func>
 // CHECK-PI-NEXT: 11008: fa000000        blx     0x11010 <thumb_func>
 // CHECK-PI-NEXT: 1100c: e12fff1e        bx      lr
@@ -49,7 +49,7 @@ _start:
 // CHECK-PI: <thumb_func>:
 // CHECK-PI-NEXT: 11010: 4770    bx      lr
 
-// CHECK-PI: <__ARMV5PILongThunk_thumb_func>:
+// CHECK-PI: <__ARMv4PILongBXThunk_thumb_func>:
 // CHECK-PI-NEXT: 11014: e59fc004        ldr     r12, [pc, #4]
 // CHECK-PI-NEXT: 11018: e08fc00c        add     r12, pc, r12
 // CHECK-PI-NEXT: 1101c: e12fff1c        bx      r12

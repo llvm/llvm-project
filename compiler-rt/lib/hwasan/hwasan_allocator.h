@@ -17,6 +17,7 @@
 #include "hwasan_interface_internal.h"
 #include "hwasan_mapping.h"
 #include "hwasan_poisoning.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -24,25 +25,31 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
 
-#if !defined(__aarch64__) && !defined(__x86_64__)
-#error Unsupported platform
+#if !defined(__aarch64__) && !defined(__x86_64__) && !(SANITIZER_RISCV64)
+#  error Unsupported platform
 #endif
 
 namespace __hwasan {
 
 struct Metadata {
+ private:
+  atomic_uint64_t alloc_context_id;
   u32 requested_size_low;
-  u32 requested_size_high : 31;
-  u32 right_aligned : 1;
-  u32 alloc_context_id;
-  u64 get_requested_size() {
-    return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
-  }
-  void set_requested_size(u64 size) {
-    requested_size_low = size & ((1ul << 32) - 1);
-    requested_size_high = size >> 32;
-  }
+  u16 requested_size_high;
+  atomic_uint8_t chunk_state;
+  u8 lsan_tag;
+
+ public:
+  inline void SetAllocated(u32 stack, u64 size);
+  inline void SetUnallocated();
+
+  inline bool IsAllocated() const;
+  inline u64 GetRequestedSize() const;
+  inline u32 GetAllocStackId() const;
+  inline void SetLsanTag(__lsan::ChunkTag tag);
+  inline __lsan::ChunkTag GetLsanTag() const;
 };
+static_assert(sizeof(Metadata) == 16);
 
 struct HwasanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { UpdateMemoryUsage(); }
@@ -88,7 +95,10 @@ class HwasanChunkView {
   uptr ActualSize() const;     // Size allocated by the allocator.
   u32 GetAllocStackId() const;
   bool FromSmallHeap() const;
+  bool AddrIsInside(uptr addr) const;
+
  private:
+  friend class __lsan::LsanMetadata;
   uptr block_;
   Metadata *const metadata_;
 };

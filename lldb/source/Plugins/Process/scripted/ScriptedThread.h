@@ -58,6 +58,8 @@ public:
 
   void ClearStackFrames() override;
 
+  StructuredData::ObjectSP FetchThreadExtendedInfo() override;
+
 private:
   void CheckInterpreterAndScriptObject() const;
   lldb::ScriptedThreadInterfaceSP GetInterface() const;

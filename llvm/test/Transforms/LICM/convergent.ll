@@ -1,11 +1,11 @@
-; RUN: opt < %s -S -licm | FileCheck %s
+; RUN: opt < %s -S -passes=licm | FileCheck %s
 
 ; Check that we do not hoist convergent functions out of loop
 ; CHECK: define i32 @test
 ; CHECK: loop:
 ; CHECK: call i32 @f
 
-define i32 @test(i32* nocapture noalias %x, i32* nocapture %y) {
+define i32 @test(ptr nocapture noalias %x, ptr nocapture %y) {
 entry:
   br label %loop
 

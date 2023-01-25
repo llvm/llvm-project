@@ -160,9 +160,10 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB9_3: # %res_block
-; X86-NEXT:    setae %al
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpw %si, %dx
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 3) nounwind
@@ -292,9 +293,10 @@ define i32 @length5(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB16_3: # %res_block
-; X86-NEXT:    setae %al
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %esi, %edx
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i32 5) nounwind
@@ -337,9 +339,10 @@ define i1 @length5_lt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    subl %ecx, %eax
 ; X86-NEXT:    jmp .LBB18_2
 ; X86-NEXT:  .LBB18_3: # %res_block
-; X86-NEXT:    setae %al
-; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl %esi, %edx
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB18_2: # %endblock
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -373,8 +376,8 @@ define i32 @length7(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:  .LBB19_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB19_3: # %endblock
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -422,8 +425,8 @@ define i1 @length7_lt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:  .LBB21_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB21_3: # %endblock
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -457,8 +460,8 @@ define i32 @length8(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:  .LBB22_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB22_3: # %endblock
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -619,8 +622,8 @@ define i32 @length12(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:  .LBB29_3: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB29_4: # %endblock
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -744,8 +747,8 @@ define i32 @length16(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:  .LBB33_4: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB33_5: # %endblock
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -858,8 +861,8 @@ define i1 @length16_lt(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:  .LBB35_4: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    setae %al
-; X86-NEXT:    leal -1(%eax,%eax), %eax
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    orl $1, %eax
 ; X86-NEXT:  .LBB35_5: # %endblock
 ; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -907,8 +910,8 @@ define i1 @length16_gt(ptr %x, ptr %y) nounwind {
 ; X86-NEXT:  .LBB36_4: # %res_block
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl %ecx, %eax
-; X86-NEXT:    setae %dl
-; X86-NEXT:    leal -1(%edx,%edx), %edx
+; X86-NEXT:    sbbl %edx, %edx
+; X86-NEXT:    orl $1, %edx
 ; X86-NEXT:  .LBB36_5: # %endblock
 ; X86-NEXT:    testl %edx, %edx
 ; X86-NEXT:    setg %al
@@ -1612,12 +1615,12 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
-; X86-SSE2-NEXT:    pand %xmm0, %xmm3
-; X86-SSE2-NEXT:    pand %xmm2, %xmm3
-; X86-SSE2-NEXT:    pmovmskb %xmm3, %eax
+; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X86-SSE2-NEXT:    pand %xmm0, %xmm2
+; X86-SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    retl
@@ -1632,12 +1635,12 @@ define i1 @length48_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
 ; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
-; X86-SSE41-NEXT:    por %xmm0, %xmm3
-; X86-SSE41-NEXT:    por %xmm2, %xmm3
-; X86-SSE41-NEXT:    ptest %xmm3, %xmm3
+; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm2
+; X86-SSE41-NEXT:    por %xmm0, %xmm2
+; X86-SSE41-NEXT:    ptest %xmm2, %xmm2
 ; X86-SSE41-NEXT:    sete %al
 ; X86-SSE41-NEXT:    retl
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i32 48) nounwind
@@ -1710,12 +1713,12 @@ define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
 ; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
-; X86-SSE2-NEXT:    pand %xmm0, %xmm3
-; X86-SSE2-NEXT:    pand %xmm2, %xmm3
-; X86-SSE2-NEXT:    pmovmskb %xmm3, %eax
+; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X86-SSE2-NEXT:    pand %xmm0, %xmm2
+; X86-SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    retl
@@ -1730,12 +1733,12 @@ define i1 @length48_eq_prefer128(ptr %x, ptr %y) nounwind "prefer-vector-width"=
 ; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
 ; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
 ; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
-; X86-SSE41-NEXT:    por %xmm0, %xmm3
-; X86-SSE41-NEXT:    por %xmm2, %xmm3
-; X86-SSE41-NEXT:    ptest %xmm3, %xmm3
+; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm2
+; X86-SSE41-NEXT:    por %xmm0, %xmm2
+; X86-SSE41-NEXT:    ptest %xmm2, %xmm2
 ; X86-SSE41-NEXT:    sete %al
 ; X86-SSE41-NEXT:    retl
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i32 48) nounwind
@@ -1774,8 +1777,8 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
-; X86-SSE2-NEXT:    pand %xmm1, %xmm2
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm2
 ; X86-SSE2-NEXT:    pmovmskb %xmm2, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
@@ -1790,8 +1793,8 @@ define i1 @length48_eq_const(ptr %X) nounwind {
 ; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm2
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE41-NEXT:    por %xmm1, %xmm0
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
-; X86-SSE41-NEXT:    por %xmm1, %xmm2
 ; X86-SSE41-NEXT:    por %xmm0, %xmm2
 ; X86-SSE41-NEXT:    ptest %xmm2, %xmm2
 ; X86-SSE41-NEXT:    setne %al
@@ -1841,22 +1844,22 @@ define i1 @length63_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm1
-; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
-; X86-SSE2-NEXT:    movdqu 47(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu 47(%eax), %xmm4
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm4
-; X86-SSE2-NEXT:    pand %xmm3, %xmm4
-; X86-SSE2-NEXT:    pand %xmm1, %xmm4
-; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    pmovmskb %xmm4, %eax
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X86-SSE2-NEXT:    movdqu 47(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 47(%eax), %xmm3
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
+; X86-SSE2-NEXT:    pand %xmm2, %xmm3
+; X86-SSE2-NEXT:    pand %xmm0, %xmm3
+; X86-SSE2-NEXT:    pmovmskb %xmm3, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    retl
@@ -1865,22 +1868,22 @@ define i1 @length63_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm1
-; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm3
-; X86-SSE41-NEXT:    movdqu 47(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu 47(%eax), %xmm4
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm4
-; X86-SSE41-NEXT:    por %xmm3, %xmm4
-; X86-SSE41-NEXT:    por %xmm1, %xmm4
-; X86-SSE41-NEXT:    por %xmm0, %xmm4
-; X86-SSE41-NEXT:    ptest %xmm4, %xmm4
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
+; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm2
+; X86-SSE41-NEXT:    movdqu 47(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 47(%eax), %xmm3
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
+; X86-SSE41-NEXT:    por %xmm2, %xmm3
+; X86-SSE41-NEXT:    por %xmm0, %xmm3
+; X86-SSE41-NEXT:    ptest %xmm3, %xmm3
 ; X86-SSE41-NEXT:    setne %al
 ; X86-SSE41-NEXT:    retl
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i32 63) nounwind
@@ -1954,9 +1957,9 @@ define i1 @length63_eq_const(ptr %X) nounwind {
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE2-NEXT:    pand %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
@@ -1973,9 +1976,9 @@ define i1 @length63_eq_const(ptr %X) nounwind {
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE41-NEXT:    por %xmm3, %xmm2
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE41-NEXT:    por %xmm2, %xmm1
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    por %xmm1, %xmm0
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    sete %al
 ; X86-SSE41-NEXT:    retl
@@ -2024,22 +2027,22 @@ define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movdqu (%ecx), %xmm1
-; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm1
-; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
-; X86-SSE2-NEXT:    movdqu 48(%ecx), %xmm2
-; X86-SSE2-NEXT:    movdqu 48(%eax), %xmm4
-; X86-SSE2-NEXT:    pcmpeqb %xmm2, %xmm4
-; X86-SSE2-NEXT:    pand %xmm3, %xmm4
-; X86-SSE2-NEXT:    pand %xmm1, %xmm4
-; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    pmovmskb %xmm4, %eax
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X86-SSE2-NEXT:    movdqu 48(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu 48(%eax), %xmm3
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm3
+; X86-SSE2-NEXT:    pand %xmm2, %xmm3
+; X86-SSE2-NEXT:    pand %xmm0, %xmm3
+; X86-SSE2-NEXT:    pmovmskb %xmm3, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    setne %al
 ; X86-SSE2-NEXT:    retl
@@ -2048,22 +2051,22 @@ define i1 @length64_eq(ptr %x, ptr %y) nounwind {
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE41-NEXT:    movdqu (%ecx), %xmm1
-; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu (%eax), %xmm0
+; X86-SSE41-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE41-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm0, %xmm2
+; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm0
 ; X86-SSE41-NEXT:    pxor %xmm1, %xmm0
-; X86-SSE41-NEXT:    movdqu 16(%eax), %xmm1
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm1
-; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm3
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm3
-; X86-SSE41-NEXT:    movdqu 48(%ecx), %xmm2
-; X86-SSE41-NEXT:    movdqu 48(%eax), %xmm4
-; X86-SSE41-NEXT:    pxor %xmm2, %xmm4
-; X86-SSE41-NEXT:    por %xmm3, %xmm4
-; X86-SSE41-NEXT:    por %xmm1, %xmm4
-; X86-SSE41-NEXT:    por %xmm0, %xmm4
-; X86-SSE41-NEXT:    ptest %xmm4, %xmm4
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
+; X86-SSE41-NEXT:    movdqu 32(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 32(%eax), %xmm2
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm2
+; X86-SSE41-NEXT:    movdqu 48(%ecx), %xmm1
+; X86-SSE41-NEXT:    movdqu 48(%eax), %xmm3
+; X86-SSE41-NEXT:    pxor %xmm1, %xmm3
+; X86-SSE41-NEXT:    por %xmm2, %xmm3
+; X86-SSE41-NEXT:    por %xmm0, %xmm3
+; X86-SSE41-NEXT:    ptest %xmm3, %xmm3
 ; X86-SSE41-NEXT:    setne %al
 ; X86-SSE41-NEXT:    retl
   %call = tail call i32 @memcmp(ptr %x, ptr %y, i32 64) nounwind
@@ -2137,9 +2140,9 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm2
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE2-NEXT:    pand %xmm2, %xmm1
 ; X86-SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X86-SSE2-NEXT:    sete %al
@@ -2156,9 +2159,9 @@ define i1 @length64_eq_const(ptr %X) nounwind {
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
 ; X86-SSE41-NEXT:    por %xmm3, %xmm2
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-SSE41-NEXT:    por %xmm2, %xmm1
 ; X86-SSE41-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE41-NEXT:    por %xmm1, %xmm0
+; X86-SSE41-NEXT:    por %xmm2, %xmm0
 ; X86-SSE41-NEXT:    ptest %xmm0, %xmm0
 ; X86-SSE41-NEXT:    sete %al
 ; X86-SSE41-NEXT:    retl

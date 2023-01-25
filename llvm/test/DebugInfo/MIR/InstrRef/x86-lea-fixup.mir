@@ -13,6 +13,7 @@
 name:            pr43758
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rax' }
   - { reg: '$rbp' }
@@ -32,6 +33,7 @@ name:            test_mul_spec
 # HASWELL-LABEL: name: test_mul_spec
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$edi' }
 frameInfo:
@@ -59,6 +61,7 @@ name:            testthree
 # ATOM-LABEL: name: testthree
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -84,6 +87,7 @@ name:            testfour
 alignment:       16
 tracksRegLiveness: true
 tracksDebugUserValues: true
+debugInstrRef: true
 liveins:
   - { reg: '$esi' }
 frameInfo:

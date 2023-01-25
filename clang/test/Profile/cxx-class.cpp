@@ -1,6 +1,6 @@
 // Tests for instrumentation of C++ methods, constructors, and destructors.
 
-// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument=clang -triple %itanium_abi_triple > %tgen
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument=clang -triple %itanium_abi_triple > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=CTRGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=DTRGEN %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=MTHGEN %s
@@ -9,7 +9,7 @@
 // RUN: FileCheck --input-file=%tgen -check-prefix=VDTRGEN %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-class.proftext -o %t.profdata
-// RUN: %clang_cc1 -no-opaque-pointers %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -triple %itanium_abi_triple > %tuse
+// RUN: %clang_cc1 %s -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata -triple %itanium_abi_triple > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=CTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=DTRUSE %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=MTHUSE %s
@@ -22,7 +22,7 @@ public:
   int Member;
   // CTRGEN-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
   // CTRUSE-LABEL: define {{.*}} @_ZN6SimpleC2Ei(
-  // CTRGEN: store {{.*}} @[[SCC:__profc__ZN6SimpleC2Ei]], i32 0, i32 0
+  // CTRGEN: store {{.*}} @[[SCC:__profc__ZN6SimpleC2Ei]]
   explicit Simple(int Member) : Member(Member) {
     // CTRGEN: store {{.*}} @[[SCC]], i32 0, i32 1
     // CTRUSE: br {{.*}} !prof ![[SC1:[0-9]+]]
@@ -35,7 +35,7 @@ public:
 
   // DTRGEN-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
   // DTRUSE-LABEL: define {{.*}} @_ZN6SimpleD2Ev(
-  // DTRGEN: store {{.*}} @[[SDC:__profc__ZN6SimpleD2Ev]], i32 0, i32 0
+  // DTRGEN: store {{.*}} @[[SDC:__profc__ZN6SimpleD2Ev]]
   ~Simple() {
     // DTRGEN: store {{.*}} @[[SDC]], i32 0, i32 1
     // DTRUSE: br {{.*}} !prof ![[SD1:[0-9]+]]
@@ -48,7 +48,7 @@ public:
 
   // MTHGEN-LABEL: define {{.*}} @_ZN6Simple6methodEv(
   // MTHUSE-LABEL: define {{.*}} @_ZN6Simple6methodEv(
-  // MTHGEN: store {{.*}} @[[SMC:__profc__ZN6Simple6methodEv]], i32 0, i32 0
+  // MTHGEN: store {{.*}} @[[SMC:__profc__ZN6Simple6methodEv]]
   void method() {
     // MTHGEN: store {{.*}} @[[SMC]], i32 0, i32 1
     // MTHUSE: br {{.*}} !prof ![[SM1:[0-9]+]]
@@ -64,7 +64,7 @@ class Derived : virtual public Simple {
 public:
   // VCTRGEN-LABEL: define {{.*}} @_ZN7DerivedC1Ev(
   // VCTRUSE-LABEL: define {{.*}} @_ZN7DerivedC1Ev(
-  // VCTRGEN: store {{.*}} @[[SCC:__profc__ZN7DerivedC1Ev]], i32 0, i32 0
+  // VCTRGEN: store {{.*}} @[[SCC:__profc__ZN7DerivedC1Ev]]
   Derived() : Simple(0) {
     // VCTRGEN: store {{.*}} @[[SCC]], i32 0, i32 1
     // VCTRUSE: br {{.*}} !prof ![[SC1:[0-9]+]]
@@ -77,7 +77,7 @@ public:
 
   // VDTRGEN-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
   // VDTRUSE-LABEL: define {{.*}} @_ZN7DerivedD2Ev(
-  // VDTRGEN: store {{.*}} @[[SDC:__profc__ZN7DerivedD2Ev]], i32 0, i32 0
+  // VDTRGEN: store {{.*}} @[[SDC:__profc__ZN7DerivedD2Ev]]
   ~Derived() {
     // VDTRGEN: store {{.*}} @[[SDC]], i32 0, i32 1
     // VDTRUSE: br {{.*}} !prof ![[SD1:[0-9]+]]
@@ -91,7 +91,7 @@ public:
 
 // WRPGEN-LABEL: define {{.*}} @_Z14simple_wrapperv(
 // WRPUSE-LABEL: define {{.*}} @_Z14simple_wrapperv(
-// WRPGEN: store {{.*}} @[[SWC:__profc__Z14simple_wrapperv]], i32 0, i32 0
+// WRPGEN: store {{.*}} @[[SWC:__profc__Z14simple_wrapperv]]
 void simple_wrapper() {
   // WRPGEN: store {{.*}} @[[SWC]], i32 0, i32 1
   // WRPUSE: br {{.*}} !prof ![[SW1:[0-9]+]]

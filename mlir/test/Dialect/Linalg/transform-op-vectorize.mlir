@@ -16,22 +16,11 @@ func.func @vectorize_matmul(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  pdl.pattern @pdl_target : benefit(1) {
-    %args = operands
-    %results = types
-    %0 = pdl.operation "linalg.matmul"(%args : !pdl.range<value>) -> (%results : !pdl.range<type>)
-    // TODO: we don't want this, but it is the required terminator for pdl.pattern
-    rewrite %0 with "transform.dialect"
-  }
-
-  transform.sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -73,14 +62,11 @@ func.func @vectorize_keep_pad(
   return %9 : tensor<24x25xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1
 }
 
 // -----
@@ -95,7 +81,7 @@ transform.with_pdl_patterns {
 func.func @vectorize_pad(
     %arg0: tensor<24x12xf32>, %arg1: tensor<12x25xf32>,
     %arg2: tensor<24x25xf32>, %arg3: index, %arg4: index,
-    %arg5: index) -> tensor<24x25xf32> {    
+    %arg5: index) -> tensor<24x25xf32> {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.000000e+00 : f32
   %0 = affine.min #map0()[%arg5]
@@ -124,14 +110,11 @@ func.func @vectorize_pad(
   return %9 : tensor<24x25xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1 = get_closest_isolated_parent %0
-    %2 = transform.structured.vectorize %1 {vectorize_padding = true}
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
+  %2 = transform.structured.vectorize %1 {vectorize_padding}
 }
 
 // -----
@@ -144,12 +127,9 @@ func.func @vectorize(%arg0: tensor<24x12xf32>,
   func.return %0 : tensor<24x25xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    // expected-error @below {{op requires isolated-from-above targets}}
-    %2 = transform.structured.vectorize %0
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  // expected-error @below {{op requires isolated-from-above targets}}
+  %2 = transform.structured.vectorize %0
 }

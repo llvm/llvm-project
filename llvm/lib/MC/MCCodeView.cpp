@@ -185,7 +185,7 @@ void CodeViewContext::emitStringTable(MCObjectStreamer &OS) {
     InsertedStrTabFragment = true;
   }
 
-  OS.emitValueToAlignment(4, 0);
+  OS.emitValueToAlignment(Align(4), 0);
 
   OS.emitLabel(StringEnd);
 }
@@ -233,7 +233,7 @@ void CodeViewContext::emitFileChecksums(MCObjectStreamer &OS) {
     OS.emitInt8(static_cast<uint8_t>(File.Checksum.size()));
     OS.emitInt8(File.ChecksumKind);
     OS.emitBytes(toStringRef(File.Checksum));
-    OS.emitValueToAlignment(4);
+    OS.emitValueToAlignment(Align(4));
   }
 
   OS.emitLabel(FileEnd);
@@ -318,10 +318,10 @@ std::pair<size_t, size_t> CodeViewContext::getLineExtent(unsigned FuncId) {
 
 ArrayRef<MCCVLoc> CodeViewContext::getLinesForExtent(size_t L, size_t R) {
   if (R <= L)
-    return None;
+    return std::nullopt;
   if (L >= MCCVLines.size())
-    return None;
-  return makeArrayRef(&MCCVLines[L], R - L);
+    return std::nullopt;
+  return ArrayRef(&MCCVLines[L], R - L);
 }
 
 void CodeViewContext::emitLineTableForFunction(MCObjectStreamer &OS,

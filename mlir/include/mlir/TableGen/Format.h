@@ -44,7 +44,6 @@ public:
     None,
     Custom,  // For custom placeholders
     Builder, // For the $_builder placeholder
-    Op,      // For the $_op placeholder
     Self,    // For the $_self placeholder
   };
 
@@ -58,11 +57,10 @@ public:
 
   // Setters for builtin placeholders
   FmtContext &withBuilder(Twine subst);
-  FmtContext &withOp(Twine subst);
   FmtContext &withSelf(Twine subst);
 
-  Optional<StringRef> getSubstFor(PHKind placeholder) const;
-  Optional<StringRef> getSubstFor(StringRef placeholder) const;
+  std::optional<StringRef> getSubstFor(PHKind placeholder) const;
+  std::optional<StringRef> getSubstFor(StringRef placeholder) const;
 
   static PHKind getPlaceHolderKind(StringRef str);
 
@@ -193,7 +191,7 @@ public:
       : FmtObjectBase(fmt, ctx, std::tuple_size<Tuple>::value),
         parameters(std::move(params)) {
     adapters.reserve(std::tuple_size<Tuple>::value);
-    adapters = llvm::apply_tuple(CreateAdapters(), parameters);
+    adapters = std::apply(CreateAdapters(), parameters);
   }
 
   FmtObject(FmtObject const &that) = delete;
@@ -201,7 +199,7 @@ public:
   FmtObject(FmtObject &&that)
       : FmtObjectBase(std::move(that)), parameters(std::move(that.parameters)) {
     adapters.reserve(that.adapters.size());
-    adapters = llvm::apply_tuple(CreateAdapters(), parameters);
+    adapters = std::apply(CreateAdapters(), parameters);
   }
 };
 

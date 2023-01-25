@@ -5,28 +5,28 @@ target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"
 
 declare i32 @main2()
-declare i7* @ctime2(i999*)
+declare ptr @ctime2(ptr)
 
-define i7* @ctime(i999*) {
+define ptr @ctime(ptr) {
 ; CHECK-LABEL: @ctime(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I0:%.*]] = call i32 @main2()
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[I0]] to i7*
-; CHECK-NEXT:    ret i7* [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i32 [[I0]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
 entry:
-  %i0 = call i7* bitcast (i32 ()* @main2 to i7* ()*)( )
-  ret i7* %i0
+  %i0 = call ptr @main2( )
+  ret ptr %i0
 }
 
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I1:%.*]] = call i7* @ctime2(i999* null)
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i7* [[I1]] to i32
+; CHECK-NEXT:    [[I1:%.*]] = call ptr @ctime2(ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[I1]] to i32
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %i1 = call i32 bitcast (i7* (i999*)* @ctime2 to i32 (i99*)*)( i99* null )
+  %i1 = call i32 @ctime2( ptr null )
   ret i32 %i1
 }

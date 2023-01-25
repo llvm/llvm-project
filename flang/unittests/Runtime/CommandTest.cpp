@@ -49,7 +49,7 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
 class CommandFixture : public ::testing::Test {
 protected:
   CommandFixture(int argc, const char *argv[]) {
-    RTNAME(ProgramStart)(argc, argv, {});
+    RTNAME(ProgramStart)(argc, argv, {}, {});
   }
 
   std::string GetPaddedStr(const char *text, std::size_t len) const {

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions %s -triple=i686-unknown-linux -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %std_cxx98- -fcxx-exceptions -fexceptions -Wno-dynamic-exception-spec %s -triple=i686-unknown-linux -emit-llvm -o - | FileCheck %s
 typedef int Array[10];
 
 void foo() throw (Array) {

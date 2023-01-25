@@ -1,4 +1,4 @@
-; RUN: not opt -verify -S < %s 2>&1 >/dev/null | FileCheck %s
+; RUN: not opt -passes=verify -S < %s 2>&1 >/dev/null | FileCheck %s
 
 ;
 ; Test that extractions/insertion indices are validated.
@@ -14,6 +14,22 @@ define <4 x i32> @extract_idx_not_constant_multiple(<8 x i32> %vec) {
 define <8 x i32> @insert_idx_not_constant_multiple(<8 x i32> %vec, <4 x i32> %subvec) {
   %1 = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> %vec, <4 x i32> %subvec, i64 2)
   ret <8 x i32> %1
+}
+
+;
+; Test that extractions/insertion element types are validated.
+;
+
+; CHECK: vector_extract result must have the same element type as the input vector.
+define <16 x i16> @extract_invalid_mismatched_element_types(<vscale x 16 x i8> %vec) nounwind {
+  %retval = call <16 x i16> @llvm.vector.extract.v16i16.nxv16i8(<vscale x 16 x i8> %vec, i64 0)
+  ret <16 x i16> %retval
+}
+
+; CHECK: vector_insert parameters must have the same element type.
+define <vscale x 16 x i8> @insert_invalid_mismatched_element_types(<vscale x 16 x i8> %vec, <4 x i16> %subvec) nounwind {
+  %retval = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v4i16(<vscale x 16 x i8> %vec, <4 x i16> %subvec, i64 0)
+  ret <vscale x 16 x i8> %retval
 }
 
 ;
@@ -70,3 +86,5 @@ declare <3 x i32> @llvm.vector.extract.v8i32.v3i32(<8 x i32>, i64)
 declare <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32>, i64)
 declare <8 x i32> @llvm.vector.insert.v8i32.v3i32(<8 x i32>, <3 x i32>, i64)
 declare <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32>, <4 x i32>, i64)
+declare <16 x i16> @llvm.vector.extract.v16i16.nxv16i8(<vscale x 16 x i8>, i64)
+declare <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v4i16(<vscale x 16 x i8>, <4 x i16>, i64)

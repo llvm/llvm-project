@@ -124,21 +124,14 @@ unsigned AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-void AVRInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MI,
-                                       Register SrcReg, bool isKill,
-                                       int FrameIndex,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
+void AVRInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
   AFI->setHasSpills(true);
-
-  DebugLoc DL;
-  if (MI != MBB.end()) {
-    DL = MI->getDebugLoc();
-  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -156,7 +149,7 @@ void AVRInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Cannot store this register into a stack slot!");
   }
 
-  BuildMI(MBB, MI, DL, get(Opcode))
+  BuildMI(MBB, MI, DebugLoc(), get(Opcode))
       .addFrameIndex(FrameIndex)
       .addImm(0)
       .addReg(SrcReg, getKillRegState(isKill))
@@ -167,12 +160,8 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MI != MBB.end()) {
-    DL = MI->getDebugLoc();
-  }
-
+                                        const TargetRegisterInfo *TRI,
+                                        Register VReg) const {
   MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -192,7 +181,7 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     llvm_unreachable("Cannot load this register from a stack slot!");
   }
 
-  BuildMI(MBB, MI, DL, get(Opcode), DestReg)
+  BuildMI(MBB, MI, DebugLoc(), get(Opcode), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0)
       .addMemOperand(MMO);

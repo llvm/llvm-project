@@ -12,6 +12,7 @@
 
 #include "NVPTXUtilities.h"
 #include "NVPTX.h"
+#include "NVPTXTargetMachine.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -322,6 +323,29 @@ bool getAlign(const CallInst &I, unsigned index, unsigned &align) {
     }
   }
   return false;
+}
+
+Function *getMaybeBitcastedCallee(const CallBase *CB) {
+  return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+}
+
+bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
+  const auto &ST =
+      *static_cast<const NVPTXTargetMachine &>(TM).getSubtargetImpl();
+  if (!ST.hasNoReturn())
+    return false;
+
+  assert((isa<Function>(V) || isa<CallInst>(V)) &&
+         "Expect either a call instruction or a function");
+
+  if (const CallInst *CallI = dyn_cast<CallInst>(V))
+    return CallI->doesNotReturn() &&
+           CallI->getFunctionType()->getReturnType()->isVoidTy();
+
+  const Function *F = cast<Function>(V);
+  return F->doesNotReturn() &&
+         F->getFunctionType()->getReturnType()->isVoidTy() &&
+         !isKernelFunction(*F);
 }
 
 } // namespace llvm

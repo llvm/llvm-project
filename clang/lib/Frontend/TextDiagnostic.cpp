@@ -20,6 +20,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 
 using namespace clang;
 
@@ -332,8 +333,7 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
     return;
 
   // No special characters are allowed in CaretLine.
-  assert(CaretLine.end() ==
-         llvm::find_if(CaretLine, [](char c) { return c < ' ' || '~' < c; }));
+  assert(llvm::none_of(CaretLine, [](char c) { return c < ' ' || '~' < c; }));
 
   // Find the slice that we need to display the full caret line
   // correctly.
@@ -924,15 +924,16 @@ void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
 }
 
 /// Find the suitable set of lines to show to include a set of ranges.
-static llvm::Optional<std::pair<unsigned, unsigned>>
+static std::optional<std::pair<unsigned, unsigned>>
 findLinesForRange(const CharSourceRange &R, FileID FID,
                   const SourceManager &SM) {
-  if (!R.isValid()) return None;
+  if (!R.isValid())
+    return std::nullopt;
 
   SourceLocation Begin = R.getBegin();
   SourceLocation End = R.getEnd();
   if (SM.getFileID(Begin) != FID || SM.getFileID(End) != FID)
-    return None;
+    return std::nullopt;
 
   return std::make_pair(SM.getExpansionLineNumber(Begin),
                         SM.getExpansionLineNumber(End));

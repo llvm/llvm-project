@@ -16,9 +16,10 @@
 //   [ Note: Returns N if x == std::numeric_limits<T>::max(). ]
 
 #include <bit>
-#include <cstdint>
-#include <type_traits>
 #include <cassert>
+#include <cstdint>
+#include <limits>
+#include <type_traits>
 
 #include "test_macros.h"
 

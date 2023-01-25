@@ -1,4 +1,4 @@
-; RUN: opt -globals-aa -gvn -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=globals-aa -passes='require<globals-aa>,gvn' -S < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa,globals-aa -passes='require<globals-aa>,gvn' -S < %s | FileCheck %s
 ;
 ; Functions w/o `nosync` attribute may communicate via memory and must be
@@ -14,9 +14,9 @@ target triple = "nvptx64-nvidia-cuda"
 ; CHECK: tail call void @llvm.nvvm.bar.sync(i32 0)
 ; CHECK: load
 define dso_local i32 @bar_sync(i32 %0) local_unnamed_addr {
-  store i32 %0, i32* addrspacecast (i32 addrspace(3)* @s to i32*), align 4
+  store i32 %0, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
   tail call void @llvm.nvvm.bar.sync(i32 0)
-  %2 = load i32, i32* addrspacecast (i32 addrspace(3)* @s to i32*), align 4
+  %2 = load i32, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
   ret i32 %2
 }
 
@@ -27,9 +27,9 @@ declare void @llvm.nvvm.bar.sync(i32) #0
 ; CHECK: tail call void @llvm.nvvm.barrier0()
 ; CHECK: load
 define dso_local i32 @barrier0(i32 %0) local_unnamed_addr  {
-  store i32 %0, i32* addrspacecast (i32 addrspace(3)* @s to i32*), align 4
+  store i32 %0, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
   tail call void @llvm.nvvm.barrier0()
-  %2 = load i32, i32* addrspacecast (i32 addrspace(3)* @s to i32*), align 4
+  %2 = load i32, ptr addrspacecast (ptr addrspace(3) @s to ptr), align 4
   ret i32 %2
 }
 

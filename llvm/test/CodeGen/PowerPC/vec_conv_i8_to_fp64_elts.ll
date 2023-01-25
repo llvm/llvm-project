@@ -24,24 +24,24 @@ define <2 x double> @test2elt(i16 %a.coerce) local_unnamed_addr #0 {
 ;
 ; CHECK-P9-LABEL: test2elt:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    mtvsrwz v2, r3
+; CHECK-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-P9-NEXT:    xxlxor v4, v4, v4
+; CHECK-P9-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-NEXT:    vperm v2, v4, v2, v3
-; CHECK-P9-NEXT:    xvcvuxddp v2, v2
+; CHECK-P9-NEXT:    lxv vs1, 0(r3)
+; CHECK-P9-NEXT:    xxperm vs0, vs2, vs1
+; CHECK-P9-NEXT:    xvcvuxddp v2, vs0
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2elt:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    mtvsrwz v2, r3
+; CHECK-BE-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
-; CHECK-BE-NEXT:    xxlxor v4, v4, v4
+; CHECK-BE-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI0_0@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r3)
-; CHECK-BE-NEXT:    vperm v2, v4, v2, v3
-; CHECK-BE-NEXT:    xvcvuxddp v2, v2
+; CHECK-BE-NEXT:    lxv vs1, 0(r3)
+; CHECK-BE-NEXT:    xxperm vs0, vs2, vs1
+; CHECK-BE-NEXT:    xvcvuxddp v2, vs0
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast i16 %a.coerce to <2 x i8>
@@ -49,7 +49,7 @@ entry:
   ret <2 x double> %1
 }
 
-define void @test4elt(<4 x double>* noalias nocapture sret(<4 x double>) %agg.result, i32 %a.coerce) local_unnamed_addr #1 {
+define void @test4elt(ptr noalias nocapture sret(<4 x double>) %agg.result, i32 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI1_0@toc@ha
@@ -111,11 +111,11 @@ define void @test4elt(<4 x double>* noalias nocapture sret(<4 x double>) %agg.re
 entry:
   %0 = bitcast i32 %a.coerce to <4 x i8>
   %1 = uitofp <4 x i8> %0 to <4 x double>
-  store <4 x double> %1, <4 x double>* %agg.result, align 32
+  store <4 x double> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test8elt(<8 x double>* noalias nocapture sret(<8 x double>) %agg.result, i64 %a.coerce) local_unnamed_addr #1 {
+define void @test8elt(ptr noalias nocapture sret(<8 x double>) %agg.result, i64 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
@@ -219,11 +219,11 @@ define void @test8elt(<8 x double>* noalias nocapture sret(<8 x double>) %agg.re
 entry:
   %0 = bitcast i64 %a.coerce to <8 x i8>
   %1 = uitofp <8 x i8> %0 to <8 x double>
-  store <8 x double> %1, <8 x double>* %agg.result, align 64
+  store <8 x double> %1, ptr %agg.result, align 64
   ret void
 }
 
-define void @test16elt(<16 x double>* noalias nocapture sret(<16 x double>) %agg.result, <16 x i8> %a) local_unnamed_addr #2 {
+define void @test16elt(ptr noalias nocapture sret(<16 x double>) %agg.result, <16 x i8> %a) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
@@ -407,7 +407,7 @@ define void @test16elt(<16 x double>* noalias nocapture sret(<16 x double>) %agg
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = uitofp <16 x i8> %a to <16 x double>
-  store <16 x double> %0, <16 x double>* %agg.result, align 128
+  store <16 x double> %0, ptr %agg.result, align 128
   ret void
 }
 
@@ -434,8 +434,8 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-P9-NEXT:    mtvsrwz v2, r3
 ; CHECK-P9-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-P9-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-P9-NEXT:    lxv v3, 0(r3)
-; CHECK-P9-NEXT:    vperm v2, v2, v2, v3
+; CHECK-P9-NEXT:    lxv vs0, 0(r3)
+; CHECK-P9-NEXT:    xxperm v2, v2, vs0
 ; CHECK-P9-NEXT:    vextsb2d v2, v2
 ; CHECK-P9-NEXT:    xvcvsxddp v2, v2
 ; CHECK-P9-NEXT:    blr
@@ -445,8 +445,8 @@ define <2 x double> @test2elt_signed(i16 %a.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    mtvsrwz v2, r3
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxv v3, 0(r3)
-; CHECK-BE-NEXT:    vperm v2, v2, v2, v3
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NEXT:    xxperm v2, v2, vs0
 ; CHECK-BE-NEXT:    vextsb2d v2, v2
 ; CHECK-BE-NEXT:    xvcvsxddp v2, v2
 ; CHECK-BE-NEXT:    blr
@@ -456,7 +456,7 @@ entry:
   ret <2 x double> %1
 }
 
-define void @test4elt_signed(<4 x double>* noalias nocapture sret(<4 x double>) %agg.result, i32 %a.coerce) local_unnamed_addr #1 {
+define void @test4elt_signed(ptr noalias nocapture sret(<4 x double>) %agg.result, i32 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test4elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI5_0@toc@ha
@@ -527,11 +527,11 @@ define void @test4elt_signed(<4 x double>* noalias nocapture sret(<4 x double>) 
 entry:
   %0 = bitcast i32 %a.coerce to <4 x i8>
   %1 = sitofp <4 x i8> %0 to <4 x double>
-  store <4 x double> %1, <4 x double>* %agg.result, align 32
+  store <4 x double> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test8elt_signed(<8 x double>* noalias nocapture sret(<8 x double>) %agg.result, i64 %a.coerce) local_unnamed_addr #1 {
+define void @test8elt_signed(ptr noalias nocapture sret(<8 x double>) %agg.result, i64 %a.coerce) local_unnamed_addr #1 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI6_0@toc@ha
@@ -652,11 +652,11 @@ define void @test8elt_signed(<8 x double>* noalias nocapture sret(<8 x double>) 
 entry:
   %0 = bitcast i64 %a.coerce to <8 x i8>
   %1 = sitofp <8 x i8> %0 to <8 x double>
-  store <8 x double> %1, <8 x double>* %agg.result, align 64
+  store <8 x double> %1, ptr %agg.result, align 64
   ret void
 }
 
-define void @test16elt_signed(<16 x double>* noalias nocapture sret(<16 x double>) %agg.result, <16 x i8> %a) local_unnamed_addr #2 {
+define void @test16elt_signed(ptr noalias nocapture sret(<16 x double>) %agg.result, <16 x i8> %a) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
@@ -873,6 +873,6 @@ define void @test16elt_signed(<16 x double>* noalias nocapture sret(<16 x double
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = sitofp <16 x i8> %a to <16 x double>
-  store <16 x double> %0, <16 x double>* %agg.result, align 128
+  store <16 x double> %0, ptr %agg.result, align 128
   ret void
 }

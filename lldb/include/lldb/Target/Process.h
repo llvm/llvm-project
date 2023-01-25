@@ -22,10 +22,10 @@
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointSiteList.h"
-#include "lldb/Core/Communication.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeValue.h"
+#include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
@@ -475,15 +475,6 @@ public:
     const ProcessEventData &operator=(const ProcessEventData &) = delete;
   };
 
-  /// Construct with a shared pointer to a target, and the Process listener.
-  /// Uses the Host UnixSignalsSP by default.
-  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
-
-  /// Construct with a shared pointer to a target, the Process listener, and
-  /// the appropriate UnixSignalsSP for the process.
-  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-          const lldb::UnixSignalsSP &unix_signals_sp);
-
   /// Destructor.
   ///
   /// The destructor is virtual since this class is designed to be inherited
@@ -649,6 +640,8 @@ public:
   /// desired, or if Process subclasses can only use a specific DynamicLoader
   /// plug-in.
   virtual DynamicLoader *GetDynamicLoader();
+
+  void SetDynamicLoader(lldb::DynamicLoaderUP dyld);
 
   // Returns AUXV structure found in many ELF-based environments.
   //
@@ -891,11 +884,9 @@ public:
 
   /// Called before attaching to a process.
   ///
-  /// Allow Process plug-ins to execute some code before attaching a process.
-  ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillAttachToProcessWithID(lldb::pid_t pid) { return Status(); }
+  Status WillAttachToProcessWithID(lldb::pid_t pid);
 
   /// Called before attaching to a process.
   ///
@@ -903,8 +894,25 @@ public:
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillAttachToProcessWithName(const char *process_name,
-                                             bool wait_for_launch) {
+  virtual Status DoWillAttachToProcessWithID(lldb::pid_t pid) {
+    return Status();
+  }
+
+  /// Called before attaching to a process.
+  ///
+  /// \return
+  ///     Returns an error object.
+  Status WillAttachToProcessWithName(const char *process_name,
+                                     bool wait_for_launch);
+
+  /// Called before attaching to a process.
+  ///
+  /// Allow Process plug-ins to execute some code before attaching a process.
+  ///
+  /// \return
+  ///     Returns an error object.
+  virtual Status DoWillAttachToProcessWithName(const char *process_name,
+                                               bool wait_for_launch) {
     return Status();
   }
 
@@ -997,12 +1005,17 @@ public:
   virtual void DidVForkDone() {}
 
   /// Called before launching to a process.
+  /// \return
+  ///     Returns an error object.
+  Status WillLaunch(Module *module);
+
+  /// Called before launching to a process.
   ///
   /// Allow Process plug-ins to execute some code before launching a process.
   ///
   /// \return
   ///     Returns an error object.
-  virtual Status WillLaunch(Module *module) { return Status(); }
+  virtual Status DoWillLaunch(Module *module) { return Status(); }
 
   /// Launch a new process.
   ///
@@ -1306,6 +1319,15 @@ public:
   // system) in use.
   virtual lldb_private::StructuredData::ObjectSP GetSharedCacheInfo() {
     return StructuredData::ObjectSP();
+  }
+
+  // Get information about the launch state of the process, if possible.
+  //
+  // On Darwin systems, libdyld can report on process state, most importantly
+  // the startup stages where the system library is not yet initialized.
+  virtual lldb_private::StructuredData::ObjectSP
+  GetDynamicLoaderProcessState() {
+    return {};
   }
 
   /// Print a user-visible warning about a module being built with
@@ -2094,7 +2116,7 @@ public:
 
   // Queue Queries
 
-  void UpdateQueueListIfNeeded();
+  virtual void UpdateQueueListIfNeeded();
 
   QueueList &GetQueueList() {
     UpdateQueueListIfNeeded();
@@ -2410,6 +2432,13 @@ void PruneThreadPlans();
     return Status("Not supported");
   }
 
+  /// Fetch process defined metadata.
+  ///
+  /// \return
+  ///     A StructuredDataSP object which, if non-empty, will contain the
+  ///     information related to the process.
+  virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
+
   size_t AddImageToken(lldb::addr_t image_ptr);
 
   lldb::addr_t GetImagePtrFromToken(size_t token) const;
@@ -2499,6 +2528,16 @@ void PruneThreadPlans();
 
 protected:
   friend class Trace;
+
+  /// Construct with a shared pointer to a target, and the Process listener.
+  /// Uses the Host UnixSignalsSP by default.
+  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp);
+
+  /// Construct with a shared pointer to a target, the Process listener, and
+  /// the appropriate UnixSignalsSP for the process.
+  Process(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+          const lldb::UnixSignalsSP &unix_signals_sp);
+
   ///  Get the processor tracing type supported for this process.
   ///  Responses might be different depending on the architecture and
   ///  capabilities of the underlying OS.
@@ -2665,7 +2704,7 @@ protected:
   };
 
   void SetNextEventAction(Process::NextEventAction *next_event_action) {
-    if (m_next_event_action_up.get())
+    if (m_next_event_action_up)
       m_next_event_action_up->HandleBeingUnshipped();
 
     m_next_event_action_up.reset(next_event_action);
@@ -2882,7 +2921,7 @@ protected:
       m_unix_signals_sp; /// This is the current signal set for this process.
   lldb::ABISP m_abi_sp;
   lldb::IOHandlerSP m_process_input_reader;
-  Communication m_stdio_communication;
+  ThreadedCommunication m_stdio_communication;
   std::recursive_mutex m_stdio_communication_mutex;
   bool m_stdin_forward; /// Remember if stdin must be forwarded to remote debug
                         /// server

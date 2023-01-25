@@ -14,22 +14,22 @@ declare i32 @missing_function(float)
 @hidden_float = hidden global float 2.0
 @missing_float = extern_weak global float
 
-@ret32_ptr = global i32 (float)* @ret32, align 4
+@ret32_ptr = global ptr @ret32, align 4
 
-define i32 (float)* @getaddr_external() {
-  ret i32 (float)* @ret32;
+define ptr @getaddr_external() {
+  ret ptr @ret32;
 }
 
-define i32 (float)* @getaddr_missing_function() {
-  ret i32 (float)* @missing_function;
+define ptr @getaddr_missing_function() {
+  ret ptr @missing_function;
 }
 
-define i32 ()* @getaddr_hidden() {
-  ret i32 ()* @hidden_func;
+define ptr @getaddr_hidden() {
+  ret ptr @hidden_func;
 }
 
-define float* @getaddr_missing_float() {
-  ret float* @missing_float
+define ptr @getaddr_missing_float() {
+  ret ptr @missing_float
 }
 
 define hidden i32 @hidden_func() {
@@ -38,16 +38,16 @@ define hidden i32 @hidden_func() {
 
 define void @_start() {
 entry:
-  %f = load float, float* @hidden_float, align 4
-  %addr = load i32 (float)*, i32 (float)** @ret32_ptr, align 4
-  %arg = load float, float* @global_float, align 4
+  %f = load float, ptr @hidden_float, align 4
+  %addr = load ptr, ptr @ret32_ptr, align 4
+  %arg = load float, ptr @global_float, align 4
   call i32 %addr(float %arg)
 
-  %addr2 = call i32 (float)* @getaddr_external()
-  %arg2 = load float, float* @hidden_float, align 4
+  %addr2 = call ptr @getaddr_external()
+  %arg2 = load float, ptr @hidden_float, align 4
   call i32 %addr2(float %arg2)
 
-  %addr3 = call i32 ()* @getaddr_hidden()
+  %addr3 = call ptr @getaddr_hidden()
   call i32 %addr3()
 
   ret void

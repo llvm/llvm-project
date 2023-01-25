@@ -16,7 +16,7 @@
 ; CHECK-NEXT: - basic block: %bb.0
 ; CHECK-NEXT: - instruction: S_CBRANCH_SCC1 %bb.2, implicit killed $scc
 ; CHECK-NEXT: - operand 1:   implicit killed $scc
-define amdgpu_kernel void @kernel0(i32 addrspace(1)* %out, i32 %in) #1 {
+define amdgpu_kernel void @kernel0(ptr addrspace(1) %out, i32 %in) #1 {
   call void asm sideeffect "", "~{v[0:7]}" () #0
   call void asm sideeffect "", "~{v[8:15]}" () #0
   call void asm sideeffect "", "~{v[16:19]}"() #0

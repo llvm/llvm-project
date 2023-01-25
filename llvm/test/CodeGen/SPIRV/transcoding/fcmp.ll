@@ -183,11 +183,7 @@
 ; CHECK-SPIRV: %[[#r89]] = OpUnordered %[[#bool]]
 ; CHECK-SPIRV: %[[#r90]] = OpUnordered %[[#bool]]
 
-target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024"
-target triple = "spirv32-unknown-unknown"
-
-; Function Attrs: nounwind
-define spir_kernel void @testFCmp(float %a, float %b) local_unnamed_addr #0 !kernel_arg_addr_space !2 !kernel_arg_access_qual !3 !kernel_arg_type !4 !kernel_arg_base_type !4 !kernel_arg_type_qual !5 {
+define spir_kernel void @testFCmp(float %a, float %b) local_unnamed_addr {
 entry:
   %r1 = fcmp oeq float %a, %b
   %r2 = fcmp nnan oeq float %a, %b
@@ -281,16 +277,3 @@ entry:
   %r90 = fcmp nsz uno float %a, %b
   ret void
 }
-
-attributes #0 = { convergent nounwind writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "denorms-are-zero"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }
-
-!llvm.module.flags = !{!0}
-!opencl.ocl.version = !{!1}
-!opencl.spir.version = !{!1}
-
-!0 = !{i32 1, !"wchar_size", i32 4}
-!1 = !{i32 2, i32 0}
-!2 = !{i32 0, i32 0}
-!3 = !{!"none", !"none"}
-!4 = !{!"float", !"float"}
-!5 = !{!"", !""}

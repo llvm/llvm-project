@@ -64,6 +64,19 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
   assert(*curPtr == '<');
   SmallVector<char, 8> nestedPunctuation;
   const char *codeCompleteLoc = state.lex.getCodeCompleteLoc();
+
+  // Functor used to emit an unbalanced punctuation error.
+  auto emitPunctError = [&] {
+    return emitError() << "unbalanced '" << nestedPunctuation.back()
+                       << "' character in pretty dialect name";
+  };
+  // Functor used to check for unbalanced punctuation.
+  auto checkNestedPunctuation = [&](char expectedToken) -> ParseResult {
+    if (nestedPunctuation.back() != expectedToken)
+      return emitPunctError();
+    nestedPunctuation.pop_back();
+    return success();
+  };
   do {
     // Handle code completions, which may appear in the middle of the symbol
     // body.
@@ -77,10 +90,8 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
     switch (c) {
     case '\0':
       // This also handles the EOF case.
-      if (!nestedPunctuation.empty()) {
-        return emitError() << "unbalanced '" << nestedPunctuation.back()
-                           << "' character in pretty dialect name";
-      }
+      if (!nestedPunctuation.empty())
+        return emitPunctError();
       return emitError("unexpected nul or EOF in pretty dialect name");
     case '<':
     case '[':
@@ -96,20 +107,20 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
       continue;
 
     case '>':
-      if (nestedPunctuation.pop_back_val() != '<')
-        return emitError("unbalanced '>' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('<')))
+        return failure();
       break;
     case ']':
-      if (nestedPunctuation.pop_back_val() != '[')
-        return emitError("unbalanced ']' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('[')))
+        return failure();
       break;
     case ')':
-      if (nestedPunctuation.pop_back_val() != '(')
-        return emitError("unbalanced ')' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('(')))
+        return failure();
       break;
     case '}':
-      if (nestedPunctuation.pop_back_val() != '{')
-        return emitError("unbalanced '}' character in pretty dialect name");
+      if (failed(checkNestedPunctuation('{')))
+        return failure();
       break;
     case '"': {
       // Dispatch to the lexer to lex past strings.
@@ -160,9 +171,7 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
   p.consumeToken();
 
   // Check to see if this is a pretty name.
-  StringRef dialectName;
-  StringRef symbolData;
-  std::tie(dialectName, symbolData) = identifier.split('.');
+  auto [dialectName, symbolData] = identifier.split('.');
   bool isPrettyName = !symbolData.empty() || identifier.back() == '.';
 
   // Check to see if the symbol has trailing data, i.e. has an immediately
@@ -215,8 +224,9 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
 /// Parse an extended attribute.
 ///
 ///   extended-attribute ::= (dialect-attribute | attribute-alias)
-///   dialect-attribute  ::= `#` dialect-namespace `<` `"` attr-data `"` `>`
-///   dialect-attribute  ::= `#` alias-name pretty-dialect-sym-body?
+///   dialect-attribute  ::= `#` dialect-namespace `<` attr-data `>`
+///                          (`:` type)?
+///                        | `#` alias-name pretty-dialect-sym-body? (`:` type)?
 ///   attribute-alias    ::= `#` alias-name
 ///
 Attribute Parser::parseExtendedAttr(Type type) {
@@ -250,9 +260,10 @@ Attribute Parser::parseExtendedAttr(Type type) {
       });
 
   // Ensure that the attribute has the same type as requested.
-  if (attr && type && attr.getType() != type) {
+  auto typedAttr = attr.dyn_cast_or_null<TypedAttr>();
+  if (type && typedAttr && typedAttr.getType() != type) {
     emitError("attribute type different than expected: expected ")
-        << type << ", but got " << attr.getType();
+        << type << ", but got " << typedAttr.getType();
     return nullptr;
   }
   return attr;

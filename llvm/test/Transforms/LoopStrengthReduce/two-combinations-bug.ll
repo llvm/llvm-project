@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %struct.planet.0.3.6.11.12.15.16.17.24.25.26.33.44 = type { double, double, double, double, double, double, double }
 
 ; Function Attrs: nounwind uwtable
-define dso_local void @advance(i32 %nbodies, %struct.planet.0.3.6.11.12.15.16.17.24.25.26.33.44* nocapture %bodies) local_unnamed_addr #0 {
+define dso_local void @advance(i32 %nbodies, ptr nocapture %bodies) local_unnamed_addr #0 {
 ; CHECK-LABEL: @advance(
 ; CHECK:  for.cond.loopexit:
 ; CHECK:    [[LSR_IV_NEXT:%.*]] = add i64 [[LSR_IV:%.*]], -1
@@ -39,8 +39,8 @@ for.body:                                         ; preds = %for.cond.loopexit, 
 
 for.body3:                                        ; preds = %for.body3, %for.body
   %indvars.iv98 = phi i64 [ %indvars.iv, %for.body ], [ %indvars.iv.next99, %for.body3 ]
-  %z9 = getelementptr inbounds %struct.planet.0.3.6.11.12.15.16.17.24.25.26.33.44, %struct.planet.0.3.6.11.12.15.16.17.24.25.26.33.44* %bodies, i64 %indvars.iv98, i32 2
-  %tmp = load double, double* %z9, align 8, !tbaa !0
+  %z9 = getelementptr inbounds %struct.planet.0.3.6.11.12.15.16.17.24.25.26.33.44, ptr %bodies, i64 %indvars.iv98, i32 2
+  %tmp = load double, ptr %z9, align 8, !tbaa !0
   %indvars.iv.next99 = add nuw nsw i64 %indvars.iv98, 1
   %exitcond = icmp eq i64 %indvars.iv.next99, %wide.trip.count
   br i1 %exitcond, label %for.cond.loopexit, label %for.body3

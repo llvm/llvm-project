@@ -80,10 +80,6 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
 
   FDECFIEncoding = dwarf::DW_EH_PE_pcrel;
 
-  // .comm doesn't support alignment before Leopard.
-  if (T.isMacOSX() && T.isMacOSXVersionLT(10, 5))
-    CommDirectiveSupportsAlignment = false;
-
   TextSection // .text
     = Ctx->getMachOSection("__TEXT", "__text",
                            MachO::S_ATTR_PURE_INSTRUCTIONS,
@@ -361,6 +357,9 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
     FDECFIEncoding =
         PositionIndependent ? dwarf::DW_EH_PE_pcrel : dwarf::DW_EH_PE_absptr;
     break;
+  case Triple::xtensa:
+    FDECFIEncoding = dwarf::DW_EH_PE_sdata4;
+    break;
   default:
     FDECFIEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
     break;
@@ -531,6 +530,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
   PseudoProbeDescSection =
       Ctx->getELFSection(".pseudo_probe_desc", DebugSecType, 0);
+
+  LLVMStatsSection = Ctx->getELFSection(".llvm_stats", ELF::SHT_PROGBITS, 0);
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
@@ -553,8 +554,6 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
   // used to indicate to the linker that the text segment contains thumb instructions
   // and to set the ISA selection bit for calls accordingly.
   const bool IsThumb = T.getArch() == Triple::thumb;
-
-  CommDirectiveSupportsAlignment = true;
 
   // COFF
   BSSSection = Ctx->getCOFFSection(
@@ -976,47 +975,53 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // sections, and the individual DWARF sections are distinguished by their
   // section subtype.
   DwarfAbbrevSection = Ctx->getXCOFFSection(
-      ".dwabrev", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwabrev", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwabrev", XCOFF::SSUBTYP_DWABREV);
 
   DwarfInfoSection = Ctx->getXCOFFSection(
-      ".dwinfo", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwinfo", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwinfo", XCOFF::SSUBTYP_DWINFO);
 
   DwarfLineSection = Ctx->getXCOFFSection(
-      ".dwline", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwline", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwline", XCOFF::SSUBTYP_DWLINE);
 
   DwarfFrameSection = Ctx->getXCOFFSection(
-      ".dwframe", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwframe", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwframe", XCOFF::SSUBTYP_DWFRAME);
 
   DwarfPubNamesSection = Ctx->getXCOFFSection(
-      ".dwpbnms", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwpbnms", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwpbnms", XCOFF::SSUBTYP_DWPBNMS);
 
   DwarfPubTypesSection = Ctx->getXCOFFSection(
-      ".dwpbtyp", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwpbtyp", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwpbtyp", XCOFF::SSUBTYP_DWPBTYP);
 
   DwarfStrSection = Ctx->getXCOFFSection(
-      ".dwstr", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwstr", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwstr", XCOFF::SSUBTYP_DWSTR);
 
   DwarfLocSection = Ctx->getXCOFFSection(
-      ".dwloc", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwloc", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwloc", XCOFF::SSUBTYP_DWLOC);
 
   DwarfARangesSection = Ctx->getXCOFFSection(
-      ".dwarnge", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwarnge", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwarnge", XCOFF::SSUBTYP_DWARNGE);
 
   DwarfRangesSection = Ctx->getXCOFFSection(
-      ".dwrnges", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwrnges", SectionKind::getMetadata(),
+      /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwrnges", XCOFF::SSUBTYP_DWRNGES);
 
   DwarfMacinfoSection = Ctx->getXCOFFSection(
-      ".dwmac", SectionKind::getMetadata(), /* CsectProperties */ None,
+      ".dwmac", SectionKind::getMetadata(), /* CsectProperties */ std::nullopt,
       /* MultiSymbolsAllowed */ true, ".dwmac", XCOFF::SSUBTYP_DWMAC);
 }
 
@@ -1033,7 +1038,6 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   Ctx = &MCCtx;
 
   // Common.
-  CommDirectiveSupportsAlignment = true;
   SupportsWeakOmittedEHFrame = true;
   SupportsCompactUnwindWithoutEHFrame = false;
   OmitDwarfIfHaveCompactUnwind = false;
@@ -1146,11 +1150,30 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 }
 
 MCSection *
-MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
+MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return nullptr;
+
+  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER | ELF::SHF_ALLOC;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+
+  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
+                            GroupName,
+                            /*IsComdat=*/true, ElfSec.getUniqueID(),
+                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+}
+
+MCSection *
+MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() == MCContext::IsELF) {
-    const auto *ElfSec = static_cast<const MCSectionELF *>(TextSec);
+    const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
     // Create a separate section for probes that comes with a comdat function.
-    if (const MCSymbol *Group = ElfSec->getGroup()) {
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
       auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,
@@ -1183,4 +1206,30 @@ MCObjectFileInfo::getPseudoProbeDescSection(StringRef FuncName) const {
     }
   }
   return PseudoProbeDescSection;
+}
+
+MCSection *MCObjectFileInfo::getLLVMStatsSection() const {
+  return LLVMStatsSection;
+}
+
+MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
+                                          const MCSection *TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return nullptr;
+
+  // SHF_WRITE for relocations, and let user post-process data in-place.
+  unsigned Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC | ELF::SHF_LINK_ORDER;
+
+  if (!TextSec)
+    TextSec = getTextSection();
+
+  StringRef GroupName;
+  const auto &ElfSec = static_cast<const MCSectionELF &>(*TextSec);
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+                            ElfSec.getUniqueID(),
+                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
 }

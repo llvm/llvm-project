@@ -7,53 +7,51 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android10000"
 
-declare void @use32(i32*)
+declare void @use32(ptr)
 
 define void @test_alloca() sanitize_hwaddress !dbg !15 {
 ; CHECK-LABEL: @test_alloca(
-; CHECK: %[[FP:[^ ]*]] = call i8* @llvm.frameaddress.p0i8(i32 0)
-; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %[[FP]] to i64
+; CHECK: %[[FP:[^ ]*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %[[FP]] to i64
 ; CHECK: %[[B:[^ ]*]] = lshr i64 %[[A]], 20
 ; CHECK: %[[BASE_TAG:[^ ]*]] = xor i64 %[[A]], %[[B]]
 
 ; CHECK: %[[X:[^ ]*]] = alloca { i32, [12 x i8] }, align 16
-; CHECK: %[[X_BC:[^ ]*]] = bitcast { i32, [12 x i8] }* %[[X]] to i32*
 ; CHECK: %[[X_TAG:[^ ]*]] = xor i64 %[[BASE_TAG]], 0
-; CHECK: %[[X1:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
+; CHECK: %[[X1:[^ ]*]] = ptrtoint ptr %[[X]] to i64
 ; CHECK: %[[C:[^ ]*]] = shl i64 %[[X_TAG]], 56
 ; CHECK: %[[D:[^ ]*]] = or i64 %[[X1]], %[[C]]
-; CHECK: %[[X_HWASAN:[^ ]*]] = inttoptr i64 %[[D]] to i32*
+; CHECK: %[[X_HWASAN:[^ ]*]] = inttoptr i64 %[[D]] to ptr
 
 ; CHECK: %[[X_TAG2:[^ ]*]] = trunc i64 %[[X_TAG]] to i8
-; CHECK: %[[E:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
+; CHECK: %[[E:[^ ]*]] = ptrtoint ptr %[[X]] to i64
 ; CHECK: %[[F:[^ ]*]] = lshr i64 %[[E]], 4
-; DYNAMIC-SHADOW: %[[X_SHADOW:[^ ]*]] = getelementptr i8, i8* %.hwasan.shadow, i64 %[[F]]
-; ZERO-BASED-SHADOW: %[[X_SHADOW:[^ ]*]] = inttoptr i64 %[[F]] to i8*
-; CHECK: %[[X_SHADOW_GEP:[^ ]*]] = getelementptr i8, i8* %[[X_SHADOW]], i32 0
-; CHECK: store i8 4, i8* %[[X_SHADOW_GEP]]
-; CHECK: %[[X_I8:[^ ]*]] = bitcast i32* %[[X_BC]] to i8*
-; CHECK: %[[X_I8_GEP:[^ ]*]] = getelementptr i8, i8* %[[X_I8]], i32 15
-; CHECK: store i8 %[[X_TAG2]], i8* %[[X_I8_GEP]]
+; DYNAMIC-SHADOW: %[[X_SHADOW:[^ ]*]] = getelementptr i8, ptr %.hwasan.shadow, i64 %[[F]]
+; ZERO-BASED-SHADOW: %[[X_SHADOW:[^ ]*]] = inttoptr i64 %[[F]] to ptr
+; CHECK: %[[X_SHADOW_GEP:[^ ]*]] = getelementptr i8, ptr %[[X_SHADOW]], i32 0
+; CHECK: store i8 4, ptr %[[X_SHADOW_GEP]]
+; CHECK: %[[X_I8_GEP:[^ ]*]] = getelementptr i8, ptr %[[X]], i32 15
+; CHECK: store i8 %[[X_TAG2]], ptr %[[X_I8_GEP]]
 ; CHECK: call void @llvm.dbg.value(
-; CHECK-SAME: metadata !DIArgList(i32* %[[X_BC]], i32* %[[X_BC]])
+; CHECK-SAME: metadata !DIArgList(ptr %[[X]], ptr %[[X]])
 ; CHECK-SAME: metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_tag_offset, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_tag_offset, 0,
-; CHECK: call void @use32(i32* nonnull %[[X_HWASAN]])
+; CHECK: call void @use32(ptr nonnull %[[X_HWASAN]])
 
 ; UAR-TAGS: %[[BASE_TAG_COMPL:[^ ]*]] = xor i64 %[[BASE_TAG]], 255
 ; UAR-TAGS: %[[X_TAG_UAR:[^ ]*]] = trunc i64 %[[BASE_TAG_COMPL]] to i8
-; CHECK: %[[E2:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
+; CHECK: %[[E2:[^ ]*]] = ptrtoint ptr %[[X]] to i64
 ; CHECK: %[[F2:[^ ]*]] = lshr i64 %[[E2]], 4
-; DYNAMIC-SHADOW: %[[X_SHADOW2:[^ ]*]] = getelementptr i8, i8* %.hwasan.shadow, i64 %[[F2]]
-; ZERO-BASED-SHADOW: %[[X_SHADOW2:[^ ]*]] = inttoptr i64 %[[F2]] to i8*
-; NO-UAR-TAGS: call void @llvm.memset.p0i8.i64(i8* align 1 %[[X_SHADOW2]], i8 0, i64 1, i1 false)
-; UAR-TAGS: call void @llvm.memset.p0i8.i64(i8* align 1 %[[X_SHADOW2]], i8 %[[X_TAG_UAR]], i64 1, i1 false)
+; DYNAMIC-SHADOW: %[[X_SHADOW2:[^ ]*]] = getelementptr i8, ptr %.hwasan.shadow, i64 %[[F2]]
+; ZERO-BASED-SHADOW: %[[X_SHADOW2:[^ ]*]] = inttoptr i64 %[[F2]] to ptr
+; NO-UAR-TAGS: call void @llvm.memset.p0.i64(ptr align 1 %[[X_SHADOW2]], i8 0, i64 1, i1 false)
+; UAR-TAGS: call void @llvm.memset.p0.i64(ptr align 1 %[[X_SHADOW2]], i8 %[[X_TAG_UAR]], i64 1, i1 false)
 ; CHECK: ret void
 
 
 entry:
   %x = alloca i32, align 4
-  call void @llvm.dbg.value(metadata !DIArgList(i32* %x, i32* %x), metadata !22, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg !21
-  call void @use32(i32* nonnull %x), !dbg !23
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %x, ptr %x), metadata !22, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg !21
+  call void @use32(ptr nonnull %x), !dbg !23
   ret void, !dbg !24
 }
 

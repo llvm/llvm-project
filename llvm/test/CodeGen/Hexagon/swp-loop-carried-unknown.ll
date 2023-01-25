@@ -20,9 +20,8 @@ b0:
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i32 [ 0, %b0 ], [ %v22, %b1 ]
-  %v1 = load %s.0*, %s.0** undef, align 4
-  %v2 = getelementptr inbounds %s.0, %s.0* %v1, i32 0, i32 0
-  %v3 = load i16, i16* %v2, align 2
+  %v1 = load ptr, ptr undef, align 4
+  %v3 = load i16, ptr %v1, align 2
   %v4 = add i16 0, %v3
   %v5 = add i16 %v4, 0
   %v6 = add i16 %v5, 0
@@ -39,10 +38,10 @@ b1:                                               ; preds = %b1, %b0
   %v17 = add i16 %v16, 0
   %v18 = add i16 %v17, 0
   %v19 = add i16 %v18, 0
-  %v20 = load %s.0*, %s.0** undef, align 4
-  store i16 %v19, i16* undef, align 2
-  %v21 = getelementptr inbounds %s.0, %s.0* %v20, i32 0, i32 1
-  store i16 0, i16* %v21, align 2
+  %v20 = load ptr, ptr undef, align 4
+  store i16 %v19, ptr undef, align 2
+  %v21 = getelementptr inbounds %s.0, ptr %v20, i32 0, i32 1
+  store i16 0, ptr %v21, align 2
   %v22 = add nuw nsw i32 %v0, 1
   %v23 = icmp eq i32 %v22, 6
   br i1 %v23, label %b2, label %b1

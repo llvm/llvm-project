@@ -176,6 +176,7 @@ set(BENCHMARK_TESTS
     algorithms/stable_sort.bench.cpp
     allocation.bench.cpp
     deque.bench.cpp
+    deque_iterator.bench.cpp
     filesystem.bench.cpp
     format_to_n.bench.cpp
     format_to.bench.cpp
@@ -184,7 +185,9 @@ set(BENCHMARK_TESTS
     formatter_float.bench.cpp
     formatter_int.bench.cpp
     function.bench.cpp
+    join_view.bench.cpp
     map.bench.cpp
+    monotonic_buffer.bench.cpp
     ordered_set.bench.cpp
     std_format_spec_string_unicode.bench.cpp
     string.bench.cpp

@@ -9,12 +9,16 @@
 //===----------------------------------------------------------------------===//
 INTERFACE_FUNCTION(__sanitizer_acquire_crash_state)
 INTERFACE_FUNCTION(__sanitizer_annotate_contiguous_container)
+INTERFACE_FUNCTION(__sanitizer_annotate_double_ended_contiguous_container)
 INTERFACE_FUNCTION(__sanitizer_contiguous_container_find_bad_address)
+INTERFACE_FUNCTION(
+    __sanitizer_double_ended_contiguous_container_find_bad_address)
 INTERFACE_FUNCTION(__sanitizer_set_death_callback)
 INTERFACE_FUNCTION(__sanitizer_set_report_path)
 INTERFACE_FUNCTION(__sanitizer_set_report_fd)
 INTERFACE_FUNCTION(__sanitizer_get_report_path)
 INTERFACE_FUNCTION(__sanitizer_verify_contiguous_container)
+INTERFACE_FUNCTION(__sanitizer_verify_double_ended_contiguous_container)
 INTERFACE_WEAK_FUNCTION(__sanitizer_on_print)
 INTERFACE_WEAK_FUNCTION(__sanitizer_report_error_summary)
 INTERFACE_WEAK_FUNCTION(__sanitizer_sandbox_on_notify)

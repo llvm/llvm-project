@@ -1,0 +1,574 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc math.h functions.
+
+load("//libc/test/src/math:libc_math_test_rules.bzl", "math_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+math_test(
+    name = "fabs",
+    hdrs = ["FAbsTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fabsf",
+    hdrs = ["FAbsTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fabsl",
+    hdrs = ["FAbsTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "ceil",
+    hdrs = ["CeilTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "ceilf",
+    hdrs = ["CeilTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "ceill",
+    hdrs = ["CeilTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "floor",
+    hdrs = ["FloorTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "floorf",
+    hdrs = ["FloorTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "floorl",
+    hdrs = ["FloorTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "trunc",
+    hdrs = ["TruncTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "truncf",
+    hdrs = ["TruncTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "truncl",
+    hdrs = ["TruncTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "round",
+    hdrs = ["RoundTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "roundf",
+    hdrs = ["RoundTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "roundl",
+    hdrs = ["RoundTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "frexp",
+    hdrs = ["FrexpTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "frexpf",
+    hdrs = ["FrexpTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "frexpl",
+    hdrs = ["FrexpTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "hypot",
+    hdrs = ["HypotTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "hypotf",
+    hdrs = [
+        "HypotTest.h",
+        "hypotf_hard_to_round.h",
+    ],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "logb",
+    hdrs = ["LogbTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "logbf",
+    hdrs = ["LogbTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "logbl",
+    hdrs = ["LogbTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "modf",
+    hdrs = ["ModfTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "modff",
+    hdrs = ["ModfTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "modfl",
+    hdrs = ["ModfTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+cc_library(
+    name = "remquo_test_template",
+    hdrs = ["RemQuoTest.h"],
+    deps = [
+        "//libc:__support_fputil_basic_operations",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "remquo",
+    deps = [
+        ":remquo_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "remquof",
+    deps = [
+        ":remquo_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "remquol",
+    deps = [
+        ":remquo_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "fmin",
+    hdrs = ["FMinTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fminf",
+    hdrs = ["FMinTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fminl",
+    hdrs = ["FMinTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fmax",
+    hdrs = ["FMaxTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fmaxf",
+    hdrs = ["FMaxTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "fmaxl",
+    hdrs = ["FMaxTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "sqrt",
+    hdrs = ["SqrtTest.h"],
+    deps = [
+        "//libc:__support_cpp_bit",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "sqrtf",
+    hdrs = ["SqrtTest.h"],
+    deps = [
+        "//libc:__support_cpp_bit",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "sqrtl",
+    hdrs = ["SqrtTest.h"],
+    deps = [
+        "//libc:__support_cpp_bit",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "copysign",
+    hdrs = ["CopySignTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "copysignf",
+    hdrs = ["CopySignTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+math_test(
+    name = "copysignl",
+    hdrs = ["CopySignTest.h"],
+    deps = ["//libc/utils/MPFRWrapper:mpfr_wrapper"],
+)
+
+cc_library(
+    name = "ilogb_test_template",
+    hdrs = ["ILogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_manipulation_functions",
+        "//libc/utils/UnitTest:LibcUnitTest",
+    ],
+)
+
+math_test(
+    name = "ilogb",
+    deps = [":ilogb_test_template"],
+)
+
+math_test(
+    name = "ilogbf",
+    deps = [":ilogb_test_template"],
+)
+
+math_test(
+    name = "ilogbl",
+    deps = [":ilogb_test_template"],
+)
+
+cc_library(
+    name = "fdim_test_template",
+    hdrs = ["FDimTest.h"],
+    deps = [
+        "//libc:__support_fputil_basic_operations",
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "fdim",
+    deps = [":fdim_test_template"],
+)
+
+math_test(
+    name = "fdimf",
+    deps = [":fdim_test_template"],
+)
+
+math_test(
+    name = "fdiml",
+    deps = [":fdim_test_template"],
+)
+
+cc_library(
+    name = "ldexp_test_template",
+    hdrs = ["LdExpTest.h"],
+    deps = [
+        "//libc:__support_fputil_fp_bits",
+        "//libc:__support_fputil_normal_float",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "ldexp",
+    deps = [":ldexp_test_template"],
+)
+
+math_test(
+    name = "ldexpf",
+    deps = [":ldexp_test_template"],
+)
+
+math_test(
+    name = "ldexpl",
+    deps = [":ldexp_test_template"],
+)
+
+cc_library(
+    name = "rint_test_template",
+    hdrs = ["RIntTest.h"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "rint",
+    deps = [
+        ":rint_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "rintf",
+    deps = [
+        ":rint_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "rintl",
+    deps = [
+        ":rint_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+cc_library(
+    name = "round_to_integer_test_template",
+    hdrs = ["RoundToIntegerTest.h"],
+    deps = [
+        "//libc:__support_fputil_fenv_impl",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "lrint",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "lrintf",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "lrintl",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llrint",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llrintf",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llrintl",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "lround",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "lroundf",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "lroundl",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llround",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llroundf",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "llroundl",
+    deps = [
+        ":round_to_integer_test_template",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+cc_library(
+    name = "nextafter_test_template",
+    hdrs = ["NextAfterTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc:__support_cpp_bit",
+        "//libc:__support_cpp_type_traits",
+        "//libc:__support_fputil_basic_operations",
+        "//libc:__support_fputil_fp_bits",
+        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/utils/UnitTest:fp_test_helpers",
+    ],
+)
+
+math_test(
+    name = "nextafter",
+    deps = [":nextafter_test_template"],
+)
+
+math_test(
+    name = "nextafterf",
+    deps = [":nextafter_test_template"],
+)
+
+math_test(
+    name = "nextafterl",
+    deps = [":nextafter_test_template"],
+)
+
+cc_library(
+    name = "sdcomp26094",
+    hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc:libc_root",
+    ],
+)
+
+math_test(
+    name = "cosf",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "sincosf",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "sinf",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)

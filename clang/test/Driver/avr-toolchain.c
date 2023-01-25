@@ -72,3 +72,16 @@
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=%S/Inputs/basic_avr_tree/usr/bin/ld.lld -T avr.lds 2>&1 | FileCheck --check-prefix=LDS1 %s
 // LDS1: "-T" "avr.lds"
 // LDS1-NOT: "-mavr5"
+
+// RUN: %clang %s -### --target=avr -mmcu=atmega328 --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir --rtlib=libgcc 2>&1 | FileCheck --check-prefix=LIBGCC %s
+// LIBGCC: "-lgcc"
+// LIBGCC-NOT: libclang_rt
+
+// RUN: %clang %s -### --target=avr -mmcu=atmega328 --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir --rtlib=compiler-rt 2>&1 | FileCheck --check-prefix=COMRT %s
+// COMRT: avr/libclang_rt.builtins.a
+// COMRT-NOT: "-lgcc"
+
+// RUN: %clang %s -### --target=avr --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir --rtlib=compiler-rt 2>&1 | FileCheck --check-prefix=NOMCU %s
+// RUN: %clang %s -### --target=avr --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir --rtlib=libgcc 2>&1 | FileCheck --check-prefix=NOMCU %s
+// NOMCU-NOT: libclang_rt
+// NOMCU-NOT: "-lgcc"

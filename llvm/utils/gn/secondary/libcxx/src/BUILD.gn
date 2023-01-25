@@ -3,9 +3,6 @@ import("//libcxx/config.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 declare_args() {
-  # Whether to support libc++ opt-in debug mode via _LIBCPP_DEBUG.
-  libcxx_enable_debug_mode = true
-
   # Build libc++ with definitions for operator new/delete.
   libcxx_enable_new_delete_definitions = true
 
@@ -115,7 +112,6 @@ config("cxx_config") {
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
-  "assert.cpp",
   "atomic.cpp",
   "barrier.cpp",
   "bind.cpp",
@@ -149,6 +145,7 @@ cxx_sources = [
   "legacy_pointer_safety.cpp",
   "locale.cpp",
   "memory.cpp",
+  "memory_resource.cpp",
   "mutex.cpp",
   "mutex_destructor.cpp",
   "new.cpp",
@@ -182,6 +179,7 @@ cxx_sources = [
   "valarray.cpp",
   "variant.cpp",
   "vector.cpp",
+  "verbose_abort.cpp",
 ]
 if (target_os == "win") {
   cxx_sources += [

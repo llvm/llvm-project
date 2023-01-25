@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // Tests that dwoIds in modules match the dwoIDs in the main file.
 
 // REQUIRES: asserts

@@ -439,39 +439,39 @@ def VecListFourQWordIndexed : Operand<i32> {
 }
 
 def dword_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 8;
+  return cast<LoadSDNode>(N)->getAlign() >= 8;
 }]>;
 def dword_alignedstore : PatFrag<(ops node:$val, node:$ptr),
                                  (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 8;
+  return cast<StoreSDNode>(N)->getAlign() >= 8;
 }]>;
 def word_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() == 4;
+  return cast<LoadSDNode>(N)->getAlign() == 4;
 }]>;
 def word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
                                  (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() == 4;
+  return cast<StoreSDNode>(N)->getAlign() == 4;
 }]>;
 def hword_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() == 2;
+  return cast<LoadSDNode>(N)->getAlign() == 2;
 }]>;
 def hword_alignedstore : PatFrag<(ops node:$val, node:$ptr),
                                  (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() == 2;
+  return cast<StoreSDNode>(N)->getAlign() == 2;
 }]>;
 def byte_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() == 1;
+  return cast<LoadSDNode>(N)->getAlign() == 1;
 }]>;
 def byte_alignedstore : PatFrag<(ops node:$val, node:$ptr),
                              (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() == 1;
+  return cast<StoreSDNode>(N)->getAlign() == 1;
 }]>;
 def non_word_alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() < 4;
+  return cast<LoadSDNode>(N)->getAlign() < 4;
 }]>;
 def non_word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
                                     (store node:$val, node:$ptr), [{
-  return cast<StoreSDNode>(N)->getAlignment() < 4;
+  return cast<StoreSDNode>(N)->getAlign() < 4;
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -6697,7 +6697,7 @@ def VDUPLN32q : VDUPLNQ<{?,1,0,0}, "vdup", "32", v4i32, v2i32, VectorIndex32> {
 
 let Predicates = [HasNEON] in {
 def : Pat<(v4f16 (ARMvduplane (v4f16 DPR:$Vm), imm:$lane)),
-          (VDUPLN32d DPR:$Vm, imm:$lane)>;
+          (VDUPLN16d DPR:$Vm, imm:$lane)>;
 
 def : Pat<(v2f32 (ARMvduplane (v2f32 DPR:$Vm), imm:$lane)),
           (VDUPLN32d DPR:$Vm, imm:$lane)>;
@@ -6982,6 +6982,10 @@ let Predicates = [HasNEON] in {
             (VREV64q16 QPR:$Vm)>;
   def : Pat<(v4f16 (ARMvrev64 (v4f16 DPR:$Vm))),
             (VREV64d16 DPR:$Vm)>;
+  def : Pat<(v8bf16 (ARMvrev64 (v8bf16 QPR:$Vm))),
+            (VREV64q16 QPR:$Vm)>;
+  def : Pat<(v4bf16 (ARMvrev64 (v4bf16 DPR:$Vm))),
+            (VREV64d16 DPR:$Vm)>;
 }
 
 //   VREV32   : Vector Reverse elements within 32-bit words
@@ -7007,6 +7011,10 @@ let Predicates = [HasNEON] in {
   def : Pat<(v8f16 (ARMvrev32 (v8f16 QPR:$Vm))),
             (VREV32q16 QPR:$Vm)>;
   def : Pat<(v4f16 (ARMvrev32 (v4f16 DPR:$Vm))),
+            (VREV32d16 DPR:$Vm)>;
+  def : Pat<(v8bf16 (ARMvrev32 (v8bf16 QPR:$Vm))),
+            (VREV32q16 QPR:$Vm)>;
+  def : Pat<(v4bf16 (ARMvrev32 (v4bf16 DPR:$Vm))),
             (VREV32d16 DPR:$Vm)>;
 }
 
@@ -7036,19 +7044,15 @@ class AlignedVEXTq<ValueType DestTy, ValueType SrcTy, SDNodeXForm LaneCVT>
         Requires<[HasNEON]>;
 
 def : AlignedVEXTq<v8i8, v16i8, DSubReg_i8_reg>;
-
 def : AlignedVEXTq<v4i16, v8i16, DSubReg_i16_reg>;
-
 def : AlignedVEXTq<v2i32, v4i32, DSubReg_i32_reg>;
-
 def : AlignedVEXTq<v1i64, v2i64, DSubReg_f64_reg>;
-
 def : AlignedVEXTq<v2f32, v4f32, DSubReg_i32_reg>;
+def : AlignedVEXTq<v4f16, v8f16, DSubReg_i16_reg>;
+def : AlignedVEXTq<v4bf16, v8bf16, DSubReg_i16_reg>;
 
-def : AlignedVEXTq<v4f16, v8f16, DSubReg_i16_reg>; // v8f16 -> v4f16
 
 //   VEXT     : Vector Extract
-
 
 // All of these have a two-operand InstAlias.
 let TwoOperandAliasConstraint = "$Vn = $Vd" in {
@@ -7084,6 +7088,8 @@ def VEXTd16 : VEXTd<"vext", "16", v4i16, imm0_3> {
 let Predicates = [HasNEON] in {
 def : Pat<(v4f16 (NEONvext (v4f16 DPR:$Vn), (v4f16 DPR:$Vm), (i32 imm:$index))),
           (VEXTd16 DPR:$Vn, DPR:$Vm, imm:$index)>;
+def : Pat<(v4bf16 (NEONvext (v4bf16 DPR:$Vn), (v4bf16 DPR:$Vm), (i32 imm:$index))),
+          (VEXTd16 DPR:$Vn, DPR:$Vm, imm:$index)>;
 }
 
 def VEXTd32 : VEXTd<"vext", "32", v2i32, imm0_1> {
@@ -7104,6 +7110,8 @@ def VEXTq16 : VEXTq<"vext", "16", v8i16, imm0_7> {
 }
 let Predicates = [HasNEON] in {
 def : Pat<(v8f16 (NEONvext (v8f16 QPR:$Vn), (v8f16 QPR:$Vm), (i32 imm:$index))),
+          (VEXTq16 QPR:$Vn, QPR:$Vm, imm:$index)>;
+def : Pat<(v8bf16 (NEONvext (v8bf16 QPR:$Vn), (v8bf16 QPR:$Vm), (i32 imm:$index))),
           (VEXTq16 QPR:$Vn, QPR:$Vm, imm:$index)>;
 }
 

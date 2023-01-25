@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -guard:longjmp -out:%t.exe -entry:main
+# RUN: lld-link %t.obj -guard:cf -out:%t.exe -entry:main
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s
 
 # CHECK: ImageBase: 0x140000000
@@ -11,7 +11,11 @@
 # CHECK:   GuardCFCheckDispatch: 0x0
 # CHECK:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK:   GuardCFFunctionCount: 1
-# CHECK:   GuardFlags: 0x10500
+# CHECK:   GuardFlags [ (0x10500)
+# CHECK:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK:     CF_INSTRUMENTED (0x100)
+# CHECK:     CF_LONGJUMP_TABLE_PRESENT (0x10000)
+# CHECK:   ]
 # CHECK:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK:   GuardAddressTakenIatEntryCount: 0
 # CHECK:   GuardLongJumpTargetTable: 0x14000{{.*}}

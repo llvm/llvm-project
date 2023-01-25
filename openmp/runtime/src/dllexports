@@ -228,6 +228,7 @@
     __kmpc_for_static_init_4                136
     __kmpc_for_static_init_8                137
     __kmpc_fork_call                        138
+    __kmpc_fork_call_if                     294
     __kmpc_global_num_threads               140
     __kmpc_global_thread_num                141
     __kmpc_in_parallel                      142
@@ -345,6 +346,7 @@ kmpc_set_defaults                           224
         __kmpc_fork_teams                   241
         __kmpc_omp_task_with_deps           242
         __kmpc_omp_wait_deps                243
+        __kmpc_omp_taskwait_deps_51         292
         __kmpc_cancel                       244
         __kmpc_cancellationpoint            245
         __kmpc_cancel_barrier               246
@@ -688,11 +690,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_fixed2_eqv               2078
     __kmpc_atomic_fixed4_eqv               2079
     __kmpc_atomic_fixed8_eqv               2080
-
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_add              2081
     __kmpc_atomic_float10_sub              2082
     __kmpc_atomic_float10_mul              2083
     __kmpc_atomic_float10_div              2084
+    %endif
 
     __kmpc_atomic_cmplx4_add               2085
     __kmpc_atomic_cmplx4_sub               2086
@@ -702,10 +705,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_cmplx8_sub               2090
     __kmpc_atomic_cmplx8_mul               2091
     __kmpc_atomic_cmplx8_div               2092
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_cmplx10_add              2093
     __kmpc_atomic_cmplx10_sub              2094
     __kmpc_atomic_cmplx10_mul              2095
     __kmpc_atomic_cmplx10_div              2096
+    %endif
     %ifdef HAVE_QUAD
     __kmpc_atomic_cmplx16_add              2097
     __kmpc_atomic_cmplx16_sub              2098
@@ -753,10 +758,12 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_float8_mul_fp            2133
     __kmpc_atomic_float8_div_fp            2134
 
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_add_fp           2135
     __kmpc_atomic_float10_sub_fp           2136
     __kmpc_atomic_float10_mul_fp           2137
     __kmpc_atomic_float10_div_fp           2138
+    %endif
     %endif
 
     __kmpc_atomic_fixed1_mul_float8        2169
@@ -785,9 +792,13 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_2                        2248
    #__kmpc_atomic_4                    # declared above #100
    #__kmpc_atomic_8                    # declared above #101
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_10                       2251
+    %endif
     __kmpc_atomic_16                       2252
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_20                       2253
+    %endif
     __kmpc_atomic_32                       2254
 
     %ifdef arch_32
@@ -808,11 +819,7 @@ kmp_set_disp_num_buffers                    890
 
     %endif
 
-    # These are specific to x86 and x64
-    %ifndef arch_64
-    %ifndef arch_aarch64
-
-        # ATOMIC extensions for OpenMP 3.1 spec (x86 and x64 only)
+        # ATOMIC extensions for OpenMP 3.1 spec
 
         __kmpc_atomic_fixed1_rd                2265
         __kmpc_atomic_fixed2_rd                2266
@@ -1039,6 +1046,9 @@ kmp_set_disp_num_buffers                    890
         __kmpc_atomic_float10_div_cpt_fp
         %endif
 
+            # These are specific to x86 and x64
+            %ifdef IS_IA_ARCH
+
             # ATOMIC extensions for OpenMP 4.0 spec (x86 and x64 only)
 
             __kmpc_atomic_fixed1_swp           2412
@@ -1214,8 +1224,7 @@ kmp_set_disp_num_buffers                    890
             __kmpc_atomic_float10_div_cpt_rev_fp
             %endif
 
-    %endif   # arch_aarch64
-    %endif   # arch_64
+    %endif   # IS_IA_ARCH
 
     %ifdef HAVE_QUAD
     __kmpc_atomic_fixed1u_add_fp
@@ -1233,6 +1242,7 @@ kmp_set_disp_num_buffers                    890
     %endif
 
     # OpenMP 5.1 atomics
+    %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_max              2139
     __kmpc_atomic_float10_min              2140
     __kmpc_atomic_float10_max_cpt          2141
@@ -1254,6 +1264,7 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_val_2_cas_cpt            2156
     __kmpc_atomic_val_4_cas_cpt            2157
     __kmpc_atomic_val_8_cas_cpt            2158
+    %endif
 
 %endif
 

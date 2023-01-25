@@ -5,7 +5,7 @@
 declare i64 @foo()
 
 ; Check SLGR.
-define zeroext i1 @f1(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
+define zeroext i1 @f1(i64 %dummy, i64 %a, i64 %b, ptr %res) {
 ; CHECK-LABEL: f1:
 ; CHECK: slgr %r3, %r4
 ; CHECK-DAG: stg %r3, 0(%r5)
@@ -16,12 +16,12 @@ define zeroext i1 @f1(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check using the overflow result for a branch.
-define void @f2(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
+define void @f2(i64 %dummy, i64 %a, i64 %b, ptr %res) {
 ; CHECK-LABEL: f2:
 ; CHECK: slgr %r3, %r4
 ; CHECK: stg %r3, 0(%r5)
@@ -30,7 +30,7 @@ define void @f2(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   br i1 %obit, label %call, label %exit
 
 call:
@@ -42,7 +42,7 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f3(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
+define void @f3(i64 %dummy, i64 %a, i64 %b, ptr %res) {
 ; CHECK-LABEL: f3:
 ; CHECK: slgr %r3, %r4
 ; CHECK: stg %r3, 0(%r5)
@@ -51,7 +51,7 @@ define void @f3(i64 %dummy, i64 %a, i64 %b, i64 *%res) {
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   br i1 %obit, label %exit, label %call
 
 call:
@@ -63,7 +63,7 @@ exit:
 }
 
 ; Check SLG with no displacement.
-define zeroext i1 @f4(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f4(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f4:
 ; CHECK: slg %r3, 0(%r4)
 ; CHECK-DAG: stg %r3, 0(%r5)
@@ -71,16 +71,16 @@ define zeroext i1 @f4(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %b = load i64, i64 *%src
+  %b = load i64, ptr %src
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the aligned SLG range.
-define zeroext i1 @f5(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f5(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f5:
 ; CHECK: slg %r3, 524280(%r4)
 ; CHECK-DAG: stg %r3, 0(%r5)
@@ -88,18 +88,18 @@ define zeroext i1 @f5(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 65535
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 65535
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next doubleword up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f6(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f6(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f6:
 ; CHECK: agfi %r4, 524288
 ; CHECK: slg %r3, 0(%r4)
@@ -108,17 +108,17 @@ define zeroext i1 @f6(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 65536
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 65536
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the negative aligned SLG range.
-define zeroext i1 @f7(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f7(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f7:
 ; CHECK: slg %r3, -8(%r4)
 ; CHECK-DAG: stg %r3, 0(%r5)
@@ -126,17 +126,17 @@ define zeroext i1 @f7(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -1
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -1
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the low end of the SLG range.
-define zeroext i1 @f8(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f8(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f8:
 ; CHECK: slg %r3, -524288(%r4)
 ; CHECK-DAG: stg %r3, 0(%r5)
@@ -144,18 +144,18 @@ define zeroext i1 @f8(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -65536
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -65536
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next doubleword down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f9(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
+define zeroext i1 @f9(i64 %dummy, i64 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f9:
 ; CHECK: agfi %r4, -524296
 ; CHECK: slg %r3, 0(%r4)
@@ -164,17 +164,17 @@ define zeroext i1 @f9(i64 %dummy, i64 %a, i64 *%src, i64 *%res) {
 ; CHECK-DAG: afi [[REG]], -536870912
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i64, i64 *%src, i64 -65537
-  %b = load i64, i64 *%ptr
+  %ptr = getelementptr i64, ptr %src, i64 -65537
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that SLG allows an index.
-define zeroext i1 @f10(i64 %src, i64 %index, i64 %a, i64 *%res) {
+define zeroext i1 @f10(i64 %src, i64 %index, i64 %a, ptr %res) {
 ; CHECK-LABEL: f10:
 ; CHECK: slg %r4, 524280({{%r3,%r2|%r2,%r3}})
 ; CHECK-DAG: stg %r4, 0(%r5)
@@ -184,41 +184,41 @@ define zeroext i1 @f10(i64 %src, i64 %index, i64 %a, i64 *%res) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524280
-  %ptr = inttoptr i64 %add2 to i64 *
-  %b = load i64, i64 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %b = load i64, ptr %ptr
   %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %a, i64 %b)
   %val = extractvalue {i64, i1} %t, 0
   %obit = extractvalue {i64, i1} %t, 1
-  store i64 %val, i64 *%res
+  store i64 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that subtractions of spilled values can use SLG rather than SLGR.
-define zeroext i1 @f11(i64 *%ptr0) {
+define zeroext i1 @f11(ptr %ptr0) {
 ; CHECK-LABEL: f11:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: slg %r2, 160(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr i64, i64 *%ptr0, i64 2
-  %ptr2 = getelementptr i64, i64 *%ptr0, i64 4
-  %ptr3 = getelementptr i64, i64 *%ptr0, i64 6
-  %ptr4 = getelementptr i64, i64 *%ptr0, i64 8
-  %ptr5 = getelementptr i64, i64 *%ptr0, i64 10
-  %ptr6 = getelementptr i64, i64 *%ptr0, i64 12
-  %ptr7 = getelementptr i64, i64 *%ptr0, i64 14
-  %ptr8 = getelementptr i64, i64 *%ptr0, i64 16
-  %ptr9 = getelementptr i64, i64 *%ptr0, i64 18
+  %ptr1 = getelementptr i64, ptr %ptr0, i64 2
+  %ptr2 = getelementptr i64, ptr %ptr0, i64 4
+  %ptr3 = getelementptr i64, ptr %ptr0, i64 6
+  %ptr4 = getelementptr i64, ptr %ptr0, i64 8
+  %ptr5 = getelementptr i64, ptr %ptr0, i64 10
+  %ptr6 = getelementptr i64, ptr %ptr0, i64 12
+  %ptr7 = getelementptr i64, ptr %ptr0, i64 14
+  %ptr8 = getelementptr i64, ptr %ptr0, i64 16
+  %ptr9 = getelementptr i64, ptr %ptr0, i64 18
 
-  %val0 = load i64, i64 *%ptr0
-  %val1 = load i64, i64 *%ptr1
-  %val2 = load i64, i64 *%ptr2
-  %val3 = load i64, i64 *%ptr3
-  %val4 = load i64, i64 *%ptr4
-  %val5 = load i64, i64 *%ptr5
-  %val6 = load i64, i64 *%ptr6
-  %val7 = load i64, i64 *%ptr7
-  %val8 = load i64, i64 *%ptr8
-  %val9 = load i64, i64 *%ptr9
+  %val0 = load i64, ptr %ptr0
+  %val1 = load i64, ptr %ptr1
+  %val2 = load i64, ptr %ptr2
+  %val3 = load i64, ptr %ptr3
+  %val4 = load i64, ptr %ptr4
+  %val5 = load i64, ptr %ptr5
+  %val6 = load i64, ptr %ptr6
+  %val7 = load i64, ptr %ptr7
+  %val8 = load i64, ptr %ptr8
+  %val9 = load i64, ptr %ptr9
 
   %ret = call i64 @foo()
 

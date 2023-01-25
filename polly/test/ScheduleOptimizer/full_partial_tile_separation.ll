@@ -27,7 +27,7 @@
 ; CHECK-NEXT:        }
 
 ; Function Attrs: nounwind uwtable
-define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, [1024 x double]* %C, [1024 x double]* %A, [1024 x double]* %B) #0 {
+define void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) #0 {
 entry:
   %cmp.27 = icmp sgt i32 %ni, 0
   br i1 %cmp.27, label %for.cond.1.preheader.lr.ph, label %for.end.22
@@ -53,15 +53,15 @@ for.body.6.lr.ph:                                 ; preds = %for.cond.4.preheade
 
 for.body.6:                                       ; preds = %for.body.6.lr.ph, %for.body.6
   %indvars.iv = phi i64 [ 0, %for.body.6.lr.ph ], [ %indvars.iv.next, %for.body.6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv33, i64 %indvars.iv
-  %0 = load double, double* %arrayidx8, align 8
-  %arrayidx12 = getelementptr inbounds [1024 x double], [1024 x double]* %B, i64 %indvars.iv, i64 %indvars.iv29
-  %1 = load double, double* %arrayidx12, align 8
+  %arrayidx8 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv33, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx8, align 8
+  %arrayidx12 = getelementptr inbounds [1024 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv29
+  %1 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %0, %1
-  %arrayidx16 = getelementptr inbounds [1024 x double], [1024 x double]* %C, i64 %indvars.iv33, i64 %indvars.iv29
-  %2 = load double, double* %arrayidx16, align 8
+  %arrayidx16 = getelementptr inbounds [1024 x double], ptr %C, i64 %indvars.iv33, i64 %indvars.iv29
+  %2 = load double, ptr %arrayidx16, align 8
   %add = fadd double %2, %mul
-  store double %add, double* %arrayidx16, align 8
+  store double %add, ptr %arrayidx16, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp ne i32 %lftr.wideiv, %nk

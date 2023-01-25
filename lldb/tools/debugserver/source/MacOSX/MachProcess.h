@@ -16,6 +16,7 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/loader.h>
 #include <mach/mach.h>
+#include <optional>
 #include <pthread.h>
 #include <sys/signal.h>
 #include <uuid/uuid.h>
@@ -252,7 +253,7 @@ public:
   DeploymentInfo GetDeploymentInfo(const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
-  static const char *GetPlatformString(unsigned char platform);
+  static std::optional<std::string> GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
                                      int wordsize,
@@ -361,6 +362,8 @@ public:
 
   DNBProfileDataScanType GetProfileScanType() { return m_profile_scan_type; }
 
+  JSONGenerator::ObjectSP GetDyldProcessState();
+
 private:
   enum {
     eMachProcessFlagsNone = 0,
@@ -467,6 +470,7 @@ private:
   void (*m_dyld_process_info_release)(void *info);
   void (*m_dyld_process_info_get_cache)(void *info, void *cacheInfo);
   uint32_t (*m_dyld_process_info_get_platform)(void *info);
+  void (*m_dyld_process_info_get_state)(void *info, void *stateInfo);
 };
 
 #endif // LLDB_TOOLS_DEBUGSERVER_SOURCE_MACOSX_MACHPROCESS_H

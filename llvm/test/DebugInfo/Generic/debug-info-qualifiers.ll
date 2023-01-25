@@ -38,20 +38,20 @@ define void @_Z1gv() #0 !dbg !17 {
   %a = alloca %class.A, align 1
   %pl = alloca { i64, i64 }, align 8
   %pr = alloca { i64, i64 }, align 8
-  call void @llvm.dbg.declare(metadata %class.A* %a, metadata !24, metadata !DIExpression()), !dbg !25
-  call void @llvm.dbg.declare(metadata { i64, i64 }* %pl, metadata !26, metadata !DIExpression()), !dbg !31
-  store { i64, i64 } { i64 ptrtoint (void (%class.A*)* @_ZNKR1A1lEv to i64), i64 0 }, { i64, i64 }* %pl, align 8, !dbg !31
-  call void @llvm.dbg.declare(metadata { i64, i64 }* %pr, metadata !32, metadata !DIExpression()), !dbg !35
-  store { i64, i64 } { i64 ptrtoint (void (%class.A*)* @_ZNKO1A1rEv to i64), i64 0 }, { i64, i64 }* %pr, align 8, !dbg !35
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !24, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %pl, metadata !26, metadata !DIExpression()), !dbg !31
+  store { i64, i64 } { i64 ptrtoint (ptr @_ZNKR1A1lEv to i64), i64 0 }, ptr %pl, align 8, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %pr, metadata !32, metadata !DIExpression()), !dbg !35
+  store { i64, i64 } { i64 ptrtoint (ptr @_ZNKO1A1rEv to i64), i64 0 }, ptr %pr, align 8, !dbg !35
   ret void, !dbg !36
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @_ZNKR1A1lEv(%class.A*)
+declare void @_ZNKR1A1lEv(ptr)
 
-declare void @_ZNKO1A1rEv(%class.A*)
+declare void @_ZNKO1A1rEv(ptr)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

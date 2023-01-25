@@ -133,25 +133,25 @@ void NORETURN reportCheckFailed(const char *File, int Line,
 #else
 #define DCHECK(A)                                                              \
   do {                                                                         \
-  } while (false)
+  } while (false && (A))
 #define DCHECK_EQ(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) == (B))
 #define DCHECK_NE(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) != (B))
 #define DCHECK_LT(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) < (B))
 #define DCHECK_LE(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) <= (B))
 #define DCHECK_GT(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) > (B))
 #define DCHECK_GE(A, B)                                                        \
   do {                                                                         \
-  } while (false)
+  } while (false && (A) >= (B))
 #endif
 
 // The superfluous die() call effectively makes this macro NORETURN.

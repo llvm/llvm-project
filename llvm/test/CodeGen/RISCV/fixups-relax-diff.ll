@@ -8,7 +8,7 @@
 define i32 @main() nounwind {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ; CHECK: R_RISCV_ADD64 b
   ; CHECK-NEXT: R_RISCV_SUB64 a
   call void asm sideeffect "a:\0Ab:\0A.dword b-a", ""()

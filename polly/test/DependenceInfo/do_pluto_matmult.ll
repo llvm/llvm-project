@@ -5,12 +5,12 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-%struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%struct._IO_marker = type { %struct._IO_marker*, %struct._IO_FILE*, i32 }
+%struct._IO_FILE = type { i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i64, i16, i8, [1 x i8], ptr, i64, ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%struct._IO_marker = type { ptr, ptr, i32 }
 
-@A = common global [36 x [49 x double]] zeroinitializer, align 8 ; <[36 x [49 x double]]*> [#uses=3]
-@B = common global [36 x [49 x double]] zeroinitializer, align 8 ; <[36 x [49 x double]]*> [#uses=3]
-@C = common global [36 x [49 x double]] zeroinitializer, align 8 ; <[36 x [49 x double]]*> [#uses=4]
+@A = common global [36 x [49 x double]] zeroinitializer, align 8 ; <ptr> [#uses=3]
+@B = common global [36 x [49 x double]] zeroinitializer, align 8 ; <ptr> [#uses=3]
+@C = common global [36 x [49 x double]] zeroinitializer, align 8 ; <ptr> [#uses=4]
 
 define void @do_pluto_matmult() nounwind {
 entry:
@@ -23,21 +23,21 @@ do.body:                                          ; preds = %do.cond42, %entry
 
 do.body1:                                         ; preds = %do.cond36, %do.body
   %indvar1 = phi i64 [ %indvar.next2, %do.cond36 ], [ 0, %do.body ] ; <i64> [#uses=3]
-  %arrayidx5 = getelementptr [36 x [49 x double]], [36 x [49 x double]]* @C, i64 0, i64 %indvar3, i64 %indvar1 ; <double*> [#uses=2]
+  %arrayidx5 = getelementptr [36 x [49 x double]], ptr @C, i64 0, i64 %indvar3, i64 %indvar1 ; <ptr> [#uses=2]
   br label %do.body2
 
 do.body2:                                         ; preds = %do.cond, %do.body1
   %indvar = phi i64 [ %indvar.next, %do.cond ], [ 0, %do.body1 ] ; <i64> [#uses=3]
-  %arrayidx13 = getelementptr [36 x [49 x double]], [36 x [49 x double]]* @A, i64 0, i64 %indvar3, i64 %indvar ; <double*> [#uses=1]
-  %arrayidx22 = getelementptr [36 x [49 x double]], [36 x [49 x double]]* @B, i64 0, i64 %indvar, i64 %indvar1 ; <double*> [#uses=1]
-  %tmp6 = load double, double* %arrayidx5                 ; <double> [#uses=1]
+  %arrayidx13 = getelementptr [36 x [49 x double]], ptr @A, i64 0, i64 %indvar3, i64 %indvar ; <ptr> [#uses=1]
+  %arrayidx22 = getelementptr [36 x [49 x double]], ptr @B, i64 0, i64 %indvar, i64 %indvar1 ; <ptr> [#uses=1]
+  %tmp6 = load double, ptr %arrayidx5                 ; <double> [#uses=1]
   %mul = fmul double 1.000000e+00, %tmp6          ; <double> [#uses=1]
-  %tmp14 = load double, double* %arrayidx13               ; <double> [#uses=1]
+  %tmp14 = load double, ptr %arrayidx13               ; <double> [#uses=1]
   %mul15 = fmul double 1.000000e+00, %tmp14       ; <double> [#uses=1]
-  %tmp23 = load double, double* %arrayidx22               ; <double> [#uses=1]
+  %tmp23 = load double, ptr %arrayidx22               ; <double> [#uses=1]
   %mul24 = fmul double %mul15, %tmp23             ; <double> [#uses=1]
   %add = fadd double %mul, %mul24                 ; <double> [#uses=1]
-  store double %add, double* %arrayidx5
+  store double %add, ptr %arrayidx5
   br label %do.cond
 
 do.cond:                                          ; preds = %do.body2

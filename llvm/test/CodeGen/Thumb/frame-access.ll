@@ -10,16 +10,16 @@
 ; int u(int *, int *, int *, struct S, struct S);
 
 %struct.S = type { [128 x i32] }
-%struct.__va_list = type { i8* }
+%struct.__va_list = type { ptr }
 
 @s = common dso_local global %struct.S zeroinitializer, align 4
 
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 declare dso_local i32 @i(i32) local_unnamed_addr
-declare dso_local i32 @g(i32*, i32, i32, i32, i32, i32) local_unnamed_addr
-declare dso_local i32 @f(i32*, i32, i32, i32, %struct.S* byval(%struct.S) align 4) local_unnamed_addr
-declare dso_local i32 @h(i32*, i32*, i32*) local_unnamed_addr
-declare dso_local i32 @u(i32*, i32*, i32*, %struct.S* byval(%struct.S) align 4, %struct.S* byval(%struct.S) align 4) local_unnamed_addr
+declare dso_local i32 @g(ptr, i32, i32, i32, i32, i32) local_unnamed_addr
+declare dso_local i32 @f(ptr, i32, i32, i32, ptr byval(%struct.S) align 4) local_unnamed_addr
+declare dso_local i32 @h(ptr, ptr, ptr) local_unnamed_addr
+declare dso_local i32 @u(ptr, ptr, ptr, ptr byval(%struct.S) align 4, ptr byval(%struct.S) align 4) local_unnamed_addr
 
 ;
 ; Test access to arguments, passed on stack (including varargs)
@@ -33,9 +33,7 @@ declare dso_local i32 @u(i32*, i32*, i32*, %struct.S* byval(%struct.S) align 4, 
 define dso_local i32 @test_args_sp(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) local_unnamed_addr {
 entry:
   %v = alloca [4 x i32], align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @g(i32* nonnull %arraydecay, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
+  %call = call i32 @g(ptr nonnull %v, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
   ret i32 %call
 }
 ; CHECK-LABEL: test_args_sp
@@ -59,11 +57,8 @@ define dso_local i32 @test_varargs_sp(i32 %a, ...) local_unnamed_addr  {
 entry:
   %v = alloca [4 x i32], align 4
   %ap = alloca %struct.__va_list, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast %struct.__va_list* %ap to i8*
-  call void @llvm.va_start(i8* nonnull %1)
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @g(i32* nonnull %arraydecay, i32 %a, i32 0, i32 0, i32 0, i32 0)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %call = call i32 @g(ptr nonnull %v, i32 %a, i32 0, i32 0, i32 0, i32 0)
   ret i32 %call
 }
 ; CHECK-LABEL: test_varargs_sp
@@ -77,12 +72,9 @@ entry:
 ; CHECK-FP-ATPCS: adds r0, #8
 ; CHECK-FP-ATPCS: stm r0!, {r1, r2, r3}
 ; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r1, [r0, #8]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r2, [r0, #12]
-; CHECK-FP-AAPCS: mov r0, r11
-; CHECK-FP-AAPCS: str r3, [r0, #16]
-
+; CHECK-FP-AAPCS: mov r7, r0
+; CHECK-FP-AAPCS: adds r7, #8
+; CHECK-FP-AAPCS: stm r7!, {r1, r2, r3}
 ; Re-aligned stack, access via FP
 ; int test_args_realign(int a, int b, int c, int d, int e) {
 ;   __attribute__((aligned(16))) int v[4];
@@ -92,9 +84,7 @@ entry:
 define dso_local i32 @test_args_realign(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) local_unnamed_addr  {
 entry:
   %v = alloca [4 x i32], align 16
-  %0 = bitcast [4 x i32]* %v to i8*
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @g(i32* nonnull %arraydecay, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
+  %call = call i32 @g(ptr nonnull %v, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
   ret i32 %call
 }
 ; CHECK-LABEL: test_args_realign
@@ -125,11 +115,8 @@ define dso_local i32 @test_varargs_realign(i32 %a, ...) local_unnamed_addr  {
 entry:
   %v = alloca [4 x i32], align 16
   %ap = alloca %struct.__va_list, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast %struct.__va_list* %ap to i8*
-  call void @llvm.va_start(i8* nonnull %1)
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @g(i32* nonnull %arraydecay, i32 %a, i32 0, i32 0, i32 0, i32 0)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %call = call i32 @g(ptr nonnull %v, i32 %a, i32 0, i32 0, i32 0, i32 0)
   ret i32 %call
 }
 ; CHECK-LABEL: test_varargs_realign
@@ -148,11 +135,9 @@ entry:
 ; CHECK-ATPCS-NEXT: adds r0, #8
 ; CHECK-ATPCS-NEXT: stm r0!, {r1, r2, r3}
 ; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r1, [r0, #8]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r2, [r0, #12]
-; CHECK-AAPCS: mov r0, r11
-; CHECK-AAPCS: str r3, [r0, #16]
+; CHECK-AAPCS: mov r7, r0
+; CHECK-AAPCS: adds r7, #8
+; CHECK-AAPCS: stm r7!, {r1, r2, r3}
 ; VLAs present, access via FP
 ; int test_args_vla(int a, int b, int c, int d, int e) {
 ;   int v[a];
@@ -161,7 +146,7 @@ entry:
 define dso_local i32 @test_args_vla(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) local_unnamed_addr  {
 entry:
   %vla = alloca i32, i32 %a, align 4
-  %call = call i32 @g(i32* nonnull %vla, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
+  %call = call i32 @g(ptr nonnull %vla, i32 %a, i32 %b, i32 %c, i32 %d, i32 %e)
   ret i32 %call
 }
 ; CHECK-LABEL: test_args_vla
@@ -189,9 +174,8 @@ define dso_local i32 @test_varargs_vla(i32 %a, ...) local_unnamed_addr  {
 entry:
   %ap = alloca %struct.__va_list, align 4
   %vla = alloca i32, i32 %a, align 4
-  %0 = bitcast %struct.__va_list* %ap to i8*
-  call void @llvm.va_start(i8* nonnull %0)
-  %call = call i32 @g(i32* nonnull %vla, i32 %a, i32 0, i32 0, i32 0, i32 0)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %call = call i32 @g(ptr nonnull %vla, i32 %a, i32 0, i32 0, i32 0, i32 0)
   ret i32 %call
 }
 ; CHECK-LABEL: test_varargs_vla
@@ -219,14 +203,12 @@ entry:
 define dso_local i32 @test_args_moving_sp(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) local_unnamed_addr  {
 entry:
   %v = alloca [4 x i32], align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
   %add = add nsw i32 %c, %b
   %add1 = add nsw i32 %add, %d
-  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 %add1, i32 %e, %struct.S* byval(%struct.S) nonnull align 4 @s)
-  %add.ptr = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 1
-  %add.ptr5 = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 2
-  %call6 = call i32 @h(i32* nonnull %arraydecay, i32* nonnull %add.ptr, i32* nonnull %add.ptr5)
+  %call = call i32 @f(ptr nonnull %v, i32 %a, i32 %add1, i32 %e, ptr byval(%struct.S) nonnull align 4 @s)
+  %add.ptr = getelementptr inbounds [4 x i32], ptr %v, i32 0, i32 1
+  %add.ptr5 = getelementptr inbounds [4 x i32], ptr %v, i32 0, i32 2
+  %call6 = call i32 @h(ptr nonnull %v, ptr nonnull %add.ptr, ptr nonnull %add.ptr5)
   %add7 = add nsw i32 %call6, %call
   ret i32 %add7
 }
@@ -273,14 +255,11 @@ define dso_local i32 @test_varargs_moving_sp(i32 %a, ...) local_unnamed_addr  {
 entry:
   %v = alloca [4 x i32], align 4
   %ap = alloca %struct.__va_list, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast %struct.__va_list* %ap to i8*
-  call void @llvm.va_start(i8* nonnull %1)
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @f(i32* nonnull %arraydecay, i32 %a, i32 0, i32 0, %struct.S* byval(%struct.S) nonnull align 4 @s)
-  %add.ptr = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 1
-  %add.ptr5 = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 2
-  %call6 = call i32 @h(i32* nonnull %arraydecay, i32* nonnull %add.ptr, i32* nonnull %add.ptr5)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %call = call i32 @f(ptr nonnull %v, i32 %a, i32 0, i32 0, ptr byval(%struct.S) nonnull align 4 @s)
+  %add.ptr = getelementptr inbounds [4 x i32], ptr %v, i32 0, i32 1
+  %add.ptr5 = getelementptr inbounds [4 x i32], ptr %v, i32 0, i32 2
+  %call6 = call i32 @h(ptr nonnull %v, ptr nonnull %add.ptr, ptr nonnull %add.ptr5)
   %add = add nsw i32 %call6, %call
   ret i32 %add
 }
@@ -308,20 +287,18 @@ entry:
 ; CHECK-FP-ATPCS-NEXT: adds r0, #8
 ; CHECK-FP-ATPCS-NEXT: stm r0!, {r1, r2, r3}
 ; CHECK-FP-AAPCS:      mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r1, [r0, #8]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r2, [r0, #12]
-; CHECK-FP-AAPCS-NEXT: mov r0, r11
-; CHECK-FP-AAPCS-NEXT: str r3, [r0, #16]
+; CHECK-FP-AAPCS-NEXT: mov r5, r0
+; CHECK-FP-AAPCS-NEXT: adds r5, #8
+; CHECK-FP-AAPCS-NEXT: stm r5!, {r1, r2, r3}
 
 ; struct S { int x[128]; } s;
 ; int test(S a, int b) {
 ;   return i(b);
 ; }
-define dso_local i32 @test_args_large_offset(%struct.S* byval(%struct.S) align 4 %0, i32 %1) local_unnamed_addr {
+define dso_local i32 @test_args_large_offset(ptr byval(%struct.S) align 4 %0, i32 %1) local_unnamed_addr {
   %3 = alloca i32, align 4
-  store i32 %1, i32* %3, align 4
-  %4 = load i32, i32* %3, align 4
+  store i32 %1, ptr %3, align 4
+  %4 = load i32, ptr %3, align 4
   %5 = call i32 @i(i32 %4)
   ret i32 %5
 }
@@ -352,16 +329,11 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i32, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast i32* %x to i8*
-  %2 = bitcast i32* %y to i8*
-  %3 = bitcast i32* %z to i8*
-  %call = call i32 @h(i32* nonnull %x, i32* nonnull %y, i32* nonnull %z)
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %4 = load i32, i32* %x, align 4
-  %5 = load i32, i32* %y, align 4
-  %6 = load i32, i32* %z, align 4
-  %call1 = call i32 @g(i32* nonnull %arraydecay, i32 %4, i32 %5, i32 %6, i32 0, i32 0)
+  %call = call i32 @h(ptr nonnull %x, ptr nonnull %y, ptr nonnull %z)
+  %0 = load i32, ptr %x, align 4
+  %1 = load i32, ptr %y, align 4
+  %2 = load i32, ptr %z, align 4
+  %call1 = call i32 @g(ptr nonnull %v, i32 %0, i32 %1, i32 %2, i32 0, i32 0)
   ret i32 %call1
 }
 ; CHECK-LABEL: test_local
@@ -389,16 +361,11 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i32, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast i32* %x to i8*
-  %2 = bitcast i32* %y to i8*
-  %3 = bitcast i32* %z to i8*
-  %call = call i32 @h(i32* nonnull %x, i32* nonnull %y, i32* nonnull %z)
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %4 = load i32, i32* %x, align 4
-  %5 = load i32, i32* %y, align 4
-  %6 = load i32, i32* %z, align 4
-  %call1 = call i32 @g(i32* nonnull %arraydecay, i32 %4, i32 %5, i32 %6, i32 0, i32 0)
+  %call = call i32 @h(ptr nonnull %x, ptr nonnull %y, ptr nonnull %z)
+  %0 = load i32, ptr %x, align 4
+  %1 = load i32, ptr %y, align 4
+  %2 = load i32, ptr %z, align 4
+  %call1 = call i32 @g(ptr nonnull %v, i32 %0, i32 %1, i32 %2, i32 0, i32 0)
   ret i32 %call1
 }
 ; CHECK-LABEL: test_local_realign
@@ -434,14 +401,11 @@ entry:
   %y = alloca i32, align 4
   %z = alloca i32, align 4
   %vla = alloca i32, i32 %n, align 4
-  %0 = bitcast i32* %x to i8*
-  %1 = bitcast i32* %y to i8*
-  %2 = bitcast i32* %z to i8*
-  %call = call i32 @h(i32* nonnull %x, i32* nonnull %y, i32* nonnull %z)
-  %3 = load i32, i32* %x, align 4
-  %4 = load i32, i32* %y, align 4
-  %5 = load i32, i32* %z, align 4
-  %call1 = call i32 @g(i32* nonnull %vla, i32 %3, i32 %4, i32 %5, i32 0, i32 0)
+  %call = call i32 @h(ptr nonnull %x, ptr nonnull %y, ptr nonnull %z)
+  %0 = load i32, ptr %x, align 4
+  %1 = load i32, ptr %y, align 4
+  %2 = load i32, ptr %z, align 4
+  %call1 = call i32 @g(ptr nonnull %vla, i32 %0, i32 %1, i32 %2, i32 0, i32 0)
   ret i32 %call1
 }
 ; CHECK-LABEL: test_local_vla
@@ -484,13 +448,8 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
   %z = alloca i32, align 4
-  %0 = bitcast [4 x i32]* %v to i8*
-  %1 = bitcast i32* %x to i8*
-  %2 = bitcast i32* %y to i8*
-  %3 = bitcast i32* %z to i8*
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %v, i32 0, i32 0
-  %call = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %x, i32* nonnull %y, %struct.S* byval(%struct.S) nonnull align 4 @s, %struct.S* byval(%struct.S) nonnull align 4 @s)
-  %call2 = call i32 @u(i32* nonnull %arraydecay, i32* nonnull %y, i32* nonnull %z, %struct.S* byval(%struct.S) nonnull align 4 @s, %struct.S* byval(%struct.S) nonnull align 4 @s)
+  %call = call i32 @u(ptr nonnull %v, ptr nonnull %x, ptr nonnull %y, ptr byval(%struct.S) nonnull align 4 @s, ptr byval(%struct.S) nonnull align 4 @s)
+  %call2 = call i32 @u(ptr nonnull %v, ptr nonnull %y, ptr nonnull %z, ptr byval(%struct.S) nonnull align 4 @s, ptr byval(%struct.S) nonnull align 4 @s)
   %add = add nsw i32 %call2, %call
   ret i32 %add
 }

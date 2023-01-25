@@ -241,14 +241,21 @@ bool CFGuard::doInitialization(Module &M) {
   GuardFnPtrType = PointerType::get(GuardFnType, 0);
 
   // Get or insert the guard check or dispatch global symbols.
+  llvm::StringRef GuardFnName;
   if (GuardMechanism == CF_Check) {
-    GuardFnGlobal =
-        M.getOrInsertGlobal("__guard_check_icall_fptr", GuardFnPtrType);
+    GuardFnName = "__guard_check_icall_fptr";
+  } else if (GuardMechanism == CF_Dispatch) {
+    GuardFnName = "__guard_dispatch_icall_fptr";
   } else {
-    assert(GuardMechanism == CF_Dispatch && "Invalid CFGuard mechanism");
-    GuardFnGlobal =
-        M.getOrInsertGlobal("__guard_dispatch_icall_fptr", GuardFnPtrType);
+    assert(false && "Invalid CFGuard mechanism");
   }
+  GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
+    auto *Var = new GlobalVariable(M, GuardFnPtrType, false,
+                                   GlobalVariable::ExternalLinkage, nullptr,
+                                   GuardFnName);
+    Var->setDSOLocal(true);
+    return Var;
+  });
 
   return true;
 }
@@ -265,8 +272,8 @@ bool CFGuard::runOnFunction(Function &F) {
   // instructions. Make a separate list of pointers to indirect
   // call/invoke/callbr instructions because the original instructions will be
   // deleted as the checks are added.
-  for (BasicBlock &BB : F.getBasicBlockList()) {
-    for (Instruction &I : BB.getInstList()) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
       auto *CB = dyn_cast<CallBase>(&I);
       if (CB && CB->isIndirectCall() && !CB->hasFnAttr("guard_nocf")) {
         IndirectCalls.push_back(CB);

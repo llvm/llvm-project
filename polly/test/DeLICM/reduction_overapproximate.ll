@@ -12,7 +12,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -53,8 +53,8 @@ outer.for:
 
     reduction.exit:
       %val = phi double [%add, %reduction.inc], [0.0, %reduction.checkloop]
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %outer.inc
 
 

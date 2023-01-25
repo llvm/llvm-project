@@ -18,6 +18,7 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <mutex>
 
 EXTERN int omp_get_num_devices(void) {
   TIMESCOPE();
@@ -62,32 +63,32 @@ EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_SHARED, __func__);
 }
 
+EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
+}
+
+EXTERN void llvm_omp_target_free_device(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEVICE, __func__);
+}
+
+EXTERN void llvm_omp_target_free_host(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_HOST, __func__);
+}
+
+EXTERN void llvm_omp_target_free_shared(void *Ptre, int DeviceNum) {
+  return targetFreeExplicit(Ptre, DeviceNum, TARGET_ALLOC_SHARED, __func__);
+}
+
 EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
 
-EXTERN void omp_target_free(void *DevicePtr, int DeviceNum) {
-  TIMESCOPE();
-  DP("Call to omp_target_free for device %d and address " DPxMOD "\n",
-     DeviceNum, DPxPTR(DevicePtr));
+EXTERN [[nodiscard]] void *llvm_omp_target_lock_mem(void *Ptr, size_t Size,
+                                                    int DeviceNum) {
+  return targetLockExplicit(Ptr, Size, DeviceNum, __func__);
+}
 
-  if (!DevicePtr) {
-    DP("Call to omp_target_free with NULL ptr\n");
-    return;
-  }
-
-  if (DeviceNum == omp_get_initial_device()) {
-    free(DevicePtr);
-    DP("omp_target_free deallocated host ptr\n");
-    return;
-  }
-
-  if (!deviceIsReady(DeviceNum)) {
-    DP("omp_target_free returns, nothing to do\n");
-    return;
-  }
-
-  PM->Devices[DeviceNum]->deleteData(DevicePtr);
-  DP("omp_target_free deallocated device ptr\n");
+EXTERN void llvm_omp_target_unlock_mem(void *Ptr, int DeviceNum) {
+  targetUnlockExplicit(Ptr, DeviceNum, __func__);
 }
 
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
@@ -125,13 +126,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
       Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
                             /*UpdateRefCount=*/false,
                             /*UseHoldRefCount=*/false, IsHostPtr);
-  int Rc = (TPR.TargetPointer != NULL);
-  // Under unified memory the host pointer can be returned by the
-  // getTgtPtrBegin() function which means that there is no device
-  // corresponding point for ptr. This function should return false
-  // in that situation.
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    Rc = !IsHostPtr;
+  int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
 }
@@ -205,7 +200,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
       Rc = SrcDev.retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
     }
     if (Rc == OFFLOAD_SUCCESS) {
-      AsyncInfoTy AsyncInfo(SrcDev);
+      AsyncInfoTy AsyncInfo(DstDev);
       Rc = DstDev.submitData(DstAddr, Buffer, Length, AsyncInfo);
     }
     free(Buffer);
@@ -332,4 +327,53 @@ EXTERN int omp_target_disassociate_ptr(const void *HostPtr, int DeviceNum) {
   int Rc = Device.disassociatePtr(const_cast<void *>(HostPtr));
   DP("omp_target_disassociate_ptr returns %d\n", Rc);
   return Rc;
+}
+
+EXTERN void *omp_get_mapped_ptr(const void *Ptr, int DeviceNum) {
+  TIMESCOPE();
+  DP("Call to omp_get_mapped_ptr with ptr " DPxMOD ", device_num %d.\n",
+     DPxPTR(Ptr), DeviceNum);
+
+  if (!Ptr) {
+    REPORT("Call to omp_get_mapped_ptr with nullptr.\n");
+    return nullptr;
+  }
+
+  if (DeviceNum == omp_get_initial_device()) {
+    REPORT("Device %d is initial device, returning Ptr " DPxMOD ".\n",
+           DeviceNum, DPxPTR(Ptr));
+    return const_cast<void *>(Ptr);
+  }
+
+  int DevicesSize = omp_get_initial_device();
+  {
+    std::lock_guard<std::mutex> LG(PM->RTLsMtx);
+    DevicesSize = PM->Devices.size();
+  }
+  if (DevicesSize <= DeviceNum) {
+    DP("DeviceNum %d is invalid, returning nullptr.\n", DeviceNum);
+    return nullptr;
+  }
+
+  if (!deviceIsReady(DeviceNum)) {
+    REPORT("Device %d is not ready, returning nullptr.\n", DeviceNum);
+    return nullptr;
+  }
+
+  bool IsLast = false;
+  bool IsHostPtr = false;
+  auto &Device = *PM->Devices[DeviceNum];
+  TargetPointerResultTy TPR =
+      Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
+                            /*UpdateRefCount=*/false,
+                            /*UseHoldRefCount=*/false, IsHostPtr);
+  if (!TPR.isPresent()) {
+    DP("Ptr " DPxMOD "is not present on device %d, returning nullptr.\n",
+       DPxPTR(Ptr), DeviceNum);
+    return nullptr;
+  }
+
+  DP("omp_get_mapped_ptr returns " DPxMOD ".\n", DPxPTR(TPR.TargetPointer));
+
+  return TPR.TargetPointer;
 }

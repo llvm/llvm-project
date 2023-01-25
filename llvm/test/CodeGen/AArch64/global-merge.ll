@@ -17,8 +17,8 @@ define void @f1(i32 %a1, i32 %a2) {
 ; CHECK-APPLE-IOS-LABEL: f1:
 ; CHECK-APPLE-IOS: adrp x{{[0-9]+}}, __MergedGlobals
 ; CHECK-APPLE-IOS-NOT: adrp
-  store i32 %a1, i32* @m, align 4
-  store i32 %a2, i32* @n, align 4
+  store i32 %a1, ptr @m, align 4
+  store i32 %a2, ptr @n, align 4
   ret void
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt %s -sroa -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='sroa,verify' -S -o - | FileCheck %s
 ;
 ; Test that we can partial emit debug info for aggregates repeatedly
 ; split up by SROA.
@@ -21,7 +21,7 @@
 
 ; Verify that SROA creates a variable piece when splitting i1.
 ; CHECK: %[[I1:.*]] = alloca [12 x i8], align 4
-; CHECK: call void @llvm.dbg.declare(metadata [12 x i8]* %[[I1]], metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 96))
+; CHECK: call void @llvm.dbg.declare(metadata ptr %[[I1]], metadata ![[VAR:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 32, 96))
 ; CHECK: call void @llvm.dbg.value(metadata i32 %[[A:.*]], metadata ![[VAR]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32))
 ; CHECK: ret i32 %[[A]]
 ; Read Var and Piece:
@@ -34,26 +34,22 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.Inner = type { i32, i64 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo(%struct.Outer* byval(%struct.Outer) align 8 %outer) #0 !dbg !4 {
+define i32 @foo(ptr byval(%struct.Outer) align 8 %outer) #0 !dbg !4 {
 entry:
   %i1 = alloca %struct.Inner, align 8
-  call void @llvm.dbg.declare(metadata %struct.Outer* %outer, metadata !25, metadata !2), !dbg !26
-  call void @llvm.dbg.declare(metadata %struct.Inner* %i1, metadata !27, metadata !2), !dbg !28
-  %inner = getelementptr inbounds %struct.Outer, %struct.Outer* %outer, i32 0, i32 0, !dbg !28
-  %arrayidx = getelementptr inbounds [2 x %struct.Inner], [2 x %struct.Inner]* %inner, i32 0, i64 1, !dbg !28
-  %0 = bitcast %struct.Inner* %i1 to i8*, !dbg !28
-  %1 = bitcast %struct.Inner* %arrayidx to i8*, !dbg !28
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %0, i8* align 8 %1, i64 16, i1 false), !dbg !28
-  %a = getelementptr inbounds %struct.Inner, %struct.Inner* %i1, i32 0, i32 0, !dbg !29
-  %2 = load i32, i32* %a, align 4, !dbg !29
-  ret i32 %2, !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %outer, metadata !25, metadata !2), !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %i1, metadata !27, metadata !2), !dbg !28
+  %arrayidx = getelementptr inbounds [2 x %struct.Inner], ptr %outer, i32 0, i64 1, !dbg !28
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %i1, ptr align 8 %arrayidx, i64 16, i1 false), !dbg !28
+  %0 = load i32, ptr %i1, align 4, !dbg !29
+  ret i32 %0, !dbg !29
 }
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone }

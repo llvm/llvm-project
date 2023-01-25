@@ -92,8 +92,15 @@ AllocaInst *llvm::DemoteRegToStack(Instruction &I, bool VolatileLoads,
   BasicBlock::iterator InsertPt;
   if (!I.isTerminator()) {
     InsertPt = ++I.getIterator();
+    // Don't insert before PHI nodes or landingpad instrs.
     for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
-      /* empty */;   // Don't insert before PHI nodes or landingpad instrs.
+      if (isa<CatchSwitchInst>(InsertPt))
+        break;
+    if (isa<CatchSwitchInst>(InsertPt)) {
+      for (BasicBlock *Handler : successors(&*InsertPt))
+        new StoreInst(&I, Slot, &*Handler->getFirstInsertionPt());
+      return Slot;
+    }
   } else {
     InvokeInst &II = cast<InvokeInst>(I);
     InsertPt = II.getNormalDest()->getFirstInsertionPt();
@@ -138,14 +145,27 @@ AllocaInst *llvm::DemotePHIToStack(PHINode *P, Instruction *AllocaPoint) {
 
   // Insert a load in place of the PHI and replace all uses.
   BasicBlock::iterator InsertPt = P->getIterator();
-
+  // Don't insert before PHI nodes or landingpad instrs.
   for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
-    /* empty */;   // Don't insert before PHI nodes or landingpad instrs.
-
-  Value *V =
-      new LoadInst(P->getType(), Slot, P->getName() + ".reload", &*InsertPt);
-  P->replaceAllUsesWith(V);
-
+    if (isa<CatchSwitchInst>(InsertPt))
+      break;
+  if (isa<CatchSwitchInst>(InsertPt)) {
+    // We need a separate load before each actual use of the PHI
+    SmallVector<Instruction *, 4> Users;
+    for (User *U : P->users()) {
+      Instruction *User = cast<Instruction>(U);
+      Users.push_back(User);
+    }
+    for (Instruction *User : Users) {
+      Value *V =
+          new LoadInst(P->getType(), Slot, P->getName() + ".reload", User);
+      User->replaceUsesOfWith(P, V);
+    }
+  } else {
+    Value *V =
+        new LoadInst(P->getType(), Slot, P->getName() + ".reload", &*InsertPt);
+    P->replaceAllUsesWith(V);
+  }
   // Delete PHI.
   P->eraseFromParent();
   return Slot;

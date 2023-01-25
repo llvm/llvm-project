@@ -71,7 +71,7 @@ static bool isNullOrUndef(const Constant *C) {
     return true;
   if (!isa<ConstantAggregate>(C))
     return false;
-  for (auto Operand : C->operand_values()) {
+  for (const auto *Operand : C->operand_values()) {
     if (!isNullOrUndef(cast<Constant>(Operand)))
       return false;
   }

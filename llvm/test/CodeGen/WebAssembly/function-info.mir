@@ -8,7 +8,7 @@
   define void @function_property_test() {
     ret void
   }
-  define void @wasm_eh_info_test() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+  define void @wasm_eh_info_test() personality ptr @__gxx_wasm_personality_v0 {
     ret void
   }
 

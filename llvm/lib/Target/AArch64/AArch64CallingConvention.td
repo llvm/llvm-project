@@ -162,6 +162,46 @@ def CC_AArch64_Win64_VarArg : CallingConv<[
   CCDelegateTo<CC_AArch64_AAPCS>
 ]>;
 
+// Vararg functions on Arm64EC ABI use a different convention, using
+// a stack layout compatible with the x64 calling convention.
+let Entry = 1 in
+def CC_AArch64_Arm64EC_VarArg : CallingConv<[
+  // Convert small floating-point values to integer.
+  CCIfType<[f16, bf16], CCBitConvertToType<i16>>,
+  CCIfType<[f32], CCBitConvertToType<i32>>,
+  CCIfType<[f64, v1f64, v1i64, v2f32, v2i32, v4i16, v4f16, v4bf16, v8i8, iPTR],
+           CCBitConvertToType<i64>>,
+
+  // Larger floating-point/vector values are passed indirectly.
+  CCIfType<[f128, v2f64, v2i64, v4i32, v4f32, v8i16, v8f16, v8bf16, v16i8],
+           CCPassIndirect<i64>>,
+  CCIfType<[nxv16i8, nxv8i16, nxv4i32, nxv2i64, nxv2f16, nxv4f16, nxv8f16,
+            nxv2bf16, nxv4bf16, nxv8bf16, nxv2f32, nxv4f32, nxv2f64],
+           CCPassIndirect<i64>>,
+  CCIfType<[nxv2i1, nxv4i1, nxv8i1, nxv16i1],
+           CCPassIndirect<i64>>,
+
+  // Handle SRet. See comment in CC_AArch64_AAPCS.
+  CCIfInReg<CCIfType<[i64],
+    CCIfSRet<CCIfType<[i64], CCAssignToReg<[X0, X1]>>>>>,
+  CCIfSRet<CCIfType<[i64], CCAssignToReg<[X8]>>>,
+
+  // Put ByVal arguments directly on the stack. Minimum size and alignment of a
+  // slot is 64-bit. (Shouldn't normally come up; the Microsoft ABI doesn't
+  // use byval.)
+  CCIfByVal<CCPassByVal<8, 8>>,
+
+  // Promote small integers to i32
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Pass first four arguments in x0-x3.
+  CCIfType<[i32], CCAssignToReg<[W0, W1, W2, W3]>>,
+  CCIfType<[i64], CCAssignToReg<[X0, X1, X2, X3]>>,
+
+  // Put remaining arguments on stack.
+  CCIfType<[i32, i64], CCAssignToStack<8, 8>>,
+]>;
+
 // Windows Control Flow Guard checks take a single argument (the target function
 // address) and have no return value.
 let Entry = 1 in
@@ -395,6 +435,26 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
                                                  X19, X20, X21, X22, X23, X24,
                                                  X25, X26, X27, X28, LR, FP)>;
 
+// SME ABI support routines such as __arm_tpidr2_save/restore preserve most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 0, 13),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
+// SME ABI support routines __arm_sme_state preserves most registers.
+def CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2
+                          : CalleeSavedRegs<(add (sequence "Z%u", 0, 31),
+                                                 (sequence "P%u", 0, 15),
+                                                 (sequence "X%u", 2, 15),
+                                                 (sequence "X%u",19, 28),
+                                                 LR, FP)>;
+
+// The SMSTART/SMSTOP instructions preserve only GPR registers.
+def CSR_AArch64_SMStartStop : CalleeSavedRegs<(add (sequence "X%u", 0, 28),
+                                                   LR, FP)>;
+
 def CSR_AArch64_AAPCS_SwiftTail
     : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X20, X22)>;
 
@@ -444,6 +504,15 @@ def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
 def CSR_Darwin_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21,
                                                  X22, X23, X24, X25, X26, X27,
                                                  X28, (sequence "Q%u", 8, 23))>;
+
+// For Windows calling convention on a non-windows OS, where X18 is treated
+// as reserved, back up X18 when entering non-windows code (marked with the
+// Windows calling convention) and restore when returning regardless of
+// whether the individual function uses it - it might call other functions
+// that clobber it.
+def CSR_Darwin_AArch64_AAPCS_Win64
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X18)>;
+
 def CSR_Darwin_AArch64_AAPCS_ThisReturn
     : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X0)>;
 

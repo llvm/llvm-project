@@ -45,7 +45,7 @@ public:
       RecursionStatus &operator--();
       bool isRecursive() const;
     };
-    Optional<llvm::DenseMap<int32_t, RecursionStatus>> RecursionDepth;
+    std::optional<llvm::DenseMap<int32_t, RecursionStatus>> RecursionDepth;
   };
   typedef llvm::DenseMap<uint32_t, FunctionStack> PerThreadFunctionStackMap;
 

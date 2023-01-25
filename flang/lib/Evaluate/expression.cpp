@@ -35,7 +35,13 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
           [](const Constant<Result> &c) -> T {
             return AsExpr(Constant<SubscriptInteger>{c.LEN()});
           },
-          [](const ArrayConstructor<Result> &a) -> T { return a.LEN(); },
+          [](const ArrayConstructor<Result> &a) -> T {
+            if (const auto *len{a.LEN()}) {
+              return T{*len};
+            } else {
+              return std::nullopt;
+            }
+          },
           [](const Parentheses<Result> &x) { return x.left().LEN(); },
           [](const Convert<Result> &x) {
             return common::visit(
@@ -140,6 +146,13 @@ template <typename R>
 bool ArrayConstructorValues<R>::operator==(
     const ArrayConstructorValues<R> &that) const {
   return values_ == that.values_;
+}
+
+template <int KIND>
+auto ArrayConstructor<Type<TypeCategory::Character, KIND>>::set_LEN(
+    Expr<SubscriptInteger> &&len) -> ArrayConstructor & {
+  length_.emplace(std::move(len));
+  return *this;
 }
 
 template <int KIND>

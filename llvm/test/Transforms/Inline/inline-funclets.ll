@@ -1,4 +1,4 @@
-; RUN: opt -inline -S %s | FileCheck %s
+; RUN: opt -passes=inline -S %s | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' -S %s | FileCheck %s
 
 declare void @g()
@@ -7,7 +7,7 @@ declare void @g()
 ;;; Test with a call in a funclet that needs to remain a call
 ;;; when inlined because the funclet doesn't unwind to caller.
 ;;; CHECK-LABEL: define void @test1(
-define void @test1() personality void ()* @g {
+define void @test1() personality ptr @g {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test1_inlinee()
@@ -20,7 +20,7 @@ exit:
   ret void
 }
 
-define void @test1_inlinee() alwaysinline personality void ()* @g {
+define void @test1_inlinee() alwaysinline personality ptr @g {
 entry:
   invoke void @g()
     to label %exit unwind label %cleanup.inner
@@ -59,7 +59,7 @@ exit:
 ;;; that needs to remain "unwind to caller" because the parent
 ;;; doesn't unwind to caller.
 ;;; CHECK-LABEL: define void @test2(
-define void @test2() personality void ()* @g {
+define void @test2() personality ptr @g {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test2_inlinee()
@@ -72,7 +72,7 @@ exit:
   ret void
 }
 
-define void @test2_inlinee() alwaysinline personality void ()* @g {
+define void @test2_inlinee() alwaysinline personality ptr @g {
 entry:
   invoke void @g()
     to label %exit unwind label %cleanup1
@@ -124,7 +124,7 @@ exit:
 ;;; Test with a call in a cleanup that has no definitive unwind
 ;;; destination, that must be rewritten to an invoke.
 ;;; CHECK-LABEL: define void @test3(
-define void @test3() personality void ()* @g {
+define void @test3() personality ptr @g {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test3_inlinee()
@@ -137,7 +137,7 @@ exit:
   ret void
 }
 
-define void @test3_inlinee() alwaysinline personality void ()* @g {
+define void @test3_inlinee() alwaysinline personality ptr @g {
 entry:
   invoke void @g()
     to label %exit unwind label %cleanup
@@ -164,7 +164,7 @@ exit:
 ;;; unwind destination, that must be rewritten to unwind to the
 ;;; inlined invoke's unwind dest
 ;;; CHECK-LABEL: define void @test4(
-define void @test4() personality void ()* @g {
+define void @test4() personality ptr @g {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test4_inlinee()
@@ -177,7 +177,7 @@ exit:
   ret void
 }
 
-define void @test4_inlinee() alwaysinline personality void ()* @g {
+define void @test4_inlinee() alwaysinline personality ptr @g {
 entry:
   invoke void @g()
     to label %exit unwind label %cleanup
@@ -214,7 +214,7 @@ exit:
 ;;; that need to be inferred from ancestors, descendants,
 ;;; and cousins.
 ;;; CHECK-LABEL: define void @test5(
-define void @test5() personality void ()* @g {
+define void @test5() personality ptr @g {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test5_inlinee()
@@ -227,7 +227,7 @@ exit:
   ret void
 }
 
-define void @test5_inlinee() alwaysinline personality void ()* @g {
+define void @test5_inlinee() alwaysinline personality ptr @g {
 entry:
   invoke void @g()
     to label %cont unwind label %noinfo.root
@@ -416,7 +416,7 @@ exit:
 ;;; unwinds don't trip up processing of the ancestor nodes (left and root) that
 ;;; ultimately have no information.
 ;;; CHECK-LABEL: define void @test6(
-define void @test6() personality void()* @ProcessCLRException {
+define void @test6() personality ptr @ProcessCLRException {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test6_inlinee()
@@ -429,7 +429,7 @@ exit:
   ret void
 }
 
-define void @test6_inlinee() alwaysinline personality void ()* @ProcessCLRException {
+define void @test6_inlinee() alwaysinline personality ptr @ProcessCLRException {
 entry:
   invoke void @g()
     to label %exit unwind label %root
@@ -531,7 +531,7 @@ exit:
 ;;; unwinds to another cousin (left.right); make sure we don't trip over this
 ;;; when propagating unwind destination info to "right".
 ;;; CHECK-LABEL: define void @test7(
-define void @test7() personality void()* @ProcessCLRException {
+define void @test7() personality ptr @ProcessCLRException {
 entry:
 ; CHECK-NEXT: entry:
   invoke void @test7_inlinee()
@@ -544,7 +544,7 @@ exit:
   ret void
 }
 
-define void @test7_inlinee() alwaysinline personality void ()* @ProcessCLRException {
+define void @test7_inlinee() alwaysinline personality ptr @ProcessCLRException {
 entry:
   invoke void @g()
     to label %exit unwind label %root
@@ -636,7 +636,7 @@ declare void @ProcessCLRException()
 ; Make sure the logic doesn't get tripped up when the inlined invoke is
 ; itself within a funclet in the caller.
 ; CHECK-LABEL: define void @test8(
-define void @test8() personality void ()* @ProcessCLRException {
+define void @test8() personality ptr @ProcessCLRException {
 entry:
   invoke void @g()
     to label %exit unwind label %callsite_parent
@@ -655,7 +655,7 @@ exit:
   ret void
 }
 
-define void @test8_inlinee() alwaysinline personality void ()* @ProcessCLRException {
+define void @test8_inlinee() alwaysinline personality ptr @ProcessCLRException {
 entry:
   invoke void @g()
     to label %exit unwind label %inlinee_cleanup

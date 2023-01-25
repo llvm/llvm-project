@@ -18,6 +18,8 @@
 #include "mlir/IR/Block.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/RegionUtils.h"
+#include <optional>
 
 namespace mlir {
 class AffineForOp;
@@ -45,9 +47,12 @@ LogicalResult loopUnrollFull(AffineForOp forOp);
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
 /// unroll factors. Requires positive loop bounds and step. If specified,
 /// annotates the Ops in each unrolled iteration by applying `annotateFn`.
+/// When `cleanUpUnroll` is true, we can ensure the cleanup loop is unrolled
+/// regardless of the unroll factor.
 LogicalResult loopUnrollByFactor(
     AffineForOp forOp, uint64_t unrollFactor,
-    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr);
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
+    bool cleanUpUnroll = false);
 
 /// Unrolls this loop by the specified unroll factor or its trip count,
 /// whichever is lower.
@@ -182,14 +187,14 @@ struct AffineCopyOptions {
 /// encountered.
 LogicalResult affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
                                      const AffineCopyOptions &copyOptions,
-                                     Optional<Value> filterMemRef,
+                                     std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
 
 /// A convenience version of affineDataCopyGenerate for all ops in the body of
 /// an AffineForOp.
 LogicalResult affineDataCopyGenerate(AffineForOp forOp,
                                      const AffineCopyOptions &copyOptions,
-                                     Optional<Value> filterMemRef,
+                                     std::optional<Value> filterMemRef,
                                      DenseSet<Operation *> &copyNests);
 
 /// Result for calling generateCopyForMemRegion.
@@ -288,6 +293,54 @@ AffineForOp createCanonicalizedAffineForOp(OpBuilder b, Location loc,
 LogicalResult
 separateFullTiles(MutableArrayRef<AffineForOp> nest,
                   SmallVectorImpl<AffineForOp> *fullTileNest = nullptr);
+
+/// Walk either an scf.for or an affine.for to find a band to coalesce.
+template <typename LoopOpTy>
+LogicalResult coalescePerfectlyNestedLoops(LoopOpTy op) {
+  LogicalResult result(failure());
+  SmallVector<LoopOpTy> loops;
+  getPerfectlyNestedLoops(loops, op);
+
+  // Look for a band of loops that can be coalesced, i.e. perfectly nested
+  // loops with bounds defined above some loop.
+  // 1. For each loop, find above which parent loop its operands are
+  // defined.
+  SmallVector<unsigned, 4> operandsDefinedAbove(loops.size());
+  for (unsigned i = 0, e = loops.size(); i < e; ++i) {
+    operandsDefinedAbove[i] = i;
+    for (unsigned j = 0; j < i; ++j) {
+      if (areValuesDefinedAbove(loops[i].getOperands(), loops[j].getRegion())) {
+        operandsDefinedAbove[i] = j;
+        break;
+      }
+    }
+  }
+
+  // 2. Identify bands of loops such that the operands of all of them are
+  // defined above the first loop in the band.  Traverse the nest bottom-up
+  // so that modifications don't invalidate the inner loops.
+  for (unsigned end = loops.size(); end > 0; --end) {
+    unsigned start = 0;
+    for (; start < end - 1; ++start) {
+      auto maxPos =
+          *std::max_element(std::next(operandsDefinedAbove.begin(), start),
+                            std::next(operandsDefinedAbove.begin(), end));
+      if (maxPos > start)
+        continue;
+      assert(maxPos == start &&
+             "expected loop bounds to be known at the start of the band");
+      auto band = llvm::MutableArrayRef(loops.data() + start, end - start);
+      if (succeeded(coalesceLoops(band)))
+        result = success();
+      break;
+    }
+    // If a band was found and transformed, keep looking at the loops above
+    // the outermost transformed loop.
+    if (start != end - 1)
+      end = start + 1;
+  }
+  return result;
+}
 
 } // namespace mlir
 

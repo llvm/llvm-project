@@ -10,6 +10,7 @@
 /// This pass creates a unified init and fini kernel with the required metadata
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPU.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -25,71 +26,82 @@ using namespace llvm;
 #define DEBUG_TYPE "amdgpu-lower-ctor-dtor"
 
 namespace {
-class AMDGPUCtorDtorLowering final : public ModulePass {
-  bool runOnModule(Module &M) override;
 
-public:
-  Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
-    StringRef InitOrFiniKernelName = "amdgcn.device.init";
-    if (!IsCtor)
-      InitOrFiniKernelName = "amdgcn.device.fini";
+static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
+  StringRef InitOrFiniKernelName = "amdgcn.device.init";
+  if (!IsCtor)
+    InitOrFiniKernelName = "amdgcn.device.fini";
 
-    Function *InitOrFiniKernel = Function::createWithDefaultAttr(
-        FunctionType::get(Type::getVoidTy(M.getContext()), false),
-        GlobalValue::ExternalLinkage, 0, InitOrFiniKernelName, &M);
-    BasicBlock *InitOrFiniKernelBB =
-        BasicBlock::Create(M.getContext(), "", InitOrFiniKernel);
-    ReturnInst::Create(M.getContext(), InitOrFiniKernelBB);
+  Function *InitOrFiniKernel = Function::createWithDefaultAttr(
+      FunctionType::get(Type::getVoidTy(M.getContext()), false),
+      GlobalValue::ExternalLinkage, 0, InitOrFiniKernelName, &M);
+  BasicBlock *InitOrFiniKernelBB =
+      BasicBlock::Create(M.getContext(), "", InitOrFiniKernel);
+  ReturnInst::Create(M.getContext(), InitOrFiniKernelBB);
 
-    InitOrFiniKernel->setCallingConv(CallingConv::AMDGPU_KERNEL);
-    if (IsCtor)
-      InitOrFiniKernel->addFnAttr("device-init");
-    else
-      InitOrFiniKernel->addFnAttr("device-fini");
-    return InitOrFiniKernel;
-  }
-
-  bool createInitOrFiniKernel(Module &M, GlobalVariable *GV, bool IsCtor) {
-    if (!GV || !GV->hasInitializer())
-      return false;
-    ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
-    if (!GA || GA->getNumOperands() == 0)
-      return false;
-    Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
-    IRBuilder<> IRB(InitOrFiniKernel->getEntryBlock().getTerminator());
-    for (Value *V : GA->operands()) {
-      auto *CS = cast<ConstantStruct>(V);
-      if (Function *F = dyn_cast<Function>(CS->getOperand(1))) {
-        FunctionCallee Ctor =
-            M.getOrInsertFunction(F->getName(), IRB.getVoidTy());
-        IRB.CreateCall(Ctor);
-      }
-    }
-    appendToUsed(M, {InitOrFiniKernel});
-    return true;
-  }
-
-  static char ID;
-  AMDGPUCtorDtorLowering() : ModulePass(ID) {}
-};
-} // End anonymous namespace
-
-char AMDGPUCtorDtorLowering::ID = 0;
-char &llvm::AMDGPUCtorDtorLoweringID = AMDGPUCtorDtorLowering::ID;
-INITIALIZE_PASS(AMDGPUCtorDtorLowering, DEBUG_TYPE,
-                "Lower ctors and dtors for AMDGPU", false, false)
-
-ModulePass *llvm::createAMDGPUCtorDtorLoweringPass() {
-  return new AMDGPUCtorDtorLowering();
+  InitOrFiniKernel->setCallingConv(CallingConv::AMDGPU_KERNEL);
+  if (IsCtor)
+    InitOrFiniKernel->addFnAttr("device-init");
+  else
+    InitOrFiniKernel->addFnAttr("device-fini");
+  return InitOrFiniKernel;
 }
 
-bool AMDGPUCtorDtorLowering::runOnModule(Module &M) {
+static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
+                                   bool IsCtor) {
+  GlobalVariable *GV = M.getGlobalVariable(GlobalName);
+  if (!GV || !GV->hasInitializer())
+    return false;
+  ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
+  if (!GA || GA->getNumOperands() == 0)
+    return false;
+
+  Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
+  IRBuilder<> IRB(InitOrFiniKernel->getEntryBlock().getTerminator());
+
+  FunctionType *ConstructorTy = InitOrFiniKernel->getFunctionType();
+
+  for (Value *V : GA->operands()) {
+    auto *CS = cast<ConstantStruct>(V);
+    IRB.CreateCall(ConstructorTy, CS->getOperand(1));
+  }
+
+  appendToUsed(M, {InitOrFiniKernel});
+
+  GV->eraseFromParent();
+  return true;
+}
+
+static bool lowerCtorsAndDtors(Module &M) {
   bool Modified = false;
-  Modified |=
-      createInitOrFiniKernel(M, M.getGlobalVariable("llvm.global_ctors"),
-                             /*IsCtor =*/true);
-  Modified |=
-      createInitOrFiniKernel(M, M.getGlobalVariable("llvm.global_dtors"),
-                             /*IsCtor =*/false);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
+  Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
   return Modified;
+}
+
+class AMDGPUCtorDtorLoweringLegacy final : public ModulePass {
+public:
+  static char ID;
+  AMDGPUCtorDtorLoweringLegacy() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    return lowerCtorsAndDtors(M);
+  }
+};
+
+} // End anonymous namespace
+
+PreservedAnalyses AMDGPUCtorDtorLoweringPass::run(Module &M,
+                                                  ModuleAnalysisManager &AM) {
+  lowerCtorsAndDtors(M);
+  return PreservedAnalyses::all();
+}
+
+char AMDGPUCtorDtorLoweringLegacy::ID = 0;
+char &llvm::AMDGPUCtorDtorLoweringLegacyPassID =
+    AMDGPUCtorDtorLoweringLegacy::ID;
+INITIALIZE_PASS(AMDGPUCtorDtorLoweringLegacy, DEBUG_TYPE,
+                "Lower ctors and dtors for AMDGPU", false, false)
+
+ModulePass *llvm::createAMDGPUCtorDtorLoweringLegacyPass() {
+  return new AMDGPUCtorDtorLoweringLegacy();
 }

@@ -323,21 +323,26 @@ namespace std { class type_info; }
 
 void unevaluated() {
   decltype(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
+}
+
+void unevaluated2() {
   sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+}
+
+void unevaluated3() {
   typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
+}
+
+void unevaluated4() {
   decltype(co_yield 1); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
+}
+
+void unevaluated5() {
   sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                      // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
+}
+
+void unevaluated6() {
   typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                      // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                      // expected-warning@-2 {{expression result unused}}
 }
 
 // [expr.await]p2: "An await-expression shall not appear in a default argument."
@@ -1062,7 +1067,7 @@ struct NoCopy {
 };
 template <class T, class U>
 void test_dependent_param(T t, U) {
-  // expected-error@-1 {{call to deleted constructor of 'NoCopy<0>'}}
+  // expected-error@-1 {{call to deleted constructor of 'NoCopy<>'}}
   // expected-error@-2 {{call to deleted constructor of 'NoCopy<1>'}}
   ((void)t);
   co_return 42;

@@ -22,6 +22,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -80,10 +81,9 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
   Instruction *LibCall = Call->clone();
   Builder.Insert(LibCall);
 
-  // Add attribute "readnone" so that backend can use a native sqrt instruction
-  // for this call.
-  Call->removeFnAttr(Attribute::WriteOnly);
-  Call->addFnAttr(Attribute::ReadNone);
+  // Add memory(none) attribute, so that the backend can use a native sqrt
+  // instruction for this call.
+  Call->setDoesNotAccessMemory();
 
   // Insert a FP compare instruction and use it as the CurrBB branch condition.
   Builder.SetInsertPoint(CurrBBTerm);
@@ -104,7 +104,7 @@ static bool optimizeSQRT(CallInst *Call, Function *CalledFunc,
 static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
                                        const TargetTransformInfo *TTI,
                                        DominatorTree *DT) {
-  Optional<DomTreeUpdater> DTU;
+  std::optional<DomTreeUpdater> DTU;
   if (DT)
     DTU.emplace(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
@@ -140,7 +140,7 @@ static bool runPartiallyInlineLibCalls(Function &F, TargetLibraryInfo *TLI,
       case LibFunc_sqrt:
         if (TTI->haveFastSqrt(Call->getType()) &&
             optimizeSQRT(Call, CalledFunc, *CurrBB, BB, TTI,
-                         DTU ? DTU.getPointer() : nullptr))
+                         DTU ? &*DTU : nullptr))
           break;
         continue;
       default:

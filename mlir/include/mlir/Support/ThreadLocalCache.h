@@ -18,7 +18,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
-#include "llvm/Support/ThreadLocal.h"
 
 namespace mlir {
 /// This class provides support for defining a thread local object with non

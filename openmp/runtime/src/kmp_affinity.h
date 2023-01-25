@@ -128,13 +128,15 @@ public:
     if (__kmp_hwloc_topology == NULL) {
       if (hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
         __kmp_hwloc_error = TRUE;
-        if (__kmp_affinity_verbose)
+        if (__kmp_affinity.flags.verbose) {
           KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
+        }
       }
       if (hwloc_topology_load(__kmp_hwloc_topology) < 0) {
         __kmp_hwloc_error = TRUE;
-        if (__kmp_affinity_verbose)
+        if (__kmp_affinity.flags.verbose) {
           KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
+        }
       }
     }
     topology_support = hwloc_topology_get_support(__kmp_hwloc_topology);
@@ -254,6 +256,29 @@ public:
 #elif __NR_sched_getaffinity != 5196
 #error Wrong code for getaffinity system call.
 #endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_LOONGARCH64
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 122
+#elif __NR_sched_setaffinity != 122
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 123
+#elif __NR_sched_getaffinity != 123
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
+#elif KMP_ARCH_RISCV64
+#ifndef __NR_sched_setaffinity
+#define __NR_sched_setaffinity 122
+#elif __NR_sched_setaffinity != 122
+#error Wrong code for setaffinity system call.
+#endif /* __NR_sched_setaffinity */
+#ifndef __NR_sched_getaffinity
+#define __NR_sched_getaffinity 123
+#elif __NR_sched_getaffinity != 123
+#error Wrong code for getaffinity system call.
+#endif /* __NR_sched_getaffinity */
+#else
 #error Unknown or unsupported architecture
 #endif /* KMP_ARCH_* */
 #elif KMP_OS_FREEBSD
@@ -656,9 +681,14 @@ struct kmp_hw_attr_t {
   bool operator!=(const kmp_hw_attr_t &rhs) const { return !operator==(rhs); }
 };
 
+#if KMP_AFFINITY_SUPPORTED
+KMP_BUILD_ASSERT(sizeof(kmp_hw_attr_t) == sizeof(kmp_affinity_attrs_t));
+#endif
+
 class kmp_hw_thread_t {
 public:
   static const int UNKNOWN_ID = -1;
+  static const int MULTIPLE_ID = -2;
   static int compare_ids(const void *a, const void *b);
   static int compare_compact(const void *a, const void *b);
   int ids[KMP_HW_LAST];
@@ -720,6 +750,9 @@ class kmp_topology_t {
 
   // Flags describing the topology
   flags_t flags;
+
+  // Compact value used during sort_compact()
+  int compact;
 
   // Insert a new topology layer after allocation
   void _insert_layer(kmp_hw_t type, const int *ids);
@@ -791,7 +824,12 @@ public:
   void canonicalize();
   void canonicalize(int pkgs, int cores_per_pkg, int thr_per_core, int cores);
 
-  // Functions used after canonicalize() called
+// Functions used after canonicalize() called
+
+#if KMP_AFFINITY_SUPPORTED
+  // Set the granularity for affinity settings
+  void set_granularity(kmp_affinity_t &stgs) const;
+#endif
   bool filter_hw_subset();
   bool is_close(int hwt1, int hwt2, int level) const;
   bool is_uniform() const { return flags.uniform; }
@@ -858,7 +896,9 @@ public:
   }
 
 #if KMP_AFFINITY_SUPPORTED
-  void sort_compact() {
+  friend int kmp_hw_thread_t::compare_compact(const void *a, const void *b);
+  void sort_compact(kmp_affinity_t &affinity) {
+    compact = affinity.compact;
     qsort(hw_threads, num_hw_threads, sizeof(kmp_hw_thread_t),
           kmp_hw_thread_t::compare_compact);
   }

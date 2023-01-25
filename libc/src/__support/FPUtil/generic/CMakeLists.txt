@@ -4,7 +4,14 @@ add_header_library(
     sqrt.h
     sqrt_80_bit_long_double.h
   DEPENDS
-    libc.src.__support.CPP.uint128
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.platform_defs
+    libc.src.__support.builtin_wrappers
+    libc.src.__support.uint128
+    libc.include.fenv
 )
 
 add_header_library(
@@ -12,11 +19,25 @@ add_header_library(
   HDRS
     FMA.h
   DEPENDS
-    libc.src.__support.CPP.uint128
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float_properties
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtin_wrappers
+    libc.src.__support.uint128
 )
 
 add_header_library(
   fmod
   HDRS
     FMod.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float_properties
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtin_wrappers
+    libc.src.math.generic.math_utils
 )

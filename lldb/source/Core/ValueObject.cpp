@@ -55,6 +55,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <tuple>
 
 #include <cassert>
@@ -263,7 +264,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
   if (auto *runtime =
           process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
-    if (llvm::Optional<CompilerType> complete_type =
+    if (std::optional<CompilerType> complete_type =
             runtime->GetRuntimeType(compiler_type)) {
       m_override_type = *complete_type;
       if (m_override_type.IsValid())
@@ -594,6 +595,14 @@ bool ValueObject::GetSummaryAsCString(TypeSummaryImpl *summary_ptr,
                                       const TypeSummaryOptions &options) {
   destination.clear();
 
+  // If we have a forcefully completed type, don't try and show a summary from
+  // a valid summary string or function because the type is not complete and
+  // no member variables or member functions will be available.
+  if (GetCompilerType().IsForcefullyCompleted()) {
+      destination = "<incomplete type>";
+      return true;
+  }
+
   // ideally we would like to bail out if passing NULL, but if we do so we end
   // up not providing the summary for function pointers anymore
   if (/*summary_ptr == NULL ||*/ m_flags.m_is_getting_summary)
@@ -674,7 +683,7 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
-  llvm::Optional<uint64_t> item_type_size =
+  std::optional<uint64_t> item_type_size =
       pointee_or_element_compiler_type.GetByteSize(
           exe_ctx.GetBestExecutionContextScope());
   if (!item_type_size)
@@ -1697,7 +1706,7 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  llvm::Optional<uint64_t> size =
+  std::optional<uint64_t> size =
       type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};
@@ -1739,7 +1748,7 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  llvm::Optional<uint64_t> size =
+  std::optional<uint64_t> size =
       type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return {};
@@ -2113,7 +2122,7 @@ ValueObjectSP ValueObject::GetValueForExpressionPath_Impl(
         return ValueObjectSP();
       }
     }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '.': // or fallthrough from ->
     {
       if (options.m_check_dot_vs_arrow_syntax &&
@@ -2673,7 +2682,10 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     // In case of incomplete child compiler type, use the pointee type and try
     // to recreate a new ValueObjectChild using it.
     if (!m_deref_valobj) {
-      if (HasSyntheticValue()) {
+      // FIXME(#59012): C++ stdlib formatters break with incomplete types (e.g.
+      // `std::vector<int> &`). Remove ObjC restriction once that's resolved.
+      if (Language::LanguageIsObjC(GetPreferredDisplayLanguage()) &&
+          HasSyntheticValue()) {
         child_compiler_type = compiler_type.GetPointeeType();
 
         if (child_compiler_type) {

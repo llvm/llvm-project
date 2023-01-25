@@ -3,28 +3,28 @@
 
 ; CHECK: @ DW_OP_breg
 
-%struct.SVal = type { i8*, i32 }
+%struct.SVal = type { ptr, i32 }
 
-define i32 @_Z3fooi4SVal(i32 %i, %struct.SVal* noalias %location) #0 !dbg !4 {
+define i32 @_Z3fooi4SVal(i32 %i, ptr noalias %location) #0 !dbg !4 {
 entry:
   %"alloca point" = bitcast i32 0 to i32
   br label %realentry
 
 realentry:
   call void @llvm.dbg.value(metadata i32 %i, metadata !21, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.value(metadata %struct.SVal* %location, metadata !23, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.value(metadata ptr %location, metadata !23, metadata !DIExpression()), !dbg !22
   %tmp = icmp ne i32 %i, 0, !dbg !25
   br i1 %tmp, label %bb, label %bb1, !dbg !25
 
 bb:                                               ; preds = %entry
-  %tmp1 = getelementptr inbounds %struct.SVal, %struct.SVal* %location, i32 0, i32 1, !dbg !27
-  %tmp2 = load i32, i32* %tmp1, align 8, !dbg !27
+  %tmp1 = getelementptr inbounds %struct.SVal, ptr %location, i32 0, i32 1, !dbg !27
+  %tmp2 = load i32, ptr %tmp1, align 8, !dbg !27
   %tmp3 = add i32 %tmp2, %i, !dbg !27
   br label %bb2, !dbg !27
 
 bb1:                                              ; preds = %entry
-  %tmp4 = getelementptr inbounds %struct.SVal, %struct.SVal* %location, i32 0, i32 1, !dbg !28
-  %tmp5 = load i32, i32* %tmp4, align 8, !dbg !28
+  %tmp4 = getelementptr inbounds %struct.SVal, ptr %location, i32 0, i32 1, !dbg !28
+  %tmp5 = load i32, ptr %tmp4, align 8, !dbg !28
   %tmp6 = sub i32 %tmp5, 1, !dbg !28
   br label %bb2, !dbg !28
 

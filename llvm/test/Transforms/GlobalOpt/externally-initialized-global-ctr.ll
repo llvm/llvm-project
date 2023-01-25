@@ -7,23 +7,23 @@
 
 target datalayout = "p:16:32:128" 
 
-%struct.ButtonInitData = type { i8* }
+%struct.ButtonInitData = type { ptr }
 
 @_ZL14buttonInitData = internal global [1 x %struct.ButtonInitData] zeroinitializer, align 4
 
 @"\01L_OBJC_METH_VAR_NAME_40" = internal global [7 x i8] c"print:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
-@"\01L_OBJC_SELECTOR_REFERENCES_41" = internal externally_initialized  global i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_METH_VAR_NAME_40", i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
+@"\01L_OBJC_SELECTOR_REFERENCES_41" = internal externally_initialized  global ptr @"\01L_OBJC_METH_VAR_NAME_40", section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip"
 
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
-@llvm.used = appending global [2 x i8*] [i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_METH_VAR_NAME_40", i32 0, i32 0),  i8* bitcast (i8** @"\01L_OBJC_SELECTOR_REFERENCES_41" to i8*)]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }]
+@llvm.used = appending global [2 x ptr] [ptr @"\01L_OBJC_METH_VAR_NAME_40",  ptr @"\01L_OBJC_SELECTOR_REFERENCES_41"]
 
 ; Choose the preferred alignment.
 
-; CHECK: @[[_ZL14BUTTONINITDATA_0_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global i8* null, align 16
+; CHECK: @[[_ZL14BUTTONINITDATA_0_0:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global ptr null, align 16
 ;.
 define internal void @__cxx_global_var_init() section "__TEXT,__StaticInit,regular,pure_instructions" {
-  %1 = load i8*, i8** @"\01L_OBJC_SELECTOR_REFERENCES_41", !invariant.load !2009
-  store i8* %1, i8** getelementptr inbounds ([1 x %struct.ButtonInitData], [1 x %struct.ButtonInitData]* @_ZL14buttonInitData, i32 0, i32 0, i32 0), align 4
+  %1 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_41", !invariant.load !2009
+  store ptr %1, ptr @_ZL14buttonInitData, align 4
   ret void
 }
 
@@ -32,18 +32,18 @@ define internal void @_GLOBAL__I_a() section "__TEXT,__StaticInit,regular,pure_i
   ret void
 }
 
-declare void @test(i8*)
+declare void @test(ptr)
 
 ; The preferred alignment is available.
 
 define void @print() {
 ; CHECK-LABEL: @print(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8*, i8** @_ZL14buttonInitData.0, align 16
-; CHECK-NEXT:    call void @test(i8* [[TMP1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @_ZL14buttonInitData.0, align 16
+; CHECK-NEXT:    call void @test(ptr [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
-  %1 = load i8*, i8** getelementptr inbounds ([1 x %struct.ButtonInitData], [1 x %struct.ButtonInitData]* @_ZL14buttonInitData, i32 0, i32 0, i32 0), align 4
-  call void @test(i8* %1)
+  %1 = load ptr, ptr @_ZL14buttonInitData, align 4
+  call void @test(ptr %1)
   ret void
 }
 

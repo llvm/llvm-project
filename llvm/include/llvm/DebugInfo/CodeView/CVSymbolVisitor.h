@@ -19,9 +19,9 @@ class SymbolVisitorCallbacks;
 class CVSymbolVisitor {
 public:
   struct FilterOptions {
-    llvm::Optional<uint32_t> SymbolOffset;
-    llvm::Optional<uint32_t> ParentRecursiveDepth;
-    llvm::Optional<uint32_t> ChildRecursiveDepth;
+    std::optional<uint32_t> SymbolOffset;
+    std::optional<uint32_t> ParentRecursiveDepth;
+    std::optional<uint32_t> ChildRecursiveDepth;
   };
 
   CVSymbolVisitor(SymbolVisitorCallbacks &Callbacks);

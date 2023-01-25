@@ -8,7 +8,9 @@
 //
 // NetBSD does not support LC_COLLATE at the moment
 // XFAIL: netbsd
+
 // XFAIL: LIBCXX-AIX-FIXME
+// XFAIL: LIBCXX-FREEBSD-FIXME
 
 // REQUIRES: locale.cs_CZ.ISO8859-2
 

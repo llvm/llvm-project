@@ -1,7 +1,7 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion -split-input-file | FileCheck %s
-// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-fusion="fusion-maximal" -split-input-file | FileCheck %s --check-prefix=MAXIMAL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion))' -split-input-file | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(affine-loop-fusion{fusion-maximal}))' -split-input-file | FileCheck %s --check-prefix=MAXIMAL
 
-// Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir. 
+// Part I of fusion tests in  mlir/test/Transforms/loop-fusion.mlir.
 // Part II of fusion tests in mlir/test/Transforms/loop-fusion-2.mlir
 // Part IV of fusion tests in mlir/test/Transforms/loop-fusion-4.mlir
 
@@ -532,8 +532,8 @@ func.func @should_fuse_defining_node_has_no_dependence_from_source_node(
     %2 = arith.divf %0, %1 : f32
   }
 
-	// Loops '%i0' and '%i1' should be fused even though there is a defining
-  // node between the loops. It is because the node has no dependence from '%i0'.
+  // Loops '%i0' and '%i1' should be fused even though there is a defining node
+  // between the loops. It is because the node has no dependence from '%i0'.
   // CHECK:       affine.load %{{.*}}[] : memref<f32>
   // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.load %{{.*}}[] : memref<f32>
@@ -561,8 +561,8 @@ func.func @should_not_fuse_defining_node_has_dependence_from_source_loop(
     %2 = arith.divf %0, %1 : f32
   }
 
-	// Loops '%i0' and '%i1' should not be fused because the defining node
-  // of '%0' used in '%i1' has dependence from loop '%i0'.
+  // Loops '%i0' and '%i1' should not be fused because the defining node of '%0'
+  // used in '%i1' has dependence from loop '%i0'.
   // CHECK:       affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[] : memref<f32>
   // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
@@ -1075,5 +1075,53 @@ func.func @fuse_large_number_of_loops(%arg0: memref<20x10xf32, 1>, %arg1: memref
 // CHECK:         affine.for
 // CHECK:         affine.for
 // CHECK-NOT:     affine.for
+
+// CHECK-LABEL: func @alias_escaping_memref
+func.func @alias_escaping_memref(%a : memref<2x5xf32>) {
+  %cst = arith.constant 0.000000e+00 : f32
+  %alias = memref.reinterpret_cast %a to offset: [0], sizes: [10], strides: [1] : memref<2x5xf32> to memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %alias[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 10 {
+    %0 = affine.load %alias[%i1] : memref<10xf32>
+  }
+  // Fusion happens, but memref isn't privatized since %alias is an alias of a
+  // function argument.
+  // CHECK:       memref.reinterpret_cast
+  // CHECK-NEXT:  affine.for
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
+
+// CHECK-LABEL: func @unknown_memref_def_op
+func.func @unknown_memref_def_op() {
+  %cst = arith.constant 0.000000e+00 : f32
+  %may_alias = call @bar() : () -> memref<10xf32>
+  affine.for %i0 = 0 to 10 {
+    affine.store %cst, %may_alias[%i0] : memref<10xf32>
+  }
+
+  affine.for %i1 = 0 to 10 {
+    %0 = affine.load %may_alias[%i1] : memref<10xf32>
+  }
+  // Fusion happens, but memref isn't privatized since %may_alias's origin is
+  // unknown.
+  // CHECK:       call
+  // CHECK-NEXT:  affine.for
+  // CHECK-NEXT:    affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:    affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:  }
+  // CHECK-NOT:   affine.for
+
+  return
+}
+func.func private @bar() -> memref<10xf32>
+
 
 // Add further tests in mlir/test/Transforms/loop-fusion-4.mlir

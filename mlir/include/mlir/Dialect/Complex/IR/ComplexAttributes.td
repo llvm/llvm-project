@@ -10,18 +10,21 @@
 #define COMPLEX_ATTRIBUTE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Dialect/Complex/IR/ComplexBase.td"
 
 //===----------------------------------------------------------------------===//
 // Complex Attributes.
 //===----------------------------------------------------------------------===//
 
-class Complex_Attr<string attrName, string attrMnemonic>
-    : AttrDef<Complex_Dialect, attrName> {
+class Complex_Attr<string attrName, string attrMnemonic,
+                   list<Trait> traits = []>
+    : AttrDef<Complex_Dialect, attrName, traits> {
   let mnemonic = attrMnemonic;
 }
 
-def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
+def Complex_NumberAttr : Complex_Attr<"Number", "number",
+                                      [TypedAttrInterface]> {
   let summary = "A complex number attribute";
 
   let description = [{
@@ -37,8 +40,31 @@ def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
   let parameters = (ins APFloatParameter<"">:$real,
                         APFloatParameter<"">:$imag,
                         AttributeSelfTypeParameter<"">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "mlir::ComplexType":$type,
+                                        "double":$real,
+                                        "double":$imag), [{
+      auto elementType = type.getElementType().cast<FloatType>();
+      APFloat realFloat(real);
+      bool unused;
+      realFloat.convert(elementType.getFloatSemantics(),
+                        APFloat::rmNearestTiesToEven, &unused);
+      APFloat imagFloat(imag);
+      imagFloat.convert(elementType.getFloatSemantics(),
+                        APFloat::rmNearestTiesToEven, &unused);
+      return $_get(type.getContext(), realFloat, imagFloat, type);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    std::complex<APFloat> getValue() {
+      return std::complex<APFloat>(getReal(), getImag());
+    }
+  }];
+
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
 }
 
 #endif // COMPLEX_ATTRIBUTE

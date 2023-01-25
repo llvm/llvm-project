@@ -46,17 +46,17 @@ entry:
   %x7.addr = alloca i32, align 4
   %x8.addr = alloca i32, align 4
   %x9.addr = alloca i32, align 4
-  store i32 %x0, i32* %x0.addr, align 4
-  store i32 %x1, i32* %x1.addr, align 4
+  store i32 %x0, ptr %x0.addr, align 4
+  store i32 %x1, ptr %x1.addr, align 4
   store <vscale x 16 x i32> %v0, <vscale x 16 x i32>* %v0.addr, align 4
-  store i32 %x2, i32* %x2.addr, align 4
-  store i32 %x3, i32* %x3.addr, align 4
-  store i32 %x4, i32* %x4.addr, align 4
-  store i32 %x5, i32* %x5.addr, align 4
-  store i32 %x6, i32* %x6.addr, align 4
-  store i32 %x7, i32* %x7.addr, align 4
-  store i32 %x8, i32* %x8.addr, align 4
-  store i32 %x9, i32* %x9.addr, align 4
+  store i32 %x2, ptr %x2.addr, align 4
+  store i32 %x3, ptr %x3.addr, align 4
+  store i32 %x4, ptr %x4.addr, align 4
+  store i32 %x5, ptr %x5.addr, align 4
+  store i32 %x6, ptr %x6.addr, align 4
+  store i32 %x7, ptr %x7.addr, align 4
+  store i32 %x8, ptr %x8.addr, align 4
+  store i32 %x9, ptr %x9.addr, align 4
   ret void
 }
 
@@ -78,12 +78,12 @@ define dso_local signext i32 @main() #0 {
 ; CHECK-NEXT:    sd a0, -64(s0)
 ; CHECK-NEXT:    ld a0, -64(s0)
 ; CHECK-NEXT:    addi a1, s0, -56
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    sub a0, s0, a0
-; CHECK-NEXT:    addi s1, a0, -112
+; CHECK-NEXT:    csrr s1, vlenb
+; CHECK-NEXT:    slli s1, s1, 3
+; CHECK-NEXT:    sub s1, s0, s1
+; CHECK-NEXT:    addi s1, s1, -112
 ; CHECK-NEXT:    vs8r.v v8, (s1)
 ; CHECK-NEXT:    li a0, 1
 ; CHECK-NEXT:    sw a0, -68(s0)
@@ -150,54 +150,51 @@ entry:
   %x7 = alloca i32, align 4
   %x8 = alloca i32, align 4
   %x9 = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = bitcast [4 x i32]* %input to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 4 %0, i8 0, i64 16, i1 false)
-  %1 = call i64 @llvm.riscv.vsetvli.i64(i64 4, i64 2, i64 3)
-  store i64 %1, i64* %vl, align 8
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %input, i64 0, i64 0
-  %2 = load i64, i64* %vl, align 8
-  %3 = bitcast i32* %arraydecay to <vscale x 16 x i32>*
-  %4 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* %3, i64 %2)
-  store <vscale x 16 x i32> %4, <vscale x 16 x i32>* %v0, align 4
-  store i32 1, i32* %x0, align 4
-  store i32 1, i32* %x1, align 4
-  store i32 1, i32* %x2, align 4
-  store i32 1, i32* %x3, align 4
-  store i32 1, i32* %x4, align 4
-  store i32 1, i32* %x5, align 4
-  store i32 1, i32* %x6, align 4
-  store i32 1, i32* %x7, align 4
-  store i32 1, i32* %x8, align 4
-  store i32 1, i32* %x9, align 4
-  %5 = load i32, i32* %x0, align 4
-  %6 = load i32, i32* %x1, align 4
-  %7 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
-  %8 = load i32, i32* %x2, align 4
-  %9 = load i32, i32* %x3, align 4
-  %10 = load i32, i32* %x4, align 4
-  %11 = load i32, i32* %x5, align 4
-  %12 = load i32, i32* %x6, align 4
-  %13 = load i32, i32* %x7, align 4
-  %14 = load i32, i32* %x8, align 4
-  %15 = load i32, i32* %x9, align 4
-  call void @lots_args(i32 signext %5, i32 signext %6, <vscale x 16 x i32> %7, i32 signext %8, i32 signext %9, i32 signext %10, i32 signext %11, i32 signext %12, i32 %13, i32 %14, i32 %15)
-  %16 = load i32, i32* %x0, align 4
-  %17 = load i32, i32* %x1, align 4
-  %18 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
-  %19 = load i32, i32* %x2, align 4
-  %20 = load i32, i32* %x3, align 4
-  %21 = load i32, i32* %x4, align 4
-  %22 = load i32, i32* %x5, align 4
-  %23 = load i32, i32* %x6, align 4
-  %24 = load i32, i32* %x7, align 4
-  %25 = load i32, i32* %x8, align 4
-  %26 = load i32, i32* %x9, align 4
-  call void @lots_args(i32 signext %16, i32 signext %17, <vscale x 16 x i32> %18, i32 signext %19, i32 signext %20, i32 signext %21, i32 signext %22, i32 signext %23, i32 %24, i32 %25, i32 %26)
+  store i32 0, ptr %retval, align 4
+  call void @llvm.memset.p0.i64(ptr align 4 %input, i8 0, i64 16, i1 false)
+  %0 = call i64 @llvm.riscv.vsetvli.i64(i64 4, i64 2, i64 3)
+  store i64 %0, ptr %vl, align 8
+  %1 = load i64, ptr %vl, align 8
+  %2 = call <vscale x 16 x i32> @llvm.riscv.vle.nxv16i32.i64(<vscale x 16 x i32> undef, <vscale x 16 x i32>* %input, i64 %1)
+  store <vscale x 16 x i32> %2, <vscale x 16 x i32>* %v0, align 4
+  store i32 1, ptr %x0, align 4
+  store i32 1, ptr %x1, align 4
+  store i32 1, ptr %x2, align 4
+  store i32 1, ptr %x3, align 4
+  store i32 1, ptr %x4, align 4
+  store i32 1, ptr %x5, align 4
+  store i32 1, ptr %x6, align 4
+  store i32 1, ptr %x7, align 4
+  store i32 1, ptr %x8, align 4
+  store i32 1, ptr %x9, align 4
+  %3 = load i32, ptr %x0, align 4
+  %4 = load i32, ptr %x1, align 4
+  %5 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
+  %6 = load i32, ptr %x2, align 4
+  %7 = load i32, ptr %x3, align 4
+  %8 = load i32, ptr %x4, align 4
+  %9 = load i32, ptr %x5, align 4
+  %10 = load i32, ptr %x6, align 4
+  %11 = load i32, ptr %x7, align 4
+  %12 = load i32, ptr %x8, align 4
+  %13 = load i32, ptr %x9, align 4
+  call void @lots_args(i32 signext %3, i32 signext %4, <vscale x 16 x i32> %5, i32 signext %6, i32 signext %7, i32 signext %8, i32 signext %9, i32 signext %10, i32 %11, i32 %12, i32 %13)
+  %14 = load i32, ptr %x0, align 4
+  %15 = load i32, ptr %x1, align 4
+  %16 = load <vscale x 16 x i32>, <vscale x 16 x i32>* %v0, align 4
+  %17 = load i32, ptr %x2, align 4
+  %18 = load i32, ptr %x3, align 4
+  %19 = load i32, ptr %x4, align 4
+  %20 = load i32, ptr %x5, align 4
+  %21 = load i32, ptr %x6, align 4
+  %22 = load i32, ptr %x7, align 4
+  %23 = load i32, ptr %x8, align 4
+  %24 = load i32, ptr %x9, align 4
+  call void @lots_args(i32 signext %14, i32 signext %15, <vscale x 16 x i32> %16, i32 signext %17, i32 signext %18, i32 signext %19, i32 signext %20, i32 signext %21, i32 %22, i32 %23, i32 %24)
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 
 declare i64 @llvm.riscv.vsetvli.i64(i64, i64 immarg, i64 immarg)
 

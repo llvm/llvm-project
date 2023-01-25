@@ -13,12 +13,11 @@ using namespace llvm;
 
 void ARMFunctionInfo::anchor() {}
 
-static bool GetBranchTargetEnforcement(MachineFunction &MF) {
-  const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
-  if (!Subtarget.isMClass() || !Subtarget.hasV7Ops())
+static bool GetBranchTargetEnforcement(const Function &F,
+                                       const ARMSubtarget *Subtarget) {
+  if (!Subtarget->isMClass() || !Subtarget->hasV7Ops())
     return false;
 
-  const Function &F = MF.getFunction();
   if (!F.hasFnAttribute("branch-target-enforcement")) {
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
             F.getParent()->getModuleFlag("branch-target-enforcement")))
@@ -61,17 +60,14 @@ static std::pair<bool, bool> GetSignReturnAddress(const Function &F) {
   return {true, false};
 }
 
-ARMFunctionInfo::ARMFunctionInfo(MachineFunction &MF)
-    : isThumb(MF.getSubtarget<ARMSubtarget>().isThumb()),
-      hasThumb2(MF.getSubtarget<ARMSubtarget>().hasThumb2()),
-      IsCmseNSEntry(MF.getFunction().hasFnAttribute("cmse_nonsecure_entry")),
-      IsCmseNSCall(MF.getFunction().hasFnAttribute("cmse_nonsecure_call")),
-      BranchTargetEnforcement(GetBranchTargetEnforcement(MF)) {
-
-  const auto &Subtarget = MF.getSubtarget<ARMSubtarget>();
-  if (Subtarget.isMClass() && Subtarget.hasV7Ops())
-    std::tie(SignReturnAddress, SignReturnAddressAll) =
-        GetSignReturnAddress(MF.getFunction());
+ARMFunctionInfo::ARMFunctionInfo(const Function &F,
+                                 const ARMSubtarget *Subtarget)
+    : isThumb(Subtarget->isThumb()), hasThumb2(Subtarget->hasThumb2()),
+      IsCmseNSEntry(F.hasFnAttribute("cmse_nonsecure_entry")),
+      IsCmseNSCall(F.hasFnAttribute("cmse_nonsecure_call")),
+      BranchTargetEnforcement(GetBranchTargetEnforcement(F, Subtarget)) {
+  if (Subtarget->isMClass() && Subtarget->hasV7Ops())
+    std::tie(SignReturnAddress, SignReturnAddressAll) = GetSignReturnAddress(F);
 }
 
 MachineFunctionInfo *

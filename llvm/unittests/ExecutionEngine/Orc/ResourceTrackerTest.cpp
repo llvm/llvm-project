@@ -23,21 +23,23 @@ namespace {
 template <typename ResourceT = unsigned>
 class SimpleResourceManager : public ResourceManager {
 public:
-  using HandleRemoveFunction = unique_function<Error(ResourceKey)>;
+  using HandleRemoveFunction =
+      unique_function<Error(JITDylib &JD, ResourceKey)>;
 
   using HandleTransferFunction =
-      unique_function<void(ResourceKey, ResourceKey)>;
+      unique_function<void(JITDylib &JD, ResourceKey, ResourceKey)>;
 
   using RecordedResourcesMap = DenseMap<ResourceKey, ResourceT>;
 
   SimpleResourceManager(ExecutionSession &ES) : ES(ES) {
-    HandleRemove = [&](ResourceKey K) -> Error {
-      ES.runSessionLocked([&] { removeResource(K); });
+    HandleRemove = [&](JITDylib &JD, ResourceKey K) -> Error {
+      ES.runSessionLocked([&] { removeResource(JD, K); });
       return Error::success();
     };
 
-    HandleTransfer = [this](ResourceKey DstKey, ResourceKey SrcKey) {
-      transferResources(DstKey, SrcKey);
+    HandleTransfer = [this](JITDylib &JD, ResourceKey DstKey,
+                            ResourceKey SrcKey) {
+      transferResources(JD, DstKey, SrcKey);
     };
 
     ES.registerResourceManager(*this);
@@ -69,11 +71,11 @@ public:
   }
 
   /// Remove the resource associated with K from the map if present.
-  void removeResource(ResourceKey K) { Resources.erase(K); }
+  void removeResource(JITDylib &JD, ResourceKey K) { Resources.erase(K); }
 
   /// Transfer resources from DstKey to SrcKey.
   template <typename MergeOp = std::plus<ResourceT>>
-  void transferResources(ResourceKey DstKey, ResourceKey SrcKey,
+  void transferResources(JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey,
                          MergeOp Merge = MergeOp()) {
     auto &DstResourceRef = Resources[DstKey];
     ResourceT DstResources;
@@ -90,13 +92,13 @@ public:
   RecordedResourcesMap &getRecordedResources() { return Resources; }
   const RecordedResourcesMap &getRecordedResources() const { return Resources; }
 
-  Error handleRemoveResources(ResourceKey K) override {
-    return HandleRemove(K);
+  Error handleRemoveResources(JITDylib &JD, ResourceKey K) override {
+    return HandleRemove(JD, K);
   }
 
-  void handleTransferResources(ResourceKey DstKey,
+  void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
                                ResourceKey SrcKey) override {
-    HandleTransfer(DstKey, SrcKey);
+    HandleTransfer(JD, DstKey, SrcKey);
   }
 
   static void transferNotAllowed(ResourceKey DstKey, ResourceKey SrcKey) {
@@ -115,11 +117,11 @@ TEST_F(ResourceTrackerStandardTest,
 
   bool ResourceManagerGotRemove = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleRemove([&](ResourceKey K) -> Error {
+  SRM.setHandleRemove([&](JITDylib &JD, ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 0U)
         << "Unexpected resources recorded";
-    SRM.removeResource(K);
+    SRM.removeResource(JD, K);
     return Error::success();
   });
 
@@ -152,13 +154,13 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllAfterMaterializing) {
 
   bool ResourceManagerGotRemove = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleRemove([&](ResourceKey K) -> Error {
+  SRM.setHandleRemove([&](JITDylib &JD, ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 1U)
         << "Unexpected number of resources recorded";
     EXPECT_EQ(SRM.getRecordedResources().count(K), 1U)
         << "Unexpected recorded resource";
-    SRM.removeResource(K);
+    SRM.removeResource(JD, K);
     return Error::success();
   });
 
@@ -190,11 +192,11 @@ TEST_F(ResourceTrackerStandardTest, BasicDefineAndRemoveAllWhileMaterializing) {
 
   bool ResourceManagerGotRemove = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleRemove([&](ResourceKey K) -> Error {
+  SRM.setHandleRemove([&](JITDylib &JD, ResourceKey K) -> Error {
     ResourceManagerGotRemove = true;
     EXPECT_EQ(SRM.getRecordedResources().size(), 0U)
         << "Unexpected resources recorded";
-    SRM.removeResource(K);
+    SRM.removeResource(JD, K);
     return Error::success();
   });
 
@@ -289,11 +291,12 @@ TEST_F(ResourceTrackerStandardTest,
 
   bool ResourceManagerGotTransfer = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
-    ResourceManagerGotTransfer = true;
-    auto &RR = SRM.getRecordedResources();
-    EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
-  });
+  SRM.setHandleTransfer(
+      [&](JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {
+        ResourceManagerGotTransfer = true;
+        auto &RR = SRM.getRecordedResources();
+        EXPECT_EQ(RR.size(), 0U) << "Expected no resources recorded yet";
+      });
 
   auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
@@ -339,10 +342,11 @@ TEST_F(ResourceTrackerStandardTest,
 
   bool ResourceManagerGotTransfer = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
-    ResourceManagerGotTransfer = true;
-    SRM.transferResources(DstKey, SrcKey);
-  });
+  SRM.setHandleTransfer(
+      [&](JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {
+        ResourceManagerGotTransfer = true;
+        SRM.transferResources(JD, DstKey, SrcKey);
+      });
 
   auto MakeMU = [&](SymbolStringPtr Name, JITEvaluatedSymbol Sym) {
     return std::make_unique<SimpleMaterializationUnit>(
@@ -389,10 +393,11 @@ TEST_F(ResourceTrackerStandardTest,
 
   bool ResourceManagerGotTransfer = false;
   SimpleResourceManager<> SRM(ES);
-  SRM.setHandleTransfer([&](ResourceKey DstKey, ResourceKey SrcKey) {
-    ResourceManagerGotTransfer = true;
-    SRM.transferResources(DstKey, SrcKey);
-  });
+  SRM.setHandleTransfer(
+      [&](JITDylib &JD, ResourceKey DstKey, ResourceKey SrcKey) {
+        ResourceManagerGotTransfer = true;
+        SRM.transferResources(JD, DstKey, SrcKey);
+      });
 
   auto FooRT = JD.createResourceTracker();
   std::unique_ptr<MaterializationResponsibility> FooMR;

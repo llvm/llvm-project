@@ -123,10 +123,15 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
     LLVM_DEBUG(dbgs() << "  Inst hasn't e32 equivalent\n");
     return false;
   }
+  // Do not shrink True16 instructions pre-RA to avoid the restriction in
+  // register allocation from only being able to use 128 VGPRs
+  if (AMDGPU::isTrue16Inst(Op))
+    return false;
   if (const auto *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
-    // Give up if there are any uses of the carry-out from instructions like
-    // V_ADD_CO_U32. The shrunken form of the instruction would write it to vcc
-    // instead of to a virtual register.
+    // Give up if there are any uses of the sdst in carry-out or VOPC.
+    // The shrunken form of the instruction would write it to vcc instead of to
+    // a virtual register. If we rewrote the uses the shrinking would be
+    // possible.
     if (!MRI->use_nodbg_empty(SDst->getReg()))
       return false;
   }
@@ -211,10 +216,10 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
   const bool MaskAllLanes =
       RowMaskOpnd->getImm() == 0xF && BankMaskOpnd->getImm() == 0xF;
   (void)MaskAllLanes;
-  assert(MaskAllLanes ||
-         !(TII->isVOPC(DPPOp) ||
-           (TII->isVOP3(DPPOp) && OrigOpE32 != -1 && TII->isVOPC(OrigOpE32))) &&
-             "VOPC cannot form DPP unless mask is full");
+  assert((MaskAllLanes ||
+          !(TII->isVOPC(DPPOp) || (TII->isVOP3(DPPOp) && OrigOpE32 != -1 &&
+                                   TII->isVOPC(OrigOpE32)))) &&
+         "VOPC cannot form DPP unless mask is full");
 
   auto DPPInst = BuildMI(*OrigMI.getParent(), OrigMI,
                          OrigMI.getDebugLoc(), TII->get(DPPOp))
@@ -267,8 +272,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
              (0LL == (Mod0->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod0->getImm());
       ++NumOperands;
-    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
-                   AMDGPU::OpName::src0_modifiers) != -1) {
+    } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src0_modifiers)) {
       DPPInst.addImm(0);
       ++NumOperands;
     }
@@ -291,8 +295,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
              (0LL == (Mod1->getImm() & ~(SISrcMods::ABS | SISrcMods::NEG))));
       DPPInst.addImm(Mod1->getImm());
       ++NumOperands;
-    } else if (AMDGPU::getNamedOperandIdx(DPPOp,
-                   AMDGPU::OpName::src1_modifiers) != -1) {
+    } else if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1_modifiers)) {
       DPPInst.addImm(0);
       ++NumOperands;
     }
@@ -328,18 +331,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     if (HasVOP3DPP) {
       auto *ClampOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::clamp);
-      if (ClampOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::clamp) != -1) {
+      if (ClampOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::clamp)) {
         DPPInst.addImm(ClampOpr->getImm());
       }
       auto *VdstInOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::vdst_in);
       if (VdstInOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::vdst_in) != -1) {
+          AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::vdst_in)) {
         DPPInst.add(*VdstInOpr);
       }
       auto *OmodOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::omod);
-      if (OmodOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::omod) != -1) {
+      if (OmodOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::omod)) {
         DPPInst.addImm(OmodOpr->getImm());
       }
       // Validate OP_SEL has to be set to all 0 and OP_SEL_HI has to be set to
@@ -352,7 +353,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           Fail = true;
           break;
         }
-        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel) != -1)
+        if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::op_sel))
           DPPInst.addImm(OpSel);
       }
       if (auto *OpSelHiOpr =
@@ -366,17 +367,15 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
           Fail = true;
           break;
         }
-        if (AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::op_sel_hi) != -1)
+        if (AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::op_sel_hi))
           DPPInst.addImm(OpSelHi);
       }
       auto *NegOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_lo);
-      if (NegOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_lo) != -1) {
+      if (NegOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::neg_lo)) {
         DPPInst.addImm(NegOpr->getImm());
       }
       auto *NegHiOpr = TII->getNamedOperand(OrigMI, AMDGPU::OpName::neg_hi);
-      if (NegHiOpr &&
-          AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::neg_hi) != -1) {
+      if (NegHiOpr && AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::neg_hi)) {
         DPPInst.addImm(NegHiOpr->getImm());
       }
     }
@@ -600,6 +599,8 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     LLVM_DEBUG(dbgs() << "  try: " << OrigMI);
 
     auto OrigOp = OrigMI.getOpcode();
+    assert((TII->get(OrigOp).getSize() != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
+           "There should not be e32 True16 instructions pre-RA");
     if (OrigOp == AMDGPU::REG_SEQUENCE) {
       Register FwdReg = OrigMI.getOperand(0).getReg();
       unsigned FwdSubReg = 0;
@@ -704,7 +705,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         continue;
       }
       while (!S.second.empty())
-        S.first->getOperand(S.second.pop_back_val()).setIsUndef(true);
+        S.first->getOperand(S.second.pop_back_val()).setIsUndef();
     }
   }
 
@@ -732,7 +733,7 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
           ++NumDPPMovsCombined;
         } else {
           auto Split = TII->expandMovDPP64(MI);
-          for (auto M : { Split.first, Split.second }) {
+          for (auto *M : {Split.first, Split.second}) {
             if (M && combineDPPMov(*M))
               ++NumDPPMovsCombined;
           }

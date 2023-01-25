@@ -1,12 +1,12 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
 
 /// A symbol assignment defined alias inherits st_type and gets the same treatment.
 // RUN: llvm-mc --triple=armv7a-linux-gnueabihf -arm-add-build-attributes -filetype=obj --defsym ALIAS=1 -o %t1.o %s
 // RUN: ld.lld --defsym foo=foo1 %t1.o -o %t1
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t | FileCheck %s
 
 /// Non-preemptible ifuncs are called via a PLT entry which is always Arm
 /// state, expect the ARM callers to go direct to the PLT entry, Thumb

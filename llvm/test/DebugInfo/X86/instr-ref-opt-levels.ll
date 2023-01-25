@@ -32,17 +32,17 @@
 
 define dso_local i32 @main() local_unnamed_addr !dbg !7 {
   %1 = alloca i32, align 4
-  %2 = load i32, i32* @b, align 1, !dbg !13
+  %2 = load i32, ptr @b, align 1, !dbg !13
   call void @llvm.dbg.value(metadata i32 %2, metadata !12, metadata !DIExpression()), !dbg !13
-  store i32 %2, i32* %1, align 4, !dbg !13
+  store i32 %2, ptr %1, align 4, !dbg !13
   ret i32 0, !dbg !13
 }
 
 define dso_local i32 @fn_optnone() local_unnamed_addr #0 !dbg !27 {
   %1 = alloca i32, align 4
-  %2 = load i32, i32* @b, align 1, !dbg !33
+  %2 = load i32, ptr @b, align 1, !dbg !33
   call void @llvm.dbg.value(metadata i32 %2, metadata !32, metadata !DIExpression()), !dbg !33
-  store i32 %2, i32* %1, align 4, !dbg !33
+  store i32 %2, ptr %1, align 4, !dbg !33
   ret i32 0, !dbg !33
 }
 

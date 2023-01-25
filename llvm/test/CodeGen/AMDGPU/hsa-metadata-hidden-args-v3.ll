@@ -24,14 +24,14 @@
 ; CHECK:          .name:           test0
 ; CHECK:          .symbol:         test0.kd
 define amdgpu_kernel void @test0(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -57,14 +57,14 @@ entry:
 ; CHECK:          .name:           test8
 ; CHECK:          .symbol:         test8.kd
 define amdgpu_kernel void @test8(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -93,14 +93,14 @@ entry:
 ; CHECK:          .name:           test16
 ; CHECK:          .symbol:         test16.kd
 define amdgpu_kernel void @test16(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #1 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #1 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -132,14 +132,14 @@ entry:
 ; CHECK:          .name:           test24
 ; CHECK:          .symbol:         test24.kd
 define amdgpu_kernel void @test24(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #2 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #2 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -168,21 +168,20 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK:          .name:           test32
 ; CHECK:          .symbol:         test32.kd
 define amdgpu_kernel void @test32(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #3 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #3 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -211,29 +210,26 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:       - .offset:         56
 ; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:         .value_kind:     hidden_default_queue
+; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
 ; CHECK:          .name:           test48
 ; CHECK:          .symbol:         test48.kd
 define amdgpu_kernel void @test48(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #4 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #4 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -262,33 +258,29 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:       - .offset:         56
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_default_queue
+; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         64
-; CHECK-NEXT:         .size:           8
-; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         72
+; CHECK-NEXT:       - .offset:         72
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
 ; CHECK:          .name:           test56
 ; CHECK:          .symbol:         test56.kd
 define amdgpu_kernel void @test56(
-    half addrspace(1)* %r,
-    half addrspace(1)* %a,
-    half addrspace(1)* %b) #5 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b) #5 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
-  %b.val = load half, half addrspace(1)* %b
+  %a.val = load half, ptr addrspace(1) %a
+  %b.val = load half, ptr addrspace(1) %b
   %r.val = fadd half %a.val, %b.val
-  store half %r.val, half addrspace(1)* %r
+  store half %r.val, ptr addrspace(1) %r
   ret void
 }
 

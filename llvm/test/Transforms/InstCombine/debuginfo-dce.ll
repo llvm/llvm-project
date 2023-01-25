@@ -1,4 +1,4 @@
-; RUN: opt -passes=instcombine %s -S -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -passes=instcombine %s -S -o - | FileCheck %s
 ; Verify that the eliminated instructions (bitcast, gep, load) are salvaged into
 ; a DIExpression.
 ;
@@ -34,7 +34,7 @@ entry:
   call void @llvm.dbg.value(metadata %struct.entry* %1, metadata !18, metadata !20), !dbg !19
 ; CHECK: define void @salvage_load
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* undef
+; CHECK-NEXT: call void @llvm.dbg.value(metadata %struct.entry* poison
   store %struct.entry* %1, %struct.entry** %im_not_dead, align 8
   ret void, !dbg !21
 }

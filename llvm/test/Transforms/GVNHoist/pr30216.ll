@@ -1,33 +1,33 @@
-; RUN: opt -S -gvn-hoist < %s | FileCheck %s
+; RUN: opt -S -passes=gvn-hoist < %s | FileCheck %s
 
 ; Make sure the two stores @B do not get hoisted past the load @B.
 
-; CHECK-LABEL: define i8* @Foo
+; CHECK-LABEL: define ptr @Foo
 ; CHECK: store
 ; CHECK: store
 ; CHECK: load
 ; CHECK: store
 
 @A = external global i8
-@B = external global i8*
+@B = external global ptr
 
-define i8* @Foo() {
-  store i8 0, i8* @A
+define ptr @Foo() {
+  store i8 0, ptr @A
   br i1 undef, label %if.then, label %if.else
 
 if.then:
-  store i8* null, i8** @B
-  ret i8* null
+  store ptr null, ptr @B
+  ret ptr null
 
 if.else:
-  %1 = load i8*, i8** @B
-  store i8* null, i8** @B
-  ret i8* %1
+  %1 = load ptr, ptr @B
+  store ptr null, ptr @B
+  ret ptr %1
 }
 
 ; Make sure the two stores @B do not get hoisted past the store @GlobalVar.
 
-; CHECK-LABEL: define i8* @Fun
+; CHECK-LABEL: define ptr @Fun
 ; CHECK: store
 ; CHECK: store
 ; CHECK: store
@@ -36,17 +36,17 @@ if.else:
 
 @GlobalVar = internal global i8 0
 
-define i8* @Fun() {
-  store i8 0, i8* @A
+define ptr @Fun() {
+  store i8 0, ptr @A
   br i1 undef, label %if.then, label %if.else
 
 if.then:
-  store i8* null, i8** @B
-  ret i8* null
+  store ptr null, ptr @B
+  ret ptr null
 
 if.else:
-  store i8 0, i8* @GlobalVar
-  store i8* null, i8** @B
-  %1 = load i8*, i8** @B
-  ret i8* %1
+  store i8 0, ptr @GlobalVar
+  store ptr null, ptr @B
+  %1 = load ptr, ptr @B
+  ret ptr %1
 }

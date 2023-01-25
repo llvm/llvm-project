@@ -7,14 +7,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include "llvm/Support/Host.h"
+#include "llvm/Support/thread.h"
+
 using namespace llvm;
 using namespace llvm::object;
+
+// Used to skip LLVM_BB_ADDR_MAP tests on windows platforms due to
+// https://github.com/llvm/llvm-project/issues/60013.
+bool IsHostWindows() {
+  Triple Host(Triple::normalize(sys::getProcessTriple()));
+  return Host.isOSWindows();
+}
 
 namespace {
 
@@ -86,38 +97,33 @@ std::array<DataForTest, 4> generateData(uint16_t Machine) {
 TEST(ELFObjectFileTest, MachineTestForNoneOrUnused) {
   std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_NONE))
-    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_NONE)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::UnknownArch);
 
   // Test an arbitrary unused EM_* value (255).
-  I = 0;
-  for (const DataForTest &D : generateData(255))
-    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+  for (auto [Idx, Data] : enumerate(generateData(255)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::UnknownArch);
 }
 
 TEST(ELFObjectFileTest, MachineTestForVE) {
   std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
                                       "elf64-ve", "elf64-ve"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_VE))
-    checkFormatAndArch(D, Formats[I++], Triple::ve);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_VE)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::ve);
 }
 
 TEST(ELFObjectFileTest, MachineTestForX86_64) {
   std::array<StringRef, 4> Formats = {"elf32-x86-64", "elf32-x86-64",
                                       "elf64-x86-64", "elf64-x86-64"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_X86_64))
-    checkFormatAndArch(D, Formats[I++], Triple::x86_64);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_X86_64)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::x86_64);
 }
 
 TEST(ELFObjectFileTest, MachineTestFor386) {
   std::array<StringRef, 4> Formats = {"elf32-i386", "elf32-i386", "elf64-i386",
                                       "elf64-i386"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_386))
-    checkFormatAndArch(D, Formats[I++], Triple::x86);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_386)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::x86);
 }
 
 TEST(ELFObjectFileTest, MachineTestForMIPS) {
@@ -125,27 +131,22 @@ TEST(ELFObjectFileTest, MachineTestForMIPS) {
                                       "elf64-mips"};
   std::array<Triple::ArchType, 4> Archs = {Triple::mipsel, Triple::mips,
                                            Triple::mips64el, Triple::mips64};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_MIPS)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_MIPS)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForAMDGPU) {
   std::array<StringRef, 4> Formats = {"elf32-amdgpu", "elf32-amdgpu",
                                       "elf64-amdgpu", "elf64-amdgpu"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_AMDGPU))
-    checkFormatAndArch(D, Formats[I++], Triple::UnknownArch);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_AMDGPU)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::UnknownArch);
 }
 
 TEST(ELFObjectFileTest, MachineTestForIAMCU) {
   std::array<StringRef, 4> Formats = {"elf32-iamcu", "elf32-iamcu",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_IAMCU))
-    checkFormatAndArch(D, Formats[I++], Triple::x86);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_IAMCU)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::x86);
 }
 
 TEST(ELFObjectFileTest, MachineTestForAARCH64) {
@@ -154,11 +155,8 @@ TEST(ELFObjectFileTest, MachineTestForAARCH64) {
                                       "elf64-bigaarch64"};
   std::array<Triple::ArchType, 4> Archs = {Triple::aarch64, Triple::aarch64_be,
                                            Triple::aarch64, Triple::aarch64_be};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_AARCH64)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_AARCH64)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForPPC64) {
@@ -166,11 +164,8 @@ TEST(ELFObjectFileTest, MachineTestForPPC64) {
                                       "elf64-powerpcle", "elf64-powerpc"};
   std::array<Triple::ArchType, 4> Archs = {Triple::ppc64le, Triple::ppc64,
                                            Triple::ppc64le, Triple::ppc64};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_PPC64)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_PPC64)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForPPC) {
@@ -178,11 +173,8 @@ TEST(ELFObjectFileTest, MachineTestForPPC) {
                                       "elf64-unknown", "elf64-unknown"};
   std::array<Triple::ArchType, 4> Archs = {Triple::ppcle, Triple::ppc,
                                            Triple::ppcle, Triple::ppc};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_PPC)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_PPC)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForRISCV) {
@@ -190,35 +182,29 @@ TEST(ELFObjectFileTest, MachineTestForRISCV) {
                                       "elf64-littleriscv", "elf64-littleriscv"};
   std::array<Triple::ArchType, 4> Archs = {Triple::riscv32, Triple::riscv32,
                                            Triple::riscv64, Triple::riscv64};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_RISCV)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_RISCV)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForARM) {
   std::array<StringRef, 4> Formats = {"elf32-littlearm", "elf32-bigarm",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_ARM))
-    checkFormatAndArch(D, Formats[I++], Triple::arm);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_ARM)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::arm);
 }
 
 TEST(ELFObjectFileTest, MachineTestForS390) {
   std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
                                       "elf64-s390", "elf64-s390"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_S390))
-    checkFormatAndArch(D, Formats[I++], Triple::systemz);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_S390)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::systemz);
 }
 
 TEST(ELFObjectFileTest, MachineTestForSPARCV9) {
   std::array<StringRef, 4> Formats = {"elf32-unknown", "elf32-unknown",
                                       "elf64-sparc", "elf64-sparc"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_SPARCV9))
-    checkFormatAndArch(D, Formats[I++], Triple::sparcv9);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_SPARCV9)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::sparcv9);
 }
 
 TEST(ELFObjectFileTest, MachineTestForSPARC) {
@@ -226,11 +212,8 @@ TEST(ELFObjectFileTest, MachineTestForSPARC) {
                                       "elf64-unknown", "elf64-unknown"};
   std::array<Triple::ArchType, 4> Archs = {Triple::sparcel, Triple::sparc,
                                            Triple::sparcel, Triple::sparc};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_SPARC)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_SPARC)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForSPARC32PLUS) {
@@ -238,11 +221,8 @@ TEST(ELFObjectFileTest, MachineTestForSPARC32PLUS) {
                                       "elf64-unknown", "elf64-unknown"};
   std::array<Triple::ArchType, 4> Archs = {Triple::sparcel, Triple::sparc,
                                            Triple::sparcel, Triple::sparc};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_SPARC32PLUS)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_SPARC32PLUS)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForBPF) {
@@ -250,43 +230,36 @@ TEST(ELFObjectFileTest, MachineTestForBPF) {
                                       "elf64-bpf", "elf64-bpf"};
   std::array<Triple::ArchType, 4> Archs = {Triple::bpfel, Triple::bpfeb,
                                            Triple::bpfel, Triple::bpfeb};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_BPF)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_BPF)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForAVR) {
   std::array<StringRef, 4> Formats = {"elf32-avr", "elf32-avr", "elf64-unknown",
                                       "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_AVR))
-    checkFormatAndArch(D, Formats[I++], Triple::avr);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_AVR)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::avr);
 }
 
 TEST(ELFObjectFileTest, MachineTestForHEXAGON) {
   std::array<StringRef, 4> Formats = {"elf32-hexagon", "elf32-hexagon",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_HEXAGON))
-    checkFormatAndArch(D, Formats[I++], Triple::hexagon);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_HEXAGON)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::hexagon);
 }
 
 TEST(ELFObjectFileTest, MachineTestForLANAI) {
   std::array<StringRef, 4> Formats = {"elf32-lanai", "elf32-lanai",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_LANAI))
-    checkFormatAndArch(D, Formats[I++], Triple::lanai);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_LANAI)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::lanai);
 }
 
 TEST(ELFObjectFileTest, MachineTestForMSP430) {
   std::array<StringRef, 4> Formats = {"elf32-msp430", "elf32-msp430",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_MSP430))
-    checkFormatAndArch(D, Formats[I++], Triple::msp430);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_MSP430)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::msp430);
 }
 
 TEST(ELFObjectFileTest, MachineTestForLoongArch) {
@@ -295,19 +268,22 @@ TEST(ELFObjectFileTest, MachineTestForLoongArch) {
   std::array<Triple::ArchType, 4> Archs = {
       Triple::loongarch32, Triple::loongarch32, Triple::loongarch64,
       Triple::loongarch64};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_LOONGARCH)) {
-    checkFormatAndArch(D, Formats[I], Archs[I]);
-    ++I;
-  }
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_LOONGARCH)))
+    checkFormatAndArch(Data, Formats[Idx], Archs[Idx]);
 }
 
 TEST(ELFObjectFileTest, MachineTestForCSKY) {
   std::array<StringRef, 4> Formats = {"elf32-csky", "elf32-csky",
                                       "elf64-unknown", "elf64-unknown"};
-  size_t I = 0;
-  for (const DataForTest &D : generateData(ELF::EM_CSKY))
-    checkFormatAndArch(D, Formats[I++], Triple::csky);
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_CSKY)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::csky);
+}
+
+TEST(ELFObjectFileTest, MachineTestForXtensa) {
+  std::array<StringRef, 4> Formats = {"elf32-xtensa", "elf32-xtensa",
+                                      "elf64-unknown", "elf64-unknown"};
+  for (auto [Idx, Data] : enumerate(generateData(ELF::EM_XTENSA)))
+    checkFormatAndArch(Data, Formats[Idx], Triple::xtensa);
 }
 
 // ELF relative relocation type test.
@@ -498,6 +474,7 @@ Sections:
 
 // Tests for error paths of the ELFFile::decodeBBAddrMap API.
 TEST(ELFObjectFileTest, InvalidDecodeBBAddrMap) {
+  if (IsHostWindows()) return;
   StringRef CommonYamlString(R"(
 --- !ELF
 FileHeader:
@@ -528,7 +505,7 @@ Sections:
   // Check that we can detect unsupported versions.
   SmallString<128> UnsupportedVersionYamlString(CommonYamlString);
   UnsupportedVersionYamlString += R"(
-        Version: 2
+        Version: 3
         BBEntries:
           - AddressOffset: 0x0
             Size:          0x1
@@ -536,13 +513,14 @@ Sections:
 )";
 
   DoCheck(UnsupportedVersionYamlString,
-          "unsupported SHT_LLVM_BB_ADDR_MAP version: 2");
+          "unsupported SHT_LLVM_BB_ADDR_MAP version: 3");
 
   SmallString<128> CommonVersionedYamlString(CommonYamlString);
   CommonVersionedYamlString += R"(
-        Version: 1
+        Version: 2
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
 )";
@@ -551,9 +529,9 @@ Sections:
   // truncated.
   SmallString<128> TruncatedYamlString(CommonVersionedYamlString);
   TruncatedYamlString += R"(
-    ShSize: 0xa
+    ShSize: 0xb
 )";
-  DoCheck(TruncatedYamlString, "unable to decode LEB128 at offset 0x0000000a: "
+  DoCheck(TruncatedYamlString, "unable to decode LEB128 at offset 0x0000000b: "
                                "malformed uleb128, extends past end");
 
   // Check that we can detect when the encoded BB entry fields exceed the UINT32
@@ -561,29 +539,32 @@ Sections:
   SmallVector<SmallString<128>, 3> OverInt32LimitYamlStrings(
       3, CommonVersionedYamlString);
   OverInt32LimitYamlStrings[0] += R"(
-          - AddressOffset: 0x100000000
+          - ID:            1
+            AddressOffset: 0x100000000
             Size:          0xFFFFFFFF
             Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[1] += R"(
-          - AddressOffset: 0xFFFFFFFF
+          - ID:            2
+            AddressOffset: 0xFFFFFFFF
             Size:          0x100000000
             Metadata:      0xFFFFFFFF
 )";
 
   OverInt32LimitYamlStrings[2] += R"(
-          - AddressOffset: 0xFFFFFFFF
+          - ID:            3
+            AddressOffset: 0xFFFFFFFF
             Size:          0xFFFFFFFF
             Metadata:      0x100000000
 )";
 
   DoCheck(OverInt32LimitYamlStrings[0],
-          "ULEB128 value at offset 0xe exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x10 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitYamlStrings[1],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitYamlStrings[2],
-          "ULEB128 value at offset 0x18 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x1a exceeds UINT32_MAX (0x100000000)");
 
   // Check the proper error handling when the section has fields exceeding
   // UINT32 and is also truncated. This is for checking that we don't generate
@@ -592,24 +573,24 @@ Sections:
       3, OverInt32LimitYamlStrings[1]);
   // Truncate before the end of the 5-byte field.
   OverInt32LimitAndTruncated[0] += R"(
-    ShSize: 0x17
+    ShSize: 0x19
 )";
   // Truncate at the end of the 5-byte field.
   OverInt32LimitAndTruncated[1] += R"(
-    ShSize: 0x18
+    ShSize: 0x1a
 )";
   // Truncate after the end of the 5-byte field.
   OverInt32LimitAndTruncated[2] += R"(
-    ShSize: 0x19
+    ShSize: 0x1b
 )";
 
   DoCheck(OverInt32LimitAndTruncated[0],
-          "unable to decode LEB128 at offset 0x00000013: malformed uleb128, "
+          "unable to decode LEB128 at offset 0x00000015: malformed uleb128, "
           "extends past end");
   DoCheck(OverInt32LimitAndTruncated[1],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
   DoCheck(OverInt32LimitAndTruncated[2],
-          "ULEB128 value at offset 0x13 exceeds UINT32_MAX (0x100000000)");
+          "ULEB128 value at offset 0x15 exceeds UINT32_MAX (0x100000000)");
 
   // Check for proper error handling when the 'NumBlocks' field is overridden
   // with an out-of-range value.
@@ -624,6 +605,7 @@ Sections:
 
 // Test for the ELFObjectFile::readBBAddrMap API.
 TEST(ELFObjectFileTest, ReadBBAddrMap) {
+  if (IsHostWindows()) return;
   StringRef CommonYamlString(R"(
 --- !ELF
 FileHeader:
@@ -635,44 +617,60 @@ Sections:
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x11111
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            1
+            AddressOffset: 0x0
             Size:          0x1
             Metadata:      0x2
   - Name: .llvm_bb_addr_map_2
     Type: SHT_LLVM_BB_ADDR_MAP
     Link: 1
     Entries:
-      - Version: 1
+      - Version: 2
         Address: 0x22222
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            2
+            AddressOffset: 0x0
             Size:          0x2
             Metadata:      0x4
-  - Name: .llvm_bb_addr_map
-    Type: SHT_LLVM_BB_ADDR_MAP_V0
-  # Link: 0 (by default)
+  - Name: .llvm_bb_addr_map_3
+    Type: SHT_LLVM_BB_ADDR_MAP
+    Link: 2
     Entries:
-      - Version: 0
+      - Version: 1
         Address: 0x33333
         BBEntries:
-          - AddressOffset: 0x0
+          - ID:            0
+            AddressOffset: 0x0
             Size:          0x3
             Metadata:      0x6
+  - Name: .llvm_bb_addr_map_4
+    Type: SHT_LLVM_BB_ADDR_MAP_V0
+  # Link: 0 (by default, can be overriden)
+    Entries:
+      - Version: 0
+        Address: 0x44444
+        BBEntries:
+          - ID:            0
+            AddressOffset: 0x0
+            Size:          0x4
+            Metadata:      0x8
 )");
 
-  BBAddrMap E1 = {0x11111, {{0x0, 0x1, 0x2}}};
-  BBAddrMap E2 = {0x22222, {{0x0, 0x2, 0x4}}};
-  BBAddrMap E3 = {0x33333, {{0x0, 0x3, 0x6}}};
+  BBAddrMap E1 = {0x11111, {{1, 0x0, 0x1, 0x2}}};
+  BBAddrMap E2 = {0x22222, {{2, 0x0, 0x2, 0x4}}};
+  BBAddrMap E3 = {0x33333, {{0, 0x0, 0x3, 0x6}}};
+  BBAddrMap E4 = {0x44444, {{0, 0x0, 0x4, 0x8}}};
 
-  std::vector<BBAddrMap> Section0BBAddrMaps = {E3};
-  std::vector<BBAddrMap> Section1BBAddrMaps = {E1, E2};
-  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3};
+  std::vector<BBAddrMap> Section0BBAddrMaps = {E4};
+  std::vector<BBAddrMap> Section1BBAddrMaps = {E3};
+  std::vector<BBAddrMap> Section2BBAddrMaps = {E1, E2};
+  std::vector<BBAddrMap> AllBBAddrMaps = {E1, E2, E3, E4};
 
   auto DoCheckSucceeds = [&](StringRef YamlString,
-                             Optional<unsigned> TextSectionIndex,
+                             std::optional<unsigned> TextSectionIndex,
                              std::vector<BBAddrMap> ExpectedResult) {
     SmallString<0> Storage;
     Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
@@ -688,7 +686,7 @@ Sections:
   };
 
   auto DoCheckFails = [&](StringRef YamlString,
-                          Optional<unsigned> TextSectionIndex,
+                          std::optional<unsigned> TextSectionIndex,
                           const char *ErrMsg) {
     SmallString<0> Storage;
     Expected<ELFObjectFile<ELF64LE>> ElfOrErr =
@@ -703,12 +701,14 @@ Sections:
   };
 
   // Check that we can retrieve the data in the normal case.
-  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/None, AllBBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/std::nullopt,
+                  AllBBAddrMaps);
   DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/0, Section0BBAddrMaps);
-  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section1BBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, Section1BBAddrMaps);
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/1, Section2BBAddrMaps);
   // Check that when no bb-address-map section is found for a text section,
   // we return an empty result.
-  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/2, {});
+  DoCheckSucceeds(CommonYamlString, /*TextSectionIndex=*/3, {});
 
   // Check that we detect when a bb-addr-map section is linked to an invalid
   // (not present) section.
@@ -717,13 +717,13 @@ Sections:
     Link: 10
 )";
 
-  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/1,
+  DoCheckFails(InvalidLinkedYamlString, /*TextSectionIndex=*/4,
                "unable to get the linked-to section for "
-               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 3: invalid section "
+               "SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: invalid section "
                "index: 10");
   // Linked sections are not checked when we don't target a specific text
   // section.
-  DoCheckSucceeds(InvalidLinkedYamlString, /*TextSectionIndex=*/None,
+  DoCheckSucceeds(InvalidLinkedYamlString, /*TextSectionIndex=*/std::nullopt,
                   AllBBAddrMaps);
 
   // Check that we can detect when bb-address-map decoding fails.
@@ -732,13 +732,13 @@ Sections:
     ShSize: 0x8
 )";
 
-  DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/None,
-               "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 3: "
+  DoCheckFails(TruncatedYamlString, /*TextSectionIndex=*/std::nullopt,
+               "unable to read SHT_LLVM_BB_ADDR_MAP_V0 section with index 4: "
                "unable to decode LEB128 at offset 0x00000008: malformed "
                "uleb128, extends past end");
   // Check that we can read the other section's bb-address-maps which are
   // valid.
-  DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/1,
+  DoCheckSucceeds(TruncatedYamlString, /*TextSectionIndex=*/2,
                   Section1BBAddrMaps);
 }
 

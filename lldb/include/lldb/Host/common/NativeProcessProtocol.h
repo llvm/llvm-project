@@ -27,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -171,7 +172,7 @@ public:
   // Watchpoint functions
   virtual const NativeWatchpointList::WatchpointMap &GetWatchpointMap() const;
 
-  virtual llvm::Optional<std::pair<uint32_t, uint32_t>>
+  virtual std::optional<std::pair<uint32_t, uint32_t>>
   GetHardwareDebugSupportInfo() const;
 
   virtual Status SetWatchpoint(lldb::addr_t addr, size_t size,
@@ -204,7 +205,7 @@ public:
   GetAuxvData() const = 0;
 
   // Exit Status
-  virtual llvm::Optional<WaitStatus> GetExitStatus();
+  virtual std::optional<WaitStatus> GetExitStatus();
 
   virtual bool SetExitStatus(WaitStatus status, bool bNotifyStateChange);
 
@@ -422,7 +423,7 @@ protected:
   lldb::StateType m_state = lldb::eStateInvalid;
   mutable std::recursive_mutex m_state_mutex;
 
-  llvm::Optional<WaitStatus> m_exit_status;
+  std::optional<WaitStatus> m_exit_status;
 
   NativeDelegate &m_delegate;
   NativeWatchpointList m_watchpoint_list;

@@ -267,7 +267,7 @@ COFFSection *WinCOFFObjectWriter::createSection(StringRef Name) {
 }
 
 static uint32_t getAlignment(const MCSectionCOFF &Sec) {
-  switch (Sec.getAlignment()) {
+  switch (Sec.getAlign().value()) {
   case 1:
     return COFF::IMAGE_SCN_ALIGN_1BYTES;
   case 2:
@@ -597,7 +597,7 @@ uint32_t WinCOFFObjectWriter::writeSectionContents(MCAssembler &Asm,
   // Calculate our CRC with an initial value of '0', this is not how
   // JamCRC is specified but it aligns with the expected output.
   JamCRC JC(/*Init=*/0);
-  JC.update(makeArrayRef(reinterpret_cast<uint8_t*>(Buf.data()), Buf.size()));
+  JC.update(ArrayRef(reinterpret_cast<uint8_t *>(Buf.data()), Buf.size()));
   return JC.getCRC();
 }
 
@@ -1098,6 +1098,8 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
     Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : AddrsigSyms) {
+      if (!S->isRegistered())
+        continue;
       if (!S->isTemporary()) {
         encodeULEB128(S->getIndex(), OS);
         continue;

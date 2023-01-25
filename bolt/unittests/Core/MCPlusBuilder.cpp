@@ -140,9 +140,9 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   // Test encodeAnnotationImm using this indirect way
   BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value));
   // Round-trip encoding-decoding check for negative values
-  Optional<MCPlus::MCLandingPad> EHInfo = BC->MIB->getEHInfo(Inst);
-  ASSERT_TRUE(EHInfo.hasValue());
-  MCPlus::MCLandingPad LP = EHInfo.getValue();
+  std::optional<MCPlus::MCLandingPad> EHInfo = BC->MIB->getEHInfo(Inst);
+  ASSERT_TRUE(EHInfo.has_value());
+  MCPlus::MCLandingPad LP = EHInfo.value();
   uint64_t DecodedValue = LP.second;
   ASSERT_EQ(Value, DecodedValue);
 

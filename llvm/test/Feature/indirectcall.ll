@@ -2,7 +2,7 @@
 ; RUN: llvm-as %t1.ll -o - | llvm-dis > %t2.ll
 ; RUN: diff %t1.ll %t2.ll
 
-declare i32 @atoi(i8*)
+declare i32 @atoi(ptr)
 
 define i64 @fib(i64 %n) {
         icmp ult i64 %n, 2              ; <i1>:1 [#uses=1]
@@ -20,7 +20,7 @@ RecurseCase:            ; preds = %0
         ret i64 %result
 }
 
-define i64 @realmain(i32 %argc, i8** %argv) {
+define i64 @realmain(i32 %argc, ptr %argv) {
 ; <label>:0
         icmp eq i32 %argc, 2            ; <i1>:1 [#uses=1]
         br i1 %1, label %HasArg, label %Continue
@@ -36,13 +36,13 @@ Continue:               ; preds = %HasArg, %0
         ret i64 %F
 }
 
-define i64 @trampoline(i64 %n, i64 (i64)* %fibfunc) {
+define i64 @trampoline(i64 %n, ptr %fibfunc) {
         %F = call i64 %fibfunc( i64 %n )                ; <i64> [#uses=1]
         ret i64 %F
 }
 
 define i32 @main() {
-        %Result = call i64 @trampoline( i64 10, i64 (i64)* @fib )               ; <i64> [#uses=1]
+        %Result = call i64 @trampoline( i64 10, ptr @fib )               ; <i64> [#uses=1]
         %Result.upgrd.1 = trunc i64 %Result to i32              ; <i32> [#uses=1]
         ret i32 %Result.upgrd.1
 }

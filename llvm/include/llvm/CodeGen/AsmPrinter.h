@@ -15,12 +15,15 @@
 #ifndef LLVM_CODEGEN_ASMPRINTER_H
 #define LLVM_CODEGEN_ASMPRINTER_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -68,7 +71,6 @@ class MDNode;
 class Module;
 class PseudoProbeHandler;
 class raw_ostream;
-class StackMaps;
 class StringRef;
 class TargetLoweringObjectFile;
 class TargetMachine;
@@ -180,8 +182,8 @@ private:
   /// block's address of label.
   std::unique_ptr<AddrLabelMap> AddrLabelSymbols;
 
-  // The garbage collection metadata printer table.
-  void *GCMetadataPrinters = nullptr; // Really a DenseMap.
+  /// The garbage collection metadata printer table.
+  DenseMap<GCStrategy *, std::unique_ptr<GCMetadataPrinter>> GCMetadataPrinters;
 
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
@@ -189,15 +191,23 @@ private:
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
+  /// List of symbols to be inserted into PC sections.
+  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
+
   static char ID;
 
 protected:
   MCSymbol *CurrentFnBegin = nullptr;
 
+  /// For dso_local functions, the current $local alias for the function.
+  MCSymbol *CurrentFnBeginLocal = nullptr;
+
   /// A vector of all debug/EH info emitters we should use. This vector
   /// maintains ownership of the emitters.
   std::vector<HandlerInfo> Handlers;
   size_t NumUserHandlers = 0;
+
+  StackMaps SM;
 
 private:
   /// If generated on the fly this own the instance.
@@ -335,6 +345,14 @@ public:
   /// emitted inbetween call and stackmap.
   MCSymbol *YkLastCallLabel = nullptr;
 
+  bool doesDwarfUseRelocationsAcrossSections() const {
+    return DwarfUsesRelocationsAcrossSections;
+  }
+
+  void setDwarfUsesRelocationsAcrossSections(bool Enable) {
+    DwarfUsesRelocationsAcrossSections = Enable;
+  }
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -419,9 +437,18 @@ public:
 
   void emitBBAddrMapSection(const MachineFunction &MF);
 
+  void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
+  virtual void emitKCFITypeId(const MachineFunction &MF);
+
   void emitPseudoProbe(const MachineInstr &MI);
 
   void emitRemarksSection(remarks::RemarkStreamer &RS);
+
+  /// Emits a label as reference for PC sections.
+  void emitPCSectionsLabel(const MachineFunction &MF, const MDNode &MD);
+
+  /// Emits the PC sections collected from instructions.
+  void emitPCSections(const MachineFunction &MF);
 
   /// Get the CFISection type for a function.
   CFISection getFunctionCFISectionType(const Function &F) const;
@@ -515,7 +542,7 @@ public:
   void emitGlobalGOTEquivs();
 
   /// Emit the stack maps.
-  void emitStackMaps(StackMaps &SM);
+  void emitStackMaps();
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks
@@ -819,6 +846,8 @@ private:
   mutable unsigned LastFn = 0;
   mutable unsigned Counter = ~0U;
 
+  bool DwarfUsesRelocationsAcrossSections = false;
+
   /// This method emits the header for the current function.
   virtual void emitFunctionHeader();
 
@@ -853,7 +882,7 @@ private:
   /// Emit bytes for llvm.commandline metadata.
   void emitModuleCommandLines(Module &M);
 
-  GCMetadataPrinter *GetOrCreateGCPrinter(GCStrategy &S);
+  GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
   void emitGlobalAlias(Module &M, const GlobalAlias &GA);
   void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 

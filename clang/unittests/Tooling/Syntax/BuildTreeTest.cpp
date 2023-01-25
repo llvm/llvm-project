@@ -2262,8 +2262,6 @@ struct S {
   template<typename T>
   static constexpr T x = 42;
 };
-// FIXME: `<int>` should be a child of `MemberExpression` and `;` of
-// `ExpressionStatement`. This is a bug in clang, in `getSourceRange` methods.
 void test(S s) [[{
   s.x<int>;
 }]]
@@ -2272,18 +2270,18 @@ void test(S s) [[{
 CompoundStatement
 |-'{' OpenParen
 |-ExpressionStatement Statement
-| `-MemberExpression Expression
-|   |-IdExpression Object
-|   | `-UnqualifiedId UnqualifiedId
-|   |   `-'s'
-|   |-'.' AccessToken
-|   `-IdExpression Member
-|     `-UnqualifiedId UnqualifiedId
-|       `-'x'
-|-'<'
-|-'int'
-|-'>'
-|-';'
+| |-MemberExpression Expression
+| | |-IdExpression Object
+| | | `-UnqualifiedId UnqualifiedId
+| | |   `-'s'
+| | |-'.' AccessToken
+| | `-IdExpression Member
+| |   `-UnqualifiedId UnqualifiedId
+| |     |-'x'
+| |     |-'<'
+| |     |-'int'
+| |     `-'>'
+| `-';'
 `-'}' CloseParen
 )txt"}));
 }

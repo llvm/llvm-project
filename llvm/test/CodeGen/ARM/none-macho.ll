@@ -6,7 +6,7 @@
 
 define i32 @test_litpool() minsize {
 ; CHECK-LABEL: test_litpool:
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   ret i32 %val
 
   ; Lit-pool entries need to produce a "$non_lazy_ptr" version of the symbol.
@@ -16,7 +16,7 @@ define i32 @test_litpool() minsize {
 
 define i32 @test_movw_movt() {
 ; CHECK-LABEL: test_movw_movt:
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   ret i32 %val
 
   ; movw/movt should also address their symbols MachO-style
@@ -49,11 +49,11 @@ define i32 @test_frame_ptr() {
 }
 
 %big_arr = type [8 x i32]
-define void @test_two_areas(%big_arr* %addr) {
+define void @test_two_areas(ptr %addr) {
 ; CHECK-LABEL: test_two_areas:
-  %val = load %big_arr, %big_arr* %addr
+  %val = load %big_arr, ptr %addr
   call void @test_trap()
-  store %big_arr %val, %big_arr* %addr
+  store %big_arr %val, ptr %addr
 
   ; This goes with the choice of r7 as FP (largely). FP and LR have to be stored
   ; consecutively on the stack for the frame record to be valid, which means we

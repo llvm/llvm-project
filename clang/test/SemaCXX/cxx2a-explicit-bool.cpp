@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only %s -verify -Wno-c++2a-extensions
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only %s -verify
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only %s -verify=expected,pre20 -Wno-c++2a-extensions
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only %s -verify=expected,post20
 
 template <bool b, auto val> struct enable_ifv {};
 
@@ -20,7 +20,7 @@ namespace special_cases
 
 template<int a>
 struct A {
-// expected-note@-1+ {{candidate constructor}}
+// pre20-note@-1+ {{candidate constructor}}
   explicit(1 << a)
 // expected-note@-1 {{negative shift count -1}}
 // expected-error@-2 {{explicit specifier argument is not a constant expression}}
@@ -28,8 +28,9 @@ struct A {
 };
 
 A<-1> a(0);
-// expected-error@-1 {{no matching constructor}}
-// expected-note@-2 {{in instantiation of template class}}
+// pre20-error@-1 {{no matching constructor}}
+// post20-error@-2 {{excess elements in struct initializer}}
+// expected-note@-3 {{in instantiation of template class}}
 
 template<int a>
 struct B {

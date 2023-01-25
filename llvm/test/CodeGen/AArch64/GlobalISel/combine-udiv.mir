@@ -228,8 +228,7 @@ body:             |
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<8 x s16>) = G_LSHR [[SUB]], [[BUILD_VECTOR3]](<8 x s16>)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[LSHR]], [[UMULH]]
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(<8 x s16>) = G_LSHR [[ADD]], [[BUILD_VECTOR2]](<8 x s16>)
-    ; CHECK-NEXT: [[BUILD_VECTOR4:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[C20]](s16), [[C20]](s16), [[C20]](s16), [[C20]](s16), [[C20]](s16), [[C20]](s16), [[C20]](s16), [[C20]](s16)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s1>) = G_ICMP intpred(eq), [[BUILD_VECTOR]](<8 x s16>), [[BUILD_VECTOR4]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s1>) = G_ICMP intpred(eq), [[BUILD_VECTOR]](<8 x s16>), [[BUILD_VECTOR3]]
     ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<8 x s16>) = G_SELECT [[ICMP]](<8 x s1>), [[COPY]], [[LSHR1]]
     ; CHECK-NEXT: $q0 = COPY [[SELECT]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0

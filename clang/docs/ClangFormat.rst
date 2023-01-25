@@ -26,7 +26,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
   together with <file>s, the files are edited in-place. Otherwise, the
   result is written to the standard output.
 
-  USAGE: clang-format [options] [<file> ...]
+  USAGE: clang-format [options] [@<file>] [<file> ...]
 
   OPTIONS:
 
@@ -69,7 +69,8 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --ferror-limit=<uint>          - Set the maximum number of clang-format errors to emit
                                      before stopping (0 = no limit).
                                      Used only with --dry-run or -n
-    --files=<string>               - Provide a list of files to run clang-format
+    --files=<filename>             - A file containing a list of files to process, one
+                                     per line.
     -i                             - Inplace edit <file>s, if specified.
     --length=<uint>                - Format a range of this length (in bytes).
                                      Multiple ranges can be formatted by specifying
@@ -167,7 +168,7 @@ your `.vimrc`:
 
   function! Formatonsave()
     let l:formatdiff = 1
-    pyf ~/llvm/tools/clang/tools/clang-format/clang-format.py
+    pyf <path-to-this-file>/clang-format.py
   endfunction
   autocmd BufWritePre *.h,*.cc,*.cpp call Formatonsave()
 
@@ -317,7 +318,7 @@ output of a unified diff and reformats all contained lines with
     -v, --verbose         be more verbose, ineffective without -i
     -style STYLE          formatting style to apply (LLVM, GNU, Google, Chromium, Microsoft, Mozilla, WebKit)
     -fallback-style FALLBACK_STYLE
-                          The name of the predefined style used as afallback in case clang-format is invoked with-style=file, but can not
+                          The name of the predefined style used as a fallback in case clang-format is invoked with-style=file, but can not
                           find the .clang-formatfile to use.
     -binary BINARY        location of binary to use for clang-format
 

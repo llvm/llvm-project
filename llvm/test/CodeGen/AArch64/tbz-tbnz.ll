@@ -204,14 +204,14 @@ if.end:
   ret void
 }
 
-define void @test11(i64 %val1, i64* %ptr) {
+define void @test11(i64 %val1, ptr %ptr) {
 ; CHECK-LABEL: @test11
 
 ; CHECK: ldr [[CMP:x[0-9]+]], [x1]
 ; CHECK-NOT: cmp
 ; CHECK: tbnz [[CMP]], #63
 
-  %val = load i64, i64* %ptr
+  %val = load i64, ptr %ptr
   %tst = icmp slt i64 %val, 0
   br i1 %tst, label %if.then, label %if.end
 

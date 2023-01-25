@@ -7,8 +7,8 @@ from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
 class InvalidScriptedProcess(ScriptedProcess):
-    def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
-        super().__init__(target, args)
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+        super().__init__(exe_ctx, args)
         self.threads[0] = InvalidScriptedThread(self, None)
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
@@ -20,8 +20,9 @@ class InvalidScriptedProcess(ScriptedProcess):
     def get_registers_for_thread(self, tid: int):
         return {}
 
-    def read_memory_at_address(self, addr: int, size: int) -> lldb.SBData:
-        return None
+    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+        error.SetErrorString("This is an invalid scripted process!")
+        return lldb.SBData()
 
     def get_loaded_images(self):
         return self.loaded_images

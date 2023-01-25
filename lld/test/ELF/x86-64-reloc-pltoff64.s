@@ -4,11 +4,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
 # RUN: llvm-readelf -S %t.so | FileCheck %s --check-prefix=SEC-SHARED
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=SHARED
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=SHARED
 
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -S %t | FileCheck %s --check-prefix=SEC-PDE
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE
 
 # SEC-SHARED: .got.plt PROGBITS 00000000000033c0 0003c0 000028
 

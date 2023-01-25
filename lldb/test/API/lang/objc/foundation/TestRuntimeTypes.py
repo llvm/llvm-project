@@ -31,6 +31,8 @@ class RuntimeTypesTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         # The backtrace should show we stop at -[MyString description].
         self.expect("thread backtrace", "Stop at -[MyString description]",
                     substrs=["a.out`-[MyString description]"])

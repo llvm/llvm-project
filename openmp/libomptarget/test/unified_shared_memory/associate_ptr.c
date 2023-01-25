@@ -17,11 +17,11 @@ int main(int argc, char *argv[]) {
   int rc = omp_target_associate_ptr(&x, x_dev, sizeof x, 0, dev);
   assert(!rc && "expected omp_target_associate_ptr to succeed");
 
-  // To determine whether x needs to be transfered, the runtime cannot simply
-  // check whether unified shared memory is enabled and the 'close' modifier is
-  // specified.  It must check whether x was previously placed in device memory
-  // by, for example, omp_target_associate_ptr.
-  #pragma omp target map(always, tofrom: x)
+// To determine whether x needs to be transfered, the runtime cannot simply
+// check whether unified shared memory is enabled and the 'close' modifier is
+// specified.  It must check whether x was previously placed in device memory
+// by, for example, omp_target_associate_ptr.
+#pragma omp target map(always, tofrom : x)
   x += 1;
 
   // CHECK: x=11

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -fno-rtti -emit-llvm -o %t.ll -fdump-vtable-layouts %s -triple=i386-pc-win32 >%t
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -fno-rtti -emit-llvm -o %t.ll -fdump-vtable-layouts %s -triple=i386-pc-win32 >%t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck --check-prefix=MANGLING %s < %t.ll
 
@@ -771,7 +771,7 @@ struct A {
 };
 struct __declspec(dllexport) B : virtual A {
   virtual void f() = 0;
-  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x i8*] } { [1 x i8*] [i8* bitcast (void ()* @_purecall to i8*)] }
+  // MANGLING-DAG: @"??_7B@Test13@@6B@" = weak_odr dllexport unnamed_addr constant { [1 x ptr] } { [1 x ptr] [ptr @_purecall] }
 };
 }
 
@@ -788,8 +788,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_1::B' in 'pr21031_1::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_1::B::g()
 
-// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_1@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21031_2 {
@@ -804,8 +804,8 @@ C::C() {}
 // CHECK-LABEL: VFTable for 'pr21031_2::A' in 'pr21031_2::B' in 'pr21031_2::C' (1 entry)
 // CHECK-NEXT:   0 | void pr21031_2::A::f()
 
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x i8*] }
-// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BA@1@@" = {{.*}} constant { [1 x ptr] }
+// MANGLING-DAG: @"??_7C@pr21031_2@@6BB@1@@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21062_1 {
@@ -818,7 +818,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_1::A' in 'pr21062_1::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_1::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_1@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21062_2 {
@@ -831,7 +831,7 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21062_2::A' in 'pr21062_2::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21062_2::A::f()
 
-// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21062_2@@6B@" = {{.*}} constant { [1 x ptr] }
 }
 
 namespace pr21064 {
@@ -843,5 +843,5 @@ D::D() {}
 // CHECK-LABEL: VFTable for 'pr21064::B' in 'pr21064::C' in 'pr21064::D' (1 entry)
 // CHECK-NEXT:   0 | void pr21064::B::f()
 
-// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x i8*] }
+// MANGLING-DAG: @"??_7D@pr21064@@6B@" = {{.*}} constant { [1 x ptr] }
 }

@@ -161,6 +161,7 @@ class PersistentExpressionState;
 class Platform;
 class Process;
 class ProcessAttachInfo;
+class ProcessLaunchInfo;
 class ProcessInfo;
 class ProcessInstanceInfo;
 class ProcessInstanceInfoMatch;
@@ -180,6 +181,7 @@ class RichManglingContext;
 class Scalar;
 class ScriptInterpreter;
 class ScriptInterpreterLocker;
+class ScriptedPlatformInterface;
 class ScriptedProcessInterface;
 class ScriptedThreadInterface;
 class ScriptedSyntheticChildren;
@@ -236,6 +238,7 @@ class ThreadPlanStepThrough;
 class ThreadPlanTracer;
 class ThreadSpec;
 class ThreadPostMortemTrace;
+class ThreadedCommunication;
 class Trace;
 class TraceCursor;
 class TraceExporter;
@@ -257,6 +260,7 @@ class TypeNameSpecifierImpl;
 class TypeSummaryImpl;
 class TypeSummaryOptions;
 class TypeSystem;
+class TypeSystemClang;
 class UUID;
 class UnixSignals;
 class Unwind;
@@ -349,6 +353,7 @@ typedef std::shared_ptr<lldb_private::MemoryRegionInfo> MemoryRegionInfoSP;
 typedef std::shared_ptr<lldb_private::Module> ModuleSP;
 typedef std::weak_ptr<lldb_private::Module> ModuleWP;
 typedef std::shared_ptr<lldb_private::ObjectFile> ObjectFileSP;
+typedef std::shared_ptr<lldb_private::ObjectContainer> ObjectContainerSP;
 typedef std::shared_ptr<lldb_private::ObjectFileJITDelegate>
     ObjectFileJITDelegateSP;
 typedef std::weak_ptr<lldb_private::ObjectFileJITDelegate>
@@ -361,6 +366,7 @@ typedef std::shared_ptr<lldb_private::OptionValueProperties>
 typedef std::shared_ptr<lldb_private::Platform> PlatformSP;
 typedef std::shared_ptr<lldb_private::Process> ProcessSP;
 typedef std::shared_ptr<lldb_private::ProcessAttachInfo> ProcessAttachInfoSP;
+typedef std::shared_ptr<lldb_private::ProcessLaunchInfo> ProcessLaunchInfoSP;
 typedef std::weak_ptr<lldb_private::Process> ProcessWP;
 typedef std::shared_ptr<lldb_private::RegisterCheckpoint> RegisterCheckpointSP;
 typedef std::shared_ptr<lldb_private::RegisterContext> RegisterContextSP;
@@ -374,6 +380,8 @@ typedef std::shared_ptr<lldb_private::RecognizedStackFrame>
 typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
     ScriptSummaryFormatSP;
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
+typedef std::unique_ptr<lldb_private::ScriptedPlatformInterface>
+    ScriptedPlatformInterfaceUP;
 typedef std::unique_ptr<lldb_private::ScriptedProcessInterface>
     ScriptedProcessInterfaceUP;
 typedef std::shared_ptr<lldb_private::ScriptedThreadInterface>
@@ -420,7 +428,7 @@ typedef std::weak_ptr<lldb_private::ThreadPlan> ThreadPlanWP;
 typedef std::shared_ptr<lldb_private::ThreadPlanTracer> ThreadPlanTracerSP;
 typedef std::shared_ptr<lldb_private::Trace> TraceSP;
 typedef std::unique_ptr<lldb_private::TraceExporter> TraceExporterUP;
-typedef std::unique_ptr<lldb_private::TraceCursor> TraceCursorUP;
+typedef std::shared_ptr<lldb_private::TraceCursor> TraceCursorSP;
 typedef std::shared_ptr<lldb_private::Type> TypeSP;
 typedef std::weak_ptr<lldb_private::Type> TypeWP;
 typedef std::shared_ptr<lldb_private::TypeCategoryImpl> TypeCategoryImplSP;
@@ -430,6 +438,8 @@ typedef std::shared_ptr<lldb_private::TypeMemberFunctionImpl>
 typedef std::shared_ptr<lldb_private::TypeEnumMemberImpl> TypeEnumMemberImplSP;
 typedef std::shared_ptr<lldb_private::TypeFilterImpl> TypeFilterImplSP;
 typedef std::shared_ptr<lldb_private::TypeSystem> TypeSystemSP;
+typedef std::shared_ptr<lldb_private::TypeSystemClang> TypeSystemClangSP;
+typedef std::weak_ptr<lldb_private::TypeSystem> TypeSystemWP;
 typedef std::shared_ptr<lldb_private::TypeFormatImpl> TypeFormatImplSP;
 typedef std::shared_ptr<lldb_private::TypeNameSpecifierImpl>
     TypeNameSpecifierImplSP;

@@ -2,7 +2,7 @@
 ## instruction correctly even if the instruction is not 32-bit aligned.
 
 # RUN: llvm-mc %s --triple=armv8a -filetype=obj | \
-# RUN:   llvm-objdump -dr - --triple armv8a --no-show-raw-insn | \
+# RUN:   llvm-objdump --no-print-imm-hex -dr - --triple armv8a --no-show-raw-insn | \
 # RUN:   FileCheck %s
 
 # CHECK:      00000000 <foo>:

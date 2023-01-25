@@ -12,10 +12,9 @@
 //   requires convertible_to<const I2&, I> && convertible_to<const S2&, S>
 //     constexpr common_iterator(const common_iterator<I2, S2>& x);
 
-#include <iterator>
 #include <cassert>
-
-#include "test_macros.h"
+#include <iterator>
+#include <type_traits>
 
 constexpr bool test()
 {

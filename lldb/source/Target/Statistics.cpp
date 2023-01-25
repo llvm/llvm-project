@@ -63,6 +63,10 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoIndexSavedToCache",
                      debug_info_index_saved_to_cache);
   module.try_emplace("debugInfoEnabled", debug_info_enabled);
+  module.try_emplace("debugInfoHadVariableErrors",
+                     debug_info_had_variable_errors);
+  module.try_emplace("debugInfoHadIncompleteTypes",
+                     debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
@@ -73,6 +77,17 @@ json::Value ModuleStats::ToJSON() const {
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
+
+  if (!type_system_stats.empty()) {
+    json::Array type_systems;
+    for (const auto &entry : type_system_stats) {
+      json::Object obj;
+      obj.try_emplace(entry.first().str(), entry.second);
+      type_systems.emplace_back(std::move(obj));
+    }
+    module.try_emplace("typeSystemInfo", std::move(type_systems));
+  }
+
   return module;
 }
 
@@ -136,13 +151,14 @@ json::Value TargetStats::ToJSON(Target &target) {
   target_metrics_json.try_emplace("breakpoints", std::move(breakpoints_array));
   target_metrics_json.try_emplace("totalBreakpointResolveTime",
                                   totalBreakpointResolveTime);
+  target_metrics_json.try_emplace("sourceMapDeduceCount", m_source_map_deduce_count);
 
   return target_metrics_json;
 }
 
 void TargetStats::SetLaunchOrAttachTime() {
   m_launch_or_attach_time = StatsClock::now();
-  m_first_private_stop_time = llvm::None;
+  m_first_private_stop_time = std::nullopt;
 }
 
 void TargetStats::SetFirstPrivateStopTime() {
@@ -159,6 +175,10 @@ void TargetStats::SetFirstPublicStopTime() {
   // first stop time if it hasn't already been set.
   if (!m_first_public_stop_time)
     m_first_public_stop_time = StatsClock::now();
+}
+
+void TargetStats::IncreaseSourceMapDeduceCount() {
+  ++m_source_map_deduce_count;
 }
 
 bool DebuggerStats::g_collecting_stats = false;
@@ -188,6 +208,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
   const uint64_t num_modules = Module::GetNumberAllocatedModules();
   uint32_t num_debug_info_enabled_modules = 0;
   uint32_t num_modules_has_debug_info = 0;
+  uint32_t num_modules_with_variable_errors = 0;
+  uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = Module::GetAllocatedModuleAtIndex(image_idx);
@@ -237,16 +259,30 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
         ++num_stripped_modules;
       module_stat.debug_info_enabled = sym_file->GetLoadDebugInfoEnabled() &&
                                        module_stat.debug_info_size > 0;
+      module_stat.debug_info_had_variable_errors =
+          sym_file->GetDebugInfoHadFrameVariableErrors();
       if (module_stat.debug_info_enabled)
         ++num_debug_info_enabled_modules;
       if (module_stat.debug_info_size > 0)
         ++num_modules_has_debug_info;
+      if (module_stat.debug_info_had_variable_errors)
+        ++num_modules_with_variable_errors;
     }
     symtab_parse_time += module_stat.symtab_parse_time;
     symtab_index_time += module_stat.symtab_index_time;
     debug_parse_time += module_stat.debug_parse_time;
     debug_index_time += module_stat.debug_index_time;
     debug_info_size += module_stat.debug_info_size;
+    module->ForEachTypeSystem([&](lldb::TypeSystemSP ts) {
+      if (auto stats = ts->ReportStatistics())
+        module_stat.type_system_stats.insert({ts->GetPluginName(), *stats});
+      if (ts->GetHasForcefullyCompletedTypes())
+        module_stat.debug_info_had_incomplete_types = true;
+      return true;
+    });
+    if (module_stat.debug_info_had_incomplete_types)
+      ++num_modules_with_incomplete_types;
+
     json_modules.emplace_back(module_stat.ToJSON());
   }
 
@@ -270,6 +306,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
       {"totalDebugInfoByteSize", debug_info_size},
       {"totalModuleCount", num_modules},
       {"totalModuleCountHasDebugInfo", num_modules_has_debug_info},
+      {"totalModuleCountWithVariableErrors", num_modules_with_variable_errors},
+      {"totalModuleCountWithIncompleteTypes", num_modules_with_incomplete_types},
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
   };

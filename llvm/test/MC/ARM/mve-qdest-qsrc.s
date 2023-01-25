@@ -466,10 +466,46 @@ vqdmullt.s16 q0, q0, q5
 
 # ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
 vqdmullb.s32 q0, q1, q0
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vqdmullb.s32 q0, q0, q1
 
 vqdmullt.s16 q0, q1, q2
 # CHECK: vqdmullt.s16 q0, q1, q2 @ encoding: [0x32,0xee,0x05,0x1f]
 # CHECK-NOFP: vqdmullt.s16 q0, q1, q2 @ encoding: [0x32,0xee,0x05,0x1f]
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vqdmullb.s32 q0, q0, r0
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vqdmullt.s32 q0, q0, r0
+
+vqdmullb.s16 q0, q0, r0
+# CHECK: vqdmullb.s16 q0, q0, r0 @ encoding: [0x30,0xee,0x60,0x0f]
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
+vcadd.s32 q0, q1, q0, #270
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
+vcadd.f32 q0, q1, q0, #270
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
+vhcadd.s32 q0, q1, q0, #270
+
+vcadd.s32 q0, q0, q1, #270
+# CHECK: vcadd.i32 q0, q0, q1, #270 @ encoding: [0x20,0xfe,0x02,0x1f]
+vcadd.f32 q0, q0, q1, #270
+# CHECK: vcadd.f32 q0, q0, q1, #270 @ encoding: [0x90,0xfd,0x42,0x08]
+vhcadd.s32 q0, q0, q1, #270
+# CHECK: vhcadd.s32 q0, q0, q1, #270 @ encoding: [0x20,0xee,0x02,0x1f]
+vhcadd.s16 q0, q0, q1, #270
+# CHECK: vhcadd.s16 q0, q0, q1, #270 @ encoding: [0x10,0xee,0x02,0x1f]
+
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vrev64.8 q0, q0
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vrev64.16 q0, q0
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+vrev64.32 q0, q0
+
+vrev32.8 q0, q0
+# CHECK: vrev32.8 q0, q0 @ encoding: [0xb0,0xff,0xc0,0x00]
 
 vpste
 vqdmulltt.s32 q0, q1, q2

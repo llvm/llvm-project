@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -57,11 +58,11 @@ public:
 
 private:
   // FIXME: Names from `ErrnoLocationFuncNames` are used to build this set.
-  CallDescriptionSet ErrnoLocationCalls{{"__errno_location", 0, 0},
-                                        {"___errno", 0, 0},
-                                        {"__errno", 0, 0},
-                                        {"_errno", 0, 0},
-                                        {"__error", 0, 0}};
+  CallDescriptionSet ErrnoLocationCalls{{{"__errno_location"}, 0, 0},
+                                        {{"___errno"}, 0, 0},
+                                        {{"__errno"}, 0, 0},
+                                        {{"_errno"}, 0, 0},
+                                        {{"__error"}, 0, 0}};
 };
 
 } // namespace
@@ -207,7 +208,7 @@ namespace clang {
 namespace ento {
 namespace errno_modeling {
 
-Optional<SVal> getErrnoValue(ProgramStateRef State) {
+std::optional<SVal> getErrnoValue(ProgramStateRef State) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return {};
@@ -239,19 +240,23 @@ ProgramStateRef setErrnoValue(ProgramStateRef State, CheckerContext &C,
   return State->set<ErrnoState>(EState);
 }
 
-Optional<Loc> getErrnoLoc(ProgramStateRef State) {
+std::optional<Loc> getErrnoLoc(ProgramStateRef State) {
   const MemRegion *ErrnoR = State->get<ErrnoRegion>();
   if (!ErrnoR)
     return {};
   return loc::MemRegionVal{ErrnoR};
 }
 
+ErrnoCheckState getErrnoState(ProgramStateRef State) {
+  return State->get<ErrnoState>();
+}
+
 ProgramStateRef setErrnoState(ProgramStateRef State, ErrnoCheckState EState) {
   return State->set<ErrnoState>(EState);
 }
 
-ErrnoCheckState getErrnoState(ProgramStateRef State) {
-  return State->get<ErrnoState>();
+ProgramStateRef clearErrnoState(ProgramStateRef State) {
+  return setErrnoState(State, Irrelevant);
 }
 
 bool isErrno(const Decl *D) {
@@ -264,6 +269,12 @@ bool isErrno(const Decl *D) {
   return false;
 }
 
+const char *describeErrnoCheckState(ErrnoCheckState CS) {
+  assert(CS == errno_modeling::MustNotBeChecked &&
+         "Errno description not applicable.");
+  return "may be undefined after the call and should not be used";
+}
+
 const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
   return C.getNoteTag([Message](PathSensitiveBugReport &BR) -> std::string {
     const MemRegion *ErrnoR = BR.getErrorNode()->getState()->get<ErrnoRegion>();
@@ -273,6 +284,53 @@ const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
     }
     return "";
   });
+}
+
+ProgramStateRef setErrnoForStdSuccess(ProgramStateRef State,
+                                      CheckerContext &C) {
+  return setErrnoState(State, MustNotBeChecked);
+}
+
+ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
+                                      NonLoc ErrnoSym) {
+  SValBuilder &SVB = C.getSValBuilder();
+  NonLoc ZeroVal = SVB.makeZeroVal(C.getASTContext().IntTy).castAs<NonLoc>();
+  DefinedOrUnknownSVal Cond =
+      SVB.evalBinOp(State, BO_NE, ErrnoSym, ZeroVal, SVB.getConditionType())
+          .castAs<DefinedOrUnknownSVal>();
+  State = State->assume(Cond, true);
+  if (!State)
+    return nullptr;
+  return setErrnoValue(State, C.getLocationContext(), ErrnoSym, Irrelevant);
+}
+
+ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
+                                         CheckerContext &C,
+                                         const Expr *InvalE) {
+  const MemRegion *ErrnoR = State->get<ErrnoRegion>();
+  if (!ErrnoR)
+    return State;
+  State = State->invalidateRegions(ErrnoR, InvalE, C.blockCount(),
+                                   C.getLocationContext(), false);
+  if (!State)
+    return nullptr;
+  return setErrnoState(State, MustBeChecked);
+}
+
+const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
+  return getErrnoNoteTag(
+      C, (Twine("Assuming that function '") + Twine(Fn) +
+          Twine("' is successful, in this case the value 'errno' ") +
+          Twine(describeErrnoCheckState(MustNotBeChecked)))
+             .str());
+}
+
+const NoteTag *getNoteTagForStdMustBeChecked(CheckerContext &C,
+                                             llvm::StringRef Fn) {
+  return getErrnoNoteTag(
+      C, (Twine("Function '") + Twine(Fn) +
+          Twine("' indicates failure only by setting of 'errno'"))
+             .str());
 }
 
 } // namespace errno_modeling

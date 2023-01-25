@@ -23,6 +23,8 @@ class Instruction;
 class PHINode;
 class ScalarEvolution;
 class Loop;
+class PredicatedScalarEvolution;
+class TargetLibraryInfo;
 
 struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
@@ -32,11 +34,18 @@ struct VPlanTransforms {
                             function_ref<const InductionDescriptor *(PHINode *)>
                                 GetIntOrFpInductionDescriptor,
                             SmallPtrSetImpl<Instruction *> &DeadInstructions,
-                            ScalarEvolution &SE);
+                            ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
   static bool sinkScalarOperands(VPlan &Plan);
 
-  static bool mergeReplicateRegions(VPlan &Plan);
+  /// Merge replicate regions in their successor region, if a replicate region
+  /// is connected to a successor replicate region with the same predicate by a
+  /// single, empty VPBasicBlock.
+  static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan);
+
+  /// Remove redundant VPBasicBlocks by merging them into their predecessor if
+  /// the predecessor has a single successor.
+  static bool mergeBlocksIntoPredecessors(VPlan &Plan);
 
   /// Remove redundant casts of inductions.
   ///
@@ -61,6 +70,12 @@ struct VPlanTransforms {
   /// Remove redundant EpxandSCEVRecipes in \p Plan's entry block by replacing
   /// them with already existing recipes expanding the same SCEV expression.
   static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
+
+  /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
+  /// resulting plan to \p BestVF and \p BestUF.
+  static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                 unsigned BestUF,
+                                 PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

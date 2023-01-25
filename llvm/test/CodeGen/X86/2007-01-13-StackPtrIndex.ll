@@ -14,43 +14,43 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    movslq (%rdi), %rdi
-; CHECK-NEXT:    movslq (%rsi), %r8
-; CHECK-NEXT:    movslq (%rdx), %r10
-; CHECK-NEXT:    movl (%rcx), %esi
+; CHECK-NEXT:    movslq (%rdi), %r8
+; CHECK-NEXT:    movslq (%rsi), %rax
+; CHECK-NEXT:    movslq (%rdx), %rsi
+; CHECK-NEXT:    movl (%rcx), %edi
 ; CHECK-NEXT:    movq %rsp, %rcx
-; CHECK-NEXT:    subl %edi, %r8d
-; CHECK-NEXT:    movslq %r8d, %rdx
+; CHECK-NEXT:    subl %r8d, %eax
+; CHECK-NEXT:    movslq %eax, %rdx
 ; CHECK-NEXT:    js .LBB0_1
 ; CHECK-NEXT:  # %bb.11: # %b63
 ; CHECK-NEXT:    testq %rdx, %rdx
 ; CHECK-NEXT:    js .LBB0_14
 ; CHECK-NEXT:  # %bb.12:
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_13: # %a25b
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    je .LBB0_13
 ; CHECK-NEXT:  .LBB0_14: # %b85
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    movb $1, %r8b
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.15:
-; CHECK-NEXT:    xorl %edi, %edi
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_16: # %a25b140
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %dil, %dil
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    je .LBB0_16
 ; CHECK-NEXT:  .LBB0_1: # %a29b
-; CHECK-NEXT:    cmpl %r10d, %esi
+; CHECK-NEXT:    cmpl %esi, %edi
 ; CHECK-NEXT:    js .LBB0_10
 ; CHECK-NEXT:  # %bb.2: # %b158
 ; CHECK-NEXT:    movslq (%r9), %rsi
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    movb $1, %r9b
+; CHECK-NEXT:    movb $1, %r8b
 ; CHECK-NEXT:    jmp .LBB0_3
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_9: # %b1606
@@ -73,7 +73,7 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    # Child Loop BB0_33 Depth 3
 ; CHECK-NEXT:    # Child Loop BB0_34 Depth 2
 ; CHECK-NEXT:    # Child Loop BB0_36 Depth 2
-; CHECK-NEXT:    testl %r8d, %r8d
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    js .LBB0_4
 ; CHECK-NEXT:  # %bb.17: # %b179
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
@@ -87,7 +87,7 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    je .LBB0_37
 ; CHECK-NEXT:  .LBB0_18: # %b188
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testb %r9b, %r9b
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_19: # %a30b294
@@ -97,23 +97,23 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    je .LBB0_19
 ; CHECK-NEXT:  .LBB0_4: # %a33b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    movl %esi, %r10d
-; CHECK-NEXT:    orl %r8d, %r10d
+; CHECK-NEXT:    movl %esi, %r9d
+; CHECK-NEXT:    orl %eax, %r9d
 ; CHECK-NEXT:    jns .LBB0_20
 ; CHECK-NEXT:  .LBB0_5: # %a50b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    shrl $31, %r10d
-; CHECK-NEXT:    movl %r8d, %eax
-; CHECK-NEXT:    orl %esi, %eax
+; CHECK-NEXT:    shrl $31, %r9d
+; CHECK-NEXT:    movl %eax, %r10d
+; CHECK-NEXT:    orl %esi, %r10d
 ; CHECK-NEXT:    jns .LBB0_26
 ; CHECK-NEXT:  .LBB0_6: # %a57b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    testb %r10b, %r10b
+; CHECK-NEXT:    shrl $31, %r10d
+; CHECK-NEXT:    testb %r9b, %r9b
 ; CHECK-NEXT:    je .LBB0_30
 ; CHECK-NEXT:  .LBB0_7: # %a66b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_34: # %a74b
@@ -127,7 +127,7 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    jne .LBB0_34
 ; CHECK-NEXT:  .LBB0_8: # %a93b
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    testl %r8d, %r8d
+; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    js .LBB0_9
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_36: # %a97b
@@ -183,7 +183,7 @@ define dso_local void @foo(ptr %a0, ptr %a1, ptr %a2, ptr %a3, ptr %a4, ptr %a5)
 ; CHECK-NEXT:    je .LBB0_38
 ; CHECK-NEXT:  .LBB0_27: # %b879
 ; CHECK-NEXT:    # in Loop: Header=BB0_26 Depth=2
-; CHECK-NEXT:    testb %r9b, %r9b
+; CHECK-NEXT:    testb %r8b, %r8b
 ; CHECK-NEXT:    jne .LBB0_28
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_29: # %a53b1019

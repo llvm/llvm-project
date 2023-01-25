@@ -20,7 +20,7 @@ func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%0, %B : tensor<?x112x16xf32>, tensor<16xf32>)
   outs(%init : tensor<?x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<?x112x16xf32>
@@ -34,7 +34,7 @@ func.func @reshape(%A: tensor<?x16xf32>, %B: tensor<16xf32>, %init: tensor<?x112
 
 // CHECK-LABEL: func @reshape_multiple
 // CHECK-SAME: (%[[A:.*]]: tensor<12544x16xf32>, %[[B:.*]]: tensor<12544x16xf32>, %[[C:.*]]: tensor<16xf32>)
-//      CHECK: %[[I:.*]] = linalg.init_tensor [112, 112, 16] : tensor<112x112x16xf32>
+//      CHECK: %[[I:.*]] = tensor.empty() : tensor<112x112x16xf32>
 //      CHECK: %[[RI:.*]] = tensor.collapse_shape %[[I]] {{\[}}[0, 1], [2]] : tensor<112x112x16xf32> into tensor<12544x16xf32>
 //      CHECK: %[[R:.*]] = linalg.generic {indexing_maps = [#[[$MAP2]], #[[$MAP2]], #[[$MAP3]], #[[$MAP2]]],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
@@ -47,7 +47,7 @@ func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
   %1 = tensor.expand_shape %B [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
-  %2 = linalg.init_tensor [112, 112, 16] : tensor<112x112x16xf32>
+  %2 = tensor.empty() : tensor<112x112x16xf32>
   %3 = linalg.generic {indexing_maps = [
     affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
     affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
@@ -56,7 +56,7 @@ func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%0, %1, %C : tensor<112x112x16xf32>, tensor<112x112x16xf32>, tensor<16xf32>)
   outs(%2 : tensor<112x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):  
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32, %arg4: f32):
     %s = arith.subf %arg1, %arg2 : f32
     %m = arith.mulf %s, %arg3 : f32
     linalg.yield %m : f32
@@ -75,14 +75,14 @@ func.func @reshape_multiple(%A: tensor<12544x16xf32>, %B: tensor<12544x16xf32>,
 func.func @reshape_negative(%A: tensor<12544x16xf32>, %B: tensor<112xf32>) -> tensor<112x112x16xf32> {
   %20 = tensor.expand_shape %A [[0, 1], [2]]
       : tensor<12544x16xf32> into tensor<112x112x16xf32>
-  %21 = linalg.init_tensor [112, 112, 16] : tensor<112x112x16xf32>
+  %21 = tensor.empty() : tensor<112x112x16xf32>
   %22 = linalg.generic {indexing_maps = [
     affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d1)>,
     affine_map<(d0, d1, d2) -> (d0, d1, d2)>],
     iterator_types = ["parallel", "parallel", "parallel"]}
   ins(%20, %B : tensor<112x112x16xf32>, tensor<112xf32>)
   outs(%21 : tensor<112x112x16xf32>) {
-  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):  
+  ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %s = arith.subf %arg1, %arg2 : f32
     linalg.yield %s : f32
   } -> tensor<112x112x16xf32>
@@ -98,7 +98,7 @@ func.func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
   %cst_8 = arith.constant 1.1920929E-7 : f32
   %25 = tensor.expand_shape %arg0 [[0, 1], [2]]
       : tensor<6x5xi32> into tensor<2x3x5xi32>
-  %26 = linalg.init_tensor [2, 3, 5] : tensor<2x3x5xf32>
+  %26 = tensor.empty() : tensor<2x3x5xf32>
   %28 = linalg.generic {
       indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                        affine_map<(d0, d1, d2) -> (d2)>,
@@ -107,7 +107,7 @@ func.func @type_correctness(%arg0 : tensor<6x5xi32>, %arg1 : tensor<5xf32>,
       iterator_types = ["parallel", "parallel", "parallel"]}
       ins(%25, %arg1, %arg2 : tensor<2x3x5xi32>, tensor<5xf32>, tensor<5xf32>)
       outs(%26 : tensor<2x3x5xf32>) {
-      ^bb0(%arg6: i32, %arg7: f32, %arg8: f32, %arg9: f32):  
+      ^bb0(%arg6: i32, %arg7: f32, %arg8: f32, %arg9: f32):
         %29 = arith.sitofp %arg6 : i32 to f32
         %30 = arith.addf %arg7, %cst_8 : f32
         %31 = arith.divf %cst_7, %30 : f32

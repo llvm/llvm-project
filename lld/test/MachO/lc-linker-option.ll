@@ -12,12 +12,17 @@
 ; FRAME-NEXT: cmdsize
 ; FRAME-NEXT:    name /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
 
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink -ignore_auto_link 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option CoreFoundation 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink --ignore-auto-link-option=CoreFoundation 2>&1 | FileCheck --check-prefix=NO-AUTOLINK %s
+; NO-AUTOLINK: error: undefined symbol: __CFBigNumGetInt128
+
 ; RUN: llvm-as %t/l.ll -o %t/l.o
 ;; The dynamic call to _CFBigNumGetInt128 uses dyld_stub_binder,
 ;; which needs -lSystem from LC_LINKER_OPTION to get resolved.
 ;; The reference to __cxa_allocate_exception will require -lc++ from
 ;; LC_LINKER_OPTION to get resolved.
-; RUN: %lld %t/l.o -o %t/l -framework CoreFoundation
+; RUN: %no-lsystem-lld %t/l.o -o %t/l -framework CoreFoundation
 ; RUN: llvm-otool -l %t/l | FileCheck --check-prefix=LIB %s \
 ; RUN:  --implicit-check-not LC_LOAD_DYLIB
 ; LIB:          cmd LC_LOAD_DYLIB
@@ -31,7 +36,7 @@
 ; LIB-NEXT:    name /usr/lib/libc++abi.dylib
 
 ;; Check that we don't create duplicate LC_LOAD_DYLIBs.
-; RUN: %lld -lSystem %t/l.o -o %t/l -framework CoreFoundation
+; RUN: %no-lsystem-lld -lSystem %t/l.o -o %t/l -framework CoreFoundation
 ; RUN: llvm-otool -l %t/l | FileCheck --check-prefix=LIB2 %s \
 ; RUN:  --implicit-check-not LC_LOAD_DYLIB
 ; LIB2:          cmd LC_LOAD_DYLIB
@@ -59,6 +64,8 @@
 ;; that this test can run on Windows.
 ; RUN: llvm-ar rcs %t/Foo.framework/Foo %t/foo.o
 ; RUN: llc %t/load-framework-foo.ll -o %t/load-framework-foo.o -filetype=obj
+; RUN: llc %t/load-framework-undefined-symbol.ll -o %t/load-framework-undefined-symbol.o -filetype=obj
+; RUN: llc %t/load-missing.ll -o %t/load-missing.o -filetype=obj
 ; RUN: llc %t/main.ll -o %t/main.o -filetype=obj
 ; RUN: %lld %t/load-framework-foo.o %t/main.o -o %t/main -F%t
 ; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS
@@ -75,40 +82,44 @@
 ; SYMS:       SYMBOL TABLE:
 ; SYMS-NEXT:  g     F __TEXT,__text _main
 ; SYMS-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-NEXT:  *UND* dyld_stub_binder
 ; SYMS-EMPTY:
 
 ;; Make sure -all_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld -all_load %t/load-framework-foo.o %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -lfoo
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_ALL_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-ALL-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_ALL_LOAD:       SYMBOL TABLE:
-; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_ALL_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_ALL_LOAD-EMPTY:
+; SYMS-ALL-LOAD:       SYMBOL TABLE:
+; SYMS-ALL-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-ALL-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-ALL-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-ALL-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-ALL-LOAD-EMPTY:
 
 ;; Make sure -force_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -force_load %t/libfoo.a
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_FORCE_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-FORCE-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_FORCE_LOAD:       SYMBOL TABLE:
-; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_FORCE_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_FORCE_LOAD-EMPTY:
+; SYMS-FORCE-LOAD:       SYMBOL TABLE:
+; SYMS-FORCE-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-FORCE-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-FORCE-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-FORCE-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-FORCE-LOAD-EMPTY:
 
 ;; Make sure -ObjC has effect when frameworks are loaded via LC_LINKER_OPTION flags and explicitly passed as well
 ; RUN: %lld -ObjC %t/load-framework-foo.o %t/load-library-foo.o %t/main.o -o %t/main -F%t -L%t -framework Foo
-; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS_OBJC_LOAD
+; RUN: llvm-objdump --macho --syms %t/main | FileCheck %s --check-prefix=SYMS-OBJC-LOAD
 
 ;; Note that _OBJC_CLASS_$_TestClass is *included* here.
-; SYMS_OBJC_LOAD:       SYMBOL TABLE:
-; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text _main
-; SYMS_OBJC_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
-; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
-; SYMS_OBJC_LOAD-EMPTY:
+; SYMS-OBJC-LOAD:       SYMBOL TABLE:
+; SYMS-OBJC-LOAD-NEXT:  g     F __TEXT,__text _main
+; SYMS-OBJC-LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+; SYMS-OBJC-LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-OBJC-LOAD-NEXT:  *UND* dyld_stub_binder
+; SYMS-OBJC-LOAD-EMPTY:
 
 ;; Make sure that frameworks containing object files or bitcode instead of
 ;; dylibs or archives do not cause duplicate symbol errors
@@ -125,6 +136,26 @@
 ; RUN: %lld %t/main -F %t -framework Foo -framework Foo -o /dev/null
 ; RUN: %lld -F %t -framework Foo -framework Foo %t/main -o /dev/null
 
+;; Checks that "framework not found" errors from LC_LINKER_OPTIONS are not
+;; emitted unless the link fails or --strict-auto-link is passed.
+; RUN: %lld -ObjC %t/load-framework-foo.o %t/main.o -o %t/main-no-foo.out
+; RUN: llvm-objdump --macho --syms %t/main-no-foo.out | FileCheck %s --check-prefix=SYMS-NO-FOO
+; RUN: not %lld --strict-auto-link -ObjC %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=MISSING-AUTO-LINK
+; RUN: %no-fatal-warnings-lld --strict-auto-link -ObjC %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=MISSING-AUTO-LINK
+; RUN: not %lld -ObjC %t/load-framework-undefined-symbol.o %t/load-missing.o %t/main.o -o %t/main-no-foo.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=UNDEFINED-SYMBOL,MISSING-AUTO-LINK
+
+;; Verify that nothing from the framework is included.
+; SYMS-NO-FOO:       SYMBOL TABLE:
+; SYMS-NO-FOO-NEXT:  g     F __TEXT,__text _main
+; SYMS-NO-FOO-NOT:   g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
+
+; UNDEFINED-SYMBOL: undefined symbol: __SomeUndefinedSymbol
+; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked framework not found for -framework Foo
+; MISSING-AUTO-LINK: {{.+}}load-missing.o: auto-linked library not found for -lBar
+
 ;--- framework.ll
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -135,7 +166,7 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 declare void @_CFBigNumGetInt128(...)
 
 define void @main() {
-  call void bitcast (void (...)* @_CFBigNumGetInt128 to void ()*)()
+  call void @_CFBigNumGetInt128()
   ret void
 }
 
@@ -148,11 +179,11 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 !llvm.linker.options = !{!0, !0, !1}
 
 declare void @_CFBigNumGetInt128(...)
-declare i8* @__cxa_allocate_exception(i64)
+declare ptr @__cxa_allocate_exception(i64)
 
 define void @main() {
-  call void bitcast (void (...)* @_CFBigNumGetInt128 to void ()*)()
-  call i8* @__cxa_allocate_exception(i64 4)
+  call void @_CFBigNumGetInt128()
+  call ptr @__cxa_allocate_exception(i64 4)
   ret void
 }
 
@@ -174,6 +205,24 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 !0 = !{!"-framework", !"Foo"}
 !llvm.linker.options = !{!0}
+
+;--- load-missing.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+!0 = !{!"-framework", !"Foo"}
+!1 = !{!"-lBar"}
+!llvm.linker.options = !{!0, !1}
+
+;--- load-framework-undefined-symbol.ll
+target triple = "x86_64-apple-macosx10.15.0"
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+declare void @_SomeUndefinedSymbol(...)
+define void @foo() {
+  call void @_SomeUndefinedSymbol()
+  ret void
+}
 
 ;--- load-framework-twice.ll
 target triple = "x86_64-apple-macosx10.15.0"

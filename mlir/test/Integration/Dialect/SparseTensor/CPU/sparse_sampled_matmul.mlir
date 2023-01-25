@@ -1,20 +1,20 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// DEFINE: FileCheck %s
 //
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
+// RUN: %{command}
 //
-// RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="vectorization-strategy=2 vl=4 enable-simd-index32" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 //
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 !Filename = !llvm.ptr<i8>
 
@@ -72,27 +72,27 @@ module {
     %c5 = arith.constant 5 : index
     %c10 = arith.constant 10 : index
 
-    // Setup memory for the dense matrices and initialize.
-    %a0 = bufferization.alloc_tensor(%c5, %c10) : tensor<?x?xf32>
-    %b0 = bufferization.alloc_tensor(%c10, %c5) : tensor<?x?xf32>
-    %x0 = bufferization.alloc_tensor(%c5, %c5) : tensor<?x?xf32>
-    %a, %b, %x = scf.for %i = %c0 to %c5 step %c1 iter_args(%a1 = %a0, %b1 = %b0, %x1 = %x0)
-        -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>) {
-      %x2 = scf.for %j = %c0 to %c5 step %c1 iter_args(%x3 = %x1) -> (tensor<?x?xf32>) {
-        %x4 = tensor.insert %d0 into %x3[%i, %j] : tensor<?x?xf32>
-        scf.yield %x4 : tensor<?x?xf32>
-      }
+    // Initialize dense matrices.
+    %x = tensor.generate %c5, %c5 {
+    ^bb0(%i : index, %j : index):
+      tensor.yield %d0 : f32
+    } : tensor<?x?xf32>
+
+    %a = tensor.generate %c5, %c10 {
+    ^bb0(%i: index, %j: index):
       %p = arith.addi %i, %c1 : index
       %q = arith.index_cast %p : index to i32
       %d = arith.sitofp %q : i32 to f32
-      %a2, %b2 = scf.for %j = %c0 to %c10 step %c1 iter_args(%a3 = %a1, %b3 = %b1)
-          -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-        %a4 = tensor.insert %d into %a3[%i, %j] : tensor<?x?xf32>
-        %b4 = tensor.insert %d into %b3[%j, %i] : tensor<?x?xf32>
-        scf.yield %a4, %b4 : tensor<?x?xf32>, tensor<?x?xf32>
-      }
-      scf.yield %a2, %b2, %x2 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
-    }
+      tensor.yield %d : f32
+    } : tensor<?x?xf32>
+
+    %b = tensor.generate %c10, %c5 {
+    ^bb0(%i: index, %j: index):
+      %p = arith.addi %j, %c1 : index
+      %q = arith.index_cast %p : index to i32
+      %d = arith.sitofp %q : i32 to f32
+      tensor.yield %d : f32
+    } : tensor<?x?xf32>
 
     // Read the sparse matrix from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)

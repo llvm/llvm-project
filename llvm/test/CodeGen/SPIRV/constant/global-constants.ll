@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -opaque-pointers=0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 @global   = addrspace(1) constant i32 1 ; OpenCL global memory
 @constant = addrspace(2) constant i32 2 ; OpenCL constant memory
@@ -19,7 +19,7 @@ define i32 @getGlobal3() {
   ret i32 %g
 }
 
-; CHECK: [[INT:%.+]] = OpTypeInt 32
+; CHECK:     [[INT:%.+]] = OpTypeInt 32
 
 ; CHECK-DAG: [[PTR_TO_INT_AS1:%.+]] = OpTypePointer CrossWorkgroup [[INT]]
 ; CHECK-DAG: [[PTR_TO_INT_AS2:%.+]] = OpTypePointer UniformConstant [[INT]]
@@ -33,6 +33,6 @@ define i32 @getGlobal3() {
 ; CHECK-DAG: [[GV2:%.+]] = OpVariable [[PTR_TO_INT_AS2]] UniformConstant [[CST_AS2]]
 ; CHECK-DAG: [[GV3:%.+]] = OpVariable [[PTR_TO_INT_AS3]] Workgroup [[CST_AS3]]
 
-; CHECK: OpLoad [[INT]] [[GV1]]
-; CHECK: OpLoad [[INT]] [[GV2]]
-; CHECK: OpLoad [[INT]] [[GV3]]
+; CHECK:     OpLoad [[INT]] [[GV1]]
+; CHECK:     OpLoad [[INT]] [[GV2]]
+; CHECK:     OpLoad [[INT]] [[GV3]]

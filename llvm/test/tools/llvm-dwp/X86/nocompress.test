@@ -2,7 +2,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not llvm-dwp %t.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: error: failure while decompressing compressed section: '.debug_{{.*}}.dwo', zlib is not available
+# CHECK: error: failure while decompressing compressed section: '.debug_{{.*}}.dwo', LLVM was not built with LLVM_ENABLE_ZLIB or did not find zlib at build time
 
 --- !ELF
 FileHeader:

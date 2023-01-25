@@ -229,23 +229,23 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
       CALLEE_SAVED_FPRS, CALLEE_SAVED_GPRS64, CALLEE_SAVED_VRS};
 
   if (Subtarget.is64BitELFABI()) {
-    NumEntries = array_lengthof(ELFOffsets64);
+    NumEntries = std::size(ELFOffsets64);
     return ELFOffsets64;
   }
 
   if (Subtarget.is32BitELFABI()) {
-    NumEntries = array_lengthof(ELFOffsets32);
+    NumEntries = std::size(ELFOffsets32);
     return ELFOffsets32;
   }
 
   assert(Subtarget.isAIXABI() && "Unexpected ABI.");
 
   if (Subtarget.isPPC64()) {
-    NumEntries = array_lengthof(AIXOffsets64);
+    NumEntries = std::size(AIXOffsets64);
     return AIXOffsets64;
   }
 
-  NumEntries = array_lengthof(AIXOffsets32);
+  NumEntries = std::size(AIXOffsets32);
   return AIXOffsets32;
 }
 
@@ -616,6 +616,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // AIX assembler does not support cfi directives.
   const bool needsCFI = MF.needsFrameMoves() && !Subtarget.isAIXABI();
 
+  const bool HasFastMFLR = Subtarget.hasFastMFLR();
+
   // Get processor type.
   bool isPPC64 = Subtarget.isPPC64();
   // Get the ABI.
@@ -837,10 +839,11 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // Generate the instruction to store the LR. In the case where ROP protection
   // is required the register holding the LR should not be killed as it will be
   // used by the hash store instruction.
-  if (MustSaveLR) {
+  auto SaveLR = [&](int64_t Offset) {
+    assert(MustSaveLR && "LR is not required to be saved!");
     BuildMI(MBB, StackUpdateLoc, dl, StoreInst)
         .addReg(ScratchReg, getKillRegState(!HasROPProtect))
-        .addImm(LROffset)
+        .addImm(Offset)
         .addReg(SPReg);
 
     // Add the ROP protection Hash Store instruction.
@@ -861,7 +864,10 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
           .addImm(ImmOffset)
           .addReg(SPReg);
     }
-  }
+  };
+
+  if (MustSaveLR && HasFastMFLR)
+      SaveLR(LROffset);
 
   if (MustSaveCR &&
       !(SingleScratchReg && MustSaveLR)) {
@@ -873,8 +879,11 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Skip the rest if this is a leaf function & all spills fit in the Red Zone.
-  if (!FrameSize)
+  if (!FrameSize) {
+    if (MustSaveLR && !HasFastMFLR)
+      SaveLR(LROffset);
     return;
+  }
 
   // Adjust stack pointer: r1 += NegFrameSize.
   // If there is a preferred stack alignment, align R1 now
@@ -888,7 +897,18 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Have we generated a STUX instruction to claim stack frame? If so,
   // the negated frame size will be placed in ScratchReg.
-  bool HasSTUX = false;
+  bool HasSTUX =
+      (TLI.hasInlineStackProbe(MF) && FrameSize > TLI.getStackProbeSize(MF)) ||
+      (HasBP && MaxAlign > 1) || isLargeFrame;
+
+  // If we use STUX to update the stack pointer, we need the two scratch
+  // registers TempReg and ScratchReg, we have to save LR here which is stored
+  // in ScratchReg.
+  // If the offset can not be encoded into the store instruction, we also have
+  // to save LR here.
+  if (MustSaveLR && !HasFastMFLR &&
+      (HasSTUX || !isInt<16>(FrameSize + LROffset)))
+    SaveLR(LROffset);
 
   // If FrameSize <= TLI.getStackProbeSize(MF), as POWER ABI requires backchain
   // pointer is always stored at SP, we will get a free probe due to an essential
@@ -909,7 +929,6 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, dl, TII.get(PPC::SUBF), ScratchReg)
           .addReg(ScratchReg)
           .addReg(SPReg);
-      HasSTUX = true;
     }
   } else {
     // This condition must be kept in sync with canUseAsPrologue.
@@ -941,21 +960,17 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(SPReg, RegState::Kill)
           .addReg(SPReg)
           .addReg(ScratchReg);
-      HasSTUX = true;
-
     } else if (!isLargeFrame) {
       BuildMI(MBB, StackUpdateLoc, dl, StoreUpdtInst, SPReg)
           .addReg(SPReg)
           .addImm(NegFrameSize)
           .addReg(SPReg);
-
     } else {
       TII.materializeImmPostRA(MBB, MBBI, dl, ScratchReg, NegFrameSize);
       BuildMI(MBB, MBBI, dl, StoreUpdtIdxInst, SPReg)
           .addReg(SPReg, RegState::Kill)
           .addReg(SPReg)
           .addReg(ScratchReg);
-      HasSTUX = true;
     }
   }
 
@@ -1081,6 +1096,10 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       }
     }
   }
+
+  // Save the LR now.
+  if (!HasSTUX && MustSaveLR && !HasFastMFLR && isInt<16>(FrameSize + LROffset))
+    SaveLR(LROffset + FrameSize);
 
   // Add Call Frame Information for the instructions we generated above.
   if (needsCFI) {
@@ -2475,8 +2494,8 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
           TII.storeRegToStackSlotNoUpd(MBB, MI, Reg, !IsLiveIn,
                                        I.getFrameIdx(), RC, TRI);
         else
-          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(),
-                                  RC, TRI);
+          TII.storeRegToStackSlot(MBB, MI, Reg, !IsLiveIn, I.getFrameIdx(), RC,
+                                  TRI, Register());
       }
     }
   }
@@ -2648,7 +2667,8 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
           TII.loadRegFromStackSlotNoUpd(MBB, I, Reg, CSI[i].getFrameIdx(), RC,
                                         TRI);
         else
-          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI);
+          TII.loadRegFromStackSlot(MBB, I, Reg, CSI[i].getFrameIdx(), RC, TRI,
+                                   Register());
 
         assert(I != MBB.begin() &&
                "loadRegFromStackSlot didn't insert any code!");

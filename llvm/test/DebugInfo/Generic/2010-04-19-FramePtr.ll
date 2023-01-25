@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s
 ; RUN: %llc_dwarf -debugger-tune=gdb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
 ; RUN: %llc_dwarf -frame-pointer=all -debugger-tune=lldb -asm-verbose -O1 -o - < %s | FileCheck %s --check-prefix=DISABLE
@@ -9,16 +9,16 @@
 
 define i32 @foo() nounwind ssp !dbg !1 {
 entry:
-  %retval = alloca i32                            ; <i32*> [#uses=2]
-  %0 = alloca i32                                 ; <i32*> [#uses=2]
+  %retval = alloca i32                            ; <ptr> [#uses=2]
+  %0 = alloca i32                                 ; <ptr> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  store i32 42, i32* %0, align 4, !dbg !0
-  %1 = load i32, i32* %0, align 4, !dbg !0             ; <i32> [#uses=1]
-  store i32 %1, i32* %retval, align 4, !dbg !0
+  store i32 42, ptr %0, align 4, !dbg !0
+  %1 = load i32, ptr %0, align 4, !dbg !0             ; <i32> [#uses=1]
+  store i32 %1, ptr %retval, align 4, !dbg !0
   br label %return, !dbg !0
 
 return:                                           ; preds = %entry
-  %retval1 = load i32, i32* %retval, !dbg !0           ; <i32> [#uses=1]
+  %retval1 = load i32, ptr %retval, !dbg !0           ; <i32> [#uses=1]
   ret i32 %retval1, !dbg !7
 }
 

@@ -13,11 +13,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "9524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
         self.expect("thread trace dump info --json",
@@ -37,12 +37,14 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
       "totalCount": 0,
       "individualCounts": {}
     },
+    "errors": {
+      "totalCount": 0,
+      "libiptErrors": {},
+      "fatalErrors": 0,
+      "otherErrors": 0
+    },
     "continuousExecutions": 0,
-    "PSBBlocks": 0,
-    "errorItems": {
-      "total": 0,
-      "individualErrors": {}
-    }
+    "PSBBlocks": 0
   },
   "globalStats": {
     "timingInSeconds": {
@@ -60,27 +62,30 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
   "traceTechnology": "intel-pt",
   "threadStats": {
     "tid": 3497496,
-    "traceItemsCount": 19533,
+    "traceItemsCount": 19527,
     "memoryUsage": {
-      "totalInBytes": "176097",
-      "avgPerItemInBytes": 9.''', '''},
+      "totalInBytes": "175819",
+      "avgPerItemInBytes": 9.0038920469094084''', '''},
     "timingInSeconds": {
       "Decoding instructions": ''', '''
     },
     "events": {
-      "totalCount": 11,
+      "totalCount": 5,
       "individualCounts": {
         "software disabled tracing": 1,
-        "HW clock tick": 9,
-        "CPU core changed": 1
+        "trace synchronization point": 1,
+        "CPU core changed": 1,
+        "HW clock tick": 2
       }
     },
+    "errors": {
+      "totalCount": 1,
+      "libiptErrors": {},
+      "fatalErrors": 0,
+      "otherErrors": 1
+    },
     "continuousExecutions": 1,
-    "PSBBlocks": 1,
-    "errorItems": {
-      "total": 0,
-      "individualErrors": {}
-    }
+    "PSBBlocks": 1
   },
   "globalStats": {
     "timingInSeconds": {
@@ -111,11 +116,12 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # we'll load the compact trace and make sure it works
         self.traceLoad(os.path.join(compact_trace_bundle_dir, "trace.json"), substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61833: [19736136.079 ns] (error) decoding truncated: TSC 40450075478174268 exceeds maximum TSC value 40450075477820383, will skip decoding the remaining data of the PSB (skipping 296 of 297 bytes)",
+                   "61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
         # This reduced the number of continuous executions to look at
@@ -130,11 +136,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -143,11 +149,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["19531: [20456511.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19523: [19691630.216 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["67919: [19736130.084 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -179,22 +185,21 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
 
   Trace technology: intel-pt
 
-  Total number of trace items: 23
+  Total number of trace items: 28
 
   Memory usage:
     Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 0.20 KiB
+    Total approximate memory usage (excluding raw trace): 0.25 KiB
     Average memory usage per item (excluding raw trace): 9.00 bytes
 
   Timing for this thread:
     Decoding instructions: ''', '''
 
   Events:
-    Number of individual events: 2
+    Number of individual events: 7
       software disabled tracing: 2
-
-  Errors:
-    Number of TSC decoding errors: 0'''])
+      hardware disabled tracing: 4
+      trace synchronization point: 1'''])
 
     @testSBAPIAndCommands
     def testLoadInvalidTraces(self):
@@ -264,3 +269,140 @@ Context:
         expected_substrs = ['error: missing value at traceBundle.processes[1].pid']
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
         self.assertEqual(self.dbg.GetNumTargets(), 0)
+
+    def testLoadTraceCursor(self):
+        src_dir = self.getSourceDir()
+        trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
+        traceDescriptionFile = lldb.SBFileSpec(trace_description_file_path, True)
+
+        error = lldb.SBError()
+        trace = self.dbg.LoadTraceFromFile(error, traceDescriptionFile)
+        self.assertSBError(error)
+
+        target = self.dbg.GetSelectedTarget()
+        process = target.process
+
+
+        # 1. Test some expected items of thread 1's trace cursor.
+        thread1 = process.threads[1]
+        cursor = trace.CreateNewCursor(error, thread1)
+        self.assertTrue(cursor)
+        self.assertTrue(cursor.HasValue())
+        cursor.Seek(0, lldb.eTraceCursorSeekTypeBeginning)
+        cursor.SetForwards(True)
+
+        self.assertTrue(cursor.IsEvent())
+        self.assertEqual(cursor.GetEventTypeAsString(), "HW clock tick")
+        self.assertEqual(cursor.GetCPU(), lldb.LLDB_INVALID_CPU_ID)
+
+        cursor.Next()
+
+        self.assertTrue(cursor.IsEvent())
+        self.assertEqual(cursor.GetEventTypeAsString(), "CPU core changed")
+        self.assertEqual(cursor.GetCPU(), 51)
+
+        cursor.GoToId(19526)
+
+        self.assertTrue(cursor.IsError())
+        self.assertEqual(cursor.GetError(), "decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)")
+
+        cursor.GoToId(19524)
+
+        self.assertTrue(cursor.IsInstruction())
+        self.assertEqual(cursor.GetLoadAddress(), 0x400BA7)
+
+
+
+        # Helper function to check equality of the current item of two trace cursors.
+        def assertCurrentTraceCursorItemEqual(lhs, rhs):
+            self.assertTrue(lhs.HasValue() and rhs.HasValue())
+
+            self.assertEqual(lhs.GetId(), rhs.GetId())
+            self.assertEqual(lhs.GetItemKind(), rhs.GetItemKind())
+            if lhs.IsError():
+                self.assertEqual(lhs.GetError(), rhs.GetError())
+            elif lhs.IsEvent():
+                self.assertEqual(lhs.GetEventType(), rhs.GetEventType())
+                self.assertEqual(lhs.GetEventTypeAsString(), rhs.GetEventTypeAsString())
+            elif lhs.IsInstruction():
+                self.assertEqual(lhs.GetLoadAddress(), rhs.GetLoadAddress())
+            else:
+                self.fail("Unknown trace item kind")
+
+        for thread in process.threads:
+            sequentialTraversalCursor = trace.CreateNewCursor(error, thread)
+            self.assertSBError(error)
+            # Skip threads with no trace items
+            if not sequentialTraversalCursor.HasValue():
+                continue
+
+            # 2. Test "End" boundary of the trace by advancing past the trace's last item.
+            sequentialTraversalCursor.Seek(0, lldb.eTraceCursorSeekTypeEnd)
+            self.assertTrue(sequentialTraversalCursor.HasValue())
+            sequentialTraversalCursor.SetForwards(True)
+            sequentialTraversalCursor.Next()
+            self.assertFalse(sequentialTraversalCursor.HasValue())
+
+
+
+            # 3. Test sequential traversal using sequential access API (ie Next())
+            # and random access API (ie GoToId()) simultaneously.
+            randomAccessCursor = trace.CreateNewCursor(error, thread)
+            self.assertSBError(error)
+            # Reset the sequential cursor
+            sequentialTraversalCursor.Seek(0, lldb.eTraceCursorSeekTypeBeginning)
+            sequentialTraversalCursor.SetForwards(True)
+            self.assertTrue(sequentialTraversalCursor.IsForwards())
+
+            while sequentialTraversalCursor.HasValue():
+                itemId = sequentialTraversalCursor.GetId()
+                randomAccessCursor.GoToId(itemId)
+                assertCurrentTraceCursorItemEqual(sequentialTraversalCursor, randomAccessCursor)
+                sequentialTraversalCursor.Next()
+
+
+
+            # 4. Test a random access with random access API (ie Seek()) and
+            # sequential access API (ie consecutive calls to Next()).
+            TEST_SEEK_ID = 3
+            randomAccessCursor.GoToId(TEST_SEEK_ID )
+            # Reset the sequential cursor
+            sequentialTraversalCursor.Seek(0, lldb.eTraceCursorSeekTypeBeginning)
+            sequentialTraversalCursor.SetForwards(True)
+            for _ in range(TEST_SEEK_ID): sequentialTraversalCursor.Next()
+            assertCurrentTraceCursorItemEqual(sequentialTraversalCursor, randomAccessCursor)
+
+    @testSBAPIAndCommands
+    def testLoadKernelTrace(self):
+        # kernel section without loadAddress (using default loadAddress).
+        src_dir = self.getSourceDir()
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
+
+        self.expect("image list", substrs=["0xffffffff81000000", "modules/m.out"])
+
+        self.expect("thread list", substrs=[
+            "Process 1 stopped",
+            "* thread #1: tid = 0x002d",
+            "  thread #2: tid = 0x0033"])
+
+        # kernel section with custom loadAddress.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace",
+                "trace_with_loadAddress.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
+
+        self.expect("image list", substrs=["0x400000", "modules/m.out"])
+
+    @testSBAPIAndCommands
+    def testLoadInvalidKernelTrace(self):
+        src_dir = self.getSourceDir()
+
+        # Test kernel section with non-empty processeses section.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace_kernel_with_process.json")
+        expected_substrs = ['error: "processes" must be empty when "kernel" is provided when parsing traceBundle']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
+
+        # Test kernel section without cpus section.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace_kernel_wo_cpus.json")
+        expected_substrs = ['error: "cpus" is required when "kernel" is provided when parsing traceBundle']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)

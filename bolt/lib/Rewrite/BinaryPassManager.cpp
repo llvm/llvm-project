@@ -12,7 +12,9 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
+#include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Passes/Hugify.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
@@ -31,6 +33,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "bolt/Passes/ThreeWayBranch.h"
 #include "bolt/Passes/ValidateInternalCalls.h"
+#include "bolt/Passes/ValidateMemRefs.h"
 #include "bolt/Passes/VeneerElimination.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -177,6 +180,11 @@ static cl::opt<bool>
     PrintStoke("print-stoke", cl::desc("print functions after stoke analysis"),
                cl::cat(BoltOptCategory));
 
+static cl::opt<bool>
+    PrintFixRelaxations("print-fix-relaxations",
+                        cl::desc("print functions after fix relaxations pass"),
+                        cl::cat(BoltOptCategory));
+
 static cl::opt<bool> PrintVeneerElimination(
     "print-veneer-elimination",
     cl::desc("print functions after veneer elimination pass"),
@@ -296,7 +304,7 @@ void BinaryFunctionPassManager::runPasses() {
       if (!Pass->shouldPrint(Function))
         continue;
 
-      Function.print(outs(), Message, true);
+      Function.print(outs(), Message);
 
       if (opts::DumpDotAll)
         Function.dumpGraphForPass(PassIdName);
@@ -313,12 +321,12 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
 
-  if (BC.isAArch64())
+  if (BC.isAArch64()) {
+    Manager.registerPass(std::make_unique<FixRelaxations>(PrintFixRelaxations));
+
     Manager.registerPass(
         std::make_unique<VeneerElimination>(PrintVeneerElimination));
-
-  if (opts::Instrument)
-    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  }
 
   // Here we manage dependencies/order manually, since passes are run in the
   // order they're registered.
@@ -330,6 +338,13 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
+
+  Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
+
+  if (opts::Instrument)
+    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  else if (opts::Hugify)
+    Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
 

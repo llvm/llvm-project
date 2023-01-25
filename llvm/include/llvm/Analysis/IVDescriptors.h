@@ -180,15 +180,18 @@ public:
                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
 
-  /// Returns true if Phi is a first-order recurrence. A first-order recurrence
+  /// Returns true if Phi is a fixed-order recurrence. A fixed-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
-  /// recurrence in the current loop iteration equals a value defined in the
-  /// previous iteration. \p SinkAfter includes pairs of instructions where the
-  /// first will be rescheduled to appear after the second if/when the loop is
-  /// vectorized. It may be augmented with additional pairs if needed in order
-  /// to handle Phi as a first-order recurrence.
+  /// recurrence in the current loop iteration equals a value defined in a
+  /// previous iteration (e.g. if the value is defined in the previous
+  /// iteration, we refer to it as first-order recurrence, if it is defined in
+  /// the iteration before the previous, we refer to it as second-order
+  /// recurrence and so on). \p SinkAfter includes pairs of instructions where
+  /// the first will be rescheduled to appear after the second if/when the loop
+  /// is vectorized. It may be augmented with additional pairs if needed in
+  /// order to handle Phi as a first-order recurrence.
   static bool
-  isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+  isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
                          MapVector<Instruction *, Instruction *> &SinkAfter,
                          DominatorTree *DT);
 

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
 ; llvm.org/PR48422
 ; Use of ScalarEvolution in Codegen not possible because DominatorTree is not updated.

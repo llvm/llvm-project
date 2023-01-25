@@ -33,7 +33,7 @@ class MCSubtargetInfo;
 class MCTargetOptions;
 class MCTargetStreamer;
 class Target;
-class FeatureBitset;
+class Triple;
 
 MCCodeEmitter *createAArch64MCCodeEmitter(const MCInstrInfo &MCII,
                                           MCContext &Ctx);
@@ -53,7 +53,8 @@ std::unique_ptr<MCObjectTargetWriter>
 createAArch64MachObjectWriter(uint32_t CPUType, uint32_t CPUSubtype,
                               bool IsILP32);
 
-std::unique_ptr<MCObjectTargetWriter> createAArch64WinCOFFObjectWriter();
+std::unique_ptr<MCObjectTargetWriter>
+createAArch64WinCOFFObjectWriter(const Triple &TheTriple);
 
 MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,

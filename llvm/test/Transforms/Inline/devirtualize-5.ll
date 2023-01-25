@@ -9,14 +9,14 @@ define i32 @i() alwaysinline {
 ; CHECK-NEXT: ret i32 45
 
 define i32 @main() {
-  %a = alloca i32 ()*
-  store i32 ()* @i, i32 ()** %a
-  %r = call i32 @call(i32 ()** %a)
+  %a = alloca ptr
+  store ptr @i, ptr %a
+  %r = call i32 @call(ptr %a)
   ret i32 %r
 }
 
-define i32 @call(i32 ()** %a) alwaysinline {
-  %c = load i32 ()*, i32 ()** %a
+define i32 @call(ptr %a) alwaysinline {
+  %c = load ptr, ptr %a
   %r = call i32 %c()
   ret i32 %r
 }

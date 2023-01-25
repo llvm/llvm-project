@@ -2,21 +2,21 @@
 target triple = "hexagon"
 
 ; Function Attrs: norecurse nounwind
-define void @test(<32 x i32>* nocapture readonly %x, <32 x i32>* nocapture readnone %y, <32 x i32>* nocapture %a, <32 x i32>* nocapture %b) #0 {
+define void @test(ptr nocapture readonly %x, ptr nocapture readnone %y, ptr nocapture %a, ptr nocapture %b) #0 {
 entry:
 ; CHECK: v0 = vmem(r0+#7):nt
-  %add.ptr = getelementptr inbounds <32 x i32>, <32 x i32>* %x, i32 7
-  %0 = load <32 x i32>, <32 x i32>* %add.ptr, align 128, !tbaa !1, !nontemporal !4
+  %add.ptr = getelementptr inbounds <32 x i32>, ptr %x, i32 7
+  %0 = load <32 x i32>, ptr %add.ptr, align 128, !tbaa !1, !nontemporal !4
 
 ; CHECK: v1.cur = vmem(r2+#0):nt
-  %1 = load <32 x i32>, <32 x i32>* %a, align 128, !tbaa !1, !nontemporal !4
+  %1 = load <32 x i32>, ptr %a, align 128, !tbaa !1, !nontemporal !4
 
 ; CHECK: vmem(r3+#3):nt = v1
-  %add.ptr2 = getelementptr inbounds <32 x i32>, <32 x i32>* %b, i32 3
-  store <32 x i32> %1, <32 x i32>* %add.ptr2, align 128, !tbaa !1, !nontemporal !4
+  %add.ptr2 = getelementptr inbounds <32 x i32>, ptr %b, i32 3
+  store <32 x i32> %1, ptr %add.ptr2, align 128, !tbaa !1, !nontemporal !4
 
 ; CHECK: vmem(r2+#0):nt = v0
-  store <32 x i32> %0, <32 x i32>* %a, align 128, !tbaa !1, !nontemporal !4
+  store <32 x i32> %0, ptr %a, align 128, !tbaa !1, !nontemporal !4
   ret void
 }
 

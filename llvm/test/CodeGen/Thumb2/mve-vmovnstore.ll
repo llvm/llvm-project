@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MVE
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-MVEFP
 
-define arm_aapcs_vfpcc void @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q0, q1
@@ -11,11 +11,11 @@ define arm_aapcs_vfpcc void @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src2, <8
 entry:
   %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> %src2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   %out = trunc <8 x i32> %strided.vec to <8 x i16>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_trunc2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q1, q0
@@ -24,11 +24,11 @@ define arm_aapcs_vfpcc void @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src2, <8
 entry:
   %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> %src2, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
   %out = trunc <8 x i32> %strided.vec to <8 x i16>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_trunc1_onesrc(<8 x i32> %src1, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_trunc1_onesrc(<8 x i32> %src1, ptr %dest) {
 ; CHECK-LABEL: vmovn32_trunc1_onesrc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q0, q1
@@ -37,11 +37,11 @@ define arm_aapcs_vfpcc void @vmovn32_trunc1_onesrc(<8 x i32> %src1, <8 x i16> *%
 entry:
   %strided.vec = shufflevector <8 x i32> %src1, <8 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   %out = trunc <8 x i32> %strided.vec to <8 x i16>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_trunc2_onesrc(<8 x i32> %src1, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_trunc2_onesrc(<8 x i32> %src1, ptr %dest) {
 ; CHECK-LABEL: vmovn32_trunc2_onesrc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q1, q0
@@ -50,11 +50,11 @@ define arm_aapcs_vfpcc void @vmovn32_trunc2_onesrc(<8 x i32> %src1, <8 x i16> *%
 entry:
   %strided.vec = shufflevector <8 x i32> %src1, <8 x i32> undef, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
   %out = trunc <8 x i32> %strided.vec to <8 x i16>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q0, q1
@@ -63,11 +63,11 @@ define arm_aapcs_vfpcc void @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src2, <1
 entry:
   %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> %src2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_trunc2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q1, q0
@@ -76,11 +76,11 @@ define arm_aapcs_vfpcc void @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src2, <1
 entry:
   %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> %src2, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_trunc1_onesrc(<16 x i16> %src1, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_trunc1_onesrc(<16 x i16> %src1, ptr %dest) {
 ; CHECK-LABEL: vmovn16_trunc1_onesrc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q0, q1
@@ -89,11 +89,11 @@ define arm_aapcs_vfpcc void @vmovn16_trunc1_onesrc(<16 x i16> %src1, <16 x i8> *
 entry:
   %strided.vec = shufflevector <16 x i16> %src1, <16 x i16> undef, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_trunc2_onesrc(<16 x i16> %src1, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_trunc2_onesrc(<16 x i16> %src1, ptr %dest) {
 ; CHECK-LABEL: vmovn16_trunc2_onesrc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q1, q0
@@ -102,12 +102,12 @@ define arm_aapcs_vfpcc void @vmovn16_trunc2_onesrc(<16 x i16> %src1, <16 x i8> *
 entry:
   %strided.vec = shufflevector <16 x i16> %src1, <16 x i16> undef, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
   %out = trunc <16 x i16> %strided.vec to <16 x i8>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
 
-define arm_aapcs_vfpcc void @vmovn64_t1(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_t1(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_t1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s2, s4
@@ -116,11 +116,11 @@ define arm_aapcs_vfpcc void @vmovn64_t1(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 0, i32 2>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn64_t2(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_t2(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s6, s0
@@ -129,11 +129,11 @@ define arm_aapcs_vfpcc void @vmovn64_t2(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 2, i32 0>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn64_b1(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_b1(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_b1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s2, s6
@@ -142,11 +142,11 @@ define arm_aapcs_vfpcc void @vmovn64_b1(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 0, i32 3>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_b2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s6
@@ -157,11 +157,11 @@ define arm_aapcs_vfpcc void @vmovn64_b2(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 3, i32 0>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn64_b3(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_b3(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_b3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s0, s2
@@ -172,11 +172,11 @@ define arm_aapcs_vfpcc void @vmovn64_b3(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 1, i32 2>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn64_b4(<2 x i64> %src1, <2 x i64> %src2, <2 x i64> *%dest) {
+define arm_aapcs_vfpcc void @vmovn64_b4(<2 x i64> %src1, <2 x i64> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn64_b4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s6, s2
@@ -185,13 +185,13 @@ define arm_aapcs_vfpcc void @vmovn64_b4(<2 x i64> %src1, <2 x i64> %src2, <2 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <2 x i64> %src1, <2 x i64> %src2, <2 x i32> <i32 2, i32 1>
-  store <2 x i64> %out, <2 x i64> *%dest, align 8
+  store <2 x i64> %out, ptr %dest, align 8
   ret void
 }
 
 
 
-define arm_aapcs_vfpcc void @vmovn32_t1(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_t1(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_t1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s1, s4
@@ -200,11 +200,11 @@ define arm_aapcs_vfpcc void @vmovn32_t1(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_t2(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_t2(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s5, s0
@@ -213,11 +213,11 @@ define arm_aapcs_vfpcc void @vmovn32_t2(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_b1(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_b1(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_b1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s1, s5
@@ -226,11 +226,11 @@ define arm_aapcs_vfpcc void @vmovn32_b1(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_b2(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_b2(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_b2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s4, s5
@@ -241,11 +241,11 @@ define arm_aapcs_vfpcc void @vmovn32_b2(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 5, i32 0, i32 7, i32 2>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_b3(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_b3(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_b3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s0, s1
@@ -256,11 +256,11 @@ define arm_aapcs_vfpcc void @vmovn32_b3(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn32_b4(<4 x i32> %src1, <4 x i32> %src2, <4 x i32> *%dest) {
+define arm_aapcs_vfpcc void @vmovn32_b4(<4 x i32> %src1, <4 x i32> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn32_b4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f32 s5, s1
@@ -269,14 +269,14 @@ define arm_aapcs_vfpcc void @vmovn32_b4(<4 x i32> %src1, <4 x i32> %src2, <4 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <4 x i32> %src1, <4 x i32> %src2, <4 x i32> <i32 4, i32 1, i32 6, i32 3>
-  store <4 x i32> %out, <4 x i32> *%dest, align 8
+  store <4 x i32> %out, ptr %dest, align 8
   ret void
 }
 
 
 
 
-define arm_aapcs_vfpcc void @vmovn16_t1(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_t1(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_t1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q0, q1
@@ -284,11 +284,11 @@ define arm_aapcs_vfpcc void @vmovn16_t1(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_t2(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_t2(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i32 q1, q0
@@ -296,11 +296,11 @@ define arm_aapcs_vfpcc void @vmovn16_t2(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_b1(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_b1(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_b1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnb.i32 q1, q0
@@ -308,11 +308,11 @@ define arm_aapcs_vfpcc void @vmovn16_b1(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-MVE-LABEL: vmovn16_b2:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov.u16 r1, q1[1]
@@ -348,11 +348,11 @@ define arm_aapcs_vfpcc void @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 9, i32 0, i32 11, i32 2, i32 13, i32 4, i32 15, i32 6>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-MVE-LABEL: vmovn16_b3:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    vmov.u16 r1, q0[1]
@@ -388,11 +388,11 @@ define arm_aapcs_vfpcc void @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-MVEFP-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 1, i32 8, i32 3, i32 10, i32 5, i32 12, i32 7, i32 14>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn16_b4(<8 x i16> %src1, <8 x i16> %src2, <8 x i16> *%dest) {
+define arm_aapcs_vfpcc void @vmovn16_b4(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn16_b4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnb.i32 q0, q1
@@ -400,12 +400,12 @@ define arm_aapcs_vfpcc void @vmovn16_b4(<8 x i16> %src1, <8 x i16> %src2, <8 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <8 x i16> %src1, <8 x i16> %src2, <8 x i32> <i32 8, i32 1, i32 10, i32 3, i32 12, i32 5, i32 14, i32 7>
-  store <8 x i16> %out, <8 x i16> *%dest, align 8
+  store <8 x i16> %out, ptr %dest, align 8
   ret void
 }
 
 
-define arm_aapcs_vfpcc void @vmovn8_b1(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_b1(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_b1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q0, q1
@@ -413,11 +413,11 @@ define arm_aapcs_vfpcc void @vmovn8_b1(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn8_b2(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_b2(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_b2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnt.i16 q1, q0
@@ -425,11 +425,11 @@ define arm_aapcs_vfpcc void @vmovn8_b2(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 16, i32 0, i32 18, i32 2, i32 20, i32 4, i32 22, i32 6, i32 24, i32 8, i32 26, i32 10, i32 28, i32 12, i32 30, i32 14>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn8_t1(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_t1(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_t1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnb.i16 q1, q0
@@ -437,11 +437,11 @@ define arm_aapcs_vfpcc void @vmovn8_t1(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn8_t2(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_t2(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.u8 r1, q1[1]
@@ -480,11 +480,11 @@ define arm_aapcs_vfpcc void @vmovn8_t2(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 17, i32 0, i32 19, i32 2, i32 21, i32 4, i32 23, i32 6, i32 25, i32 8, i32 27, i32 10, i32 29, i32 12, i32 31, i32 14>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn8_t3(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_t3(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_t3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.u8 r1, q0[1]
@@ -523,11 +523,11 @@ define arm_aapcs_vfpcc void @vmovn8_t3(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 1, i32 16, i32 3, i32 18, i32 5, i32 20, i32 7, i32 22, i32 9, i32 24, i32 11, i32 26, i32 13, i32 28, i32 15, i32 30>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }
 
-define arm_aapcs_vfpcc void @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2, <16 x i8> *%dest) {
+define arm_aapcs_vfpcc void @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2, ptr %dest) {
 ; CHECK-LABEL: vmovn8_t4:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmovnb.i16 q0, q1
@@ -535,6 +535,6 @@ define arm_aapcs_vfpcc void @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2, <16 x i
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %src1, <16 x i8> %src2, <16 x i32> <i32 16, i32 1, i32 18, i32 3, i32 20, i32 5, i32 22, i32 7, i32 24, i32 9, i32 26, i32 11, i32 28, i32 13, i32 30, i32 15>
-  store <16 x i8> %out, <16 x i8> *%dest, align 8
+  store <16 x i8> %out, ptr %dest, align 8
   ret void
 }

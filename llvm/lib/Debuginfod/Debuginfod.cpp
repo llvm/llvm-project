@@ -22,26 +22,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/HTTPClient.h"
-#include "llvm/Object/Binary.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/xxhash.h"
 
 #include <atomic>
+#include <thread>
 
 namespace llvm {
+
+using llvm::object::BuildIDRef;
+
 static std::string uniqueKey(llvm::StringRef S) { return utostr(xxHash64(S)); }
 
 // Returns a binary BuildID as a normalized hex string.
@@ -166,6 +171,44 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
   return Error::success();
 }
 
+// An over-accepting simplification of the HTTP RFC 7230 spec.
+static bool isHeader(StringRef S) {
+  StringRef Name;
+  StringRef Value;
+  std::tie(Name, Value) = S.split(':');
+  if (Name.empty() || Value.empty())
+    return false;
+  return all_of(Name, [](char C) { return llvm::isPrint(C) && C != ' '; }) &&
+         all_of(Value, [](char C) { return llvm::isPrint(C) || C == '\t'; });
+}
+
+static SmallVector<std::string, 0> getHeaders() {
+  const char *Filename = getenv("DEBUGINFOD_HEADERS_FILE");
+  if (!Filename)
+    return {};
+  ErrorOr<std::unique_ptr<MemoryBuffer>> HeadersFile =
+      MemoryBuffer::getFile(Filename, /*IsText=*/true);
+  if (!HeadersFile)
+    return {};
+
+  SmallVector<std::string, 0> Headers;
+  uint64_t LineNumber = 0;
+  for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
+    LineNumber++;
+    if (!Line.empty() && Line.back() == '\r')
+      Line = Line.drop_back();
+    if (!isHeader(Line)) {
+      if (!all_of(Line, llvm::isSpace))
+        WithColor::warning()
+            << "could not parse debuginfod header: " << Filename << ':'
+            << LineNumber << '\n';
+      continue;
+    }
+    Headers.emplace_back(Line);
+  }
+  return Headers;
+}
+
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
     ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
@@ -181,7 +224,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
   FileCache Cache = *CacheOrErr;
   // We choose an arbitrary Task parameter as we do not make use of it.
   unsigned Task = 0;
-  Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, UniqueKey);
+  Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, UniqueKey, "");
   if (!CacheAddStreamOrErr)
     return CacheAddStreamOrErr.takeError();
   AddStreamFn &CacheAddStream = *CacheAddStreamOrErr;
@@ -208,9 +251,10 @@ Expected<std::string> getCachedOrDownloadArtifact(
 
     // Perform the HTTP request and if successful, write the response body to
     // the cache.
-    StreamedHTTPResponseHandler Handler([&]() { return CacheAddStream(Task); },
-                                        Client);
+    StreamedHTTPResponseHandler Handler(
+        [&]() { return CacheAddStream(Task, ""); }, Client);
     HTTPRequest Request(ArtifactUrl);
+    Request.Headers = getHeaders();
     Error Err = Client.perform(Request, Handler);
     if (Err)
       return std::move(Err);
@@ -300,16 +344,6 @@ Error DebuginfodCollection::updateForever(std::chrono::milliseconds Interval) {
   llvm_unreachable("updateForever loop should never end");
 }
 
-static bool isDebugBinary(object::ObjectFile *Object) {
-  // TODO: handle PDB debuginfo
-  std::unique_ptr<DWARFContext> Context = DWARFContext::create(
-      *Object, DWARFContext::ProcessDebugRelocations::Process);
-  const DWARFObject &DObj = Context->getDWARFObj();
-  unsigned NumSections = 0;
-  DObj.forEachInfoSections([&](const DWARFSection &S) { NumSections++; });
-  return NumSections;
-}
-
 static bool hasELFMagic(StringRef FilePath) {
   file_magic Type;
   std::error_code EC = identify_magic(FilePath, Type);
@@ -369,17 +403,17 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!Object)
           continue;
 
-        Optional<BuildIDRef> ID = symbolize::getBuildID(Object);
+        std::optional<BuildIDRef> ID = getBuildID(Object);
         if (!ID)
           continue;
 
-        std::string IDString = buildIDToString(ID.value());
-        if (isDebugBinary(Object)) {
+        std::string IDString = buildIDToString(*ID);
+        if (Object->hasDebugInfo()) {
           std::lock_guard<sys::RWMutex> DebugBinariesGuard(DebugBinariesMutex);
-          DebugBinaries[IDString] = FilePath;
+          (void)DebugBinaries.try_emplace(IDString, std::move(FilePath));
         } else {
           std::lock_guard<sys::RWMutex> BinariesGuard(BinariesMutex);
-          Binaries[IDString] = FilePath;
+          (void)Binaries.try_emplace(IDString, std::move(FilePath));
         }
       }
     });
@@ -391,7 +425,7 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
   return Error::success();
 }
 
-Expected<Optional<std::string>>
+Expected<std::optional<std::string>>
 DebuginfodCollection::getBinaryPath(BuildIDRef ID) {
   Log.push("getting binary path of ID " + buildIDToString(ID));
   std::shared_lock<sys::RWMutex> Guard(BinariesMutex);
@@ -400,10 +434,10 @@ DebuginfodCollection::getBinaryPath(BuildIDRef ID) {
     std::string Path = Loc->getValue();
     return Path;
   }
-  return None;
+  return std::nullopt;
 }
 
-Expected<Optional<std::string>>
+Expected<std::optional<std::string>>
 DebuginfodCollection::getDebugBinaryPath(BuildIDRef ID) {
   Log.push("getting debug binary path of ID " + buildIDToString(ID));
   std::shared_lock<sys::RWMutex> Guard(DebugBinariesMutex);
@@ -412,16 +446,16 @@ DebuginfodCollection::getDebugBinaryPath(BuildIDRef ID) {
     std::string Path = Loc->getValue();
     return Path;
   }
-  return None;
+  return std::nullopt;
 }
 
 Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
   {
     // Check collection; perform on-demand update if stale.
-    Expected<Optional<std::string>> PathOrErr = getBinaryPath(ID);
+    Expected<std::optional<std::string>> PathOrErr = getBinaryPath(ID);
     if (!PathOrErr)
       return PathOrErr.takeError();
-    Optional<std::string> Path = *PathOrErr;
+    std::optional<std::string> Path = *PathOrErr;
     if (!Path) {
       Expected<bool> UpdatedOrErr = updateIfStale();
       if (!UpdatedOrErr)
@@ -435,7 +469,7 @@ Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
       }
     }
     if (Path)
-      return Path.value();
+      return *Path;
   }
 
   // Try federation.
@@ -449,10 +483,10 @@ Expected<std::string> DebuginfodCollection::findBinaryPath(BuildIDRef ID) {
 
 Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
   // Check collection; perform on-demand update if stale.
-  Expected<Optional<std::string>> PathOrErr = getDebugBinaryPath(ID);
+  Expected<std::optional<std::string>> PathOrErr = getDebugBinaryPath(ID);
   if (!PathOrErr)
     return PathOrErr.takeError();
-  Optional<std::string> Path = *PathOrErr;
+  std::optional<std::string> Path = *PathOrErr;
   if (!Path) {
     Expected<bool> UpdatedOrErr = updateIfStale();
     if (!UpdatedOrErr)
@@ -466,7 +500,7 @@ Expected<std::string> DebuginfodCollection::findDebugBinaryPath(BuildIDRef ID) {
     }
   }
   if (Path)
-    return Path.value();
+    return *Path;
 
   // Try federation.
   return getCachedOrDownloadDebuginfo(ID);
@@ -484,7 +518,7 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
               {404, "text/plain", "Build ID is not a hex string\n"});
           return;
         }
-        BuildID ID(IDString.begin(), IDString.end());
+        object::BuildID ID(IDString.begin(), IDString.end());
         Expected<std::string> PathOrErr = Collection.findDebugBinaryPath(ID);
         if (Error Err = PathOrErr.takeError()) {
           consumeError(std::move(Err));
@@ -502,7 +536,7 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
               {404, "text/plain", "Build ID is not a hex string\n"});
           return;
         }
-        BuildID ID(IDString.begin(), IDString.end());
+        object::BuildID ID(IDString.begin(), IDString.end());
         Expected<std::string> PathOrErr = Collection.findBinaryPath(ID);
         if (Error Err = PathOrErr.takeError()) {
           consumeError(std::move(Err));

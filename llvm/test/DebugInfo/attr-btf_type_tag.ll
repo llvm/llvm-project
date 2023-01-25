@@ -9,7 +9,7 @@
 ; Compilation flag:
 ;   clang -target x86_64 -g -S -emit-llvm t.c
 
-@g = dso_local global i32*** null, align 8, !dbg !0
+@g = dso_local global ptr null, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!13, !14, !15, !16, !17}

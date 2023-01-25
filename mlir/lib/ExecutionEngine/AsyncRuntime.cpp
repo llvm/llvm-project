@@ -199,7 +199,7 @@ struct AsyncValue : public RefCounted {
   std::atomic<State::StateEnum> state;
 
   // Use vector of bytes to store async value payload.
-  std::vector<int8_t> storage;
+  std::vector<std::byte> storage;
 
   // Pending awaiters are guarded by a mutex.
   std::mutex mu;

@@ -13,7 +13,7 @@
 ; CHECK: ArrayDecl[UnknownSize][%m][%o] with elements of 8 bytes.
 ; CHECK: ArrayRef[{%p,+,1}<nw><%for.i>][{%q,+,1}<nsw><%for.j>][{%r,+,1}<nsw><%for.k>]
 
-define void @foo(i64 %n, i64 %m, i64 %o, double* %A, i64 %p, i64 %q, i64 %r) {
+define void @foo(i64 %n, i64 %m, i64 %o, ptr %A, i64 %p, i64 %q, i64 %r) {
 entry:
   br label %for.i
 
@@ -34,8 +34,8 @@ for.k:
   %subscript2 = mul i64 %subscript1, %o
   %offset2 = add nsw i64 %k, %r
   %subscript = add i64 %subscript2, %offset2
-  %idx = getelementptr inbounds double, double* %A, i64 %subscript
-  store double 1.0, double* %idx
+  %idx = getelementptr inbounds double, ptr %A, i64 %subscript
+  store double 1.0, ptr %idx
   br label %for.k.inc
 
 for.k.inc:

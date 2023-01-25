@@ -6,13 +6,13 @@
 ; R600: BIT_ALIGN_INT
 
 ; SI: v_alignbit_b32
-define amdgpu_kernel void @rotr_i32(i32 addrspace(1)* %in, i32 %x, i32 %y) {
+define amdgpu_kernel void @rotr_i32(ptr addrspace(1) %in, i32 %x, i32 %y) {
 entry:
   %tmp0 = sub i32 32, %y
   %tmp1 = shl i32 %x, %tmp0
   %tmp2 = lshr i32 %x, %y
   %tmp3 = or i32 %tmp1, %tmp2
-  store i32 %tmp3, i32 addrspace(1)* %in
+  store i32 %tmp3, ptr addrspace(1) %in
   ret void
 }
 
@@ -22,13 +22,13 @@ entry:
 
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
-define amdgpu_kernel void @rotr_v2i32(<2 x i32> addrspace(1)* %in, <2 x i32> %x, <2 x i32> %y) {
+define amdgpu_kernel void @rotr_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i32> %y) {
 entry:
   %tmp0 = sub <2 x i32> <i32 32, i32 32>, %y
   %tmp1 = shl <2 x i32> %x, %tmp0
   %tmp2 = lshr <2 x i32> %x, %y
   %tmp3 = or <2 x i32> %tmp1, %tmp2
-  store <2 x i32> %tmp3, <2 x i32> addrspace(1)* %in
+  store <2 x i32> %tmp3, ptr addrspace(1) %in
   ret void
 }
 
@@ -42,13 +42,13 @@ entry:
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
 ; SI: v_alignbit_b32
-define amdgpu_kernel void @rotr_v4i32(<4 x i32> addrspace(1)* %in, <4 x i32> %x, <4 x i32> %y) {
+define amdgpu_kernel void @rotr_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i32> %y) {
 entry:
   %tmp0 = sub <4 x i32> <i32 32, i32 32, i32 32, i32 32>, %y
   %tmp1 = shl <4 x i32> %x, %tmp0
   %tmp2 = lshr <4 x i32> %x, %y
   %tmp3 = or <4 x i32> %tmp1, %tmp2
-  store <4 x i32> %tmp3, <4 x i32> addrspace(1)* %in
+  store <4 x i32> %tmp3, ptr addrspace(1) %in
   ret void
 }
 
@@ -65,14 +65,14 @@ entry:
 
 declare i16 @llvm.fshr.i16(i16, i16, i16)
 
-define void @test_rotr_i16(i16 addrspace(1)* nocapture readonly %sourceA, i16 addrspace(1)* nocapture readonly %sourceB, i16 addrspace(1)* nocapture %destValues) {
+define void @test_rotr_i16(ptr addrspace(1) nocapture readonly %sourceA, ptr addrspace(1) nocapture readonly %sourceB, ptr addrspace(1) nocapture %destValues) {
 entry:
-  %arrayidx = getelementptr inbounds i16, i16 addrspace(1)* %sourceA, i64 16
-  %a = load i16, i16 addrspace(1)* %arrayidx
-  %arrayidx2 = getelementptr inbounds i16, i16 addrspace(1)* %sourceB, i64 24
-  %b = load i16, i16 addrspace(1)* %arrayidx2
+  %arrayidx = getelementptr inbounds i16, ptr addrspace(1) %sourceA, i64 16
+  %a = load i16, ptr addrspace(1) %arrayidx
+  %arrayidx2 = getelementptr inbounds i16, ptr addrspace(1) %sourceB, i64 24
+  %b = load i16, ptr addrspace(1) %arrayidx2
   %c = tail call i16 @llvm.fshr.i16(i16 %a, i16 %a, i16 %b)
-  %arrayidx5 = getelementptr inbounds i16, i16 addrspace(1)* %destValues, i64 4
-  store i16 %c, i16 addrspace(1)* %arrayidx5
+  %arrayidx5 = getelementptr inbounds i16, ptr addrspace(1) %destValues, i64 4
+  store i16 %c, ptr addrspace(1) %arrayidx5
   ret void
 }

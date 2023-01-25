@@ -379,6 +379,8 @@ public:
   LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LegalizeResult lowerFPOWI(MachineInstr &MI);
 
+  LegalizeResult lowerISFPCLASS(MachineInstr &MI);
+
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);

@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -no-opaque-pointers -target-feature +altivec -target-feature +power8-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -target-feature +altivec -target-feature +power8-vector \
 // RUN: -triple powerpc64-unknown-linux -emit-llvm %s -o - | FileCheck %s
 //
-// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -no-opaque-pointers -target-feature +altivec -target-feature +power8-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -target-feature +altivec -target-feature +power8-vector \
 // RUN: -triple powerpc64le-unknown-linux -emit-llvm %s -o - | FileCheck %s 
 
-// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -no-opaque-pointers -target-feature +altivec -target-feature +power8-vector \
+// RUN: %clang_cc1 -flax-vector-conversions=none -O2 -target-feature +altivec -target-feature +power8-vector \
 // RUN: -triple powerpc64-unknown-aix -emit-llvm %s -o - | FileCheck %s
 #include <altivec.h>
 

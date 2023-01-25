@@ -34,7 +34,8 @@ static bool canComputePointerDiff(ScalarEvolution &SE,
 }
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
-                                const MemoryLocation &LocB, AAQueryInfo &AAQI) {
+                                const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                                const Instruction *) {
   // If either of the memory references is empty, it doesn't matter what the
   // pointer values are. This allows the code below to ignore this special
   // case.
@@ -101,11 +102,11 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
                              BO ? LocationSize::beforeOrAfterPointer()
                                 : LocB.Size,
                              BO ? AAMDNodes() : LocB.AATags),
-              AAQI) == AliasResult::NoAlias)
+              AAQI, nullptr) == AliasResult::NoAlias)
       return AliasResult::NoAlias;
 
   // Forward the query to the next analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
 /// Given an expression, try to find a base value.

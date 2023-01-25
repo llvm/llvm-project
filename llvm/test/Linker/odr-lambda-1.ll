@@ -43,7 +43,7 @@ define linkonce_odr void @_Z12consumeError5Error() #0 !dbg !13 {
 entry:
   %Err = alloca %class.Error, align 1
   %agg.tmp = alloca %class.anon, align 1
-  call void @llvm.dbg.declare(metadata %class.Error* %Err, metadata !17, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %Err, metadata !17, metadata !DIExpression()), !dbg !18
   call void @_Z15handleAllErrorsIZ12consumeError5ErrorEUlvE_EvT_(), !dbg !19
   ret void, !dbg !20
 }
@@ -55,7 +55,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define linkonce_odr void @_Z15handleAllErrorsIZ12consumeError5ErrorEUlvE_EvT_() #0 !dbg !21 {
 entry:
   %Handlers = alloca %class.anon, align 1
-  call void @llvm.dbg.declare(metadata %class.anon* %Handlers, metadata !27, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %Handlers, metadata !27, metadata !DIExpression()), !dbg !28
   ret void, !dbg !29
 }
 

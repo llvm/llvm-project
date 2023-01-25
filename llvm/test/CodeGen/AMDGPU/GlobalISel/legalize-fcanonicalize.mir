@@ -320,20 +320,18 @@ body: |
     ; GFX9-LABEL: name: test_fcanonicalize_v3s16
     ; GFX9: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+    ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[BITCAST]](s32), [[LSHR]](s32)
-    ; GFX9-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GFX9-NEXT: [[BUILD_VECTOR_TRUNC1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[BITCAST1]](s32), [[DEF1]](s32)
-    ; GFX9-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[BUILD_VECTOR_TRUNC]]
-    ; GFX9-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[BUILD_VECTOR_TRUNC1]]
-    ; GFX9-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[FCANONICALIZE]](<2 x s16>)
-    ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; GFX9-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[FCANONICALIZE1]](<2 x s16>)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST2]](s32), [[LSHR1]](s32), [[BITCAST3]](s32)
-    ; GFX9-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<3 x s32>)
+    ; GFX9-NEXT: [[DEF1:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[DEF1]](s16)
+    ; GFX9-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[UV]]
+    ; GFX9-NEXT: [[FCANONICALIZE1:%[0-9]+]]:_(<2 x s16>) = G_FCANONICALIZE [[BUILD_VECTOR]]
+    ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[FCANONICALIZE]](<2 x s16>)
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C]](s32)
+    ; GFX9-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[FCANONICALIZE1]](<2 x s16>)
+    ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[BITCAST1]](s32), [[LSHR]](s32), [[BITCAST2]](s32)
+    ; GFX9-NEXT: S_NOP 0, implicit [[BUILD_VECTOR1]](<3 x s32>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FCANONICALIZE %0
     %2:_(<3 x s32>) = G_ANYEXT %1

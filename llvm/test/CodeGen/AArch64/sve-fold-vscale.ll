@@ -4,7 +4,7 @@
 ; Check that vscale call is recognised by load/store reg/reg pattern and
 ; partially folded, with the rest pulled out of the loop.
 
-define void @ld1w_reg_loop([32000 x i32]* %addr) {
+define void @ld1w_reg_loop(ptr %addr) {
 ; CHECK-LABEL: ld1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -24,18 +24,17 @@ entry:
 
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
-  %2 = getelementptr inbounds [32000 x i32], [32000 x i32]* %addr, i64 0, i64 %index
-  %3 = bitcast i32* %2 to <vscale x 4 x i32>*
-  %load = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %3, align 16
+  %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
+  %load = load volatile <vscale x 4 x i32>, <vscale x 4 x i32>* %2, align 16
   %index.next = add i64 %index, %1
-  %4 = icmp eq i64 %index.next, 0
-  br i1 %4, label %for.cond.cleanup, label %vector.body
+  %3 = icmp eq i64 %index.next, 0
+  br i1 %3, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:
   ret void
 }
 
-define void @st1w_reg_loop([32000 x i32]* %addr, <vscale x 4 x i32> %val) {
+define void @st1w_reg_loop(ptr %addr, <vscale x 4 x i32> %val) {
 ; CHECK-LABEL: st1w_reg_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, xzr
@@ -55,12 +54,11 @@ entry:
 
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
-  %2 = getelementptr inbounds [32000 x i32], [32000 x i32]* %addr, i64 0, i64 %index
-  %3 = bitcast i32* %2 to <vscale x 4 x i32>*
-  store volatile <vscale x 4 x i32> %val, <vscale x 4 x i32>* %3, align 16
+  %2 = getelementptr inbounds [32000 x i32], ptr %addr, i64 0, i64 %index
+  store volatile <vscale x 4 x i32> %val, <vscale x 4 x i32>* %2, align 16
   %index.next = add i64 %index, %1
-  %4 = icmp eq i64 %index.next, 0
-  br i1 %4, label %for.cond.cleanup, label %vector.body
+  %3 = icmp eq i64 %index.next, 0
+  br i1 %3, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:
   ret void

@@ -26,6 +26,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include <memory>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -213,6 +214,10 @@ void DynamicLoaderPOSIXDYLD::UnloadSections(const ModuleSP module) {
 void DynamicLoaderPOSIXDYLD::ProbeEntry() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
 
+  // If we have a core file, we don't need any breakpoints.
+  if (IsCoreFile())
+    return;
+
   const addr_t entry = GetEntryPoint();
   if (entry == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(
@@ -297,6 +302,11 @@ bool DynamicLoaderPOSIXDYLD::EntryBreakpointHit(
 
 bool DynamicLoaderPOSIXDYLD::SetRendezvousBreakpoint() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
+
+  // If we have a core file, we don't need any breakpoints.
+  if (IsCoreFile())
+    return false;
+
   if (m_dyld_bid != LLDB_INVALID_BREAK_ID) {
     LLDB_LOG(log,
              "Rendezvous breakpoint breakpoint id {0} for pid {1}"
@@ -592,7 +602,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(const FileSpec &file,
   // (e.g. com.example.myapplication) instead of the main process binary
   // (/system/bin/app_process(32)). The logic is not sound in general (it
   // assumes base_addr is the real address, even though it actually is a load
-  // bias), but it happens to work on adroid because app_process has a file
+  // bias), but it happens to work on android because app_process has a file
   // address of zero.
   // This should be removed after we drop support for android-23.
   if (m_process->GetTarget().GetArchitecture().GetTriple().isAndroid()) {
@@ -685,11 +695,11 @@ addr_t DynamicLoaderPOSIXDYLD::ComputeLoadOffset() {
 }
 
 void DynamicLoaderPOSIXDYLD::EvalSpecialModulesStatus() {
-  if (llvm::Optional<uint64_t> vdso_base =
+  if (std::optional<uint64_t> vdso_base =
           m_auxv->GetAuxValue(AuxVector::AUXV_AT_SYSINFO_EHDR))
     m_vdso_base = *vdso_base;
 
-  if (llvm::Optional<uint64_t> interpreter_base =
+  if (std::optional<uint64_t> interpreter_base =
           m_auxv->GetAuxValue(AuxVector::AUXV_AT_BASE))
     m_interpreter_base = *interpreter_base;
 }
@@ -701,7 +711,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_auxv == nullptr)
     return LLDB_INVALID_ADDRESS;
 
-  llvm::Optional<uint64_t> entry_point =
+  std::optional<uint64_t> entry_point =
       m_auxv->GetAuxValue(AuxVector::AUXV_AT_ENTRY);
   if (!entry_point)
     return LLDB_INVALID_ADDRESS;
@@ -828,4 +838,8 @@ bool DynamicLoaderPOSIXDYLD::AlwaysRelyOnEHUnwindInfo(
     return false;
 
   return module_sp->GetFileSpec().GetPath() == "[vdso]";
+}
+
+bool DynamicLoaderPOSIXDYLD::IsCoreFile() const {
+  return !m_process->IsLiveDebugSession();
 }

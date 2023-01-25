@@ -14,6 +14,7 @@ static_library("Utils") {
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
 
     # MCTargetDesc depends on Utils, so we can't depend on the full
     # MCTargetDesc target here: it would form a cycle.

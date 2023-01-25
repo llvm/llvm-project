@@ -13,6 +13,8 @@
 #ifndef LINALG_BASE
 #define LINALG_BASE
 
+include "mlir/Dialect/Utils/StructuredOpsUtils.td"
+include "mlir/Dialect/Linalg/IR/LinalgEnums.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
@@ -34,7 +36,7 @@ def Linalg_Dialect : Dialect {
   }];
   let cppNamespace = "::mlir::linalg";
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "AffineDialect",
     "math::MathDialect",
     "memref::MemRefDialect",
@@ -44,6 +46,7 @@ def Linalg_Dialect : Dialect {
   let hasCanonicalizer = 1;
   let hasOperationAttrVerify = 1;
   let hasConstantMaterializer = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let extraClassDeclaration = [{
     /// Attribute name used to to memoize indexing maps for named ops.
     constexpr const static ::llvm::StringLiteral
@@ -57,42 +60,9 @@ def Linalg_Dialect : Dialect {
     private:
       llvm::StringMap<RegionBuilderFunType> namedStructuredOpRegionBuilders;
   }];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 // Define the function attribute enums matching the OpDSL functions.
-def UnaryFn : I32EnumAttr<"UnaryFn", "", [
-  I32EnumAttrCase<"exp", 0>,
-  I32EnumAttrCase<"log", 1>,
-  I32EnumAttrCase<"abs", 2>,
-  I32EnumAttrCase<"ceil", 3>,
-  I32EnumAttrCase<"floor", 4>,
-  I32EnumAttrCase<"negf", 5>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-def BinaryFn : I32EnumAttr<"BinaryFn", "", [
-  I32EnumAttrCase<"add", 0>,
-  I32EnumAttrCase<"sub", 1>,
-  I32EnumAttrCase<"mul", 2>,
-  I32EnumAttrCase<"max_signed", 3>,
-  I32EnumAttrCase<"min_signed", 4>,
-  I32EnumAttrCase<"max_unsigned", 5>,
-  I32EnumAttrCase<"min_unsigned", 6>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-def TypeFn : I32EnumAttr<"TypeFn", "", [
-  I32EnumAttrCase<"cast_signed", 0>,
-  I32EnumAttrCase<"cast_unsigned", 1>
-]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::linalg";
-}
-
 def UnaryFnAttr : EnumAttr<Linalg_Dialect, UnaryFn, "unary_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }
@@ -102,5 +72,11 @@ def BinaryFnAttr : EnumAttr<Linalg_Dialect, BinaryFn, "binary_fn"> {
 def TypeFnAttr : EnumAttr<Linalg_Dialect, TypeFn, "type_fn"> {
   let assemblyFormat = "`<` $value `>`";
 }
+
+def IteratorTypeEnum : EnumAttr<Linalg_Dialect, IteratorType, "iterator_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
+  "Iterator type should be an enum.">;
 
 #endif // LINALG_BASE

@@ -12,22 +12,22 @@
     br i1 %tobool5, label %j.us.us.preheader, label %entry.split
 
   j.us.us.preheader:                                ; preds = %entry
-    %.pre59 = load i32, i32* @d, align 4
+    %.pre59 = load i32, ptr @d, align 4
     br label %j.us.us
 
   j.us.us:                                          ; preds = %j.us.us, %if.end.us.us.us, %if.end.us.us.us.1, %if.end.us.us.us.2, %if.end.us.us.us.3, %if.end.us.us.us.4, %if.end.us.us.us.5, %if.end.us.us.us.6, %j.us.us.preheader
     %0 = phi i32 [ %.pre59, %j.us.us.preheader ], [ %12, %if.end.us.us.us.6 ], [ %11, %if.end.us.us.us.5 ], [ %10, %if.end.us.us.us.4 ], [ %9, %if.end.us.us.us.3 ], [ %8, %if.end.us.us.us.2 ], [ %7, %if.end.us.us.us.1 ], [ %2, %if.end.us.us.us ], [ %0, %j.us.us ]
-    %cmp.us.us = icmp slt i32 %0, ptrtoint (i32* @a to i32)
+    %cmp.us.us = icmp slt i32 %0, ptrtoint (ptr @a to i32)
     %conv1.us.us = zext i1 %cmp.us.us to i32
-    %1 = load i32, i32* @e, align 4
+    %1 = load i32, ptr @e, align 4
     %and.us.us = and i32 %1, %conv1.us.us
-    store i32 %and.us.us, i32* @e, align 4
+    store i32 %and.us.us, ptr @e, align 4
     %tobool4.us.us.us = icmp eq i32 %0, 0
     br i1 %tobool4.us.us.us, label %if.end.us.us.us, label %j.us.us
 
   if.end.us.us.us:                                  ; preds = %j.us.us
     tail call void asm sideeffect "", ""()
-    %2 = load i32, i32* @d, align 4
+    %2 = load i32, ptr @d, align 4
     %tobool4.us.us.us.1 = icmp eq i32 %2, 0
     br i1 %tobool4.us.us.us.1, label %if.end.us.us.us.1, label %j.us.us
 
@@ -36,16 +36,16 @@
     br i1 %tobool, label %j.us27.preheader, label %j.preheader
 
   j.preheader:                                      ; preds = %entry.split
-    %.pre = load i32, i32* @e, align 4
-    %.pre55 = load i32, i32* @d, align 4
-    %cmp = icmp slt i32 %conv, ptrtoint (i32* @a to i32)
+    %.pre = load i32, ptr @e, align 4
+    %.pre55 = load i32, ptr @d, align 4
+    %cmp = icmp slt i32 %conv, ptrtoint (ptr @a to i32)
     %conv1 = zext i1 %cmp to i32
     br label %j
 
   j.us27.preheader:                                 ; preds = %entry.split
-    %.pre56 = load i32, i32* @d, align 4
-    %.pre57 = load i32, i32* @e, align 4
-    %cmp.us29 = icmp slt i32 %.pre56, ptrtoint (i32* @a to i32)
+    %.pre56 = load i32, ptr @d, align 4
+    %.pre57 = load i32, ptr @e, align 4
+    %cmp.us29 = icmp slt i32 %.pre56, ptrtoint (ptr @a to i32)
     %conv1.us30 = zext i1 %cmp.us29 to i32
     br label %j.us27
 
@@ -56,7 +56,7 @@
     br i1 %4, label %if.end.us38, label %j.us27
 
   if.end.us38:                                      ; preds = %j.us27
-    store i32 %and.us31, i32* @e, align 4
+    store i32 %and.us31, ptr @e, align 4
     tail call void asm sideeffect "", ""()
     ret void
 
@@ -67,43 +67,43 @@
     br i1 %6, label %if.end, label %j
 
   if.end:                                           ; preds = %j
-    store i32 %and, i32* @e, align 4
+    store i32 %and, ptr @e, align 4
     tail call void asm sideeffect "", ""()
     ret void
 
   if.end.us.us.us.1:                                ; preds = %if.end.us.us.us
     tail call void asm sideeffect "", ""()
-    %7 = load i32, i32* @d, align 4
+    %7 = load i32, ptr @d, align 4
     %tobool4.us.us.us.2 = icmp eq i32 %7, 0
     br i1 %tobool4.us.us.us.2, label %if.end.us.us.us.2, label %j.us.us
 
   if.end.us.us.us.2:                                ; preds = %if.end.us.us.us.1
     tail call void asm sideeffect "", ""()
-    %8 = load i32, i32* @d, align 4
+    %8 = load i32, ptr @d, align 4
     %tobool4.us.us.us.3 = icmp eq i32 %8, 0
     br i1 %tobool4.us.us.us.3, label %if.end.us.us.us.3, label %j.us.us
 
   if.end.us.us.us.3:                                ; preds = %if.end.us.us.us.2
     tail call void asm sideeffect "", ""()
-    %9 = load i32, i32* @d, align 4
+    %9 = load i32, ptr @d, align 4
     %tobool4.us.us.us.4 = icmp eq i32 %9, 0
     br i1 %tobool4.us.us.us.4, label %if.end.us.us.us.4, label %j.us.us
 
   if.end.us.us.us.4:                                ; preds = %if.end.us.us.us.3
     tail call void asm sideeffect "", ""()
-    %10 = load i32, i32* @d, align 4
+    %10 = load i32, ptr @d, align 4
     %tobool4.us.us.us.5 = icmp eq i32 %10, 0
     br i1 %tobool4.us.us.us.5, label %if.end.us.us.us.5, label %j.us.us
 
   if.end.us.us.us.5:                                ; preds = %if.end.us.us.us.4
     tail call void asm sideeffect "", ""()
-    %11 = load i32, i32* @d, align 4
+    %11 = load i32, ptr @d, align 4
     %tobool4.us.us.us.6 = icmp eq i32 %11, 0
     br i1 %tobool4.us.us.us.6, label %if.end.us.us.us.6, label %j.us.us
 
   if.end.us.us.us.6:                                ; preds = %if.end.us.us.us.5
     tail call void asm sideeffect "", ""()
-    %12 = load i32, i32* @d, align 4
+    %12 = load i32, ptr @d, align 4
     %tobool4.us.us.us.7 = icmp eq i32 %12, 0
     br i1 %tobool4.us.us.us.7, label %if.end.us.us.us.7, label %j.us.us
 

@@ -7,22 +7,21 @@ target triple = "armv6-apple-darwin10"
 ; This function would crash RegAllocFast because it tried to spill %CPSR.
 define arm_apcscc void @clobber_cc() nounwind noinline ssp {
 entry:
-  %asmtmp = call %struct0 asm sideeffect "...", "=&r,=&r,r,Ir,r,~{cc},~{memory}"(i32* undef, i32 undef, i32 1) nounwind ; <%0> [#uses=0]
+  %asmtmp = call %struct0 asm sideeffect "...", "=&r,=&r,r,Ir,r,~{cc},~{memory}"(ptr undef, i32 undef, i32 1) nounwind ; <%0> [#uses=0]
   unreachable
 }
 
-@.str523 = private constant [256 x i8] c"<Unknown>\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 4 ; <[256 x i8]*> [#uses=1]
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+@.str523 = private constant [256 x i8] c"<Unknown>\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", align 4 ; <ptr> [#uses=1]
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
 ; This function uses the scavenger for an ADDri instruction.
 ; ARMBaseRegisterInfo::estimateRSStackSizeLimit must return a 255 limit.
 define arm_apcscc void @scavence_ADDri() nounwind {
 entry:
-  %letter = alloca i8                             ; <i8*> [#uses=0]
-  %prodvers = alloca [256 x i8]                   ; <[256 x i8]*> [#uses=1]
-  %buildver = alloca [256 x i8]                   ; <[256 x i8]*> [#uses=0]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 undef, i8* align 1 getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i1 false)
-  %prodvers2 = bitcast [256 x i8]* %prodvers to i8* ; <i8*> [#uses=1]
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %prodvers2, i8* align 1 getelementptr inbounds ([256 x i8], [256 x i8]* @.str523, i32 0, i32 0), i32 256, i1 false)
+  %letter = alloca i8                             ; <ptr> [#uses=0]
+  %prodvers = alloca [256 x i8]                   ; <ptr> [#uses=1]
+  %buildver = alloca [256 x i8]                   ; <ptr> [#uses=0]
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 undef, ptr align 1 @.str523, i32 256, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 %prodvers, ptr align 1 @.str523, i32 256, i1 false)
   unreachable
 }

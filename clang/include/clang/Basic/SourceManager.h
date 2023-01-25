@@ -53,6 +53,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -139,8 +140,9 @@ public:
   /// It is possible for this to be NULL if the ContentCache encapsulates
   /// an imaginary text buffer.
   ///
-  /// FIXME: Turn this into a FileEntryRef and remove Filename.
-  const FileEntry *OrigEntry;
+  /// FIXME: Make non-optional using a virtual file as needed, remove \c
+  /// Filename and use \c OrigEntry.getNameAsRequested() instead.
+  OptionalFileEntryRefDegradesToFileEntryPtr OrigEntry;
 
   /// References the file which the contents were actually loaded from.
   ///
@@ -177,9 +179,14 @@ public:
 
   mutable unsigned IsBufferInvalid : 1;
 
-  ContentCache(const FileEntry *Ent = nullptr) : ContentCache(Ent, Ent) {}
+  ContentCache()
+      : OrigEntry(std::nullopt), ContentsEntry(nullptr),
+        BufferOverridden(false), IsFileVolatile(false), IsTransient(false),
+        IsBufferInvalid(false) {}
 
-  ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
+  ContentCache(FileEntryRef Ent) : ContentCache(Ent, Ent) {}
+
+  ContentCache(FileEntryRef Ent, const FileEntry *contentEnt)
       : OrigEntry(Ent), ContentsEntry(contentEnt), BufferOverridden(false),
         IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 
@@ -205,7 +212,7 @@ public:
   ///
   /// \param Loc If specified, is the location that invalid file diagnostics
   ///   will be emitted at.
-  llvm::Optional<llvm::MemoryBufferRef>
+  std::optional<llvm::MemoryBufferRef>
   getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
                   SourceLocation Loc = SourceLocation()) const;
 
@@ -228,18 +235,18 @@ public:
   llvm::MemoryBuffer::BufferKind getMemoryBufferKind() const;
 
   /// Return the buffer, only if it has been loaded.
-  llvm::Optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
+  std::optional<llvm::MemoryBufferRef> getBufferIfLoaded() const {
     if (Buffer)
       return Buffer->getMemBufferRef();
-    return None;
+    return std::nullopt;
   }
 
   /// Return a StringRef to the source buffer data, only if it has already
   /// been loaded.
-  llvm::Optional<StringRef> getBufferDataIfLoaded() const {
+  std::optional<StringRef> getBufferDataIfLoaded() const {
     if (Buffer)
       return Buffer->getBuffer();
-    return None;
+    return std::nullopt;
   }
 
   /// Set the buffer.
@@ -251,7 +258,7 @@ public:
   /// Set the buffer to one that's not owned (or to nullptr).
   ///
   /// \pre Buffer cannot already be set.
-  void setUnownedBuffer(llvm::Optional<llvm::MemoryBufferRef> B) {
+  void setUnownedBuffer(std::optional<llvm::MemoryBufferRef> B) {
     assert(!Buffer && "Expected to be called right after construction");
     if (B)
       setBuffer(llvm::MemoryBuffer::getMemBuffer(*B));
@@ -542,10 +549,10 @@ class InBeforeInTUCacheEntry {
   /// If these match up with a subsequent query, the result can be reused.
   FileID LQueryFID, RQueryFID;
 
-  /// True if LQueryFID was created before RQueryFID.
+  /// The relative order of FileIDs that the CommonFID *immediately* includes.
   ///
   /// This is used to compare macro expansion locations.
-  bool IsLQFIDBeforeRQFID;
+  bool LChildBeforeRChild;
 
   /// The file found in common between the two \#include traces, i.e.,
   /// the nearest common ancestor of the \#include tree.
@@ -559,12 +566,17 @@ class InBeforeInTUCacheEntry {
   unsigned LCommonOffset, RCommonOffset;
 
 public:
+  InBeforeInTUCacheEntry() = default;
+  InBeforeInTUCacheEntry(FileID L, FileID R) : LQueryFID(L), RQueryFID(R) {
+    assert(L != R);
+  }
+
   /// Return true if the currently cached values match up with
   /// the specified LHS/RHS query.
   ///
   /// If not, we can't use the cache.
-  bool isCacheValid(FileID LHS, FileID RHS) const {
-    return LQueryFID == LHS && RQueryFID == RHS;
+  bool isCacheValid() const {
+    return CommonFID.isValid();
   }
 
   /// If the cache is valid, compute the result given the
@@ -581,29 +593,28 @@ public:
     // one of the locations points at the inclusion/expansion point of the other
     // in which case its FileID will come before the other.
     if (LOffset == ROffset)
-      return IsLQFIDBeforeRQFID;
+      return LChildBeforeRChild;
 
     return LOffset < ROffset;
   }
 
   /// Set up a new query.
-  void setQueryFIDs(FileID LHS, FileID RHS, bool isLFIDBeforeRFID) {
+  /// If it matches the old query, we can keep the cached answer.
+  void setQueryFIDs(FileID LHS, FileID RHS) {
     assert(LHS != RHS);
-    LQueryFID = LHS;
-    RQueryFID = RHS;
-    IsLQFIDBeforeRQFID = isLFIDBeforeRFID;
-  }
-
-  void clear() {
-    LQueryFID = RQueryFID = FileID();
-    IsLQFIDBeforeRQFID = false;
+    if (LQueryFID != LHS || RQueryFID != RHS) {
+      LQueryFID = LHS;
+      RQueryFID = RHS;
+      CommonFID = FileID();
+    }
   }
 
   void setCommonLoc(FileID commonFID, unsigned lCommonOffset,
-                    unsigned rCommonOffset) {
+                    unsigned rCommonOffset, bool LParentBeforeRParent) {
     CommonFID = commonFID;
     LCommonOffset = lCommonOffset;
     RCommonOffset = rCommonOffset;
+    LChildBeforeRChild = LParentBeforeRParent;
   }
 };
 
@@ -656,7 +667,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   struct OverriddenFilesInfoTy {
     /// Files that have been overridden with the contents from another
     /// file.
-    llvm::DenseMap<const FileEntry *, const FileEntry *> OverriddenFiles;
+    llvm::DenseMap<const FileEntry *, FileEntryRef> OverriddenFiles;
 
     /// Files that were overridden with a memory buffer.
     llvm::DenseSet<const FileEntry *> OverriddenFilesWithBuffer;
@@ -701,7 +712,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// not have been loaded, so that value would be unknown.
   SourceLocation::UIntTy CurrentLoadedOffset;
 
-  /// The highest possible offset is 2^32-1 (2^63-1 for 64-bit source
+  /// The highest possible offset is 2^31-1 (2^63-1 for 64-bit source
   /// locations), so CurrentLoadedOffset starts at 2^31 (2^63 resp.).
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
@@ -929,8 +940,8 @@ public:
 
   /// Retrieve the memory buffer associated with the given file.
   ///
-  /// Returns None if the buffer is not valid.
-  llvm::Optional<llvm::MemoryBufferRef>
+  /// Returns std::nullopt if the buffer is not valid.
+  std::optional<llvm::MemoryBufferRef>
   getMemoryBufferForFileOrNone(const FileEntry *File);
 
   /// Retrieve the memory buffer associated with the given file.
@@ -974,8 +985,7 @@ public:
   ///
   /// \param NewFile the file whose contents will be used as the
   /// data instead of the contents of the given source file.
-  void overrideFileContents(const FileEntry *SourceFile,
-                            const FileEntry *NewFile);
+  void overrideFileContents(const FileEntry *SourceFile, FileEntryRef NewFile);
 
   /// Returns true if the file contents have been overridden.
   bool isFileOverridden(const FileEntry *File) const {
@@ -990,11 +1000,11 @@ public:
   }
 
   /// Bypass the overridden contents of a file.  This creates a new FileEntry
-  /// and initializes the content cache for it.  Returns None if there is no
-  /// such file in the filesystem.
+  /// and initializes the content cache for it.  Returns std::nullopt if there
+  /// is no such file in the filesystem.
   ///
   /// This should be called before parsing has begun.
-  Optional<FileEntryRef> bypassFileContentsOverride(FileEntryRef File);
+  OptionalFileEntryRef bypassFileContentsOverride(FileEntryRef File);
 
   /// Specify that a file is transient.
   void setFileIsTransient(const FileEntry *SourceFile);
@@ -1011,13 +1021,14 @@ public:
 
   /// Return the buffer for the specified FileID.
   ///
-  /// If there is an error opening this buffer the first time, return None.
-  llvm::Optional<llvm::MemoryBufferRef>
+  /// If there is an error opening this buffer the first time, return
+  /// std::nullopt.
+  std::optional<llvm::MemoryBufferRef>
   getBufferOrNone(FileID FID, SourceLocation Loc = SourceLocation()) const {
     if (auto *Entry = getSLocEntryForFile(FID))
       return Entry->getFile().getContentCache().getBufferOrNone(
           Diag, getFileManager(), Loc);
-    return None;
+    return std::nullopt;
   }
 
   /// Return the buffer for the specified FileID.
@@ -1039,17 +1050,17 @@ public:
   }
 
   /// Returns the FileEntryRef for the provided FileID.
-  Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
-    if (auto *Entry = getFileEntryForID(FID))
-      return Entry->getLastRef();
-    return None;
+  OptionalFileEntryRef getFileEntryRefForID(FileID FID) const {
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().getContentCache().OrigEntry;
+    return std::nullopt;
   }
 
   /// Returns the filename for the provided FileID, unless it's a built-in
   /// buffer that's not represented by a filename.
   ///
-  /// Returns None for non-files and built-in files.
-  Optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
+  /// Returns std::nullopt for non-files and built-in files.
+  std::optional<StringRef> getNonBuiltinFilenameForID(FileID FID) const;
 
   /// Returns the FileEntry record for the provided SLocEntry.
   const FileEntry *getFileEntryForSLocEntry(const SrcMgr::SLocEntry &sloc) const
@@ -1065,16 +1076,16 @@ public:
   StringRef getBufferData(FileID FID, bool *Invalid = nullptr) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if invalid.
+  /// specified FileID, returning std::nullopt if invalid.
   ///
   /// \param FID The file ID whose contents will be returned.
-  llvm::Optional<StringRef> getBufferDataOrNone(FileID FID) const;
+  std::optional<StringRef> getBufferDataOrNone(FileID FID) const;
 
   /// Return a StringRef to the source buffer data for the
-  /// specified FileID, returning None if it's not yet loaded.
+  /// specified FileID, returning std::nullopt if it's not yet loaded.
   ///
   /// \param FID The file ID whose contents will be returned.
-  llvm::Optional<StringRef> getBufferDataIfLoaded(FileID FID) const;
+  std::optional<StringRef> getBufferDataIfLoaded(FileID FID) const;
 
   /// Get the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
@@ -1106,13 +1117,7 @@ public:
   /// the entry in SLocEntryTable which contains the specified location.
   ///
   FileID getFileID(SourceLocation SpellingLoc) const {
-    SourceLocation::UIntTy SLocOffset = SpellingLoc.getOffset();
-
-    // If our one-entry cache covers this offset, just return it.
-    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
-      return LastFileIDLookup;
-
-    return getFileIDSlow(SLocOffset);
+    return getFileID(SpellingLoc.getOffset());
   }
 
   /// Return the filename of the file containing a SourceLocation.
@@ -1689,6 +1694,10 @@ public:
 
   void dump() const;
 
+  // Produce notes describing the current source location address space usage.
+  void noteSLocAddressSpaceUsage(DiagnosticsEngine &Diag,
+                                 std::optional<unsigned> MaxNotes = 32) const;
+
   /// Get the number of local SLocEntries we have.
   unsigned local_sloc_entry_size() const { return LocalSLocEntryTable.size(); }
 
@@ -1739,12 +1748,12 @@ public:
 
   /// Returns true if \p Loc came from a PCH/Module.
   bool isLoadedSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() >= CurrentLoadedOffset;
+    return isLoadedOffset(Loc.getOffset());
   }
 
   /// Returns true if \p Loc did not come from a PCH/Module.
   bool isLocalSourceLocation(SourceLocation Loc) const {
-    return Loc.getOffset() < NextLocalOffset;
+    return isLocalOffset(Loc.getOffset());
   }
 
   /// Returns true if \p FID came from a PCH/Module.
@@ -1812,6 +1821,22 @@ private:
   const SrcMgr::SLocEntry &
   getLoadedSLocEntryByID(int ID, bool *Invalid = nullptr) const {
     return getLoadedSLocEntry(static_cast<unsigned>(-ID - 2), Invalid);
+  }
+
+  FileID getFileID(SourceLocation::UIntTy SLocOffset) const {
+    // If our one-entry cache covers this offset, just return it.
+    if (isOffsetInFileID(LastFileIDLookup, SLocOffset))
+      return LastFileIDLookup;
+
+    return getFileIDSlow(SLocOffset);
+  }
+
+  bool isLocalOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset < CurrentLoadedOffset;
+  }
+
+  bool isLoadedOffset(SourceLocation::UIntTy SLocOffset) const {
+    return SLocOffset >= CurrentLoadedOffset;
   }
 
   /// Implements the common elements of storing an expansion info struct into
@@ -1918,11 +1943,11 @@ public:
   }
 };
 
-/// SourceManager and necessary depdencies (e.g. VFS, FileManager) for a single
-/// in-memorty file.
+/// SourceManager and necessary dependencies (e.g. VFS, FileManager) for a
+/// single in-memorty file.
 class SourceManagerForFile {
 public:
-  /// Creates SourceManager and necessary depdencies (e.g. VFS, FileManager).
+  /// Creates SourceManager and necessary dependencies (e.g. VFS, FileManager).
   /// The main file in the SourceManager will be \p FileName with \p Content.
   SourceManagerForFile(StringRef FileName, StringRef Content);
 

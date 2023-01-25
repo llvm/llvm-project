@@ -54,8 +54,7 @@ define void @f0() #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %v0 = alloca %s.0
-  %v1 = getelementptr %s.0, %s.0* %v0, i32 0, i32 0
-  atomicrmw add i8* %v1, i8 2 monotonic
+  atomicrmw add ptr %v0, i8 2 monotonic
   ret void
 }
 
@@ -116,7 +115,7 @@ define void @f1() #0 {
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
 entry:
-  %v0 = cmpxchg volatile i8* @g0, i8 0, i8 1 seq_cst seq_cst
+  %v0 = cmpxchg volatile ptr @g0, i8 0, i8 1 seq_cst seq_cst
   ret void
 }
 

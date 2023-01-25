@@ -12,9 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 using namespace ast_matchers;
 
 const FunctionDecl *getSurroundingFunction(ASTContext &Context,
@@ -90,6 +88,4 @@ bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM) {
          !utils::rangeContainsMacroExpansion(Range, SM);
 }
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils

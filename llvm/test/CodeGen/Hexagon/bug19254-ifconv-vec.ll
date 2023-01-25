@@ -7,14 +7,14 @@ target triple = "hexagon"
 @g0 = private unnamed_addr constant [39 x i8] c"\0AnumTrainingSet =%d  numFeatures = %d\0A\00", align 1
 
 ; Function Attrs: nounwind
-declare i32 @f0(i8* nocapture readonly, ...) #0
+declare i32 @f0(ptr nocapture readonly, ...) #0
 
 ; Function Attrs: nounwind
-define void @f1(i16* nocapture readnone %a0, i16 signext %a1, i16 signext %a2, i16* nocapture readnone %a3, i16* nocapture readnone %a4, i16* nocapture %a5, i16 signext %a6, i16 signext %a7) #0 {
+define void @f1(ptr nocapture readnone %a0, i16 signext %a1, i16 signext %a2, ptr nocapture readnone %a3, ptr nocapture readnone %a4, ptr nocapture %a5, i16 signext %a6, i16 signext %a7) #0 {
 b0:
   %v0 = sext i16 %a1 to i32
   %v1 = sext i16 %a2 to i32
-  %v2 = tail call i32 (i8*, ...) @f0(i8* getelementptr inbounds ([39 x i8], [39 x i8]* @g0, i32 0, i32 0), i32 %v0, i32 %v1) #2
+  %v2 = tail call i32 (ptr, ...) @f0(ptr @g0, i32 %v0, i32 %v1) #2
   %v3 = tail call <32 x i32> @llvm.hexagon.V6.vd0.128B()
   br label %b1
 
@@ -48,7 +48,7 @@ b4:                                               ; preds = %b18
   %v21 = extractelement <32 x i32> %v56, i32 0
   %v22 = mul nsw i32 %v20, %v21
   %v23 = trunc i32 %v22 to i16
-  store i16 %v23, i16* %a5, align 2, !tbaa !0
+  store i16 %v23, ptr %a5, align 2, !tbaa !0
   ret void
 
 b5:                                               ; preds = %b3

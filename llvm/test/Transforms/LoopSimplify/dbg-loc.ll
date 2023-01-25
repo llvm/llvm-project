@@ -1,10 +1,10 @@
 ; Check that LoopSimplify creates debug locations in synthesized basic blocks.
-; RUN: opt -loop-simplify %s -S -o - | FileCheck %s
+; RUN: opt -passes=loop-simplify %s -S -o - | FileCheck %s
 
 %union.anon = type { i32 }
 %"Length" = type <{ %union.anon, i8, i8, i8, i8 }>
-declare void @bar(%"Length"*) #3
-@catchtypeinfo = external unnamed_addr constant { i8*, i8*, i8* }
+declare void @bar(ptr) #3
+@catchtypeinfo = external unnamed_addr constant { ptr, ptr, ptr }
 declare i32 @__gxx_personality_v0(...)
 declare void @f1()
 declare void @f2()
@@ -16,26 +16,26 @@ declare void @f3()
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label %for.end, !dbg [[LOOPEXIT_LOC:![0-9]+]]
 
-define linkonce_odr hidden void @foo(%"Length"* %begin, %"Length"* %end) nounwind ssp uwtable align 2 !dbg !6 {
+define linkonce_odr hidden void @foo(ptr %begin, ptr %end) nounwind ssp uwtable align 2 !dbg !6 {
 entry:
-  %cmp.4 = icmp eq %"Length"* %begin, %end, !dbg !7
+  %cmp.4 = icmp eq ptr %begin, %end, !dbg !7
   br i1 %cmp.4, label %for.end, label %for.body, !dbg !8
 
 for.body:                                         ; preds = %entry, %length.exit
-  %begin.sink5 = phi %"Length"* [ %incdec.ptr, %length.exit ], [ %begin, %entry ]
-  tail call void @llvm.dbg.value(metadata %"Length"* %begin.sink5, metadata !15, metadata !16), !dbg !17
-  %m_type.i.i.i = getelementptr inbounds %"Length", %"Length"* %begin.sink5, i64 0, i32 2, !dbg !9
-  %0 = load i8, i8* %m_type.i.i.i, align 1, !dbg !9
+  %begin.sink5 = phi ptr [ %incdec.ptr, %length.exit ], [ %begin, %entry ]
+  tail call void @llvm.dbg.value(metadata ptr %begin.sink5, metadata !15, metadata !16), !dbg !17
+  %m_type.i.i.i = getelementptr inbounds %"Length", ptr %begin.sink5, i64 0, i32 2, !dbg !9
+  %0 = load i8, ptr %m_type.i.i.i, align 1, !dbg !9
   %cmp.i.i = icmp eq i8 %0, 9, !dbg !7
   br i1 %cmp.i.i, label %if.then.i, label %length.exit, !dbg !8
 
 if.then.i:                                        ; preds = %for.body
-  tail call void @bar(%"Length"* %begin.sink5) #7, !dbg !10
+  tail call void @bar(ptr %begin.sink5) #7, !dbg !10
   br label %length.exit, !dbg !10
 
 length.exit:                        ; preds = %for.body, %if.then.i
-  %incdec.ptr = getelementptr inbounds %"Length", %"Length"* %begin.sink5, i64 1, !dbg !11
-  %cmp = icmp eq %"Length"* %incdec.ptr, %end, !dbg !7
+  %incdec.ptr = getelementptr inbounds %"Length", ptr %begin.sink5, i64 1, !dbg !11
+  %cmp = icmp eq ptr %incdec.ptr, %end, !dbg !7
   br i1 %cmp, label %for.end, label %for.body, !dbg !8
 
 for.end:                                          ; preds = %length.exit, %entry
@@ -48,13 +48,13 @@ for.end:                                          ; preds = %length.exit, %entry
 ; CHECK: catch.preheader.split-lp:
 ; CHECK:   br label %catch, !dbg [[LPAD_PREHEADER_LOC]]
 
-define void @with_landingpad() uwtable ssp personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @with_landingpad() uwtable ssp personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @f1() to label %try.cont19 unwind label %catch, !dbg !13
 
 catch:                                            ; preds = %if.else, %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* bitcast ({ i8*, i8*, i8* }* @catchtypeinfo to i8*), !dbg !13
+  %0 = landingpad { ptr, i32 }
+          catch ptr @catchtypeinfo, !dbg !13
   invoke void @f3() to label %if.else unwind label %eh.resume, !dbg !13
 
 if.else:                                          ; preds = %catch
@@ -64,9 +64,9 @@ try.cont19:                                       ; preds = %if.else, %entry
   ret void, !dbg !13
 
 eh.resume:                                        ; preds = %catch
-  %1 = landingpad { i8*, i32 }
-          cleanup catch i8* bitcast ({ i8*, i8*, i8* }* @catchtypeinfo to i8*), !dbg !13
-  resume { i8*, i32 } undef, !dbg !13
+  %1 = landingpad { ptr, i32 }
+          cleanup catch ptr @catchtypeinfo, !dbg !13
+  resume { ptr, i32 } undef, !dbg !13
 }
 
 ; Function Attrs: nounwind readnone

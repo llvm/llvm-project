@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(canonicalize,cse),one-shot-bufferize{bufferize-function-boundaries}" |\
-// RUN: mlir-opt -pass-pipeline="func.func(buffer-deallocation,convert-vector-to-scf,lower-affine,convert-linalg-to-loops)" |\
-// RUN: mlir-opt -pass-pipeline="func.func(canonicalize,convert-scf-to-cf),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" | \
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(canonicalize,cse),one-shot-bufferize{bufferize-function-boundaries})" |\
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(buffer-deallocation,convert-vector-to-scf,lower-affine,convert-linalg-to-loops))" |\
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(canonicalize,convert-scf-to-cf),convert-vector-to-llvm,expand-strided-metadata,lower-affine,convert-arith-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts)" | \
 
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext,%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext |\
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext,%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
 #map0 = affine_map<(d0, d1)[s0] -> ((d1 - d0) ceildiv s0)>

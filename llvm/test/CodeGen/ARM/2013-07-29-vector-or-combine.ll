@@ -15,13 +15,13 @@ entry:
 ; CHECK: vorr q8, q8, q9
 ; CHECK: vst1.32 {d16, d17}, [r0]
 vector.body:
-  %wide.load = load <4 x i32>, <4 x i32>* undef, align 4
+  %wide.load = load <4 x i32>, ptr undef, align 4
   %0 = and <4 x i32> %wide.load, <i32 -16711936, i32 -16711936, i32 -16711936, i32 -16711936>
   %1 = sub <4 x i32> %wide.load, zeroinitializer
   %2 = and <4 x i32> %1, <i32 16711680, i32 16711680, i32 16711680, i32 16711680>
   %3 = or <4 x i32> %0, <i32 1, i32 2, i32 3, i32 4>
   %4 = or <4 x i32> %3, %2
-  store <4 x i32> %4, <4 x i32>* undef, align 4
+  store <4 x i32> %4, ptr undef, align 4
   br label %vector.body
 
 for.end:

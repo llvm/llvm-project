@@ -12,8 +12,7 @@
 #include "InputSection.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 using SectionPair = std::pair<const InputSection *, const InputSection *>;
 
@@ -70,13 +69,12 @@ private:
     llvm::DenseMap<llvm::StringRef, size_t> objectFiles;
   };
 
-  llvm::Optional<size_t> getSymbolPriority(const Defined *sym);
+  std::optional<size_t> getSymbolPriority(const Defined *sym);
   llvm::DenseMap<llvm::StringRef, SymbolPriorityEntry> priorities;
   llvm::MapVector<SectionPair, uint64_t> callGraphProfile;
 };
 
 extern PriorityBuilder priorityBuilder;
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

@@ -13,7 +13,6 @@
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
@@ -31,6 +30,7 @@
 #include <iterator>
 #include <list>
 #include <numeric>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -585,7 +585,7 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   return Freqs[Node.Index].Integer;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                                  const BlockNode &Node,
                                                  bool AllowSynthetic) const {
@@ -593,13 +593,13 @@ BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
                                  AllowSynthetic);
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
                                                     uint64_t Freq,
                                                     bool AllowSynthetic) const {
   auto EntryCount = F.getEntryCount(AllowSynthetic);
   if (!EntryCount)
-    return None;
+    return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
   APInt BlockCount(128, EntryCount->getCount());
   APInt BlockFreq(128, Freq);

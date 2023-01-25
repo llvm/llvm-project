@@ -55,6 +55,8 @@ def DirectivePwr10: SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR10", "">;
 def DirectivePwrFuture
     : SubtargetFeature<"", "CPUDirective", "PPC::DIR_PWR_FUTURE", "">;
 
+// Specifies that the selected CPU supports 64-bit instructions, regardless of
+// whether we are in 32-bit or 64-bit mode.
 def Feature64Bit     : SubtargetFeature<"64bit","Has64BitSupport", "true",
                                         "Enable 64-bit instructions">;
 def AIXOS: SubtargetFeature<"aix", "IsAIX", "true", "AIX OS">;
@@ -63,8 +65,14 @@ def FeatureModernAIXAs
                        "AIX system assembler is modern enough to support new mnes">;
 def FeatureHardFloat : SubtargetFeature<"hard-float", "HasHardFloat", "true",
                               "Enable floating-point instructions">;
+
+// Specifies that we are in 64-bit mode or that we should use 64-bit registers
+// in 32-bit mode when possible. Requires Feature64Bit to be enabled.
 def Feature64BitRegs : SubtargetFeature<"64bitregs","Use64BitRegs", "true",
                               "Enable 64-bit registers usage for ppc32 [beta]">;
+
+// Specify if we should store and manipulate i1 values in the individual
+// condition register bits.
 def FeatureCRBits    : SubtargetFeature<"crbits", "UseCRBits", "true",
                               "Use condition-register bits individually">;
 def FeatureFPU       : SubtargetFeature<"fpu","HasFPU","true",
@@ -133,7 +141,7 @@ def FeatureMSYNC     : SubtargetFeature<"msync", "HasOnlyMSYNC", "true",
                               [FeatureBookE]>;
 def FeatureE500      : SubtargetFeature<"e500", "IsE500", "true",
                                         "Enable E500/E500mc instructions">;
-def FeatureSecurePlt : SubtargetFeature<"secure-plt","SecurePlt", "true",
+def FeatureSecurePlt : SubtargetFeature<"secure-plt","IsSecurePlt", "true",
                                         "Enable secure plt mode">;
 def FeaturePPC4xx    : SubtargetFeature<"ppc4xx", "IsPPC4xx", "true",
                                         "Enable PPC 4xx instructions">;
@@ -172,7 +180,7 @@ def FeatureLongCall : SubtargetFeature<"longcall", "UseLongCalls", "true",
                                        "Always use indirect calls">;
 def FeatureHTM : SubtargetFeature<"htm", "HasHTM", "true",
                                   "Enable Hardware Transactional Memory instructions">;
-def FeatureMFTB   : SubtargetFeature<"", "FeatureMFTB", "true",
+def FeatureMFTB   : SubtargetFeature<"", "IsFeatureMFTB", "true",
                                         "Implement mftb using the mfspr instruction">;
 def FeatureFusion : SubtargetFeature<"fusion", "HasFusion", "true",
                                      "Target supports instruction fusion">;
@@ -246,7 +254,7 @@ def FeatureSlowPOPCNTD : SubtargetFeature<"slow-popcntd","HasPOPCNTD",
                                           "POPCNTD_Slow",
                                           "Has slow popcnt[dw] instructions">;
 
-def DeprecatedDST    : SubtargetFeature<"", "DeprecatedDST", "true",
+def DeprecatedDST    : SubtargetFeature<"", "IsDeprecatedDST", "true",
   "Treat vector data stream cache control instructions as deprecated">;
 
 def FeatureISA2_06 : SubtargetFeature<"isa-v206-instructions", "IsISA2_06",
@@ -315,6 +323,9 @@ def FeaturePredictableSelectIsExpensive :
                    "PredictableSelectIsExpensive",
                    "true",
                    "Prefer likely predicted branches over selects">;
+
+def FeatureFastMFLR : SubtargetFeature<"fast-MFLR", "HasFastMFLR", "true",
+                                       "MFLR is a fast instruction">;
 
 // Since new processors generally contain a superset of features of those that
 // came before them, the idea is to make implementations of new processors
@@ -424,7 +435,7 @@ def ProcessorFeatures {
     !listconcat(FusionFeatures, [
        DirectivePwr10, FeatureISA3_1, FeaturePrefixInstrs,
        FeaturePCRelativeMemops, FeatureP10Vector, FeatureMMA,
-       FeaturePairedVectorMemops]);
+       FeaturePairedVectorMemops, FeatureFastMFLR]);
   list<SubtargetFeature> P10SpecificFeatures = [];
   list<SubtargetFeature> P10InheritableFeatures =
     !listconcat(P9InheritableFeatures, P10AdditionalFeatures);
@@ -664,6 +675,7 @@ def PPCInstrInfo : InstrInfo {
   let decodePositionallyEncodedOperands = 1;
 
   let noNamedPositionallyEncodedOperands = 1;
+  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def PPCAsmWriter : AsmWriter {

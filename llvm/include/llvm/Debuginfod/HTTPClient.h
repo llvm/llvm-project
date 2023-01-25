@@ -27,6 +27,7 @@ enum class HTTPMethod { GET };
 /// A stateless description of an outbound HTTP request.
 struct HTTPRequest {
   SmallString<128> Url;
+  SmallVector<std::string, 0> Headers;
   HTTPMethod Method = HTTPMethod::GET;
   bool FollowRedirects = true;
   HTTPRequest(StringRef Url);

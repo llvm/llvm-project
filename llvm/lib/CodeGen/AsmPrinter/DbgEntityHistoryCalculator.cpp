@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <map>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -76,7 +76,7 @@ bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,
   auto &Entries = VarEntries[Var];
   if (!Entries.empty() && Entries.back().isDbgValue() &&
       !Entries.back().isClosed() &&
-      Entries.back().getInstr()->isIdenticalTo(MI)) {
+      Entries.back().getInstr()->isEquivalentDbgInstr(MI)) {
     LLVM_DEBUG(dbgs() << "Coalescing identical DBG_VALUE entries:\n"
                       << "\t" << Entries.back().getInstr() << "\t" << MI
                       << "\n");
@@ -110,20 +110,20 @@ void DbgValueHistoryMap::Entry::endEntry(EntryIndex Index) {
 /// range in Ranges. EndMI can be nullptr to indicate that the range is
 /// unbounded. Assumes Ranges is ordered and disjoint. Returns true and points
 /// to the first intersecting scope range if one exists.
-static Optional<ArrayRef<InsnRange>::iterator>
+static std::optional<ArrayRef<InsnRange>::iterator>
 intersects(const MachineInstr *StartMI, const MachineInstr *EndMI,
            const ArrayRef<InsnRange> &Ranges,
            const InstructionOrdering &Ordering) {
   for (auto RangesI = Ranges.begin(), RangesE = Ranges.end();
        RangesI != RangesE; ++RangesI) {
     if (EndMI && Ordering.isBefore(EndMI, RangesI->first))
-      return None;
+      return std::nullopt;
     if (EndMI && !Ordering.isBefore(RangesI->second, EndMI))
       return RangesI;
     if (Ordering.isBefore(StartMI, RangesI->second))
       return RangesI;
   }
-  return None;
+  return std::nullopt;
 }
 
 void DbgValueHistoryMap::trimLocationRanges(
@@ -264,7 +264,7 @@ bool DbgValueHistoryMap::hasNonEmptyLocation(const Entries &Entries) const {
     const MachineInstr *MI = Entry.getInstr();
     assert(MI->isDebugValue());
     // A DBG_VALUE $noreg is an empty variable location
-    if (MI->getOperand(0).isReg() && MI->getOperand(0).getReg() == 0)
+    if (MI->isUndefDebugValue())
       continue;
 
     return true;
@@ -495,7 +495,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
             continue;
           // If this is a virtual register, only clobber it since it doesn't
           // have aliases.
-          if (Register::isVirtualRegister(MO.getReg()))
+          if (MO.getReg().isVirtual())
             clobberRegisterUses(RegVars, MO.getReg(), DbgValues, LiveEntries,
                                 MI);
           // If this is a register def operand, it may end a debug value

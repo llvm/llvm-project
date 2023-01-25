@@ -11,4 +11,4 @@
 @assoc = private constant i8 2, !associated !1
 
 !0 = !{i32 0, !"typeid"}
-!1 = !{i8* @g}
+!1 = !{ptr @g}

@@ -91,10 +91,17 @@ int RTNAME(PointerAllocateSource)(Descriptor &, const Descriptor &source,
 
 // Deallocates a data pointer, which must have been allocated by
 // PointerAllocate(), possibly copied with PointerAssociate().
-// Finalizes elements &/or components as needed.  The pointer is left
+// Finalizes elements &/or components as needed. The pointer is left
 // in an initialized disassociated state suitable for reallocation
 // with the same bounds, cobounds, and length type parameters.
 int RTNAME(PointerDeallocate)(Descriptor &, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
+
+// Same as PointerDeallocate but also set the dynamic type as the declared type
+// as mentioned in 7.3.2.3 note 7.
+int RTNAME(PointerDeallocatePolymorphic)(Descriptor &,
+    const typeInfo::DerivedType *, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
 

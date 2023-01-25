@@ -3,7 +3,7 @@
 
 ; Currently we only lower stores with shape information, but need to embed the
 ; matrix in a flat vector for function calls and returns.
-define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
+define <8 x double> @strided_load_4x4(<8 x double> %in, ptr %Ptr) {
 ; CHECK-LABEL: @strided_load_4x4(
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[IN:%.*]], <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x double> [[IN]], <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -26,23 +26,18 @@ define <8 x double> @strided_load_4x4(<8 x double> %in, <8 x double>* %Ptr) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> [[TMP16]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x double> [[TMP17]], <4 x double> [[TMP18]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP20:%.*]] = bitcast <8 x double>* [[PTR:%.*]] to double*
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast double* [[TMP20]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, double* [[TMP20]], i64 2
-; CHECK-NEXT:    [[VEC_CAST2:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[VEC_CAST2]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, double* [[TMP20]], i64 4
-; CHECK-NEXT:    [[VEC_CAST4:%.*]] = bitcast double* [[VEC_GEP3]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP12]], <2 x double>* [[VEC_CAST4]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, double* [[TMP20]], i64 6
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP16]], <2 x double>* [[VEC_CAST6]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[PTR:%.*]], align 8
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[PTR]], i64 2
+; CHECK-NEXT:    store <2 x double> [[TMP8]], ptr [[VEC_GEP]], align 8
+; CHECK-NEXT:    [[VEC_GEP2:%.*]] = getelementptr double, ptr [[PTR]], i64 4
+; CHECK-NEXT:    store <2 x double> [[TMP12]], ptr [[VEC_GEP2]], align 8
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[PTR]], i64 6
+; CHECK-NEXT:    store <2 x double> [[TMP16]], ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    call void @foo(<8 x double> [[TMP19]])
 ; CHECK-NEXT:    ret <8 x double> [[TMP19]]
 ;
   %transposed = call <8 x double> @llvm.matrix.transpose(<8 x double> %in, i32 4, i32 2)
-  store <8 x double> %transposed, <8 x double>* %Ptr, align 8
+  store <8 x double> %transposed, ptr %Ptr, align 8
   call void @foo(<8 x double> %transposed)
   ret <8 x double> %transposed
 }

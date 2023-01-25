@@ -1,5 +1,4 @@
 // RUN: fir-opt --target-rewrite="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
-// UNSUPPORTED: darwin
 
 // Test that we rewrite the signature and body of a func.function that returns a
 // complex<16>.
@@ -48,7 +47,7 @@ func.func @addrof() {
 }
 
 // CHECK-LABEL:   func.func @returncomplex16(
-// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.sret}) {
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.sret = tuple<!fir.real<16>, !fir.real<16>>}) {
 // CHECK:           %[[VAL_1:.*]] = fir.undefined !fir.complex<16>
 // CHECK:           %[[VAL_2:.*]] = arith.constant 2.000000e+00 : f128
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (f128) -> !fir.real<16>
@@ -61,7 +60,7 @@ func.func @addrof() {
 // CHECK:           fir.store %[[VAL_8]] to %[[VAL_9]] : !fir.ref<!fir.complex<16>>
 // CHECK:           return
 // CHECK:         }
-// CHECK:         func.func private @paramcomplex16(!fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval})
+// CHECK:         func.func private @paramcomplex16(!fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>})
 
 // CHECK-LABEL:   func.func @callcomplex16() {
 // CHECK:           %[[VAL_0:.*]] = fir.alloca tuple<!fir.real<16>, !fir.real<16>>
@@ -74,10 +73,10 @@ func.func @addrof() {
 // CHECK:           fir.call @paramcomplex16(%[[VAL_4]]) : (!fir.ref<tuple<!fir.real<16>, !fir.real<16>>>) -> ()
 // CHECK:           return
 // CHECK:         }
-// CHECK:         func.func private @calleemultipleparamscomplex16(!fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval}, !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval}, !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval})
+// CHECK:         func.func private @calleemultipleparamscomplex16(!fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>}, !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>}, !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>})
 
 // CHECK-LABEL:   func.func @multipleparamscomplex16(
-// CHECK-SAME:       %[[VAL_0:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval}, %[[VAL_1:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval}, %[[VAL_2:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval}) {
+// CHECK-SAME:       %[[VAL_0:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>}, %[[VAL_1:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>}, %[[VAL_2:.*]]: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.byval = tuple<!fir.real<16>, !fir.real<16>>}) {
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<tuple<!fir.real<16>, !fir.real<16>>>) -> !fir.ref<!fir.complex<16>>
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.complex<16>>
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<!fir.real<16>, !fir.real<16>>>) -> !fir.ref<!fir.complex<16>>
@@ -98,7 +97,7 @@ func.func @addrof() {
 // CHECK:         }
 
 // CHECK-LABEL:   func.func private @mlircomplexf128(
-// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret}, %[[VAL_1:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval},  %[[VAL_2:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval}) {
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.sret = tuple<f128, f128>}, %[[VAL_1:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>},  %[[VAL_2:.*]]: !fir.ref<tuple<f128, f128>> {llvm.align = 16 : i32, llvm.byval = tuple<f128, f128>}) {
 // CHECK:           %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<complex<f128>>
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<tuple<f128, f128>>) -> !fir.ref<complex<f128>>

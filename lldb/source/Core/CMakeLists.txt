@@ -54,6 +54,7 @@ add_lldb_library(lldbCore
   SourceManager.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
+  ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
   ValueObject.cpp
@@ -93,6 +94,7 @@ add_lldb_library(lldbCore
   LINK_COMPONENTS
     Support
     Demangle
+    TargetParser
   )
 
 add_dependencies(lldbCore

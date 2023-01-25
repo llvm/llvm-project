@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=arm-eabi %s -o /dev/null
 
-@handler_installed.6144.b = external global i1          ; <i1*> [#uses=1]
+@handler_installed.6144.b = external global i1          ; <ptr> [#uses=1]
 
 define void @__mf_sigusr1_respond() {
 entry:
-        %tmp8.b = load i1, i1* @handler_installed.6144.b            ; <i1> [#uses=1]
+        %tmp8.b = load i1, ptr @handler_installed.6144.b            ; <i1> [#uses=1]
         br i1 false, label %cond_true7, label %cond_next
 
 cond_next:              ; preds = %entry

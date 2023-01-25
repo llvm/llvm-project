@@ -12,9 +12,9 @@ declare i16 @llvm.convert.to.fp16.f32(float) nounwind readnone
 ; EG: MEM_RAT MSKOR
 ; EG: VTX_READ_32
 ; EG: FLT32_TO_FLT16
-define amdgpu_kernel void @test_convert_fp32_to_fp16(i16 addrspace(1)* noalias %out, float addrspace(1)* noalias %in) nounwind {
-  %val = load float, float addrspace(1)* %in, align 4
+define amdgpu_kernel void @test_convert_fp32_to_fp16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %in) nounwind {
+  %val = load float, ptr addrspace(1) %in, align 4
   %cvt = call i16 @llvm.convert.to.fp16.f32(float %val) nounwind readnone
-  store i16 %cvt, i16 addrspace(1)* %out, align 2
+  store i16 %cvt, ptr addrspace(1) %out, align 2
   ret void
 }

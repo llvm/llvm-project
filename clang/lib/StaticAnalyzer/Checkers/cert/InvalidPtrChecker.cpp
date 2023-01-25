@@ -39,11 +39,11 @@ private:
 
   // SEI CERT ENV31-C
   const CallDescriptionMap<HandlerFn> EnvpInvalidatingFunctions = {
-      {{"setenv", 3}, &InvalidPtrChecker::EnvpInvalidatingCall},
-      {{"unsetenv", 1}, &InvalidPtrChecker::EnvpInvalidatingCall},
-      {{"putenv", 1}, &InvalidPtrChecker::EnvpInvalidatingCall},
-      {{"_putenv_s", 2}, &InvalidPtrChecker::EnvpInvalidatingCall},
-      {{"_wputenv_s", 2}, &InvalidPtrChecker::EnvpInvalidatingCall},
+      {{{"setenv"}, 3}, &InvalidPtrChecker::EnvpInvalidatingCall},
+      {{{"unsetenv"}, 1}, &InvalidPtrChecker::EnvpInvalidatingCall},
+      {{{"putenv"}, 1}, &InvalidPtrChecker::EnvpInvalidatingCall},
+      {{{"_putenv_s"}, 2}, &InvalidPtrChecker::EnvpInvalidatingCall},
+      {{{"_wputenv_s"}, 2}, &InvalidPtrChecker::EnvpInvalidatingCall},
   };
 
   void postPreviousReturnInvalidatingCall(const CallEvent &Call,
@@ -51,13 +51,15 @@ private:
 
   // SEI CERT ENV34-C
   const CallDescriptionMap<HandlerFn> PreviousCallInvalidatingFunctions = {
-      {{"getenv", 1}, &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
-      {{"setlocale", 2},
+      {{{"getenv"}, 1}, &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
+      {{{"setlocale"}, 2},
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
-      {{"strerror", 1}, &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
-      {{"localeconv", 0},
+      {{{"strerror"}, 1},
        &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
-      {{"asctime", 1}, &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
+      {{{"localeconv"}, 0},
+       &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
+      {{{"asctime"}, 1},
+       &InvalidPtrChecker::postPreviousReturnInvalidatingCall},
   };
 
 public:

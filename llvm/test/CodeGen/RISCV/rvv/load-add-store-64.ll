@@ -9,7 +9,7 @@ define void @vadd_vint64m1(<vscale x 1 x i64> *%pc, <vscale x 1 x i64> *%pa, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1re64.v v8, (a1)
 ; CHECK-NEXT:    vl1re64.v v9, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -25,7 +25,7 @@ define void @vadd_vint64m2(<vscale x 2 x i64> *%pc, <vscale x 2 x i64> *%pa, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2re64.v v8, (a1)
 ; CHECK-NEXT:    vl2re64.v v10, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    vs2r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -41,7 +41,7 @@ define void @vadd_vint64m4(<vscale x 4 x i64> *%pc, <vscale x 4 x i64> *%pa, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4re64.v v8, (a1)
 ; CHECK-NEXT:    vl4re64.v v12, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vs4r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -57,7 +57,7 @@ define void @vadd_vint64m8(<vscale x 8 x i64> *%pc, <vscale x 8 x i64> *%pa, <vs
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v8, (a1)
 ; CHECK-NEXT:    vl8re64.v v16, (a2)
-; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    ret

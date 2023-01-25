@@ -12,6 +12,7 @@ intermediate LLVM representation.
 .. toctree::
    :hidden:
 
+   AArch64SME
    AddingConstrainedIntrinsics
    AdvancedBuilds
    AliasAnalysis
@@ -57,6 +58,7 @@ intermediate LLVM representation.
    ReportingGuide
    ResponseGuide
    Remarks
+   RISCVUsage
    SourceLevelDebugging
    SPIRVUsage
    StackSafetyAnalysis
@@ -228,6 +230,9 @@ Additional Topics
   LLVM's support for generating NEON instructions on big endian ARM targets is
   somewhat nonintuitive. This document explains the implementation and rationale.
 
+:doc:`AArch64SME`
+  LLVM's support for AArch64 SME ACLE and ABI.
+
 :doc:`CompileCudaWithLLVM`
   LLVM support for CUDA.
 
@@ -252,3 +257,7 @@ Additional Topics
 :doc:`DirectXUsage`
    This document describes using the DirectX target to compile GPU code for the
    DirectX runtime.
+
+:doc:`RISCVUsage`
+   This document describes using the RISCV-V target.
+

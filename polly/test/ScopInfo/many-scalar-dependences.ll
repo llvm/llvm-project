@@ -147,7 +147,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f([100 x float]* %a) {
+define void @f(ptr %a) {
 bb:
   br label %bb5
 
@@ -184,10 +184,10 @@ bb11:                                             ; preds = %bb10
 
 bb12:                                             ; preds = %bb11, %bb10
   %x.3 = phi float [ 4.200000e+01, %bb11 ], [ %x.2, %bb10 ]
-  %tmp13 = getelementptr inbounds [100 x float], [100 x float]* %a, i64 %indvars.iv2, i64 %indvars.iv
-  %tmp14 = load float, float* %tmp13, align 4
+  %tmp13 = getelementptr inbounds [100 x float], ptr %a, i64 %indvars.iv2, i64 %indvars.iv
+  %tmp14 = load float, ptr %tmp13, align 4
   %tmp15 = fadd float %tmp14, %x.3
-  store float %tmp15, float* %tmp13, align 4
+  store float %tmp15, ptr %tmp13, align 4
   br label %bb16
 
 bb16:                                             ; preds = %bb12

@@ -1,4 +1,4 @@
-; RUN: opt -mcpu=skx -S -loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -enable-interleaved-mem-accesses < %s | FileCheck %s
+; RUN: opt -mcpu=skx -S -passes=loop-vectorize -force-vector-width=8 -force-vector-interleave=1 -enable-interleaved-mem-accesses < %s | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 
@@ -29,9 +29,9 @@ target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
 ;CHECK-NEXT:  %{{.*}} = shl nuw nsw <8 x i32> %[[VECIND]], <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ;CHECK-NEXT:  %[[M:.+]] = extractelement <8 x i1> %[[VMASK]], i32 0
 ;CHECK-NEXT:  br i1 %[[M]], label %pred.store.if, label %pred.store.continue
-;CHECK-NOT:   %{{.+}} = load <16 x i8>, <16 x i8>* %{{.*}}, align 1
+;CHECK-NOT:   %{{.+}} = load <16 x i8>, ptr %{{.*}}, align 1
 
-define dso_local void @masked_strided(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
+define dso_local void @masked_strided(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 zeroext %guard) local_unnamed_addr {
 entry:
   %conv = zext i8 %guard to i32
   br label %for.body
@@ -43,10 +43,10 @@ for.body:
 
 if.then:
   %mul = shl nuw nsw i32 %ix.09, 1
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %mul
-  %0 = load i8, i8* %arrayidx, align 1
-  %arrayidx3 = getelementptr inbounds i8, i8* %q, i32 %ix.09
-  store i8 %0, i8* %arrayidx3, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %p, i32 %mul
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx3 = getelementptr inbounds i8, ptr %q, i32 %ix.09
+  store i8 %0, ptr %arrayidx3, align 1
   br label %for.inc
 
 for.inc:

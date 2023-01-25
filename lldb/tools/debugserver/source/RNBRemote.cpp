@@ -499,6 +499,10 @@ void RNBRemote::CreatePacketTable() {
       "Test the maximum speed at which packet can be sent/received."));
   t.push_back(Packet(query_transfer, &RNBRemote::HandlePacket_qXfer, NULL,
                      "qXfer:", "Support the qXfer packet."));
+  t.push_back(Packet(json_query_dyld_process_state,
+                     &RNBRemote::HandlePacket_jGetDyldProcessState, NULL,
+                     "jGetDyldProcessState",
+                     "Query the process state from dyld."));
 }
 
 void RNBRemote::FlushSTDIO() {
@@ -4781,24 +4785,6 @@ static bool GetHostCPUType(uint32_t &cputype, uint32_t &cpusubtype,
   return g_host_cputype != 0;
 }
 
-static bool GetAddressingBits(uint32_t &addressing_bits) {
-  static uint32_t g_addressing_bits = 0;
-  static bool g_tried_addressing_bits_syscall = false;
-  if (g_tried_addressing_bits_syscall == false) {
-    size_t len = sizeof (uint32_t);
-    if (::sysctlbyname("machdep.virtual_address_size",
-          &g_addressing_bits, &len, NULL, 0) != 0) {
-      g_addressing_bits = 0;
-    }
-  }
-  g_tried_addressing_bits_syscall = true;
-  addressing_bits = g_addressing_bits;
-  if (addressing_bits > 0)
-    return true;
-  else
-    return false;
-}
-
 rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   std::ostringstream strm;
 
@@ -4812,7 +4798,7 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   }
 
   uint32_t addressing_bits = 0;
-  if (GetAddressingBits(addressing_bits)) {
+  if (DNBGetAddressingBits(addressing_bits)) {
     strm << "addressing_bits:" << std::dec << addressing_bits << ';';
   }
 
@@ -5272,6 +5258,22 @@ rnb_err_t RNBRemote::HandlePacket_qGDBServerVersion(const char *p) {
   strm << "version:" << DEBUGSERVER_VERSION_NUM << ";";
 
   return SendPacket(strm.str());
+}
+
+rnb_err_t RNBRemote::HandlePacket_jGetDyldProcessState(const char *p) {
+  const nub_process_t pid = m_ctx.ProcessID();
+  if (pid == INVALID_NUB_PROCESS)
+    return SendPacket("E87");
+
+  JSONGenerator::ObjectSP dyld_state_sp = DNBGetDyldProcessState(pid);
+  if (dyld_state_sp) {
+    std::ostringstream strm;
+    dyld_state_sp->DumpBinaryEscaped(strm);
+    dyld_state_sp->Clear();
+    if (strm.str().size() > 0)
+      return SendPacket(strm.str());
+  }
+  return SendPacket("E88");
 }
 
 // A helper function that retrieves a single integer value from
@@ -6276,12 +6278,12 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
 
         bool is_executable = true;
         uint32_t major_version, minor_version, patch_version;
-        auto *platform =
+        std::optional<std::string> platform =
             DNBGetDeploymentInfo(pid, is_executable, lc, load_command_addr,
                                  major_version, minor_version, patch_version);
         if (platform) {
           os_handled = true;
-          rep << "ostype:" << platform << ";";
+          rep << "ostype:" << *platform << ";";
           break;
         }
         load_command_addr = load_command_addr + lc.cmdsize;

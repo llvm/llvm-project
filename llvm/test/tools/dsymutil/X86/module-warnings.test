@@ -42,6 +42,7 @@
 # STATIC: warning: {{.*}}Bar.pcm:
 # STATIC: note: Linking a static library
 # STATIC: warning: {{.*}}Foo.pcm:
+# STATIC: warning: couldn`t find compile unit for the macro table with offset = 0x0
 # STATIC-NOT: warning:
 
 ---

@@ -118,19 +118,13 @@ bool GlobalValue::canBenefitFromLocalAlias() const {
          !isa<GlobalIFunc>(this) && !isDeduplicateComdat(getComdat());
 }
 
-unsigned GlobalValue::getAddressSpace() const {
-  PointerType *PtrTy = getType();
-  return PtrTy->getAddressSpace();
-}
-
 void GlobalObject::setAlignment(MaybeAlign Align) {
   assert((!Align || *Align <= MaximumAlignment) &&
          "Alignment is greater than MaximumAlignment!");
   unsigned AlignmentData = encode(Align);
   unsigned OldData = getGlobalValueSubClassData();
   setGlobalValueSubClassData((OldData & ~AlignmentMask) | AlignmentData);
-  assert(MaybeAlign(getAlignment()) == Align &&
-         "Alignment representation error!");
+  assert(getAlign() == Align && "Alignment representation error!");
 }
 
 void GlobalObject::copyAttributesFrom(const GlobalObject *Src) {
@@ -261,6 +255,13 @@ void GlobalObject::setSection(StringRef S) {
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
 }
 
+bool GlobalValue::isNobuiltinFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->empty())
+    return false;
+  return F->hasFnAttribute(Attribute::NoBuiltin);
+}
+
 bool GlobalValue::isDeclaration() const {
   // Globals are definitions if they have an initializer.
   if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(this))
@@ -368,14 +369,14 @@ bool GlobalValue::isAbsoluteSymbolRef() const {
   return GO->getMetadata(LLVMContext::MD_absolute_symbol);
 }
 
-Optional<ConstantRange> GlobalValue::getAbsoluteSymbolRange() const {
+std::optional<ConstantRange> GlobalValue::getAbsoluteSymbolRange() const {
   auto *GO = dyn_cast<GlobalObject>(this);
   if (!GO)
-    return None;
+    return std::nullopt;
 
   MDNode *MD = GO->getMetadata(LLVMContext::MD_absolute_symbol);
   if (!MD)
-    return None;
+    return std::nullopt;
 
   return getConstantRangeFromMetadata(*MD);
 }
@@ -425,7 +426,7 @@ GlobalVariable::GlobalVariable(Module &M, Type *Ty, bool constant,
                                LinkageTypes Link, Constant *InitVal,
                                const Twine &Name, GlobalVariable *Before,
                                ThreadLocalMode TLMode,
-                               Optional<unsigned> AddressSpace,
+                               std::optional<unsigned> AddressSpace,
                                bool isExternallyInitialized)
     : GlobalObject(Ty, Value::GlobalVariableVal,
                    OperandTraits<GlobalVariable>::op_begin(this),
@@ -582,9 +583,7 @@ void GlobalIFunc::eraseFromParent() {
 }
 
 const Function *GlobalIFunc::getResolverFunction() const {
-  DenseSet<const GlobalAlias *> Aliases;
-  return dyn_cast<Function>(
-      findBaseObject(getResolver(), Aliases, [](const GlobalValue &) {}));
+  return dyn_cast<Function>(getResolver()->stripPointerCastsAndAliases());
 }
 
 void GlobalIFunc::applyAlongResolverPath(

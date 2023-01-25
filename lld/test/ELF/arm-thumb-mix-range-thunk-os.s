@@ -3,17 +3,17 @@
 // RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 --start-address=0x100000 --stop-address=0x10001c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x200000 --stop-address=0x20000a | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1000004 --stop-address=0x1000010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1000010 --stop-address=0x100001a | FileCheck --check-prefix=CHECK4 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1f00004 --stop-address=0x1f0000e | FileCheck --check-prefix=CHECK5 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x2200000 --stop-address=0x2200006 | FileCheck --check-prefix=CHECK6 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x2300000 --stop-address=0x2300008 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x2e00004 --stop-address=0x2e00010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK8 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x3300004 --stop-address=0x3300010 | FileCheck --check-prefix=CHECK9 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x4100000 --stop-address=0x410000c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x4200000 --stop-address=0x4200008 | FileCheck --check-prefix=CHECK11 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100000 --stop-address=0x10001c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x200000 --stop-address=0x20000a | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000004 --stop-address=0x1000010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000010 --stop-address=0x100001a | FileCheck --check-prefix=CHECK4 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1f00004 --stop-address=0x1f0000e | FileCheck --check-prefix=CHECK5 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2200000 --stop-address=0x2200006 | FileCheck --check-prefix=CHECK6 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2300000 --stop-address=0x2300008 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK7 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x2e00004 --stop-address=0x2e00010 --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK8 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x3300004 --stop-address=0x3300010 | FileCheck --check-prefix=CHECK9 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x4100000 --stop-address=0x410000c --triple=armv7a-linux-gnueabihf | FileCheck --check-prefix=CHECK10 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x4200000 --stop-address=0x4200008 | FileCheck --check-prefix=CHECK11 %s
 
 // Test the Range extension Thunks for ARM and Thumb when all the code is in a
 // single OutputSection. The ARM branches and branch and link instructions

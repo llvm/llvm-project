@@ -5,38 +5,38 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.9.0"
 
-define void @test(i32 %argc, i8** %argv) uwtable ssp !dbg !5 {
+define void @test(i32 %argc, ptr %argv) uwtable ssp !dbg !5 {
 entry:
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %i = alloca i32, align 4
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !14, metadata !DIExpression()), !dbg !15
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !16, metadata !DIExpression()), !dbg !15
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !17, metadata !DIExpression()), !dbg !20
-  store i32 0, i32* %i, align 4, !dbg !20
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !14, metadata !DIExpression()), !dbg !15
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !16, metadata !DIExpression()), !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !17, metadata !DIExpression()), !dbg !20
+  store i32 0, ptr %i, align 4, !dbg !20
   br label %for.cond, !dbg !20
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4, !dbg !20
-  %1 = load i32, i32* %argc.addr, align 4, !dbg !20
+  %0 = load i32, ptr %i, align 4, !dbg !20
+  %1 = load i32, ptr %argc.addr, align 4, !dbg !20
   %cmp = icmp slt i32 %0, %1, !dbg !20
   br i1 %cmp, label %for.body, label %for.end, !dbg !20
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i32, i32* %i, align 4, !dbg !21
+  %2 = load i32, ptr %i, align 4, !dbg !21
   %idxprom = sext i32 %2 to i64, !dbg !21
-  %3 = load i8**, i8*** %argv.addr, align 8, !dbg !21
-  %arrayidx = getelementptr inbounds i8*, i8** %3, i64 %idxprom, !dbg !21
-  %4 = load i8*, i8** %arrayidx, align 8, !dbg !21
-  %call = call i32 @puts(i8* %4), !dbg !21
+  %3 = load ptr, ptr %argv.addr, align 8, !dbg !21
+  %arrayidx = getelementptr inbounds ptr, ptr %3, i64 %idxprom, !dbg !21
+  %4 = load ptr, ptr %arrayidx, align 8, !dbg !21
+  %call = call i32 @puts(ptr %4), !dbg !21
   br label %for.inc, !dbg !23
 
 for.inc:                                          ; preds = %for.body
-  %5 = load i32, i32* %i, align 4, !dbg !20
+  %5 = load i32, ptr %i, align 4, !dbg !20
   %inc = add nsw i32 %5, 1, !dbg !20
-  store i32 %inc, i32* %i, align 4, !dbg !20
+  store i32 %inc, ptr %i, align 4, !dbg !20
   br label %for.cond, !dbg !20
 
 for.end:                                          ; preds = %for.cond
@@ -45,7 +45,7 @@ for.end:                                          ; preds = %for.cond
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare i32 @puts(i8*)
+declare i32 @puts(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!27}

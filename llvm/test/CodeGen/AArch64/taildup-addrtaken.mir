@@ -1,0 +1,129 @@
+# RUN: llc -mtriple=aarch64-apple-ios -run-pass=early-tailduplication %s -o - | FileCheck %s
+
+--- |
+  ; ModuleID = 'taildup.ll'
+  source_filename = "taildup.ll"
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+  
+  @bb1 = global i8* blockaddress(@foo, %final)
+  @bb2 = global i8* inttoptr (i32 1 to i8*)
+  
+  define void @foo(i1 %tst, i32* %ptr) {
+    br i1 %tst, label %left, label %right
+  
+  left:                                             ; preds = %0
+    %val.left = call i32 @bar()
+    br label %next
+  
+  right:                                            ; preds = %0
+    %val.right = call i32 @baz()
+    br label %next
+  
+  next:                                             ; preds = %right, %left
+    %val = phi i32 [ %val.left, %left ], [ %val.right, %right ]
+    store i32 %val, i32* %ptr, align 4
+    br label %final
+  
+  final:                                            ; preds = %next
+    %1 = call i32 @bar()
+    ret void
+  }
+  
+  declare i32 @bar()
+  
+  declare i32 @baz()
+
+...
+---
+name:            foo
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+  - { id: 0, class: gpr32all, preferred-register: '' }
+  - { id: 1, class: gpr32all, preferred-register: '' }
+  - { id: 2, class: gpr32, preferred-register: '' }
+  - { id: 3, class: gpr32, preferred-register: '' }
+  - { id: 4, class: gpr64common, preferred-register: '' }
+  - { id: 5, class: gpr32all, preferred-register: '' }
+  - { id: 6, class: gpr32all, preferred-register: '' }
+  - { id: 7, class: gpr32all, preferred-register: '' }
+liveins:
+  - { reg: '$w0', virtual-reg: '%3' }
+  - { reg: '$x1', virtual-reg: '%4' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $w0, $x1
+
+    %4:gpr64common = COPY $x1
+    %3:gpr32 = COPY $w0
+    TBZW %3, 0, %bb.2
+    B %bb.1
+
+  bb.1.left:
+    successors: %bb.3(0x80000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @bar, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %6:gpr32all = COPY $w0
+    %0:gpr32all = COPY %6
+    B %bb.3
+
+  bb.2.right:
+    successors: %bb.3(0x80000000)
+
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @baz, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %5:gpr32all = COPY $w0
+    %1:gpr32all = COPY %5
+
+  bb.3.next:
+    successors: %bb.4(0x80000000)
+
+    ; CHECK: %2:gpr32 = PHI
+    %2:gpr32 = PHI %1, %bb.2, %0, %bb.1
+    STRWui %2, %4, 0 :: (store (s32) into %ir.ptr)
+
+  bb.4.final (ir-block-address-taken %ir-block.final):
+    ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
+    BL @bar, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
+    %7:gpr32all = COPY $w0
+    RET_ReallyLR
+
+...

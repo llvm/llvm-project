@@ -27,7 +27,7 @@ void create_and_join() {
     ASSERT_EQ(__llvm_libc::thrd_create(&thread, thread_func, nullptr),
               (int)thrd_success);
     int retval = thread_count + 1; // Start with a retval we dont expect.
-    ASSERT_EQ(__llvm_libc::thrd_join(&thread, &retval), (int)thrd_success);
+    ASSERT_EQ(__llvm_libc::thrd_join(thread, &retval), (int)thrd_success);
     ASSERT_EQ(retval, 0);
     ASSERT_EQ(counter, old_counter_val + 1);
   }
@@ -47,13 +47,14 @@ void spawn_and_join() {
 
   for (int i = 0; i < thread_count; ++i) {
     int retval = thread_count + 1; // Start with a retval we dont expect.
-    ASSERT_EQ(__llvm_libc::thrd_join(&thread_list[i], &retval),
+    ASSERT_EQ(__llvm_libc::thrd_join(thread_list[i], &retval),
               (int)thrd_success);
     ASSERT_EQ(retval, i);
   }
 }
 
-int main() {
+TEST_MAIN() {
   create_and_join();
   spawn_and_join();
+  return 0;
 }

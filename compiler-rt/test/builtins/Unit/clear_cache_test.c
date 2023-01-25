@@ -1,5 +1,5 @@
 // REQUIRES: native-run
-// UNSUPPORTED: arm, aarch64
+// UNSUPPORTED: target={{(arm|aarch64).*}}
 // RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_clear_cache
 

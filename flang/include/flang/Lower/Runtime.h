@@ -16,10 +16,7 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
-namespace llvm {
-template <typename T>
-class Optional;
-}
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -69,17 +66,23 @@ void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
                           mlir::Value pointer, mlir::Value target);
 
+void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
+                         mlir::Value pointer, mlir::Value target);
+void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
+                                  mlir::Value pointer, mlir::Value target,
+                                  mlir::Value bounds);
+
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
-                    llvm::Optional<fir::CharBoxValue> date,
-                    llvm::Optional<fir::CharBoxValue> time,
-                    llvm::Optional<fir::CharBoxValue> zone, mlir::Value values);
+                    std::optional<fir::CharBoxValue> date,
+                    std::optional<fir::CharBoxValue> time,
+                    std::optional<fir::CharBoxValue> zone, mlir::Value values);
 
 void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
                    mlir::Value imageDistinct);
 void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
-void genRandomSeed(fir::FirOpBuilder &, mlir::Location, int argIndex,
-                   mlir::Value argBox);
+void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
+                   mlir::Value put, mlir::Value get);
 
 /// generate runtime call to transfer intrinsic with no size argument
 void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,

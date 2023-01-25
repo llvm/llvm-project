@@ -94,16 +94,16 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     return nullptr;
 
   spirv::ModuleOp firstModule = inputModules.front();
-  auto addressingModel = firstModule.addressing_model();
-  auto memoryModel = firstModule.memory_model();
-  auto vceTriple = firstModule.vce_triple();
+  auto addressingModel = firstModule.getAddressingModel();
+  auto memoryModel = firstModule.getMemoryModel();
+  auto vceTriple = firstModule.getVceTriple();
 
   // First check whether there are conflicts between addressing/memory model.
   // Return early if so.
   for (auto module : inputModules) {
-    if (module.addressing_model() != addressingModel ||
-        module.memory_model() != memoryModel ||
-        module.vce_triple() != vceTriple) {
+    if (module.getAddressingModel() != addressingModel ||
+        module.getMemoryModel() != memoryModel ||
+        module.getVceTriple() != vceTriple) {
       module.emitError("input modules differ in addressing model, memory "
                        "model, and/or VCE triple");
       return nullptr;
@@ -130,9 +130,9 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
 
     // In the combined module, rename all symbols that conflict with symbols
     // from the current input module. This renaming applies to all ops except
-    // for spv.funcs. This way, if the conflicting op in the input module is
-    // non-spv.func, we rename that symbol instead and maintain the spv.func in
-    // the combined module name as it is.
+    // for spirv.funcs. This way, if the conflicting op in the input module is
+    // non-spirv.func, we rename that symbol instead and maintain the spirv.func
+    // in the combined module name as it is.
     for (auto &op : *combinedModule.getBody()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)
@@ -169,7 +169,7 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
     }
 
     // In the current input module, rename all symbols that conflict with
-    // symbols from the combined module. This includes renaming spv.funcs.
+    // symbols from the combined module. This includes renaming spirv.funcs.
     for (auto &op : *moduleClone->getBody()) {
       auto symbolOp = dyn_cast<SymbolOpInterface>(op);
       if (!symbolOp)

@@ -265,9 +265,7 @@ define i32 @max_sub_ugt_c1(i32 %a) {
 
 define i32 @max_sub_ugt_c01(i32 %a) {
 ; CHECK-LABEL: @max_sub_ugt_c01(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 0
-; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[A]], -1
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 0, i32 [[SUB]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A:%.*]], i32 1)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp ugt i32 %a, 0

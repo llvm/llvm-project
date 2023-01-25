@@ -17,6 +17,10 @@
 namespace llvm {
 namespace exegesis {
 
+cl::OptionCategory Options("llvm-exegesis options");
+cl::OptionCategory BenchmarkOptions("llvm-exegesis benchmark options");
+cl::OptionCategory AnalysisOptions("llvm-exegesis analysis options");
+
 ExegesisTarget::~ExegesisTarget() {} // anchor.
 
 static ExegesisTarget *FirstTarget = nullptr;
@@ -70,6 +74,7 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
 Expected<std::unique_ptr<BenchmarkRunner>>
 ExegesisTarget::createBenchmarkRunner(
     InstructionBenchmark::ModeE Mode, const LLVMState &State,
+    BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
   PfmCountersInfo PfmCounters = State.getPfmCounters();
   switch (Mode) {
@@ -77,21 +82,30 @@ ExegesisTarget::createBenchmarkRunner(
     return nullptr;
   case InstructionBenchmark::Latency:
   case InstructionBenchmark::InverseThroughput:
-    if (!PfmCounters.CycleCounter) {
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+        !PfmCounters.CycleCounter) {
       const char *ModeName = Mode == InstructionBenchmark::Latency
                                  ? "latency"
                                  : "inverse_throughput";
       return make_error<Failure>(
           Twine("can't run '")
               .concat(ModeName)
-              .concat("' mode, sched model does not define a cycle counter."));
+              .concat(
+                  "' mode, sched model does not define a cycle counter. You "
+                  "can pass --skip-measurements to skip the actual "
+                  "benchmarking."));
     }
-    return createLatencyBenchmarkRunner(State, Mode, ResultAggMode);
+    return createLatencyBenchmarkRunner(State, Mode, BenchmarkPhaseSelector,
+                                        ResultAggMode);
   case InstructionBenchmark::Uops:
-    if (!PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
-      return make_error<Failure>("can't run 'uops' mode, sched model does not "
-                                 "define uops or issue counters.");
-    return createUopsBenchmarkRunner(State, ResultAggMode);
+    if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
+        !PfmCounters.UopsCounter && !PfmCounters.IssueCounters)
+      return make_error<Failure>(
+          "can't run 'uops' mode, sched model does not define uops or issue "
+          "counters. You can pass --skip-measurements to skip the actual "
+          "benchmarking.");
+    return createUopsBenchmarkRunner(State, BenchmarkPhaseSelector,
+                                     ResultAggMode);
   }
   return nullptr;
 }
@@ -108,14 +122,16 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
     const LLVMState &State, InstructionBenchmark::ModeE Mode,
+    BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE ResultAggMode) const {
-  return std::make_unique<LatencyBenchmarkRunner>(State, Mode, ResultAggMode);
+  return std::make_unique<LatencyBenchmarkRunner>(
+      State, Mode, BenchmarkPhaseSelector, ResultAggMode);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createUopsBenchmarkRunner(
-    const LLVMState &State,
+    const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE /*unused*/) const {
-  return std::make_unique<UopsBenchmarkRunner>(State);
+  return std::make_unique<UopsBenchmarkRunner>(State, BenchmarkPhaseSelector);
 }
 
 static_assert(std::is_pod<PfmCountersInfo>::value,

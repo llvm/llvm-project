@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv6m-arm-none-eabi"
 
-define i32 @C(i32 %x, i32* nocapture %y) #0 {
+define i32 @C(i32 %x, ptr nocapture %y) #0 {
 ; CHECK-LABEL: C:
 ; CHECK:         .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
@@ -46,21 +46,21 @@ for.cond:                                         ; preds = %B.exit, %entry
 for.body:                                         ; preds = %for.cond
   %mul = shl i32 %i.0, 2
   %add = add i32 %mul, %x
-  store volatile i32 0, i32* inttoptr (i32 805355532 to i32*), align 4
-  store volatile i32 %add, i32* inttoptr (i32 805355524 to i32*), align 4
-  store volatile i32 1, i32* inttoptr (i32 805355536 to i32*), align 16
+  store volatile i32 0, ptr inttoptr (i32 805355532 to ptr), align 4
+  store volatile i32 %add, ptr inttoptr (i32 805355524 to ptr), align 4
+  store volatile i32 1, ptr inttoptr (i32 805355536 to ptr), align 16
   tail call void @llvm.arm.isb(i32 15) #1
   br label %while.cond.i
 
 while.cond.i:                                     ; preds = %while.cond.i, %for.body
-  %0 = load volatile i32, i32* inttoptr (i32 805355536 to i32*), align 16
+  %0 = load volatile i32, ptr inttoptr (i32 805355536 to ptr), align 16
   %tobool.i = icmp eq i32 %0, 0
   br i1 %tobool.i, label %B.exit, label %while.cond.i
 
 B.exit:                                           ; preds = %while.cond.i
-  %1 = load volatile i32, i32* inttoptr (i32 805355528 to i32*), align 8
-  %arrayidx = getelementptr inbounds i32, i32* %y, i32 %i.0
-  store i32 %1, i32* %arrayidx, align 4
+  %1 = load volatile i32, ptr inttoptr (i32 805355528 to ptr), align 8
+  %arrayidx = getelementptr inbounds i32, ptr %y, i32 %i.0
+  store i32 %1, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond
 

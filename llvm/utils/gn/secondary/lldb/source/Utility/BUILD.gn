@@ -4,6 +4,7 @@ static_library("Utility") {
   deps = [
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ArchSpec.cpp",
@@ -17,6 +18,7 @@ static_library("Utility") {
     "DataBufferLLVM.cpp",
     "DataEncoder.cpp",
     "DataExtractor.cpp",
+    "Diagnostics.cpp",
     "Environment.cpp",
     "Event.cpp",
     "FileSpec.cpp",
@@ -31,8 +33,6 @@ static_library("Utility") {
     "ProcessInfo.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
-    "Reproducer.cpp",
-    "ReproducerProvider.cpp",
     "Scalar.cpp",
     "SelectHelper.cpp",
     "State.cpp",

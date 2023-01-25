@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=armv7-unknown-linux -o - %s | FileCheck %s
 
 @vtable = constant [4 x i32] [i32 0,
-    i32 sub (i32 ptrtoint (void ()* @fn1 to i32), i32 ptrtoint (i32* getelementptr ([4 x i32], [4 x i32]* @vtable, i32 0, i32 1) to i32)),
-    i32 sub (i32 ptrtoint (void ()* @fn2 to i32), i32 ptrtoint (i32* getelementptr ([4 x i32], [4 x i32]* @vtable, i32 0, i32 1) to i32)),
-    i32 sub (i32 ptrtoint (void ()* @fn3 to i32), i32 ptrtoint (i32* getelementptr ([4 x i32], [4 x i32]* @vtable, i32 0, i32 1) to i32))
+    i32 sub (i32 ptrtoint (ptr @fn1 to i32), i32 ptrtoint (ptr getelementptr ([4 x i32], ptr @vtable, i32 0, i32 1) to i32)),
+    i32 sub (i32 ptrtoint (ptr @fn2 to i32), i32 ptrtoint (ptr getelementptr ([4 x i32], ptr @vtable, i32 0, i32 1) to i32)),
+    i32 sub (i32 ptrtoint (ptr @fn3 to i32), i32 ptrtoint (ptr getelementptr ([4 x i32], ptr @vtable, i32 0, i32 1) to i32))
 ]
 
 declare void @fn1() unnamed_addr

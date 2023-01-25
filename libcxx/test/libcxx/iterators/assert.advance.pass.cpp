@@ -24,13 +24,13 @@ int main(int, char**) {
     int a[] = {1, 2, 3};
 
     bidirectional_iterator<int *> bidi(a+1);
-	std::advance(bidi,  1);  // should work fine
-	std::advance(bidi,  0);  // should work fine
+    std::advance(bidi,  1);  // should work fine
+    std::advance(bidi,  0);  // should work fine
     std::advance(bidi, -1);  // should work fine
 
     forward_iterator<int *> it(a+1);
-	std::advance(it, 1);  // should work fine
-	std::advance(it, 0);  // should work fine
+    std::advance(it, 1);  // should work fine
+    std::advance(it, 0);  // should work fine
     TEST_LIBCPP_ASSERT_FAILURE(std::advance(it, -1), "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
 
     return 0;

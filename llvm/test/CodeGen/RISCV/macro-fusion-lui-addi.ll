@@ -21,8 +21,24 @@ define void @foo(i32 signext %0, i32 signext %1) {
 ; FUSION-NEXT:    addi a0, a0, %lo(.L.str)
 ; FUSION-NEXT:    tail bar@plt
   %3 = sitofp i32 %1 to float
-  tail call void @bar(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), float %3)
+  tail call void @bar(ptr @.str, float %3)
   ret void
 }
 
-declare void @bar(i8*, float)
+declare void @bar(ptr, float)
+
+; Test that we prefer lui+addiw over li+slli.
+define i32 @test_matint() {
+; NOFUSION-LABEL: test_matint:
+; NOFUSION:       # %bb.0:
+; NOFUSION-NEXT:    li a0, 1
+; NOFUSION-NEXT:    slli a0, a0, 11
+; NOFUSION-NEXT:    ret
+;
+; FUSION-LABEL: test_matint:
+; FUSION:       # %bb.0:
+; FUSION-NEXT:    lui a0, 1
+; FUSION-NEXT:    addiw a0, a0, -2048
+; FUSION-NEXT:    ret
+  ret i32 2048
+}

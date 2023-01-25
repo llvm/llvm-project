@@ -15,11 +15,11 @@ public:
 } // namespace std
 
 int x = std::vector<int>{}.at(42);
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:17:14 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):14 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: COMPLETION: __vector_base : __vector_base<<#typename Tp#>>
 // CHECK-CC1: COMPLETION: vector : vector<<#typename Tp#>>
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:17:28 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-4):28 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: COMPLETION: __stays_ugly : [#int#]__stays_ugly()
 // CHECK-CC2: COMPLETION: at : [#int &#]at(<#unsigned int index#>)[# const#]
-// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:17:31 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-7):31 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
 // CHECK-CC3: OVERLOAD: [#int &#]at(<#unsigned int index#>)

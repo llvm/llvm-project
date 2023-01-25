@@ -15,25 +15,30 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPPEEL_H
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {
 
-bool canPeel(Loop *L);
+bool canPeel(const Loop *L);
 
+/// VMap is the value-map that maps instructions from the original loop to
+/// instructions in the last peeled-off iteration.
 bool peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI, ScalarEvolution *SE,
-              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA);
+              DominatorTree &DT, AssumptionCache *AC, bool PreserveLCSSA,
+              ValueToValueMapTy &VMap);
 
 TargetTransformInfo::PeelingPreferences
 gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
                          const TargetTransformInfo &TTI,
-                         Optional<bool> UserAllowPeeling,
-                         Optional<bool> UserAllowProfileBasedPeeling,
+                         std::optional<bool> UserAllowPeeling,
+                         std::optional<bool> UserAllowProfileBasedPeeling,
                          bool UnrollingSpecficValues = false);
 
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::PeelingPreferences &PP,
                       unsigned TripCount, DominatorTree &DT,
-                      ScalarEvolution &SE, unsigned Threshold = UINT_MAX);
+                      ScalarEvolution &SE, AssumptionCache *AC = nullptr,
+                      unsigned Threshold = UINT_MAX);
 
 } // end namespace llvm
 

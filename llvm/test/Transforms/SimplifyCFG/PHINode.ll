@@ -1,7 +1,7 @@
-; -simplifycfg -simplifycfg-require-and-preserve-domtree=1 is not folding blocks if there is a PHI node involved.  This
+; -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 is not folding blocks if there is a PHI node involved.  This
 ; should be fixed eventually
 
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 define i32 @main(i32 %argc) {
 ; <label>:0

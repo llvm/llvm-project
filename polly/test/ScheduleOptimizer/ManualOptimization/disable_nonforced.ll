@@ -3,7 +3,7 @@
 ; Check that the disable_nonforced metadata is honored; optimization
 ; heuristics/rescheduling must not be applied.
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -21,8 +21,8 @@ for:
         bodyA:
           %mul = mul nuw nsw i32 %j, 128
           %add = add nuw nsw i32 %mul, %i
-          %A_idx = getelementptr inbounds double, double* %A, i32 %add
-          store double 0.0, double* %A_idx
+          %A_idx = getelementptr inbounds double, ptr %A, i32 %add
+          store double 0.0, ptr %A_idx
           br label %inner.inc
 
 

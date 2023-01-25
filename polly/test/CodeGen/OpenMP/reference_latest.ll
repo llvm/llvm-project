@@ -6,7 +6,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @reference_latest(float* nocapture readonly %data, i32 %n, i32 %m) {
+define void @reference_latest(ptr nocapture readonly %data, i32 %n, i32 %m) {
 entry:
   %0 = alloca double, i64 undef, align 16
   %conv1 = sext i32 %m to i64
@@ -18,8 +18,7 @@ while.body:
 
 for.body:
   %indvars.iv207 = phi i64 [ %indvars.iv211, %while.body ], [ %indvars.iv.next208, %for.body ]
-  %arrayidx7 = getelementptr inbounds float, float* %data, i64 0
-  %1 = load float, float* %arrayidx7, align 4
+  %1 = load float, ptr %data, align 4
   %add10 = fadd double undef, undef
   %indvars.iv.next208 = add nsw i64 %indvars.iv207, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next208 to i32
@@ -27,8 +26,8 @@ for.body:
   br i1 %exitcond210, label %for.end, label %for.body
 
 for.end:
-  %arrayidx12 = getelementptr inbounds double, double* %0, i64 %indvars.iv211
-  store double %add10, double* %arrayidx12, align 8
+  %arrayidx12 = getelementptr inbounds double, ptr %0, i64 %indvars.iv211
+  store double %add10, ptr %arrayidx12, align 8
   %indvars.iv.next212 = add nsw i64 %indvars.iv211, -1
   %2 = trunc i64 %indvars.iv211 to i32
   %tobool = icmp eq i32 %2, 0
@@ -38,7 +37,7 @@ while.end:
   ret void
 }
 
-; CHECK-LABEL: define internal void @reference_latest_polly_subfn(i8* %polly.par.userContext)
+; CHECK-LABEL: define internal void @reference_latest_polly_subfn(ptr %polly.par.userContext)
 
-; CHECK:      %polly.access.polly.subfunc.arg. = getelementptr double, double* %polly.subfunc.arg., i64 %{{[0-9]+}}
-; CHECK-NEXT: store double %p_add{{[0-9]*}}, double* %polly.access.polly.subfunc.arg.
+; CHECK:      %polly.access.polly.subfunc.arg. = getelementptr double, ptr %polly.subfunc.arg., i64 %{{[0-9]+}}
+; CHECK-NEXT: store double %p_add{{[0-9]*}}, ptr %polly.access.polly.subfunc.arg.

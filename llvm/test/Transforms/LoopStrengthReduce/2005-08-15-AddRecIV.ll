@@ -48,10 +48,10 @@ loopexit.3:		; preds = %loopentry.3
 loopentry.4:		; preds = %loopentry.4, %loopexit.3
 	%indvar340 = phi i32 [ 0, %loopexit.3 ], [ %indvar.next341, %loopentry.4 ]		; <i32> [#uses=2]
 	%tmp. = add i32 %indvar340, %indvar342		; <i32> [#uses=1]
-	%tmp.526 = load i32*, i32** null		; <i32*> [#uses=1]
+	%tmp.526 = load ptr, ptr null		; <ptr> [#uses=1]
 	%gep.upgrd.1 = zext i32 %tmp. to i64		; <i64> [#uses=1]
-	%tmp.528 = getelementptr i32, i32* %tmp.526, i64 %gep.upgrd.1		; <i32*> [#uses=1]
-	store i32 0, i32* %tmp.528
+	%tmp.528 = getelementptr i32, ptr %tmp.526, i64 %gep.upgrd.1		; <ptr> [#uses=1]
+	store i32 0, ptr %tmp.528
 	%indvar.next341 = add i32 %indvar340, 1		; <i32> [#uses=1]
 	br label %loopentry.4
 }

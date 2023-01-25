@@ -1,4 +1,4 @@
-//===- ReduceAliases.h - Specialized Delta Pass ---------------------------===//
+//===- ReduceAliases.h - Specialized Delta Pass -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,6 +18,7 @@
 
 namespace llvm {
 void reduceAliasesDeltaPass(TestRunner &Test);
+void reduceIFuncsDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif

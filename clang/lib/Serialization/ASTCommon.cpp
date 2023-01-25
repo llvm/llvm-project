@@ -412,6 +412,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::PragmaComment:
   case Decl::PragmaDetectMismatch:
   case Decl::FileScopeAsm:
+  case Decl::TopLevelStmt:
   case Decl::AccessSpec:
   case Decl::Friend:
   case Decl::FriendTemplate:
@@ -430,9 +431,11 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::Decomposition:
   case Decl::Binding:
   case Decl::Concept:
+  case Decl::ImplicitConceptSpecialization:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually
@@ -472,7 +475,7 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     if (auto *VD = dyn_cast<VarDecl>(D))
       return VD->isStaticLocal();
     // FIXME: What about CapturedDecls (and declarations nested within them)?
-    return isa<TagDecl>(D) || isa<BlockDecl>(D);
+    return isa<TagDecl, BlockDecl>(D);
   }
 
   // Otherwise, we only care about anonymous class members / block-scope decls.
@@ -482,5 +485,5 @@ bool serialization::needsAnonymousDeclarationNumber(const NamedDecl *D) {
     return false;
   if (!isa<RecordDecl, ObjCInterfaceDecl>(D->getLexicalDeclContext()))
     return false;
-  return isa<TagDecl>(D) || isa<FieldDecl>(D);
+  return isa<TagDecl, FieldDecl>(D);
 }

@@ -120,7 +120,7 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
   if (const Symbol * symbol{GetSymbol()}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     if (const auto *proc{ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
-      return proc->interface().symbol();
+      return proc->procInterface();
     } else if (const auto *binding{
                    ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
       return &binding->symbol();
@@ -141,6 +141,20 @@ bool ProcedureDesignator::IsElemental() const {
         characteristics::Procedure::Attr::Elemental);
   } else {
     DIE("ProcedureDesignator::IsElemental(): no case");
+  }
+  return false;
+}
+
+bool ProcedureDesignator::IsPure() const {
+  if (const Symbol * interface{GetInterfaceSymbol()}) {
+    return IsPureProcedure(*interface);
+  } else if (const Symbol * symbol{GetSymbol()}) {
+    return IsPureProcedure(*symbol);
+  } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
+    return intrinsic->characteristics.value().attrs.test(
+        characteristics::Procedure::Attr::Pure);
+  } else {
+    DIE("ProcedureDesignator::IsPure(): no case");
   }
   return false;
 }
@@ -167,6 +181,10 @@ const Symbol *ProcedureDesignator::GetSymbol() const {
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       u);
+}
+
+const SymbolRef *ProcedureDesignator::UnwrapSymbolRef() const {
+  return std::get_if<SymbolRef>(&u);
 }
 
 std::string ProcedureDesignator::GetName() const {

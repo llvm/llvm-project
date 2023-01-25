@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 
 using namespace fir;
@@ -16,7 +17,7 @@ using llvm::StringRef;
 
 struct DeconstructedName {
   DeconstructedName(llvm::ArrayRef<std::string> modules,
-      llvm::Optional<std::string> host, llvm::StringRef name,
+      std::optional<std::string> host, llvm::StringRef name,
       llvm::ArrayRef<std::int64_t> kinds)
       : modules{modules.begin(), modules.end()}, host{host}, name{name},
         kinds{kinds.begin(), kinds.end()} {}
@@ -31,7 +32,7 @@ struct DeconstructedName {
 
 private:
   llvm::SmallVector<std::string> modules;
-  llvm::Optional<std::string> host;
+  std::optional<std::string> host;
   std::string name;
   llvm::SmallVector<std::int64_t> kinds;
 };
@@ -253,6 +254,23 @@ TEST(InternalNamesTest, isExternalFacingUniquedName) {
   ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
   result = NameUniquer::deconstruct("_QBa");
   ASSERT_TRUE(NameUniquer::isExternalFacingUniquedName(result));
+}
+
+TEST(InternalNamesTest, getTypeDescriptorName) {
+  std::string derivedTypeName = "_QMdispatch1Tp1";
+  std::string expectedBindingTableName = "_QMdispatch1E.dt.p1";
+  ASSERT_EQ(expectedBindingTableName,
+      fir::NameUniquer::getTypeDescriptorName(derivedTypeName));
+  ASSERT_EQ("", fir::NameUniquer::getTypeDescriptorName("_QMdispatch1Pp1"));
+}
+
+TEST(InternalNamesTest, getTypeDescriptorBindingTableName) {
+  std::string derivedTypeName = "_QMdispatch1Tp1";
+  std::string expectedBindingTableName = "_QMdispatch1E.v.p1";
+  ASSERT_EQ(expectedBindingTableName,
+      fir::NameUniquer::getTypeDescriptorBindingTableName(derivedTypeName));
+  ASSERT_EQ("",
+      fir::NameUniquer::getTypeDescriptorBindingTableName("_QMdispatch1Pp1"));
 }
 
 // main() from gtest_main

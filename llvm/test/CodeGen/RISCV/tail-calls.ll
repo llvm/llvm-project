@@ -13,24 +13,24 @@ entry:
 
 ; Perform tail call optimization for external symbol.
 @dest = global [2 x i8] zeroinitializer
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
-define void @caller_extern(i8* %src) optsize {
+declare void @llvm.memcpy.p0.p0.i32(ptr, ptr, i32, i1)
+define void @caller_extern(ptr %src) optsize {
 entry:
 ; CHECK: caller_extern
 ; CHECK-NOT: call memcpy
 ; CHECK: tail memcpy
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @dest, i32 0, i32 0), i8* %src, i32 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr @dest, ptr %src, i32 7, i1 false)
   ret void
 }
 
 ; Perform tail call optimization for external symbol.
 @dest_pgso = global [2 x i8] zeroinitializer
-define void @caller_extern_pgso(i8* %src) !prof !14 {
+define void @caller_extern_pgso(ptr %src) !prof !14 {
 entry:
 ; CHECK: caller_extern_pgso
 ; CHECK-NOT: call memcpy
 ; CHECK: tail memcpy
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @dest_pgso, i32 0, i32 0), i8* %src, i32 7, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr @dest_pgso, ptr %src, i32 7, i1 false)
   ret void
 }
 
@@ -53,14 +53,14 @@ define void @caller_indirect_tail(i32 %a) nounwind {
 ; CHECK-NEXT: jr t1
 entry:
   %tobool = icmp eq i32 %a, 0
-  %callee = select i1 %tobool, void ()* @callee_indirect1, void ()* @callee_indirect2
+  %callee = select i1 %tobool, ptr @callee_indirect1, ptr @callee_indirect2
   tail call void %callee()
   ret void
 }
 
 ; Make sure we don't use t0 as the source for jr as that is a hint to pop the
 ; return address stack on some microarchitectures.
-define i32 @caller_indirect_no_t0(i32 (i32, i32, i32, i32, i32, i32, i32)* %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
+define i32 @caller_indirect_no_t0(ptr %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
 ; CHECK-LABEL: caller_indirect_no_t0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv t1, a0
@@ -140,14 +140,14 @@ attributes #0 = { "interrupt"="machine" }
 ; Byval parameters hand the function a pointer directly into the stack area
 ; we want to reuse during a tail call. Do not tail call optimize functions with
 ; byval parameters.
-declare i32 @callee_byval(i32** byval(i32*) %a)
+declare i32 @callee_byval(ptr byval(ptr) %a)
 define i32 @caller_byval() nounwind {
 ; CHECK-LABEL: caller_byval
 ; CHECK-NOT: tail callee_byval
 ; CHECK: call callee_byval
 entry:
-  %a = alloca i32*
-  %r = tail call i32 @callee_byval(i32** byval(i32*) %a)
+  %a = alloca ptr
+  %r = tail call i32 @callee_byval(ptr byval(ptr) %a)
   ret i32 %r
 }
 
@@ -155,19 +155,19 @@ entry:
 %struct.A = type { i32 }
 @a = global %struct.A zeroinitializer
 
-declare void @callee_struct(%struct.A* sret(%struct.A) %a)
+declare void @callee_struct(ptr sret(%struct.A) %a)
 define void @caller_nostruct() nounwind {
 ; CHECK-LABEL: caller_nostruct
 ; CHECK-NOT: tail callee_struct
 ; CHECK: call callee_struct
 entry:
-  tail call void @callee_struct(%struct.A* sret(%struct.A) @a)
+  tail call void @callee_struct(ptr sret(%struct.A) @a)
   ret void
 }
 
 ; Do not tail call optimize if caller uses structret semantics.
 declare void @callee_nostruct()
-define void @caller_struct(%struct.A* sret(%struct.A) %a) nounwind {
+define void @caller_struct(ptr sret(%struct.A) %a) nounwind {
 ; CHECK-LABEL: caller_struct
 ; CHECK-NOT: tail callee_nostruct
 ; CHECK: call callee_nostruct

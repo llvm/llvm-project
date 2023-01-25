@@ -66,16 +66,15 @@ entry:
 
 "102":                                            ; preds = %"102", %"99"
   %indvars.iv17 = phi i64 [ %indvars.iv.next18, %"102" ], [ 1, %"99" ]
-  %0 = getelementptr [168 x double], [168 x double]* @__data_radiation_MOD_coai, i64 0, i64 0
-  store double 1.000000e+00, double* %0, align 8
-  %1 = icmp eq i64 %indvars.iv17, 3
+  store double 1.000000e+00, ptr @__data_radiation_MOD_coai, align 8
+  %0 = icmp eq i64 %indvars.iv17, 3
   %indvars.iv.next18 = add nuw nsw i64 %indvars.iv17, 1
-  br i1 %1, label %"110", label %"102"
+  br i1 %0, label %"110", label %"102"
 
 "110":                                            ; preds = %"102"
-  %2 = load i32, i32* @__data_runcontrol_MOD_lmulti_layer, align 4, !range !0
-  %3 = icmp eq i32 %2, 0
-  br i1 %3, label %"112", label %"111"
+  %1 = load i32, ptr @__data_runcontrol_MOD_lmulti_layer, align 4, !range !0
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %"112", label %"111"
 
 "111":                                            ; preds = %"110"
   br label %"115"
@@ -85,18 +84,18 @@ entry:
 
 "115":                                            ; preds = %"112", %"111"
   %.pn = phi double [ undef, %"112" ], [ undef, %"111" ]
-  %4 = fdiv double 1.000000e+00, %.pn
+  %3 = fdiv double 1.000000e+00, %.pn
   br label %"116"
 
 "116":                                            ; preds = %"116", %"115"
   %indvars.iv = phi i64 [ %indvars.iv.next, %"116" ], [ 1, %"115" ]
-  %5 = add nsw i64 %indvars.iv, -1
-  %6 = fmul double %4, undef
-  %7 = getelementptr [10 x double], [10 x double]* @__data_radiation_MOD_rad_csalbw, i64 0, i64 %5
-  store double %6, double* %7, align 8
-  %8 = icmp eq i64 %indvars.iv, 10
+  %4 = add nsw i64 %indvars.iv, -1
+  %5 = fmul double %3, undef
+  %6 = getelementptr [10 x double], ptr @__data_radiation_MOD_rad_csalbw, i64 0, i64 %4
+  store double %5, ptr %6, align 8
+  %7 = icmp eq i64 %indvars.iv, 10
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  br i1 %8, label %return, label %"116"
+  br i1 %7, label %return, label %"116"
 
 return:                                           ; preds = %"116"
   ret void

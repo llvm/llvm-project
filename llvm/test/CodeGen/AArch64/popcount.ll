@@ -2,7 +2,7 @@
 ; RUN: llc < %s -O0 -mtriple=aarch64-unknown-unknown | FileCheck %s
 
 ; Function Attrs: nobuiltin nounwind readonly
-define i8 @popcount128(i128* nocapture nonnull readonly %0) {
+define i8 @popcount128(ptr nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount128:
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -14,7 +14,7 @@ define i8 @popcount128(i128* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 Entry:
-  %1 = load i128, i128* %0, align 16
+  %1 = load i128, ptr %0, align 16
   %2 = tail call i128 @llvm.ctpop.i128(i128 %1)
   %3 = trunc i128 %2 to i8
   ret i8 %3
@@ -24,7 +24,7 @@ Entry:
 declare i128 @llvm.ctpop.i128(i128)
 
 ; Function Attrs: nobuiltin nounwind readonly
-define i16 @popcount256(i256* nocapture nonnull readonly %0) {
+define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-LABEL: popcount256:
 ; CHECK:       // %bb.0: // %Entry
 ; CHECK-NEXT:    ldr x11, [x0]
@@ -61,7 +61,7 @@ define i16 @popcount256(i256* nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 Entry:
-  %1 = load i256, i256* %0, align 16
+  %1 = load i256, ptr %0, align 16
   %2 = tail call i256 @llvm.ctpop.i256(i256 %1)
   %3 = trunc i256 %2 to i16
   ret i16 %3

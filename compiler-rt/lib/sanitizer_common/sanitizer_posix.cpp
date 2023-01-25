@@ -87,19 +87,26 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   CHECK(IsPowerOfTwo(size));
   CHECK(IsPowerOfTwo(alignment));
   uptr map_size = size + alignment;
+  // mmap maps entire pages and rounds up map_size needs to be a an integral 
+  // number of pages. 
+  // We need to be aware of this size for calculating end and for unmapping
+  // fragments before and after the alignment region.
+  map_size = RoundUpTo(map_size, GetPageSizeCached());
   uptr map_res = (uptr)MmapOrDieOnFatalError(map_size, mem_type);
   if (UNLIKELY(!map_res))
     return nullptr;
-  uptr map_end = map_res + map_size;
   uptr res = map_res;
   if (!IsAligned(res, alignment)) {
     res = (map_res + alignment - 1) & ~(alignment - 1);
     UnmapOrDie((void*)map_res, res - map_res);
   }
+  uptr map_end = map_res + map_size;
   uptr end = res + size;
   end = RoundUpTo(end, GetPageSizeCached());
-  if (end != map_end)
+  if (end != map_end) {
+    CHECK_LT(end, map_end);
     UnmapOrDie((void*)end, map_end - end);
+  }
   return (void*)res;
 }
 

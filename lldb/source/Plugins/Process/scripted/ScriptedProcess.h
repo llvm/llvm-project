@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 #define LLDB_SOURCE_PLUGINS_SCRIPTED_PROCESS_H
 
+#include "lldb/Interpreter/ScriptedMetadata.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -18,24 +19,7 @@
 #include <mutex>
 
 namespace lldb_private {
-
 class ScriptedProcess : public Process {
-protected:
-  class ScriptedProcessInfo {
-  public:
-    ScriptedProcessInfo(const ProcessLaunchInfo &launch_info) {
-      m_class_name = launch_info.GetScriptedProcessClassName();
-      m_args_sp = launch_info.GetScriptedProcessDictionarySP();
-    }
-
-    std::string GetClassName() const { return m_class_name; }
-    StructuredData::DictionarySP GetArgsSP() const { return m_args_sp; }
-
-  private:
-    std::string m_class_name;
-    StructuredData::DictionarySP m_args_sp;
-  };
-
 public:
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
                                         lldb::ListenerSP listener_sp,
@@ -50,10 +34,6 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
-  ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                  const ScriptedProcess::ScriptedProcessInfo &launch_info,
-                  Status &error);
-
   ~ScriptedProcess() override;
 
   bool CanDebug(lldb::TargetSP target_sp,
@@ -62,8 +42,6 @@ public:
   DynamicLoader *GetDynamicLoader() override { return nullptr; }
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
   Status DoLoadCore() override;
 
@@ -92,7 +70,14 @@ public:
   lldb_private::StructuredData::ObjectSP
   GetLoadedDynamicLibrariesInfos() override;
 
+  lldb_private::StructuredData::DictionarySP GetMetadata() override;
+
+  void UpdateQueueListIfNeeded() override;
+
 protected:
+  ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                  const ScriptedMetadata &scripted_metadata, Status &error);
+
   Status DoStop();
 
   void Clear();
@@ -111,7 +96,7 @@ private:
   static bool IsScriptLanguageSupported(lldb::ScriptLanguage language);
 
   // Member variables.
-  const ScriptedProcessInfo m_scripted_process_info;
+  const ScriptedMetadata m_scripted_metadata;
   lldb_private::ScriptInterpreter *m_interpreter = nullptr;
   lldb_private::StructuredData::ObjectSP m_script_object_sp = nullptr;
   //@}

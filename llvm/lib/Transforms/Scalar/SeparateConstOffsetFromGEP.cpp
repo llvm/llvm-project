@@ -817,6 +817,10 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
+      // Constant offsets of scalable types are not really constant.
+      if (isa<ScalableVectorType>(GTI.getIndexedType()))
+        continue;
+
       // Tries to extract a constant offset from this GEP index.
       int64_t ConstantOffset =
           ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP, DT);
@@ -1006,6 +1010,10 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
+      // Constant offsets of scalable types are not really constant.
+      if (isa<ScalableVectorType>(GTI.getIndexedType()))
+        continue;
+
       // Splits this GEP index into a variadic part and a constant offset, and
       // uses the variadic part as the new index.
       Value *OldIdx = GEP->getOperand(I);
@@ -1122,18 +1130,17 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     // sizeof(int64).
     //
     // Emit an uglygep in this case.
-    Type *I8PtrTy = Type::getInt8PtrTy(GEP->getContext(),
-                                       GEP->getPointerAddressSpace());
-    NewGEP = new BitCastInst(NewGEP, I8PtrTy, "", GEP);
-    NewGEP = GetElementPtrInst::Create(
-        Type::getInt8Ty(GEP->getContext()), NewGEP,
-        ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true), "uglygep",
-        GEP);
+    IRBuilder<> Builder(GEP);
+    Type *I8PtrTy =
+        Builder.getInt8Ty()->getPointerTo(GEP->getPointerAddressSpace());
+
+    NewGEP = cast<Instruction>(Builder.CreateGEP(
+        Builder.getInt8Ty(), Builder.CreateBitCast(NewGEP, I8PtrTy),
+        {ConstantInt::get(IntPtrTy, AccumulativeByteOffset, true)}, "uglygep",
+        GEPWasInBounds));
+
     NewGEP->copyMetadata(*GEP);
-    // Inherit the inbounds attribute of the original GEP.
-    cast<GetElementPtrInst>(NewGEP)->setIsInBounds(GEPWasInBounds);
-    if (GEP->getType() != I8PtrTy)
-      NewGEP = new BitCastInst(NewGEP, GEP->getType(), GEP->getName(), GEP);
+    NewGEP = cast<Instruction>(Builder.CreateBitCast(NewGEP, GEP->getType()));
   }
 
   GEP->replaceAllUsesWith(NewGEP);

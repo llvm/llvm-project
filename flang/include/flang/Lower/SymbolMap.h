@@ -16,14 +16,15 @@
 #include "flang/Common/reference.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Support/Matcher.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace Fortran::lower {
 
@@ -338,6 +339,18 @@ public:
   /// Dump the map. For debugging.
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
+  void addVariableDefinition(semantics::SymbolRef symRef,
+                             fir::FortranVariableOpInterface definingOp,
+                             bool force = false) {
+    const auto *sym = &symRef.get().GetUltimate();
+    if (force)
+      symbolMapStack.back().erase(sym);
+    symbolMapStack.back().try_emplace(sym, definingOp);
+  }
+
+  std::optional<fir::FortranVariableOpInterface>
+  lookupVariableDefinition(semantics::SymbolRef sym);
+
 private:
   /// Add `symbol` to the current map and bind a `box`.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,
@@ -349,7 +362,9 @@ private:
     symbolMapStack.back().try_emplace(sym, box);
   }
 
-  llvm::SmallVector<llvm::DenseMap<const semantics::Symbol *, SymbolBox>>
+  llvm::SmallVector<
+      llvm::DenseMap<const semantics::Symbol *,
+                     std::variant<SymbolBox, fir::FortranVariableOpInterface>>>
       symbolMapStack;
 
   // Implied DO induction variables are not represented as Se::Symbol in

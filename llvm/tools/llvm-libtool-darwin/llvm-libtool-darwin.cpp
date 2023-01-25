@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DependencyInfo.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/ArchiveWriter.h"
@@ -87,6 +88,12 @@ static cl::list<std::string> LibrarySearchDirs(
         " libraries"),
     cl::Prefix, cl::cat(LibtoolCategory));
 
+static cl::opt<std::string> DependencyInfoPath(
+    "dependency_info",
+    cl::desc("Write an Xcode dependency info file describing the dependencies "
+             "of the created library"),
+    cl::cat(LibtoolCategory));
+
 static cl::opt<bool>
     VersionOption("V", cl::desc("Print the version number and exit"),
                   cl::cat(LibtoolCategory));
@@ -101,11 +108,15 @@ static cl::opt<bool> WarningsAsErrors("warnings_as_errors",
                                       cl::cat(LibtoolCategory),
                                       cl::init(false));
 
+static cl::opt<std::string> IgnoredSyslibRoot("syslibroot", cl::Hidden);
+
 static const std::array<std::string, 3> StandardSearchDirs{
     "/lib",
     "/usr/lib",
     "/usr/local/lib",
 };
+
+std::unique_ptr<DependencyInfo> GlobalDependencyInfo;
 
 struct Config {
   bool Deterministic = true; // Updated by 'D' and 'U' modifiers.
@@ -114,20 +125,22 @@ struct Config {
 };
 
 static Expected<std::string> searchForFile(const Twine &FileName) {
-
   auto FindLib =
-      [FileName](ArrayRef<std::string> SearchDirs) -> Optional<std::string> {
+      [FileName](
+          ArrayRef<std::string> SearchDirs) -> std::optional<std::string> {
     for (StringRef Dir : SearchDirs) {
       SmallString<128> Path;
       sys::path::append(Path, Dir, FileName);
 
       if (sys::fs::exists(Path))
         return std::string(Path);
+
+      GlobalDependencyInfo->addMissingInput(Path);
     }
-    return None;
+    return std::nullopt;
   };
 
-  Optional<std::string> Found = FindLib(LibrarySearchDirs);
+  std::optional<std::string> Found = FindLib(LibrarySearchDirs);
   if (!Found)
     Found = FindLib(StandardSearchDirs);
   if (Found)
@@ -244,8 +257,8 @@ public:
       "This test makes sure NewArchiveMemberList is used by MembersData since "
       "the following asserts test invariants required for MembersData.");
   static_assert(
-      !std::is_copy_constructible<
-          decltype(NewArchiveMemberList::Members)::value_type>::value,
+      !std::is_copy_constructible_v<
+          decltype(NewArchiveMemberList::Members)::value_type>,
       "MembersData::MembersPerArchitecture has a dependency on "
       "MembersData::FileBuffers so it should not be able to "
       "be copied on its own without FileBuffers. Unfortunately, "
@@ -253,8 +266,8 @@ public:
       "of a non-copyable type is itself non-copyable so we have to test the "
       "actual type of the stored data (ie, value_type).");
   static_assert(
-      !std::is_copy_assignable<
-          decltype(NewArchiveMemberList::Members)::value_type>::value,
+      !std::is_copy_assignable_v<
+          decltype(NewArchiveMemberList::Members)::value_type>,
       "MembersData::MembersPerArchitecture has a dependency on "
       "MembersData::FileBuffers so it should not be able to "
       "be copied on its own without FileBuffers. Unfortunately, "
@@ -650,6 +663,11 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
     return C;
   }
 
+  GlobalDependencyInfo =
+      DependencyInfoPath.empty()
+          ? std::make_unique<DummyDependencyInfo>()
+          : std::make_unique<DependencyInfo>(DependencyInfoPath);
+
   if (OutputFile.empty()) {
     std::string Error;
     raw_string_ostream Stream(Error);
@@ -683,6 +701,9 @@ static Expected<Config> parseCommandLine(int Argc, char **Argv) {
         MachO::getCPUTypeFromArchitecture(
             MachO::getArchitectureFromName(ArchType));
   }
+
+  GlobalDependencyInfo->write("llvm-libtool-darwin " LLVM_VERSION_STRING,
+                              InputFiles, OutputFile);
 
   return C;
 }

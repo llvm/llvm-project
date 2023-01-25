@@ -17,7 +17,8 @@ contains
     type(t), allocatable :: a(:)
     type(t), allocatable :: b[:]
     a(1)%p => s
-    !ERROR: Procedure pointer may not be a coindexed object
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: Procedure pointer 'p' may not be a coindexed object
     b[1]%p => s
   end
   ! C1028
@@ -100,8 +101,10 @@ contains
 
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2': incompatible dummy argument #1: incompatible dummy data object intents
     p_impure => f_impure2
-    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
     p_pure => f_pure2
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'ccos': function results have incompatible types: INTEGER(4) vs COMPLEX(4)
+    p_pure => ccos
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible procedure attributes: Elemental
     p_impure => f_elemental2
 
@@ -269,10 +272,10 @@ contains
   end
 
   ! Check is_contiguous, which is usually the same as when pointer bounds
-  ! remapping is used. If it's not simply contiguous it's not constant so
-  ! an error is reported.
+  ! remapping is used.
   subroutine s12
     integer, pointer :: p(:)
+    integer, pointer, contiguous :: pc(:)
     type :: t
       integer :: a(4, 4)
       integer :: b
@@ -280,16 +283,26 @@ contains
     type(t), target :: x
     type(t), target :: y(10,10)
     integer :: v(10)
-    logical, parameter :: l1 = is_contiguous(x%a(:,:))
-    logical, parameter :: l2 = is_contiguous(y(1,1)%a(1,1))
+    logical(kind=merge(1,-1,is_contiguous(x%a(:,:)))) :: l1 ! known true
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,1)))) :: l2 ! known true
     !ERROR: Must be a constant value
-    logical, parameter :: l3 = is_contiguous(y(:,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l3 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l4 = is_contiguous(x%a(:,v))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l4 ! unknown
+    logical(kind=merge(-1,1,is_contiguous(x%a(:,v)))) :: l5 ! known false
     !ERROR: Must be a constant value
-    logical, parameter :: l5 = is_contiguous(y(v,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(v,1)%a(1,1)))) :: l6 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l6 = is_contiguous(p(:))
+    logical(kind=merge(-1,-2,is_contiguous(p(:)))) :: l7 ! unknown
+    logical(kind=merge(1,-1,is_contiguous(pc(:)))) :: l8 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(1:10:2)))) :: l9 ! known false
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l10 ! known false
+    logical(kind=merge(1,-1,is_contiguous(pc(1:10:1)))) :: l11 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l12 ! known false
+    !ERROR: Must be a constant value
+    logical(kind=merge(-1,1,is_contiguous(pc(::-1)))) :: l13 ! unknown (could be empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(::-1,1)))) :: l14 ! known true (empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,::-1)))) :: l15 ! known true (empty)
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)
@@ -303,5 +316,12 @@ contains
     !Ok - don't emit an error about incompatible Subroutine attribute
     ptr => s_external
     call ptr
+  end subroutine
+
+  subroutine s14
+    procedure(real), pointer :: ptr
+    sf(x) = x + 1.
+    !ERROR: Statement function 'sf' may not be the target of a pointer assignment
+    ptr => sf
   end subroutine
 end

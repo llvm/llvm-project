@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown -debug-info-kind=limited -dwarf-version=2 -debugger-tuning=gdb | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown -debug-info-kind=limited -dwarf-version=2 -debugger-tuning=gdb | FileCheck %s
 
 #include "Inputs/cuda.h"
 
@@ -14,12 +14,12 @@ __device__ __constant__ int FileVar2;
 
 __device__ void kernel1(
     // CHECK-DAG: ![[ARG:[0-9]+]] = !DILocalVariable(name: "Arg", arg: {{[0-9]+}}, scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-    // CHECK-DAG: call void @llvm.dbg.declare(metadata i32* {{.*}}, metadata ![[ARG]], metadata !DIExpression()), !dbg !{{[0-9]+}}
+    // CHECK-DAG: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[ARG]], metadata !DIExpression()), !dbg !{{[0-9]+}}
     int Arg) {
     // CHECK-DAG: ![[FUNCVAR0:[0-9]+]] = distinct !DIGlobalVariable(name: "FuncVar0", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}}, isLocal: true, isDefinition: true)
     // CHECK-DAG: !DIGlobalVariableExpression(var: ![[FUNCVAR0]], expr: !DIExpression(DW_OP_constu, 8, DW_OP_swap, DW_OP_xderef))
   __shared__ int FuncVar0;
   // CHECK-DAG: ![[FUNCVAR1:[0-9]+]] = !DILocalVariable(name: "FuncVar1", scope: !{{[0-9]+}}, file: !{{[0-9]+}}, line: {{[0-9]+}}, type: !{{[0-9]+}})
-  // CHECK-DAG: call void @llvm.dbg.declare(metadata i32* {{.*}}, metadata ![[FUNCVAR1]], metadata !DIExpression()), !dbg !{{[0-9]+}}
+  // CHECK-DAG: call void @llvm.dbg.declare(metadata ptr {{.*}}, metadata ![[FUNCVAR1]], metadata !DIExpression()), !dbg !{{[0-9]+}}
   int FuncVar1;
 }

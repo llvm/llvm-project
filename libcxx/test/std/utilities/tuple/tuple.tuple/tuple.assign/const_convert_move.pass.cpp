@@ -22,7 +22,7 @@
 #include <type_traits>
 
 #include "test_macros.h"
-#include "types.h"
+#include "copy_move_types.h"
 
 // test constraints
 

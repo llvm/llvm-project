@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | grep "ret i32 0"
+; RUN: opt < %s -passes=instcombine -S | grep "ret i32 0"
 ; PR4424
 declare void @ext()
 

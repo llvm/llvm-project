@@ -12,6 +12,7 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/Support/Errc.h"
+#include <optional>
 #include <queue>
 
 namespace llvm {
@@ -152,7 +153,7 @@ class DataflowAnalysis {
     return *static_cast<const Derived *>(this);
   }
 
-  mutable Optional<unsigned> AnnotationIndex;
+  mutable std::optional<unsigned> AnnotationIndex;
 
 protected:
   const BinaryContext &BC;
@@ -340,12 +341,11 @@ public:
         }
       }
     } else {
-      for (auto I = Func.rbegin(), E = Func.rend(); I != E; ++I) {
-        Worklist.push(&*I);
+      for (BinaryBasicBlock &BB : llvm::reverse(Func)) {
+        Worklist.push(&BB);
         MCInst *Prev = nullptr;
-        for (auto J = (*I).rbegin(), E2 = (*I).rend(); J != E2; ++J) {
-          MCInst &Inst = *J;
-          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&*I);
+        for (MCInst &Inst : llvm::reverse(BB)) {
+          PrevPoint[&Inst] = Prev ? ProgramPoint(Prev) : ProgramPoint(&BB);
           Prev = &Inst;
         }
       }
@@ -416,8 +416,8 @@ public:
         for (MCInst &Inst : *BB)
           doNext(Inst, *BB);
       else
-        for (auto I = BB->rbegin(), E = BB->rend(); I != E; ++I)
-          doNext(*I, *BB);
+        for (MCInst &Inst : llvm::reverse(*BB))
+          doNext(Inst, *BB);
 
       if (Changed) {
         if (!Backward) {
@@ -439,13 +439,18 @@ public:
 /// Define an iterator for navigating the expressions calculated by a
 /// dataflow analysis at each program point, when they are backed by a
 /// BitVector.
-class ExprIterator
-    : public std::iterator<std::forward_iterator_tag, const MCInst *> {
+class ExprIterator {
   const BitVector *BV;
   const std::vector<MCInst *> &Expressions;
   int Idx;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = const MCInst *;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   ExprIterator &operator++() {
     assert(Idx != -1 && "Iterator already at the end");
     Idx = BV->find_next(Idx);

@@ -1,17 +1,17 @@
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences -S | FileCheck %s -check-prefix=CHECK-TF
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
-; RUN: opt < %s -loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=disabled -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=default -S | FileCheck %s -check-prefix=CHECK-NOTF
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=disabled+simple+reductions+recurrences -S | FileCheck %s -check-prefix=CHECK-TF
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all+noreductions -S | FileCheck %s -check-prefix=CHECK-TF-NORED
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=all+norecurrences -S | FileCheck %s -check-prefix=CHECK-TF-NOREC
+; RUN: opt -opaque-pointers=0 < %s -passes=loop-vectorize -sve-tail-folding=reductions -S | FileCheck %s -check-prefix=CHECK-TF-ONLYRED
 
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 ; CHECK-NOTF-LABEL: @simple_memset(
 ; CHECK-NOTF:       vector.ph:
-; CHECK-NOTF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-NOTF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-NOTF:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NOTF:       vector.body:
 ; CHECK-NOTF-NOT:     %{{.*}} = phi <vscale x 4 x i1>
@@ -19,7 +19,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-NORED-LABEL: @simple_memset(
 ; CHECK-TF-NORED:       vector.ph:
-; CHECK-TF-NORED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-NORED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-NORED:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-NORED:       vector.body:
 ; CHECK-TF-NORED:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -27,7 +27,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-NOREC-LABEL: @simple_memset(
 ; CHECK-TF-NOREC:       vector.ph:
-; CHECK-TF-NOREC:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-NOREC:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-NOREC:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-NOREC:       vector.body:
 ; CHECK-TF-NOREC:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -35,7 +35,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-LABEL: @simple_memset(
 ; CHECK-TF:       vector.ph:
-; CHECK-TF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF:       vector.body:
 ; CHECK-TF:         %[[ACTIVE_LANE_MASK:.*]] = phi <vscale x 4 x i1>
@@ -43,7 +43,7 @@ define void @simple_memset(i32 %val, i32* %ptr, i64 %n) #0 {
 
 ; CHECK-TF-ONLYRED-LABEL: @simple_memset(
 ; CHECK-TF-ONLYRED:       vector.ph:
-; CHECK-TF-ONLYRED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i32 0
+; CHECK-TF-ONLYRED:         %[[INSERT:.*]] = insertelement <vscale x 4 x i32> poison, i32 %val, i64 0
 ; CHECK-TF-ONLYRED:         %[[SPLAT:.*]] = shufflevector <vscale x 4 x i32> %[[INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-TF-ONLYRED:       vector.body:
 ; CHECK-TF-ONLYRED-NOT:     %{{.*}} = phi <vscale x 4 x i1>
@@ -210,6 +210,59 @@ for.body:                                         ; preds = %entry, %for.body
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
 for.end:                                          ; preds = %for.body
+  ret void
+}
+
+define void @interleave(float* noalias %dst, float* noalias %src, i64 %n) #0 {
+; CHECK-NOTF-LABEL: @interleave(
+; CHECK-NOTF:       vector.body:
+; CHECK-NOTF:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-NOTF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NOTF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-LABEL: @interleave(
+; CHECK-TF:       vector.body:
+; CHECK-TF:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-NORED-LABEL: @interleave(
+; CHECK-TF-NORED:       vector.body:
+; CHECK-TF-NORED:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF-NORED:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF-NORED:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-NOREC-LABEL: @interleave(
+; CHECK-TF-NOREC:       vector.body:
+; CHECK-TF-NOREC:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.021 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %mul = shl nuw nsw i64 %i.021, 1
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %mul
+  %0 = load float, float* %arrayidx, align 4
+  %mul1 = mul nuw nsw i64 %i.021, 3
+  %arrayidx2 = getelementptr inbounds float, float* %dst, i64 %mul1
+  store float %0, float* %arrayidx2, align 4
+  %add = or i64 %mul, 1
+  %arrayidx4 = getelementptr inbounds float, float* %src, i64 %add
+  %1 = load float, float* %arrayidx4, align 4
+  %add6 = add nuw nsw i64 %mul1, 1
+  %arrayidx7 = getelementptr inbounds float, float* %dst, i64 %add6
+  store float %1, float* %arrayidx7, align 4
+  %add9 = add nuw nsw i64 %mul1, 2
+  %arrayidx10 = getelementptr inbounds float, float* %dst, i64 %add9
+  store float 3.000000e+00, float* %arrayidx10, align 4
+  %inc = add nuw nsw i64 %i.021, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 

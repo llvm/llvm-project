@@ -12,7 +12,7 @@
 @data = external global i8, align 1
 
 ; Function Attrs: norecurse nounwind readnone
-define i8* @test_frame0(i8* nocapture readnone %0, i8* readnone returned %1) {
+define ptr @test_frame0(ptr nocapture readnone %0, ptr readnone returned %1) {
 ; CHECK-LABEL: test_frame0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    or %s0, 0, %s1
@@ -22,11 +22,11 @@ define i8* @test_frame0(i8* nocapture readnone %0, i8* readnone returned %1) {
 ; PIC:       # %bb.0:
 ; PIC-NEXT:    or %s0, 0, %s1
 ; PIC-NEXT:    b.l.t (, %s10)
-  ret i8* %1
+  ret ptr %1
 }
 
 ; Function Attrs: nofree nounwind
-define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
+define nonnull ptr @test_frame32(ptr nocapture readonly %0) {
 ; CHECK-LABEL: test_frame32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -32, %s11
@@ -67,22 +67,21 @@ define nonnull i8* @test_frame32(i8* nocapture readonly %0) {
 ; PIC-NEXT:    adds.l %s11, 32, %s11
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
-  %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %3)
-  %4 = load i8, i8* %0, align 1
-  store volatile i8 %4, i8* %3, align 1
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %3)
-  ret i8* %3
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %2)
+  %3 = load i8, ptr %0, align 1
+  store volatile i8 %3, ptr %2, align 1
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %2)
+  ret ptr %2
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nofree nounwind
-define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly %1) {
+define noalias nonnull ptr @test_align32(i32 signext %0, ptr nocapture readonly %1) {
 ; CHECK-LABEL: test_align32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -172,18 +171,17 @@ define noalias nonnull i8* @test_align32(i32 signext %0, i8* nocapture readonly 
 ; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %3 = alloca [32 x i8], align 32
-  %4 = getelementptr inbounds [32 x i8], [32 x i8]* %3, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %4)
-  %5 = sext i32 %0 to i64
-  %6 = alloca i8, i64 %5, align 32
-  %7 = load i8, i8* %1, align 1
-  store volatile i8 %7, i8* %6, align 32
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %4)
-  ret i8* %4
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3)
+  %4 = sext i32 %0 to i64
+  %5 = alloca i8, i64 %4, align 32
+  %6 = load i8, ptr %1, align 1
+  store volatile i8 %6, ptr %5, align 32
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3)
+  ret ptr %3
 }
 
 ; Function Attrs: nofree norecurse nounwind
-define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
+define ptr @test_frame0_var(ptr returned %0, ptr nocapture readnone %1) {
 ; CHECK-LABEL: test_frame0_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s1, data@lo
@@ -210,13 +208,13 @@ define i8* @test_frame0_var(i8* returned %0, i8* nocapture readnone %1) {
 ; PIC-NEXT:    ld %s16, 32(, %s11)
 ; PIC-NEXT:    ld %s15, 24(, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
-  %3 = load i8, i8* @data, align 1
-  store i8 %3, i8* %0, align 1
-  ret i8* %0
+  %3 = load i8, ptr @data, align 1
+  store i8 %3, ptr %0, align 1
+  ret ptr %0
 }
 
 ; Function Attrs: nofree nounwind
-define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
+define nonnull ptr @test_frame32_var(ptr nocapture readnone %0) {
 ; CHECK-LABEL: test_frame32_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -32, %s11
@@ -272,16 +270,15 @@ define nonnull i8* @test_frame32_var(i8* nocapture readnone %0) {
 ; PIC-NEXT:    ld %s15, 24(, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
-  %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %3)
-  %4 = load i8, i8* @data, align 1
-  store volatile i8 %4, i8* %3, align 1
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %3)
-  ret i8* %3
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %2)
+  %3 = load i8, ptr @data, align 1
+  store volatile i8 %3, ptr %2, align 1
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %2)
+  ret ptr %2
 }
 
 ; Function Attrs: nofree nounwind
-define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture readonly %1) {
+define noalias nonnull ptr @test_align32_var(i32 signext %0, ptr nocapture readonly %1) {
 ; CHECK-LABEL: test_align32_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    st %s9, (, %s11)
@@ -371,12 +368,11 @@ define noalias nonnull i8* @test_align32_var(i32 signext %0, i8* nocapture reado
 ; PIC-NEXT:    ld %s9, (, %s11)
 ; PIC-NEXT:    b.l.t (, %s10)
   %3 = alloca [32 x i8], align 32
-  %4 = getelementptr inbounds [32 x i8], [32 x i8]* %3, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* nonnull %4)
-  %5 = sext i32 %0 to i64
-  %6 = alloca i8, i64 %5, align 32
-  %7 = load i8, i8* %1, align 1
-  store volatile i8 %7, i8* %6, align 32
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* nonnull %4)
-  ret i8* %4
+  call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %3)
+  %4 = sext i32 %0 to i64
+  %5 = alloca i8, i64 %4, align 32
+  %6 = load i8, ptr %1, align 1
+  store volatile i8 %6, ptr %5, align 32
+  call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %3)
+  ret ptr %3
 }

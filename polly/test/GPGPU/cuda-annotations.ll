@@ -4,15 +4,15 @@
 
 ; REQUIRES: pollyacc
 
-; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_A, i64 %n) #0 {
+; KERNEL: define ptx_kernel void @FUNC_foo_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_A, i64 %n) #0 {
 
 ; KERNEL: !nvvm.annotations = !{!0}
 
-; KERNEL: !0 = !{void (i8 addrspace(1)*, i64)* @FUNC_foo_SCOP_0_KERNEL_0, !"maxntidx", i32 32, !"maxntidy", i32 1, !"maxntidz", i32 1}
+; KERNEL: !0 = !{ptr @FUNC_foo_SCOP_0_KERNEL_0, !"maxntidx", i32 32, !"maxntidy", i32 1, !"maxntidz", i32 1}
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64* %A, i64 %n) {
+define void @foo(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -22,10 +22,10 @@ bb1:                                              ; preds = %bb6, %bb
   br i1 %tmp, label %bb2, label %bb8
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = getelementptr inbounds i64, i64* %A, i64 %i.0
-  %tmp4 = load i64, i64* %tmp3, align 8
+  %tmp3 = getelementptr inbounds i64, ptr %A, i64 %i.0
+  %tmp4 = load i64, ptr %tmp3, align 8
   %tmp5 = add nsw i64 %tmp4, 100
-  store i64 %tmp5, i64* %tmp3, align 8
+  store i64 %tmp5, ptr %tmp3, align 8
   br label %bb6
 
 bb6:                                              ; preds = %bb2

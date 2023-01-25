@@ -27,7 +27,7 @@ exit:
 }
 
 ; The same counted loop, but with an unknown early exit
-define void @test2(i32) gc "statepoint-example" {
+define void @test2(i1 %c, i32) gc "statepoint-example" {
 ; CHECK-LABEL: test2
 ; CHECK-LABEL: entry
 ; CHECK: call void @do_safepoint
@@ -42,7 +42,7 @@ loop:
   %counter = phi i32 [ 0 , %entry ], [ %counter.inc , %continue ]
   %counter.inc = add i32 %counter, 1
   %counter.cmp = icmp slt i32 %counter.inc, 16
-  br i1 undef, label %continue, label %exit
+  br i1 %c, label %continue, label %exit
 
 continue:
   br i1 %counter.cmp, label %loop, label %exit

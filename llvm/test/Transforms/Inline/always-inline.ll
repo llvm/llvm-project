@@ -1,9 +1,3 @@
-; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
-; Ensure the threshold has no impact on these decisions.
-; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
 ; the always inliner, but test that we get the correct result.
 ; RUN: opt < %s -inline-threshold=0 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK
@@ -89,10 +83,10 @@ entry:
 }
 
 ; We can't inline this even though it has alwaysinline!
-define internal i32 @inner5(i8* %addr) alwaysinline {
+define internal i32 @inner5(ptr %addr) alwaysinline {
 ; CHECK-LABEL: @inner5(
 entry:
-  indirectbr i8* %addr, [ label %one, label %two ]
+  indirectbr ptr %addr, [ label %one, label %two ]
 
 one:
   ret i32 42
@@ -106,8 +100,8 @@ define i32 @outer5(i32 %x) {
 ; CHECK: ret
 
   %cmp = icmp slt i32 %x, 42
-  %addr = select i1 %cmp, i8* blockaddress(@inner5, %one), i8* blockaddress(@inner5, %two)
-  %call = call i32 @inner5(i8* %addr)
+  %addr = select i1 %cmp, ptr blockaddress(@inner5, %one), ptr blockaddress(@inner5, %two)
+  %call = call i32 @inner5(ptr %addr)
   ret i32 %call
 }
 
@@ -149,17 +143,17 @@ define i32 @outer7() {
    ret i32 %r
 }
 
-define internal float* @inner8(float* nocapture align 128 %a) alwaysinline {
+define internal ptr @inner8(ptr nocapture align 128 %a) alwaysinline {
 ; CHECK-NOT: @inner8(
-  ret float* %a
+  ret ptr %a
 }
-define float @outer8(float* nocapture %a) {
+define float @outer8(ptr nocapture %a) {
 ; CHECK-LABEL: @outer8(
-; CHECK-NOT: call float* @inner8
+; CHECK-NOT: call ptr @inner8
 ; CHECK: ret
 
-  %inner_a = call float* @inner8(float* %a)
-  %f = load float, float* %inner_a, align 4
+  %inner_a = call ptr @inner8(ptr %a)
+  %f = load float, ptr %inner_a, align 4
   ret float %f
 }
 
@@ -194,7 +188,7 @@ entry:
   ; this the function can't be deleted because of the constant expression
   ; usage.
   %sink = alloca i1
-  store volatile i1 icmp eq (i64 ptrtoint (void (i1)* @inner9a to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)), i1* %sink
+  store volatile i1 icmp eq (i64 ptrtoint (ptr @inner9a to i64), i64 ptrtoint(ptr @dummy9 to i64)), ptr %sink
 ; CHECK: store volatile
   call void @inner9a(i1 false)
 ; CHECK-NOT: call void @inner9a
@@ -202,7 +196,7 @@ entry:
   ; Next we call @inner9b passing in a constant expression. This constant
   ; expression will in fact be removed by inlining, so we should also be able
   ; to delete the function.
-  call void @inner9b(i1 icmp eq (i64 ptrtoint (void (i1)* @inner9b to i64), i64 ptrtoint(void (i1)* @dummy9 to i64)))
+  call void @inner9b(i1 icmp eq (i64 ptrtoint (ptr @inner9b to i64), i64 ptrtoint(ptr @dummy9 to i64)))
 ; CHECK-NOT: @inner9b
 
   ret void

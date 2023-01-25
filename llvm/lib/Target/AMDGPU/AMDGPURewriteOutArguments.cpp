@@ -28,7 +28,7 @@
 /// into something like this:
 ///
 ///  std::pair<int, int> foo(int a, int b) {
-///     return std::make_pair(a + b, bar());
+///     return std::pair(a + b, bar());
 /// }
 ///
 /// Typically the incoming pointer is a simple alloca for a temporary variable
@@ -332,7 +332,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
-  NewFunc->getBasicBlockList().splice(NewFunc->begin(), F.getBasicBlockList());
+  NewFunc->splice(NewFunc->begin(), &F);
 
   for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
@@ -340,7 +340,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     B.SetCurrentDebugLocation(RI->getDebugLoc());
 
     int RetIdx = 0;
-    Value *NewRetVal = UndefValue::get(NewRetTy);
+    Value *NewRetVal = PoisonValue::get(NewRetTy);
 
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
@@ -362,7 +362,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
     if (OutArgIndexes.count(Arg.getArgNo())) {
       // It's easier to preserve the type of the argument list. We rely on
       // DeadArgumentElimination to take care of these.
-      StubCallArgs.push_back(UndefValue::get(Arg.getType()));
+      StubCallArgs.push_back(PoisonValue::get(Arg.getType()));
     } else {
       StubCallArgs.push_back(&Arg);
     }

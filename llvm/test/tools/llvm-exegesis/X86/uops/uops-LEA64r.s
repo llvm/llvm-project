@@ -1,5 +1,5 @@
-# RUN: llvm-exegesis -mode=uops -opcode-name=LEA64r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck %s
-# RUN: llvm-exegesis -mode=uops -opcode-name=LEA64r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=uops --benchmark-phase=assemble-measured-code -opcode-name=LEA64r -repetition-mode=duplicate -max-configs-per-opcode=2 | FileCheck %s
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=uops --benchmark-phase=assemble-measured-code -opcode-name=LEA64r -repetition-mode=loop -max-configs-per-opcode=2 | FileCheck %s
 
 CHECK:      ---
 CHECK-NEXT: mode: uops

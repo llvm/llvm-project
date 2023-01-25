@@ -6,7 +6,7 @@
 ; RUN:   -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s -check-prefix=CHECK-BE
 
-define dso_local void @testutof(<8 x i16> %a, float* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testutof(<8 x i16> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testutof:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -23,11 +23,11 @@ define dso_local void @testutof(<8 x i16> %a, float* nocapture %ptr) local_unnam
 entry:
   %vecext = extractelement <8 x i16> %a, i32 0
   %conv = uitofp i16 %vecext to float
-  store float %conv, float* %ptr, align 4
+  store float %conv, ptr %ptr, align 4
   ret void
 }
 
-define dso_local void @testutod(<8 x i16> %a, double* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testutod(<8 x i16> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testutod:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -44,11 +44,11 @@ define dso_local void @testutod(<8 x i16> %a, double* nocapture %ptr) local_unna
 entry:
   %vecext = extractelement <8 x i16> %a, i32 0
   %conv = uitofp i16 %vecext to double
-  store double %conv, double* %ptr, align 8
+  store double %conv, ptr %ptr, align 8
   ret void
 }
 
-define dso_local void @teststof(<8 x i16> %a, float* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @teststof(<8 x i16> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: teststof:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -67,11 +67,11 @@ define dso_local void @teststof(<8 x i16> %a, float* nocapture %ptr) local_unnam
 entry:
   %vecext = extractelement <8 x i16> %a, i32 0
   %conv = sitofp i16 %vecext to float
-  store float %conv, float* %ptr, align 4
+  store float %conv, ptr %ptr, align 4
   ret void
 }
 
-define dso_local void @teststod(<8 x i16> %a, double* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @teststod(<8 x i16> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: teststod:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -90,11 +90,11 @@ define dso_local void @teststod(<8 x i16> %a, double* nocapture %ptr) local_unna
 entry:
   %vecext = extractelement <8 x i16> %a, i32 0
   %conv = sitofp i16 %vecext to double
-  store double %conv, double* %ptr, align 8
+  store double %conv, ptr %ptr, align 8
   ret void
 }
 
-define dso_local void @testsubtod(<16 x i8> %a, double* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testsubtod(<16 x i8> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testsubtod:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 15
@@ -111,11 +111,11 @@ define dso_local void @testsubtod(<16 x i8> %a, double* nocapture %ptr) local_un
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0
   %conv = uitofp i8 %vecext to double
-  store double %conv, double* %ptr, align 8
+  store double %conv, ptr %ptr, align 8
   ret void
 }
 
-define dso_local void @testsbtod(<16 x i8> %a, double* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testsbtod(<16 x i8> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testsbtod:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 15
@@ -134,11 +134,11 @@ define dso_local void @testsbtod(<16 x i8> %a, double* nocapture %ptr) local_unn
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0
   %conv = sitofp i8 %vecext to double
-  store double %conv, double* %ptr, align 8
+  store double %conv, ptr %ptr, align 8
   ret void
 }
 
-define dso_local void @testsubtof(<16 x i8> %a, float* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testsubtof(<16 x i8> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testsubtof:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 15
@@ -155,11 +155,11 @@ define dso_local void @testsubtof(<16 x i8> %a, float* nocapture %ptr) local_unn
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0
   %conv = uitofp i8 %vecext to float
-  store float %conv, float* %ptr, align 8
+  store float %conv, ptr %ptr, align 8
   ret void
 }
 
-define dso_local void @testsbtof(<16 x i8> %a, float* nocapture %ptr) local_unnamed_addr #0 {
+define dso_local void @testsbtof(<16 x i8> %a, ptr nocapture %ptr) local_unnamed_addr #0 {
 ; CHECK-LABEL: testsbtof:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 15
@@ -178,6 +178,6 @@ define dso_local void @testsbtof(<16 x i8> %a, float* nocapture %ptr) local_unna
 entry:
   %vecext = extractelement <16 x i8> %a, i32 0
   %conv = sitofp i8 %vecext to float
-  store float %conv, float* %ptr, align 8
+  store float %conv, ptr %ptr, align 8
   ret void
 }

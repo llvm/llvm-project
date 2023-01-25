@@ -27,8 +27,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -304,7 +304,7 @@ class TypeSourceInfo;
     /// \param From Object to import.
     /// \return Error information (success or error).
     template <typename ImportT>
-    LLVM_NODISCARD llvm::Error importInto(ImportT &To, const ImportT &From) {
+    [[nodiscard]] llvm::Error importInto(ImportT &To, const ImportT &From) {
       auto ToOrErr = Import(From);
       if (ToOrErr)
         To = *ToOrErr;
@@ -367,7 +367,7 @@ class TypeSourceInfo;
     /// in the "to" context was imported. If it was not imported or of the wrong
     /// type a null value is returned.
     template <typename DeclT>
-    llvm::Optional<DeclT *> getImportedFromDecl(const DeclT *ToD) const {
+    std::optional<DeclT *> getImportedFromDecl(const DeclT *ToD) const {
       auto FromI = ImportedFromDecls.find(ToD);
       if (FromI == ImportedFromDecls.end())
         return {};
@@ -482,7 +482,7 @@ class TypeSourceInfo;
 
     /// Import the definition of the given declaration, including all of
     /// the declarations it contains.
-    LLVM_NODISCARD llvm::Error ImportDefinition(Decl *From);
+    [[nodiscard]] llvm::Error ImportDefinition(Decl *From);
 
     /// Cope with a name conflict when importing a declaration into the
     /// given context.
@@ -564,7 +564,7 @@ class TypeSourceInfo;
     /// Return if import of the given declaration has failed and if yes
     /// the kind of the problem. This gives the first error encountered with
     /// the node.
-    llvm::Optional<ASTImportError> getImportDeclErrorIfAny(Decl *FromD) const;
+    std::optional<ASTImportError> getImportDeclErrorIfAny(Decl *FromD) const;
 
     /// Mark (newly) imported declaration with error.
     void setImportDeclError(Decl *From, ASTImportError Error);
@@ -577,8 +577,8 @@ class TypeSourceInfo;
     /// Determine the index of a field in its parent record.
     /// F should be a field (or indirect field) declaration.
     /// \returns The index of the field in its parent context (starting from 0).
-    /// On error `None` is returned (parent context is non-record).
-    static llvm::Optional<unsigned> getFieldIndex(Decl *F);
+    /// On error `std::nullopt` is returned (parent context is non-record).
+    static std::optional<unsigned> getFieldIndex(Decl *F);
   };
 
 } // namespace clang

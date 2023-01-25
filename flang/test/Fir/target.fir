@@ -48,13 +48,13 @@ func.func @gen8() -> !fir.complex<8> {
   return %5 : !fir.complex<8>
 }
 
-// I32: declare void @sink4(ptr)
+// I32: declare void @sink4(ptr byval({ float, float }) align 4)
 // X64: declare void @sink4(<2 x float>)
 // AARCH64: declare void @sink4([2 x float])
 // PPC: declare void @sink4(float, float)
 func.func private @sink4(!fir.complex<4>) -> ()
 
-// I32: declare void @sink8(ptr)
+// I32: declare void @sink8(ptr byval({ double, double }) align 4)
 // X64: declare void @sink8(double, double)
 // AARCH64: declare void @sink8([2 x double])
 // PPC: declare void @sink8(double, double)
@@ -115,7 +115,7 @@ func.func @char1lensum(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i64 
 // I32-LABEL: define void @char1copy(ptr sret(i8) %0, i32 %1, ptr %2, i32 %3)
 // I64-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
 // PPC-LABEL: define void @char1copy(ptr sret(i8) %0, i64 %1, ptr %2, i64 %3)
-func.func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar<1>) {
+func.func @char1copy(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1, ?>}, %arg1 : !fir.boxchar<1>) {
   // I32-DAG: %[[p0:.*]] = insertvalue { ptr, i32 } undef, ptr %2, 0
   // I32-DAG: = insertvalue { ptr, i32 } %[[p0]], i32 %3, 1
   // I32-DAG: %[[p1:.*]] = insertvalue { ptr, i32 } undef, ptr %0, 0

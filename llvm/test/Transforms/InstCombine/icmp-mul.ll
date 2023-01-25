@@ -3,6 +3,91 @@
 
 declare void @use(i8)
 
+define i1 @squared_nsw_eq0(i5 %x) {
+; CHECK-LABEL: @squared_nsw_eq0(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp eq i5 %m, 0
+  ret i1 %r
+}
+
+define <2 x i1> @squared_nuw_eq0(<2 x i8> %x) {
+; CHECK-LABEL: @squared_nuw_eq0(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %m = mul nuw <2 x i8> %x, %x
+  %r = icmp eq <2 x i8> %m, zeroinitializer
+  ret <2 x i1> %r
+}
+
+; extra use is ok
+
+define i1 @squared_nsw_nuw_ne0(i8 %x) {
+; CHECK-LABEL: @squared_nsw_nuw_ne0(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw nuw i8 %x, %x
+  call void @use(i8 %m)
+  %r = icmp ne i8 %m, 0
+  ret i1 %r
+}
+
+; negative test - must have no-overflow
+
+define i1 @squared_eq0(i8 %x) {
+; CHECK-LABEL: @squared_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul i8 %x, %x
+  %r = icmp eq i8 %m, 0
+  ret i1 %r
+}
+
+; negative test - not squared
+; TODO: This could be or-of-icmps.
+
+define i1 @mul_nsw_eq0(i5 %x, i5 %y) {
+; CHECK-LABEL: @mul_nsw_eq0(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %y
+  %r = icmp eq i5 %m, 0
+  ret i1 %r
+}
+
+; negative test - non-zero cmp
+
+define i1 @squared_nsw_eq1(i5 %x) {
+; CHECK-LABEL: @squared_nsw_eq1(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i5 [[M]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp eq i5 %m, 1
+  ret i1 %r
+}
+
+define i1 @squared_nsw_sgt0(i5 %x) {
+; CHECK-LABEL: @squared_nsw_sgt0(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i5 [[X:%.*]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %m = mul nsw i5 %x, %x
+  %r = icmp sgt i5 %m, 0
+  ret i1 %r
+}
+
 ; Tests for slt/ult
 
 define i1 @slt_positive_multip_rem_zero(i8 %x) {
@@ -664,11 +749,11 @@ define <2 x i1> @eq_mul_constants_with_tz_splat(<2 x i32> %x, <2 x i32> %y) {
 define i1 @oss_fuzz_39934(i32 %arg) {
 ; CHECK-LABEL: @oss_fuzz_39934(
 ; CHECK-NEXT:    [[B13:%.*]] = mul nsw i32 [[ARG:%.*]], -65536
-; CHECK-NEXT:    [[C10:%.*]] = icmp ne i32 [[B13]], mul (i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 65537), i32 -65536)
+; CHECK-NEXT:    [[C10:%.*]] = icmp ne i32 [[B13]], mul (i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537), i32 -65536)
 ; CHECK-NEXT:    ret i1 [[C10]]
 ;
   %B13 = mul nsw i32 %arg, -65536
-  %C10 = icmp ne i32 mul (i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 65537), i32 -65536), %B13
+  %C10 = icmp ne i32 mul (i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537), i32 -65536), %B13
   ret i1 %C10
 }
 
@@ -860,7 +945,9 @@ define i1 @splat_mul_known_lz(i32 %x) {
 
 define i1 @splat_mul_unknown_lz(i32 %x) {
 ; CHECK-LABEL: @splat_mul_unknown_lz(
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[X:%.*]] to i128
+; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw i128 [[Z]], 18446744078004518913
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i128 [[M]], 39614081257132168796771975168
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %z = zext i32 %x to i128

@@ -8,14 +8,14 @@
 ; vld1.32 instruction. The test checks that a vmov.f64 was not
 ; generated.
 
-define <2 x float> @t1(float* %A, <2 x float> %B) {
+define <2 x float> @t1(ptr %A, <2 x float> %B) {
 ; CHECK-LABEL: t1:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d16, r2, r3
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r0:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    bx lr
-  %tmp2 = load float, float* %A, align 4
+  %tmp2 = load float, ptr %A, align 4
   %tmp3 = insertelement <2 x float> %B, float %tmp2, i32 1
   ret <2 x float> %tmp3
 }
@@ -24,7 +24,7 @@ define <2 x float> @t1(float* %A, <2 x float> %B) {
 ; We check that a dependency breaking vmov* instruction was
 ; generated.
 
-define void @t2(<4 x i8> *%in, <4 x i8> *%out, i32 %n) {
+define void @t2(ptr %in, ptr %out, i32 %n) {
 ; CHECK-LABEL: t2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    add r0, r0, #4
@@ -46,10 +46,10 @@ entry:
 loop:
   %oldcount = phi i32 [0, %entry], [%newcount, %loop]
   %newcount = add i32 %oldcount, 1
-  %p1 = getelementptr <4 x i8>, <4 x i8> *%in, i32 %newcount
-  %p2 = getelementptr <4 x i8>, <4 x i8> *%out, i32 %newcount
-  %tmp1 = load <4 x i8> , <4 x i8> *%p1, align 4
-  store <4 x i8> %tmp1, <4 x i8> *%p2
+  %p1 = getelementptr <4 x i8>, ptr %in, i32 %newcount
+  %p2 = getelementptr <4 x i8>, ptr %out, i32 %newcount
+  %tmp1 = load <4 x i8> , ptr %p1, align 4
+  store <4 x i8> %tmp1, ptr %p2
   %cmp = icmp eq i32 %newcount, %n
   br i1 %cmp, label %loop, label %ret
 ret:
@@ -61,7 +61,7 @@ ret:
 ; TODO: This (and above) could use a splat load to remove the false
 ;       dependence with no extra instruction.
 
-define void @t2_minsize(<4 x i8> *%in, <4 x i8> *%out, i32 %n) minsize {
+define void @t2_minsize(ptr %in, ptr %out, i32 %n) minsize {
 ; CHECK-LABEL: t2_minsize:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    add r0, r0, #4
@@ -82,10 +82,10 @@ entry:
 loop:
   %oldcount = phi i32 [0, %entry], [%newcount, %loop]
   %newcount = add i32 %oldcount, 1
-  %p1 = getelementptr <4 x i8>, <4 x i8> *%in, i32 %newcount
-  %p2 = getelementptr <4 x i8>, <4 x i8> *%out, i32 %newcount
-  %tmp1 = load <4 x i8> , <4 x i8> *%p1, align 4
-  store <4 x i8> %tmp1, <4 x i8> *%p2
+  %p1 = getelementptr <4 x i8>, ptr %in, i32 %newcount
+  %p2 = getelementptr <4 x i8>, ptr %out, i32 %newcount
+  %tmp1 = load <4 x i8> , ptr %p1, align 4
+  store <4 x i8> %tmp1, ptr %p2
   %cmp = icmp eq i32 %newcount, %n
   br i1 %cmp, label %loop, label %ret
 ret:

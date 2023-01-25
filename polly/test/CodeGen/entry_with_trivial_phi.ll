@@ -6,19 +6,19 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @test(i64 %n, float* noalias nonnull %A, float %a) {
+define void @test(i64 %n, ptr noalias nonnull %A, float %a) {
 entry:
   br label %entry.split
 
 ; CHECK-LABEL: %polly.split_new_and_old
-; CHECK-NEXT:    store float %a, float* %b.phiops
+; CHECK-NEXT:    store float %a, ptr %b.phiops
 
 ; CHECK-LABEL: polly.stmt.entry.split
-; CHECK-NEXT:    %b.phiops.reload = load float, float* %b.phiops
+; CHECK-NEXT:    %b.phiops.reload = load float, ptr %b.phiops
 
 entry.split:
   %b = phi float [ %a, %entry ]
-  store float %b, float* %A, align 4
+  store float %b, ptr %A, align 4
   %cmp2 = icmp slt i64 %n, 5
   br i1 %cmp2, label %for.cond, label %for.end
 
@@ -28,8 +28,8 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %i.0
-  store float %a, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %i.0
+  store float %a, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

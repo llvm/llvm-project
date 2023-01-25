@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+#include "Plugins/SymbolFile/NativePDB/CodeViewRegisterMapping.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -29,6 +30,8 @@ using namespace lldb_private::npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+// The returned range list is guaranteed to be sorted and no overlaps between
+// adjacent ranges because fields in LocalVariableAddrGap are unsigned integers.
 static Variable::RangeList
 MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
               llvm::ArrayRef<LocalVariableAddrGap> gaps) {
@@ -52,21 +55,144 @@ MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
 }
 
 namespace {
-struct FindMembersSize : public TypeVisitorCallbacks {
-  FindMembersSize(
-      std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info,
-      TpiStream &tpi)
-      : members_info(members_info), tpi(tpi) {}
-  std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info;
-  TpiStream &tpi;
-  llvm::Error visitKnownMember(CVMemberRecord &cvr,
-                               DataMemberRecord &member) override {
-    members_info.insert(
-        {member.getFieldOffset(),
-         {llvm::codeview::RegisterId::NONE, GetSizeOfType(member.Type, tpi)}});
-    return llvm::Error::success();
+struct MemberLocations {
+  std::map<uint64_t, MemberValLocation> offset_to_location;
+  DWARFExpression expr;
+  bool is_dwarf = false;
+
+  MemberLocations() = default;
+  MemberLocations(const DWARFExpression &expr) : expr(expr), is_dwarf(true) {}
+  MemberLocations(uint64_t offset, const MemberValLocation &member_loc) {
+    insert(offset, member_loc);
   }
+
+  void insert(uint64_t offset, const MemberValLocation &member_loc) {
+    offset_to_location[offset] = member_loc;
+  }
+
+  struct Comparator {
+  public:
+    bool operator()(const MemberLocations &, const MemberLocations &) const {
+      return false;
+    }
+  };
 };
+
+// A range map with address ranges to a map of pair of offset and locaitons.
+typedef RangeDataVector<lldb::addr_t, lldb::addr_t, MemberLocations, 0,
+                        MemberLocations::Comparator>
+    RangeMap;
+
+void AddMemberLocationRanges(RangeMap &location_map, uint64_t offset,
+                             MemberValLocation member_loc,
+                             const Variable::RangeList &ranges) {
+  RangeMap new_location_map;
+  auto add_overlap_region = [&](lldb::addr_t base, lldb::addr_t end,
+                                RangeMap::Entry *entry) {
+    RangeMap::Entry overlap_region = {base, end - base, entry->data};
+    overlap_region.data.insert(offset, member_loc);
+    new_location_map.Append(overlap_region);
+  };
+
+  for (const auto &range : ranges) {
+    lldb::addr_t base = range.GetRangeBase();
+    lldb::addr_t end = range.GetRangeEnd();
+    uint32_t base_idx = location_map.FindEntryIndexThatContainsOrFollows(base);
+    while (auto *entry = location_map.GetMutableEntryAtIndex(base_idx)) {
+      if (base >= end || entry->base >= end)
+        break;
+      if (entry->data.is_dwarf)
+        base = entry->GetRangeEnd();
+      else {
+        lldb::addr_t entry_end = entry->GetRangeEnd();
+        if (base > entry->base) {
+          if (end < entry_end)
+            new_location_map.Append({end, entry_end - end, entry->data});
+          add_overlap_region(base, end < entry_end ? end : entry_end, entry);
+          entry->SetRangeEnd(base);
+        } else if (base < entry->base) {
+          new_location_map.Append(
+              {base, entry->base - base, {offset, member_loc}});
+          if (entry_end == end)
+            entry->data.insert(offset, member_loc);
+          else {
+            add_overlap_region(entry->base, end, entry);
+            entry->ShrinkFront(end - entry->base);
+          }
+        } else {
+          if (end < entry_end) {
+            new_location_map.Append({end, entry_end, entry->data});
+            entry->SetRangeEnd(end);
+          }
+          entry->data.insert(offset, member_loc);
+        }
+        base = entry_end;
+      }
+      ++base_idx;
+    }
+    if (base >= end)
+      continue;
+    new_location_map.Append({base, end - base, {offset, member_loc}});
+  }
+  for (const auto &entry : new_location_map)
+    location_map.Append(entry);
+  if (!new_location_map.IsEmpty())
+    location_map.Sort();
+}
+
+void AddDwarfRange(RangeMap &location_map, const DWARFExpression &expr,
+                   const Variable::RangeList &ranges) {
+  if (!expr.IsValid())
+    return;
+  RangeMap new_location_map;
+  for (const auto &range : ranges) {
+    lldb::addr_t base = range.GetRangeBase();
+    lldb::addr_t end = range.GetRangeEnd();
+    uint32_t base_idx = location_map.FindEntryIndexThatContains(base);
+    uint32_t end_idx = location_map.FindEntryIndexThatContains(end - 1);
+    // range is within an entry.
+    if (base_idx == end_idx && base_idx != UINT32_MAX) {
+      auto *entry = location_map.GetMutableEntryAtIndex(base_idx);
+      if (base > entry->base) {
+        new_location_map.Append({entry->base, base - entry->base, entry->data});
+        entry->ShrinkFront(base - entry->base);
+      }
+      if (end == entry->GetRangeEnd())
+        entry->data = expr;
+      else {
+        entry->ShrinkFront(end - base);
+        new_location_map.Append({base, end - base, expr});
+      }
+      continue;
+    }
+    base_idx = location_map.FindEntryIndexThatContainsOrFollows(base);
+    if (auto *entry = location_map.GetMutableEntryAtIndex(base_idx)) {
+      if (entry->Contains(base) && entry->base != base) {
+        entry->SetRangeEnd(base);
+        ++base_idx;
+      }
+    }
+    end_idx = location_map.FindEntryIndexThatContainsOrFollows(end - 1);
+    if (auto *entry = location_map.GetMutableEntryAtIndex(end_idx)) {
+      if (entry->Contains(end - 1)) {
+        if (entry->GetRangeEnd() == end)
+          ++end_idx;
+        else
+          entry->ShrinkFront(end - entry->base);
+      }
+    }
+
+    if (end_idx == UINT32_MAX)
+      end_idx = location_map.GetSize();
+    // Erase existing ranges covered by new range.
+    location_map.Erase(base_idx, end_idx);
+    new_location_map.Append({base, end - base, expr});
+  }
+
+  for (const auto &entry : new_location_map)
+    location_map.Append(entry);
+  location_map.Sort();
+}
 } // namespace
 
 CVTagRecord CVTagRecord::create(CVType type) {
@@ -612,207 +738,175 @@ VariableInfo lldb_private::npdb::GetVariableLocationInfo(
   if (sym.kind() == S_REGREL32) {
     RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
     cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
-    result.location =
-        MakeRegRelLocationExpression(reg.Register, reg.Offset, module);
-    result.ranges.emplace();
+    result.location = DWARFExpressionList(
+        module, MakeRegRelLocationExpression(reg.Register, reg.Offset, module),
+        nullptr);
     return result;
   }
 
   if (sym.kind() == S_REGISTER) {
     RegisterSym reg(SymbolRecordKind::RegisterSym);
     cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
-    result.location = MakeEnregisteredLocationExpression(reg.Register, module);
-    result.ranges.emplace();
+    result.location = DWARFExpressionList(
+        module, MakeEnregisteredLocationExpression(reg.Register, module),
+        nullptr);
     return result;
   }
 
   if (sym.kind() == S_LOCAL) {
     LocalSym local(SymbolRecordKind::LocalSym);
-    cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
+    if (llvm::Error error =
+            SymbolDeserializer::deserializeAs<LocalSym>(sym, local)) {
+      llvm::consumeError(std::move(error));
+      return result;
+    }
 
     PdbCompilandSymId loc_specifier_id(var_id.modi,
                                        var_id.offset + sym.RecordData.size());
-    CVSymbol loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
-    switch(loc_specifier_cvs.kind()) {
-    case S_DEFRANGE_FRAMEPOINTER_REL: {
-      DefRangeFramePointerRelSym loc(
-          SymbolRecordKind::DefRangeFramePointerRelSym);
-      cantFail(SymbolDeserializer::deserializeAs<DefRangeFramePointerRelSym>(
-          loc_specifier_cvs, loc));
+    CVSymbol loc_specifier_cvs;
+    // Only used for S_DEFRANGE_FRAMEPOINTER_REL.
+    RegisterId base_reg = RegisterId::NONE;
+    size_t type_size = GetSizeOfType(result.type, index.tpi());
+    // A map from offset of a field in parent to size of the field.
+    std::map<uint64_t, size_t> offset_to_size;
 
-      Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+    // When overlaps happens, always prefer the one that doesn't split the value
+    // into multiple locations and the location parsed first is perfered.
+    RangeMap location_map;
 
-      PdbCompilandSymId func_scope_id =
-          PdbSymUid(func_block.GetID()).asCompilandSym();
-      CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
-      lldbassert(func_block_cvs.kind() == S_GPROC32 ||
-                 func_block_cvs.kind() == S_LPROC32);
-
-      PdbCompilandSymId frame_proc_id(
-          func_scope_id.modi, func_scope_id.offset + func_block_cvs.length());
-
-      RegisterId base_reg =
-          GetBaseFrameRegister(index, frame_proc_id, result.is_param);
-      if (base_reg == RegisterId::NONE)
+    // Iterate through all location records after S_LOCAL. They describe the
+    // value of this variable at different locations.
+    bool finished = false;
+    while (!finished) {
+      loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
+      switch (loc_specifier_cvs.kind()) {
+      case S_DEFRANGE_FRAMEPOINTER_REL: {
+        DefRangeFramePointerRelSym loc(
+            SymbolRecordKind::DefRangeFramePointerRelSym);
+        if (llvm::Error error =
+                SymbolDeserializer::deserializeAs<DefRangeFramePointerRelSym>(
+                    loc_specifier_cvs, loc)) {
+          llvm::consumeError(std::move(error));
+          return result;
+        }
+        Variable::RangeList raw_ranges =
+            MakeRangeList(index, loc.Range, loc.Gaps);
+        if (base_reg == RegisterId::NONE) {
+          PdbCompilandSymId func_scope_id =
+              PdbSymUid(func_block.GetID()).asCompilandSym();
+          CVSymbol func_block_cvs = index.ReadSymbolRecord(func_scope_id);
+          lldbassert(func_block_cvs.kind() == S_GPROC32 ||
+                     func_block_cvs.kind() == S_LPROC32);
+          PdbCompilandSymId frame_proc_id(func_scope_id.modi,
+                                          func_scope_id.offset +
+                                              func_block_cvs.length());
+          base_reg =
+              GetBaseFrameRegister(index, frame_proc_id, result.is_param);
+          if (base_reg == RegisterId::NONE)
+            break;
+        }
+        DWARFExpression expr;
+        if (base_reg == RegisterId::VFRAME) {
+          llvm::StringRef program;
+          if (GetFrameDataProgram(index, raw_ranges, program))
+            expr = MakeVFrameRelLocationExpression(program, loc.Hdr.Offset,
+                                                   module);
+          else {
+            // invalid variable
+          }
+        } else
+          expr = MakeRegRelLocationExpression(base_reg, loc.Hdr.Offset, module);
+        AddDwarfRange(location_map, expr, raw_ranges);
         break;
-      if (base_reg == RegisterId::VFRAME) {
-        llvm::StringRef program;
-        if (GetFrameDataProgram(index, ranges, program)) {
-          result.location =
-              MakeVFrameRelLocationExpression(program, loc.Hdr.Offset, module);
-          result.ranges = std::move(ranges);
-        } else {
-          // invalid variable
-        }
-      } else {
-        result.location =
-            MakeRegRelLocationExpression(base_reg, loc.Hdr.Offset, module);
-        result.ranges = std::move(ranges);
       }
-      break;
-    }
-    case S_DEFRANGE_REGISTER_REL: {
-      DefRangeRegisterRelSym loc(SymbolRecordKind::DefRangeRegisterRelSym);
-      cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterRelSym>(
-          loc_specifier_cvs, loc));
-
-      Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
-
-      RegisterId base_reg = (RegisterId)(uint16_t)loc.Hdr.Register;
-
-      if (base_reg == RegisterId::VFRAME) {
-        llvm::StringRef program;
-        if (GetFrameDataProgram(index, ranges, program)) {
-          result.location = MakeVFrameRelLocationExpression(
-              program, loc.Hdr.BasePointerOffset, module);
-          result.ranges = std::move(ranges);
-        } else {
-          // invalid variable
+      case S_DEFRANGE_REGISTER: {
+        DefRangeRegisterSym loc(SymbolRecordKind::DefRangeRegisterSym);
+        if (llvm::Error error =
+                SymbolDeserializer::deserializeAs<DefRangeRegisterSym>(
+                    loc_specifier_cvs, loc)) {
+          llvm::consumeError(std::move(error));
+          return result;
         }
-      } else {
-        result.location = MakeRegRelLocationExpression(
-            base_reg, loc.Hdr.BasePointerOffset, module);
-        result.ranges = std::move(ranges);
+        RegisterId reg_id = (RegisterId)(uint16_t)loc.Hdr.Register;
+        Variable::RangeList raw_ranges =
+            MakeRangeList(index, loc.Range, loc.Gaps);
+        DWARFExpression expr =
+            MakeEnregisteredLocationExpression(reg_id, module);
+        AddDwarfRange(location_map, expr, raw_ranges);
+        break;
       }
-      break;
-    }
-    case S_DEFRANGE_REGISTER: {
-      DefRangeRegisterSym loc(SymbolRecordKind::DefRangeRegisterSym);
-      cantFail(SymbolDeserializer::deserializeAs<DefRangeRegisterSym>(
-          loc_specifier_cvs, loc));
-
-      RegisterId base_reg = (RegisterId)(uint16_t)loc.Hdr.Register;
-      result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
-      result.location = MakeEnregisteredLocationExpression(base_reg, module);
-      break;
-    }
-    case S_DEFRANGE_SUBFIELD_REGISTER: {
-      // A map from offset in parent to pair of register id and size. If the
-      // variable is a simple type, then we don't know the number of subfields.
-      // Otherwise, the size of the map should be greater than or equal to the
-      // number of sub field record.
-      std::map<uint64_t, std::pair<RegisterId, uint32_t>> members_info;
-      bool is_simple_type = result.type.isSimple();
-      if (!is_simple_type) {
-        CVType class_cvt = index.tpi().getType(result.type);
-        TypeIndex class_id = result.type;
-        if (class_cvt.kind() == LF_MODIFIER)
-          class_id = LookThroughModifierRecord(class_cvt);
-        if (IsForwardRefUdt(class_id, index.tpi())) {
-          auto expected_full_ti =
-              index.tpi().findFullDeclForForwardRef(class_id);
-          if (!expected_full_ti) {
-            llvm::consumeError(expected_full_ti.takeError());
-            break;
-          }
-          class_cvt = index.tpi().getType(*expected_full_ti);
+      case S_DEFRANGE_REGISTER_REL: {
+        DefRangeRegisterRelSym loc(SymbolRecordKind::DefRangeRegisterRelSym);
+        if (llvm::Error error =
+                SymbolDeserializer::deserializeAs<DefRangeRegisterRelSym>(
+                    loc_specifier_cvs, loc)) {
+          llvm::consumeError(std::move(error));
+          return result;
         }
-        if (IsTagRecord(class_cvt)) {
-          TagRecord tag_record = CVTagRecord::create(class_cvt).asTag();
-          CVType field_list_cvt = index.tpi().getType(tag_record.FieldList);
-          FieldListRecord field_list;
-          if (llvm::Error error =
-                  TypeDeserializer::deserializeAs<FieldListRecord>(
-                      field_list_cvt, field_list))
-            llvm::consumeError(std::move(error));
-          FindMembersSize find_members_size(members_info, index.tpi());
-          if (llvm::Error err = visitMemberRecordStream(field_list.Data,
-                                                        find_members_size)) {
-            llvm::consumeError(std::move(err));
-            break;
+        Variable::RangeList raw_ranges =
+            MakeRangeList(index, loc.Range, loc.Gaps);
+        RegisterId reg_id = (RegisterId)(uint16_t)loc.Hdr.Register;
+        DWARFExpression expr;
+        if (reg_id == RegisterId::VFRAME) {
+          llvm::StringRef program;
+          if (GetFrameDataProgram(index, raw_ranges, program))
+            expr = MakeVFrameRelLocationExpression(
+                program, loc.Hdr.BasePointerOffset, module);
+          else {
+            // invalid variable
           }
         } else {
-          // TODO: Handle poiner type.
-          break;
+          expr = MakeRegRelLocationExpression(reg_id, loc.Hdr.BasePointerOffset,
+                                              module);
         }
+        // FIXME: If it's UDT, we need to know the size of the value in byte.
+        if (!loc.hasSpilledUDTMember())
+          AddDwarfRange(location_map, expr, raw_ranges);
+        break;
       }
-
-      size_t member_idx = 0;
-      // Assuming S_DEFRANGE_SUBFIELD_REGISTER is followed only by
-      // S_DEFRANGE_SUBFIELD_REGISTER, need to verify.
-      while (loc_specifier_cvs.kind() == S_DEFRANGE_SUBFIELD_REGISTER) {
-        if (!is_simple_type && member_idx >= members_info.size())
-          break;
-
+      case S_DEFRANGE_SUBFIELD_REGISTER: {
         DefRangeSubfieldRegisterSym loc(
             SymbolRecordKind::DefRangeSubfieldRegisterSym);
-        cantFail(SymbolDeserializer::deserializeAs<DefRangeSubfieldRegisterSym>(
-            loc_specifier_cvs, loc));
-
-        if (result.ranges) {
-          result.ranges = Variable::RangeList::GetOverlaps(
-              *result.ranges, MakeRangeList(index, loc.Range, loc.Gaps));
-        } else {
-          result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
-          result.ranges->Sort();
+        if (llvm::Error error =
+                SymbolDeserializer::deserializeAs<DefRangeSubfieldRegisterSym>(
+                    loc_specifier_cvs, loc)) {
+          llvm::consumeError(std::move(error));
+          return result;
         }
 
-        if (is_simple_type) {
-          if (members_info.count(loc.Hdr.OffsetInParent)) {
-            // Malformed record.
-            result.ranges->Clear();
-            return result;
-          }
-          members_info[loc.Hdr.OffsetInParent] = {
-              (RegisterId)(uint16_t)loc.Hdr.Register, 0};
-        } else {
-          if (!members_info.count(loc.Hdr.OffsetInParent)) {
-            // Malformed record.
-            result.ranges->Clear();
-            return result;
-          }
-          members_info[loc.Hdr.OffsetInParent].first =
-              (RegisterId)(uint16_t)loc.Hdr.Register;
-        }
-        // Go to next S_DEFRANGE_SUBFIELD_REGISTER.
-        loc_specifier_id = PdbCompilandSymId(
-            loc_specifier_id.modi,
-            loc_specifier_id.offset + loc_specifier_cvs.RecordData.size());
-        loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
+        Variable::RangeList ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+        uint32_t reg_size =
+            GetRegisterSize((RegisterId)(uint16_t)loc.Hdr.Register);
+        if (reg_size == 0)
+          break;
+        offset_to_size[loc.Hdr.OffsetInParent] = reg_size;
+        AddMemberLocationRanges(location_map, loc.Hdr.OffsetInParent,
+                                {loc.Hdr.Register, 0, true}, ranges);
+        break;
       }
-      // Fix size for simple type.
-      if (is_simple_type) {
-        auto cur = members_info.begin();
-        auto end = members_info.end();
-        auto next = cur;
-        ++next;
-        uint32_t size = 0;
-        while (next != end) {
-          cur->second.second = next->first - cur->first;
-          size += cur->second.second;
-          cur = next++;
-        }
-        cur->second.second =
-            GetTypeSizeForSimpleKind(result.type.getSimpleKind()) - size;
-      }
-      result.location =
-          MakeEnregisteredLocationExpressionForClass(members_info, module);
-      break;
-    }
-    default:
       // FIXME: Handle other kinds. LLVM only generates the 4 types of records
-      // above.
-      break;
+      // above. MSVC generates other location types.
+      case S_DEFRANGE:
+      case S_DEFRANGE_SUBFIELD:
+      case S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE:
+        break;
+      default:
+        finished = true;
+        break;
+      }
+      loc_specifier_id = PdbCompilandSymId(
+          loc_specifier_id.modi,
+          loc_specifier_id.offset + loc_specifier_cvs.RecordData.size());
+    }
+    for (const auto &entry : location_map) {
+      DWARFExpression dwarf_expr =
+          entry.data.is_dwarf ? entry.data.expr
+                              : MakeEnregisteredLocationExpressionForComposite(
+                                    entry.data.offset_to_location,
+                                    offset_to_size, type_size, module);
+
+      result.location.AddExpression(entry.GetRangeBase(), entry.GetRangeEnd(),
+                                     dwarf_expr);
     }
     return result;
   }
@@ -1010,6 +1104,11 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
     return GetSizeOfTypeInternal<ClassRecord>(cvt);
   case LF_UNION:
     return GetSizeOfTypeInternal<UnionRecord>(cvt);
+  case LF_BITFIELD: {
+    BitFieldRecord record;
+    llvm::cantFail(TypeDeserializer::deserializeAs<BitFieldRecord>(cvt, record));
+    return GetSizeOfType({record.Type}, tpi);
+  }
   default:
     break;
   }

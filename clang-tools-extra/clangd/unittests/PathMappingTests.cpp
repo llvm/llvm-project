@@ -10,6 +10,7 @@
 #include "llvm/Support/JSON.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 namespace clang {
 namespace clangd {
@@ -86,7 +87,7 @@ bool mapsProperly(llvm::StringRef Orig, llvm::StringRef Expected,
   llvm::Expected<PathMappings> Mappings = parsePathMappings(RawMappings);
   if (!Mappings)
     return false;
-  llvm::Optional<std::string> MappedPath = doPathMapping(Orig, Dir, *Mappings);
+  std::optional<std::string> MappedPath = doPathMapping(Orig, Dir, *Mappings);
   std::string Actual = MappedPath ? *MappedPath : Orig.str();
   EXPECT_STREQ(Expected.str().c_str(), Actual.c_str());
   return Expected == Actual;

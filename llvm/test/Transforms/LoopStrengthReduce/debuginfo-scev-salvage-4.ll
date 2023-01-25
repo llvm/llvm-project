@@ -27,9 +27,9 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @_Z9zext_scevPljs(i64* nocapture %arr, i32 %factor0, i16 signext %factor1) local_unnamed_addr !dbg !90 {
+define dso_local void @_Z9zext_scevPljs(ptr nocapture %arr, i32 %factor0, i16 signext %factor1) local_unnamed_addr !dbg !90 {
 entry:
-  call void @llvm.dbg.value(metadata i64* %arr, metadata !94, metadata !DIExpression()), !dbg !95
+  call void @llvm.dbg.value(metadata ptr %arr, metadata !94, metadata !DIExpression()), !dbg !95
   call void @llvm.dbg.value(metadata i32 %factor0, metadata !96, metadata !DIExpression()), !dbg !95
   call void @llvm.dbg.value(metadata i16 %factor1, metadata !97, metadata !DIExpression()), !dbg !95
   call void @llvm.dbg.value(metadata i32 0, metadata !98, metadata !DIExpression()), !dbg !95
@@ -46,8 +46,8 @@ while.body:                                       ; preds = %while.body, %entry
   call void @llvm.dbg.value(metadata i32 %sub, metadata !101, metadata !DIExpression()), !dbg !99
   %conv2 = zext i32 %sub to i64, !dbg !99
   %idxprom = zext i32 %i.04 to i64, !dbg !99
-  %arrayidx = getelementptr inbounds i64, i64* %arr, i64 %idxprom, !dbg !99
-  store i64 %conv2, i64* %arrayidx, align 8, !dbg !99
+  %arrayidx = getelementptr inbounds i64, ptr %arr, i64 %idxprom, !dbg !99
+  store i64 %conv2, ptr %arrayidx, align 8, !dbg !99
   %inc = add nuw nsw i32 %i.04, 1, !dbg !99
   call void @llvm.dbg.value(metadata i32 %inc, metadata !98, metadata !DIExpression()), !dbg !95
   %cmp = icmp ult i32 %inc, 63, !dbg !95

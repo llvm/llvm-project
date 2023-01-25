@@ -41,6 +41,8 @@ func.func @launch() {
 // CHECK-LABEL: gpu.module @launch_kernel
 // CHECK-NEXT: gpu.func @launch_kernel
 // CHECK-SAME: (%[[KERNEL_ARG0:.*]]: f32, %[[KERNEL_ARG1:.*]]: memref<?xf32, 1>)
+// CHECK-SAME: gpu.known_block_size = array<i32: 20, 24, 28>
+// CHECK-SAME: gpu.known_grid_size = array<i32: 8, 12, 16>
 // CHECK-NEXT: %[[BID:.*]] = gpu.block_id x
 // CHECK-NEXT: = gpu.block_id y
 // CHECK-NEXT: = gpu.block_id z
@@ -286,8 +288,25 @@ func.func @recursive_device_function() {
 // CHECK:     llvm.mlir.addressof @global : !llvm.ptr<i64>
 // CHECK:     gpu.return
 //
-// CHECK:   llvm.mlir.global internal @global(42 : i64) : i64
+// CHECK:   llvm.mlir.global internal @global(42 : i64) {addr_space = 0 : i32} : i64
 //
 // CHECK:   func @device_function()
 // CHECK:   func @recursive_device_function()
 // CHECK-NOT:   func @device_function
+
+// -----
+
+// CHECK-LABEL: @non_constant_launches
+func.func @non_constant_launches(%arg0 : index) {
+  // CHECK-NOT: gpu.known_block_size
+  // CHECK-NOT: gpu.known_grid_size
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %arg0, %grid_y = %arg0,
+                                       %grid_z = %arg0)
+             threads(%tx, %ty, %tz) in (%block_x = %arg0, %block_y = %arg0,
+                                        %block_z = %arg0) {
+    gpu.terminator
+  }
+  return
+}
+
+// CHECK-DL-LABEL: gpu.module @non_constant_launches_kernel attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32 : i32>>}

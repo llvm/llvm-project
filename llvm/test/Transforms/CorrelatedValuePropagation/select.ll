@@ -82,7 +82,7 @@ define i32 @PR23752() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 icmp sgt (i32* @b, i32* @c), i32 0, i32 1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 icmp sgt (ptr @b, ptr @c), i32 0, i32 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[SEL]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
@@ -93,7 +93,7 @@ entry:
 
 for.body:
   %phi = phi i32 [ 0, %entry ], [ %sel, %for.body ]
-  %sel = select i1 icmp sgt (i32* @b, i32* @c), i32 %phi, i32 1
+  %sel = select i1 icmp sgt (ptr @b, ptr @c), i32 %phi, i32 1
   %cmp = icmp ne i32 %sel, 1
   br i1 %cmp, label %for.body, label %if.end
 
@@ -102,9 +102,9 @@ if.end:
   ret i32 %sel
 }
 
-define i1 @test1(i32* %p, i1 %unknown) {
+define i1 @test1(ptr %p, i1 %unknown) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -127,9 +127,9 @@ exit:
 }
 
 ; Check that we take a conservative meet
-define i1 @test2(i32* %p, i32 %qval, i1 %unknown) {
+define i1 @test2(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -153,9 +153,9 @@ exit:
 }
 
 ; Same as @test2, but for the opposite select input
-define i1 @test3(i32* %p, i32 %qval, i1 %unknown) {
+define i1 @test3(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -182,9 +182,9 @@ exit:
 ; NOTE: Using doubles in this version is a bit of a hack.  This
 ; is to get around the fact that all integers (including constants
 ; and non-constants) are actually represented as constant-ranges.
-define i1 @test4(i32* %p, i32 %qval, i1 %unknown) {
+define i1 @test4(ptr %p, i32 %qval, i1 %unknown) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -210,9 +210,9 @@ exit:
 ;; Using the condition to clamp the result
 ;;
 
-define i1 @test5(i32* %p, i1 %unknown) {
+define i1 @test5(ptr %p, i1 %unknown) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:
@@ -236,9 +236,9 @@ exit:
   ret i1 true
 }
 
-define i1 @test6(i32* %p, i1 %unknown) {
+define i1 @test6(ptr %p, i1 %unknown) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[PVAL:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[PVAL:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[PVAL]], 255
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[NEXT:%.*]], label [[EXIT:%.*]]
 ; CHECK:       next:

@@ -8,7 +8,7 @@
 ; pointers into constant arrays of types larger than char and fractional
 ; offsets.
 
-declare i8* @memchr(i8*, i32, i64)
+declare ptr @memchr(ptr, i32, i64)
 
 %struct.A = type { [2 x i16], [2 x i16] }
 
@@ -16,219 +16,211 @@ declare i8* @memchr(i8*, i32, i64)
 @a = constant [1 x %struct.A] [%struct.A { [2 x i16] [i16 0, i16 257], [2 x i16] [i16 514, i16 771] }]
 
 
-define void @fold_memchr_A_pIb_cst_cst(i8** %pchr) {
+define void @fold_memchr_A_pIb_cst_cst(ptr %pchr) {
 ; CHECK-LABEL: @fold_memchr_A_pIb_cst_cst(
-; CHECK-NEXT:    store i8* bitcast ([1 x %struct.A]* @a to i8*), i8** [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 1
-; CHECK-NEXT:    store i8* null, i8** [[PST_0_1_1]], align 8
-; CHECK-NEXT:    [[PST_0_4_4:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 2
-; CHECK-NEXT:    store i8* null, i8** [[PST_0_4_4]], align 8
-; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 3
-; CHECK-NEXT:    store i8* getelementptr (i8, i8* bitcast ([1 x %struct.A]* @a to i8*), i64 1), i8** [[PST_1_0_1]], align 8
-; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 4
-; CHECK-NEXT:    store i8* getelementptr (i8, i8* bitcast ([1 x %struct.A]* @a to i8*), i64 1), i8** [[PST_1_0_3]], align 8
-; CHECK-NEXT:    [[PST_1_1_1:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 5
-; CHECK-NEXT:    store i8* null, i8** [[PST_1_1_1]], align 8
-; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 6
-; CHECK-NEXT:    store i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1) to i8*), i8** [[PST_1_1_2]], align 8
-; CHECK-NEXT:    [[PST_1_3_3:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 7
-; CHECK-NEXT:    store i8* null, i8** [[PST_1_3_3]], align 8
-; CHECK-NEXT:    [[PST_1_3_4:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 8
-; CHECK-NEXT:    store i8* null, i8** [[PST_1_3_4]], align 8
-; CHECK-NEXT:    [[PST_1_3_6:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 10
-; CHECK-NEXT:    store i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1) to i8*), i8** [[PST_1_3_6]], align 8
+; CHECK-NEXT:    store ptr @a, ptr [[PCHR:%.*]], align 8
+; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
+; CHECK-NEXT:    store ptr null, ptr [[PST_0_1_1]], align 8
+; CHECK-NEXT:    [[PST_0_4_4:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_4]], align 8
+; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @a, i64 1), ptr [[PST_1_0_1]], align 8
+; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
+; CHECK-NEXT:    store ptr getelementptr inbounds (i8, ptr @a, i64 1), ptr [[PST_1_0_3]], align 8
+; CHECK-NEXT:    [[PST_1_1_1:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
+; CHECK-NEXT:    store ptr null, ptr [[PST_1_1_1]], align 8
+; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
+; CHECK-NEXT:    store ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1), ptr [[PST_1_1_2]], align 8
+; CHECK-NEXT:    [[PST_1_3_3:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 7
+; CHECK-NEXT:    store ptr null, ptr [[PST_1_3_3]], align 8
+; CHECK-NEXT:    [[PST_1_3_4:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 8
+; CHECK-NEXT:    store ptr null, ptr [[PST_1_3_4]], align 8
+; CHECK-NEXT:    [[PST_1_3_6:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 10
+; CHECK-NEXT:    store ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1), ptr [[PST_1_3_6]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %pa = getelementptr [1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0
-  %pi8a = bitcast %struct.A* %pa to i8*
 
-  %pi8ap0 = getelementptr i8, i8* %pi8a, i32 0
 
   ; Fold memchr((char*)a + 0, '\0', 1) to a.
-  %pst_0_0_1 = getelementptr i8*, i8** %pchr, i32 0
-  %chr_0_0_1 = call i8* @memchr(i8* %pi8ap0, i32 0, i64 1)
-  store i8* %chr_0_0_1, i8** %pst_0_0_1
+  %chr_0_0_1 = call ptr @memchr(ptr @a, i32 0, i64 1)
+  store ptr %chr_0_0_1, ptr %pchr
 
   ; Fold memchr((char*)a + 0, '\01', 1) to null.
-  %pst_0_1_1 = getelementptr i8*, i8** %pchr, i32 1
-  %chr_0_1_1 = call i8* @memchr(i8* %pi8ap0, i32 1, i64 1)
-  store i8* %chr_0_1_1, i8** %pst_0_1_1
+  %pst_0_1_1 = getelementptr ptr, ptr %pchr, i32 1
+  %chr_0_1_1 = call ptr @memchr(ptr @a, i32 1, i64 1)
+  store ptr %chr_0_1_1, ptr %pst_0_1_1
 
   ; Fold memchr((char*)a + 0, '\04', 4) to null.
-  %pst_0_4_4 = getelementptr i8*, i8** %pchr, i32 2
-  %chr_0_4_4 = call i8* @memchr(i8* %pi8ap0, i32 4, i64 4)
-  store i8* %chr_0_4_4, i8** %pst_0_4_4
+  %pst_0_4_4 = getelementptr ptr, ptr %pchr, i32 2
+  %chr_0_4_4 = call ptr @memchr(ptr @a, i32 4, i64 4)
+  store ptr %chr_0_4_4, ptr %pst_0_4_4
 
 
-  %pi8ap1 = getelementptr i8, i8* %pi8a, i32 1
+  %pi8ap1 = getelementptr i8, ptr @a, i32 1
 
   ; Fold memchr((char*)a + 1, '\0', 1) to (char*)a + 1.
-  %pst_1_0_1 = getelementptr i8*, i8** %pchr, i32 3
-  %chr_1_0_1 = call i8* @memchr(i8* %pi8ap1, i32 0, i64 1)
-  store i8* %chr_1_0_1, i8** %pst_1_0_1
+  %pst_1_0_1 = getelementptr ptr, ptr %pchr, i32 3
+  %chr_1_0_1 = call ptr @memchr(ptr %pi8ap1, i32 0, i64 1)
+  store ptr %chr_1_0_1, ptr %pst_1_0_1
 
   ; Fold memchr((char*)a + 1, '\0', 3) to (char*)a + 1.
-  %pst_1_0_3 = getelementptr i8*, i8** %pchr, i32 4
-  %chr_1_0_3 = call i8* @memchr(i8* %pi8ap1, i32 0, i64 3)
-  store i8* %chr_1_0_3, i8** %pst_1_0_3
+  %pst_1_0_3 = getelementptr ptr, ptr %pchr, i32 4
+  %chr_1_0_3 = call ptr @memchr(ptr %pi8ap1, i32 0, i64 3)
+  store ptr %chr_1_0_3, ptr %pst_1_0_3
 
   ; Fold memchr((char*)a + 1, '\01', 1) to null.
-  %pst_1_1_1 = getelementptr i8*, i8** %pchr, i32 5
-  %chr_1_1_1 = call i8* @memchr(i8* %pi8ap1, i32 1, i64 1)
-  store i8* %chr_1_1_1, i8** %pst_1_1_1
+  %pst_1_1_1 = getelementptr ptr, ptr %pchr, i32 5
+  %chr_1_1_1 = call ptr @memchr(ptr %pi8ap1, i32 1, i64 1)
+  store ptr %chr_1_1_1, ptr %pst_1_1_1
 
   ; Fold memchr((char*)a + 1, '\01', 2) to (char*)a + 2.
-  %pst_1_1_2 = getelementptr i8*, i8** %pchr, i32 6
-  %chr_1_1_2 = call i8* @memchr(i8* %pi8ap1, i32 1, i64 2)
-  store i8* %chr_1_1_2, i8** %pst_1_1_2
+  %pst_1_1_2 = getelementptr ptr, ptr %pchr, i32 6
+  %chr_1_1_2 = call ptr @memchr(ptr %pi8ap1, i32 1, i64 2)
+  store ptr %chr_1_1_2, ptr %pst_1_1_2
 
   ; Fold memchr((char*)a + 1, '\03', 3) to null.
-  %pst_1_3_3 = getelementptr i8*, i8** %pchr, i32 7
-  %chr_1_3_3 = call i8* @memchr(i8* %pi8ap1, i32 3, i64 3)
-  store i8* %chr_1_3_3, i8** %pst_1_3_3
+  %pst_1_3_3 = getelementptr ptr, ptr %pchr, i32 7
+  %chr_1_3_3 = call ptr @memchr(ptr %pi8ap1, i32 3, i64 3)
+  store ptr %chr_1_3_3, ptr %pst_1_3_3
 
   ; Fold memchr((char*)a + 1, '\03', 4) to null.
-  %pst_1_3_4 = getelementptr i8*, i8** %pchr, i32 8
-  %chr_1_3_4 = call i8* @memchr(i8* %pi8ap1, i32 3, i64 4)
-  store i8* %chr_1_3_4, i8** %pst_1_3_4
+  %pst_1_3_4 = getelementptr ptr, ptr %pchr, i32 8
+  %chr_1_3_4 = call ptr @memchr(ptr %pi8ap1, i32 3, i64 4)
+  store ptr %chr_1_3_4, ptr %pst_1_3_4
 
   ; Fold memchr((char*)a + 1, '\03', 5) to null.
-  %pst_1_3_5 = getelementptr i8*, i8** %pchr, i32 9
-  %chr_1_3_5 = call i8* @memchr(i8* %pi8ap1, i32 3, i64 5)
-  store i8* %chr_1_3_4, i8** %pst_1_3_4
+  %pst_1_3_5 = getelementptr ptr, ptr %pchr, i32 9
+  %chr_1_3_5 = call ptr @memchr(ptr %pi8ap1, i32 3, i64 5)
+  store ptr %chr_1_3_4, ptr %pst_1_3_4
 
   ; Fold memchr((char*)a + 1, '\03', 6) to (char*)a + 5.
-  %pst_1_3_6 = getelementptr i8*, i8** %pchr, i32 10
-  %chr_1_3_6 = call i8* @memchr(i8* %pi8ap1, i32 3, i64 6)
-  store i8* %chr_1_3_6, i8** %pst_1_3_6
+  %pst_1_3_6 = getelementptr ptr, ptr %pchr, i32 10
+  %chr_1_3_6 = call ptr @memchr(ptr %pi8ap1, i32 3, i64 6)
+  store ptr %chr_1_3_6, ptr %pst_1_3_6
 
 
   ret void
 }
 
 
-define void @fold_memchr_A_pIb_cst_N(i64 %N, i8** %pchr) {
+define void @fold_memchr_A_pIb_cst_N(i64 %N, ptr %pchr) {
 ; CHECK-LABEL: @fold_memchr_A_pIb_cst_N(
 ; CHECK-NEXT:    [[MEMCHR_CMP:%.*]] = icmp eq i64 [[N:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[MEMCHR_CMP]], i8* null, i8* bitcast ([1 x %struct.A]* @a to i8*)
-; CHECK-NEXT:    store i8* [[TMP1]], i8** [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_0_1_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[MEMCHR_CMP]], ptr null, ptr @a
+; CHECK-NEXT:    store ptr [[TMP1]], ptr [[PCHR:%.*]], align 8
+; CHECK-NEXT:    [[PST_0_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
 ; CHECK-NEXT:    [[MEMCHR_CMP1:%.*]] = icmp ult i64 [[N]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[MEMCHR_CMP1]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1) to i8*)
-; CHECK-NEXT:    store i8* [[TMP2]], i8** [[PST_0_1_N]], align 8
-; CHECK-NEXT:    [[PST_0_4_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 2
-; CHECK-NEXT:    store i8* null, i8** [[PST_0_4_N]], align 8
-; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[MEMCHR_CMP1]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[TMP2]], ptr [[PST_0_1_N]], align 8
+; CHECK-NEXT:    [[PST_0_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    store ptr null, ptr [[PST_0_4_N]], align 8
+; CHECK-NEXT:    [[PST_1_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 3
 ; CHECK-NEXT:    [[MEMCHR_CMP2:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[MEMCHR_CMP2]], i8* null, i8* getelementptr (i8, i8* bitcast ([1 x %struct.A]* @a to i8*), i64 1)
-; CHECK-NEXT:    store i8* [[TMP3]], i8** [[PST_1_0_N]], align 8
-; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[MEMCHR_CMP2]], ptr null, ptr getelementptr inbounds (i8, ptr @a, i64 1)
+; CHECK-NEXT:    store ptr [[TMP3]], ptr [[PST_1_0_N]], align 8
+; CHECK-NEXT:    [[PST_1_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 4
 ; CHECK-NEXT:    [[MEMCHR_CMP3:%.*]] = icmp ult i64 [[N]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[MEMCHR_CMP3]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1) to i8*)
-; CHECK-NEXT:    store i8* [[TMP4]], i8** [[PST_1_1_N]], align 8
-; CHECK-NEXT:    [[PST_1_2_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 5
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[MEMCHR_CMP3]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[TMP4]], ptr [[PST_1_1_N]], align 8
+; CHECK-NEXT:    [[PST_1_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 5
 ; CHECK-NEXT:    [[MEMCHR_CMP4:%.*]] = icmp ult i64 [[N]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[MEMCHR_CMP4]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0) to i8*)
-; CHECK-NEXT:    store i8* [[TMP5]], i8** [[PST_1_2_N]], align 8
-; CHECK-NEXT:    [[PST_1_3_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 6
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[MEMCHR_CMP4]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
+; CHECK-NEXT:    store ptr [[TMP5]], ptr [[PST_1_2_N]], align 8
+; CHECK-NEXT:    [[PST_1_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 6
 ; CHECK-NEXT:    [[MEMCHR_CMP5:%.*]] = icmp ult i64 [[N]], 6
-; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[MEMCHR_CMP5]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1) to i8*)
-; CHECK-NEXT:    store i8* [[TMP6]], i8** [[PST_1_3_N]], align 8
-; CHECK-NEXT:    [[PST_1_4_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 7
-; CHECK-NEXT:    store i8* null, i8** [[PST_1_4_N]], align 8
-; CHECK-NEXT:    [[PST_2_0_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 8
-; CHECK-NEXT:    store i8* null, i8** [[PST_2_0_N]], align 8
-; CHECK-NEXT:    [[PST_2_1_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 9
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[MEMCHR_CMP5]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
+; CHECK-NEXT:    store ptr [[TMP6]], ptr [[PST_1_3_N]], align 8
+; CHECK-NEXT:    [[PST_1_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 7
+; CHECK-NEXT:    store ptr null, ptr [[PST_1_4_N]], align 8
+; CHECK-NEXT:    [[PST_2_0_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 8
+; CHECK-NEXT:    store ptr null, ptr [[PST_2_0_N]], align 8
+; CHECK-NEXT:    [[PST_2_1_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 9
 ; CHECK-NEXT:    [[MEMCHR_CMP6:%.*]] = icmp eq i64 [[N]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[MEMCHR_CMP6]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1) to i8*)
-; CHECK-NEXT:    store i8* [[TMP7]], i8** [[PST_2_1_N]], align 8
-; CHECK-NEXT:    [[PST_2_2_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 10
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[MEMCHR_CMP6]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1)
+; CHECK-NEXT:    store ptr [[TMP7]], ptr [[PST_2_1_N]], align 8
+; CHECK-NEXT:    [[PST_2_2_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 10
 ; CHECK-NEXT:    [[MEMCHR_CMP7:%.*]] = icmp ult i64 [[N]], 3
-; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[MEMCHR_CMP7]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0) to i8*)
-; CHECK-NEXT:    store i8* [[TMP8]], i8** [[PST_2_2_N]], align 8
-; CHECK-NEXT:    [[PST_2_3_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 11
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[MEMCHR_CMP7]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0)
+; CHECK-NEXT:    store ptr [[TMP8]], ptr [[PST_2_2_N]], align 8
+; CHECK-NEXT:    [[PST_2_3_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 11
 ; CHECK-NEXT:    [[MEMCHR_CMP8:%.*]] = icmp ult i64 [[N]], 5
-; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[MEMCHR_CMP8]], i8* null, i8* bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1) to i8*)
-; CHECK-NEXT:    store i8* [[TMP9]], i8** [[PST_2_3_N]], align 8
-; CHECK-NEXT:    [[PST_2_4_N:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 12
-; CHECK-NEXT:    store i8* null, i8** [[PST_2_4_N]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[MEMCHR_CMP8]], ptr null, ptr getelementptr inbounds ([1 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1)
+; CHECK-NEXT:    store ptr [[TMP9]], ptr [[PST_2_3_N]], align 8
+; CHECK-NEXT:    [[PST_2_4_N:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 12
+; CHECK-NEXT:    store ptr null, ptr [[PST_2_4_N]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %pa = getelementptr [1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0
-  %pi8a = bitcast %struct.A* %pa to i8*
 
-  %pi8ap0 = getelementptr i8, i8* %pi8a, i32 0
 
   ; Fold memchr((char*)a + 0, '\0', N) to N ? a : null.
-  %pst_0_0_n = getelementptr i8*, i8** %pchr, i32 0
-  %chr_0_0_n = call i8* @memchr(i8* %pi8ap0, i32 0, i64 %N)
-  store i8* %chr_0_0_n, i8** %pst_0_0_n
+  %chr_0_0_n = call ptr @memchr(ptr @a, i32 0, i64 %N)
+  store ptr %chr_0_0_n, ptr %pchr
 
   ; Fold memchr((char*)a + 0, '\01', N) to N < 2 ? null : a.
-  %pst_0_1_n = getelementptr i8*, i8** %pchr, i32 1
-  %chr_0_1_n = call i8* @memchr(i8* %pi8ap0, i32 1, i64 %N)
-  store i8* %chr_0_1_n, i8** %pst_0_1_n
+  %pst_0_1_n = getelementptr ptr, ptr %pchr, i32 1
+  %chr_0_1_n = call ptr @memchr(ptr @a, i32 1, i64 %N)
+  store ptr %chr_0_1_n, ptr %pst_0_1_n
 
   ; Fold memchr((char*)a + 0, '\04', N) to null.
-  %pst_0_4_n = getelementptr i8*, i8** %pchr, i32 2
-  %chr_0_4_n = call i8* @memchr(i8* %pi8ap0, i32 4, i64 %N)
-  store i8* %chr_0_4_n, i8** %pst_0_4_n
+  %pst_0_4_n = getelementptr ptr, ptr %pchr, i32 2
+  %chr_0_4_n = call ptr @memchr(ptr @a, i32 4, i64 %N)
+  store ptr %chr_0_4_n, ptr %pst_0_4_n
 
 
-  %pi8ap1 = getelementptr i8, i8* %pi8a, i32 1
+  %pi8ap1 = getelementptr i8, ptr @a, i32 1
 
   ; Fold memchr((char*)a + 1, '\0', N) to null.
-  %pst_1_0_n = getelementptr i8*, i8** %pchr, i32 3
-  %chr_1_0_n = call i8* @memchr(i8* %pi8ap1, i32 0, i64 %N)
-  store i8* %chr_1_0_n, i8** %pst_1_0_n
+  %pst_1_0_n = getelementptr ptr, ptr %pchr, i32 3
+  %chr_1_0_n = call ptr @memchr(ptr %pi8ap1, i32 0, i64 %N)
+  store ptr %chr_1_0_n, ptr %pst_1_0_n
 
   ; Fold memchr((char*)a + 1, '\01', N) N ? (char*)a + 1 : null.
-  %pst_1_1_n = getelementptr i8*, i8** %pchr, i32 4
-  %chr_1_1_n = call i8* @memchr(i8* %pi8ap1, i32 1, i64 %N)
-  store i8* %chr_1_1_n, i8** %pst_1_1_n
+  %pst_1_1_n = getelementptr ptr, ptr %pchr, i32 4
+  %chr_1_1_n = call ptr @memchr(ptr %pi8ap1, i32 1, i64 %N)
+  store ptr %chr_1_1_n, ptr %pst_1_1_n
 
   ; Fold memchr((char*)a + 1, '\02', N) to N < 2 ? null : (char*)a + 4.
-  %pst_1_2_n = getelementptr i8*, i8** %pchr, i32 5
-  %chr_1_2_n = call i8* @memchr(i8* %pi8ap1, i32 2, i64 %N)
-  store i8* %chr_1_2_n, i8** %pst_1_2_n
+  %pst_1_2_n = getelementptr ptr, ptr %pchr, i32 5
+  %chr_1_2_n = call ptr @memchr(ptr %pi8ap1, i32 2, i64 %N)
+  store ptr %chr_1_2_n, ptr %pst_1_2_n
 
   ; Fold memchr((char*)a + 1, '\03', N) to N < 6 ? null : (char*)a + 6.
-  %pst_1_3_n = getelementptr i8*, i8** %pchr, i32 6
-  %chr_1_3_n = call i8* @memchr(i8* %pi8ap1, i32 3, i64 %N)
-  store i8* %chr_1_3_n, i8** %pst_1_3_n
+  %pst_1_3_n = getelementptr ptr, ptr %pchr, i32 6
+  %chr_1_3_n = call ptr @memchr(ptr %pi8ap1, i32 3, i64 %N)
+  store ptr %chr_1_3_n, ptr %pst_1_3_n
 
   ; Fold memchr((char*)a + 1, '\04', N) to null.
-  %pst_1_4_n = getelementptr i8*, i8** %pchr, i32 7
-  %chr_1_4_n = call i8* @memchr(i8* %pi8ap1, i32 4, i64 %N)
-  store i8* %chr_1_4_n, i8** %pst_1_4_n
+  %pst_1_4_n = getelementptr ptr, ptr %pchr, i32 7
+  %chr_1_4_n = call ptr @memchr(ptr %pi8ap1, i32 4, i64 %N)
+  store ptr %chr_1_4_n, ptr %pst_1_4_n
 
 
-  %pi8ap2 = getelementptr i8, i8* %pi8a, i32 2
+  %pi8ap2 = getelementptr i8, ptr @a, i32 2
 
   ; Fold memchr((char*)a + 2, '\0', N) to null.
-  %pst_2_0_n = getelementptr i8*, i8** %pchr, i32 8
-  %chr_2_0_n = call i8* @memchr(i8* %pi8ap2, i32 0, i64 %N)
-  store i8* %chr_2_0_n, i8** %pst_2_0_n
+  %pst_2_0_n = getelementptr ptr, ptr %pchr, i32 8
+  %chr_2_0_n = call ptr @memchr(ptr %pi8ap2, i32 0, i64 %N)
+  store ptr %chr_2_0_n, ptr %pst_2_0_n
 
   ; Fold memchr((char*)a + 2, '\01', N) N ? (char*)a + 2 : null.
-  %pst_2_1_n = getelementptr i8*, i8** %pchr, i32 9
-  %chr_2_1_n = call i8* @memchr(i8* %pi8ap2, i32 1, i64 %N)
-  store i8* %chr_2_1_n, i8** %pst_2_1_n
+  %pst_2_1_n = getelementptr ptr, ptr %pchr, i32 9
+  %chr_2_1_n = call ptr @memchr(ptr %pi8ap2, i32 1, i64 %N)
+  store ptr %chr_2_1_n, ptr %pst_2_1_n
 
   ; Fold memchr((char*)a + 2, '\02', N) to N < 3 ? null : (char*)a + 2.
-  %pst_2_2_n = getelementptr i8*, i8** %pchr, i32 10
-  %chr_2_2_n = call i8* @memchr(i8* %pi8ap2, i32 2, i64 %N)
-  store i8* %chr_2_2_n, i8** %pst_2_2_n
+  %pst_2_2_n = getelementptr ptr, ptr %pchr, i32 10
+  %chr_2_2_n = call ptr @memchr(ptr %pi8ap2, i32 2, i64 %N)
+  store ptr %chr_2_2_n, ptr %pst_2_2_n
 
   ; Fold memchr((char*)a + 2, '\03', N) to N < 5 ? null : (char*)a + 4.
-  %pst_2_3_n = getelementptr i8*, i8** %pchr, i32 11
-  %chr_2_3_n = call i8* @memchr(i8* %pi8ap2, i32 3, i64 %N)
-  store i8* %chr_2_3_n, i8** %pst_2_3_n
+  %pst_2_3_n = getelementptr ptr, ptr %pchr, i32 11
+  %chr_2_3_n = call ptr @memchr(ptr %pi8ap2, i32 3, i64 %N)
+  store ptr %chr_2_3_n, ptr %pst_2_3_n
 
   ; Fold memchr((char*)a + 2, '\04', N) to null.
-  %pst_2_4_n = getelementptr i8*, i8** %pchr, i32 12
-  %chr_2_4_n = call i8* @memchr(i8* %pi8ap2, i32 4, i64 %N)
-  store i8* %chr_2_4_n, i8** %pst_2_4_n
+  %pst_2_4_n = getelementptr ptr, ptr %pchr, i32 12
+  %chr_2_4_n = call ptr @memchr(ptr %pi8ap2, i32 4, i64 %N)
+  store ptr %chr_2_4_n, ptr %pst_2_4_n
 
   ret void
 }
@@ -236,47 +228,42 @@ define void @fold_memchr_A_pIb_cst_N(i64 %N, i8** %pchr) {
 
 ; Verify that calls with out of bounds offsets are not folded.
 
-define void @call_memchr_A_pIb_xs_cst(i8** %pchr) {
+define void @call_memchr_A_pIb_xs_cst(ptr %pchr) {
 ; CHECK-LABEL: @call_memchr_A_pIb_xs_cst(
-; CHECK-NEXT:    [[CHR_1_0_0_2:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (%struct.A* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 1, i64 0) to i8*), i32 0, i64 2)
-; CHECK-NEXT:    store i8* [[CHR_1_0_0_2]], i8** [[PCHR:%.*]], align 8
-; CHECK-NEXT:    [[PST_1_0_1_2:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 1
-; CHECK-NEXT:    [[CHR_1_0_1_2:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (%struct.A* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 1, i64 0) to i8*), i32 0, i64 2)
-; CHECK-NEXT:    store i8* [[CHR_1_0_1_2]], i8** [[PST_1_0_1_2]], align 8
-; CHECK-NEXT:    [[PST_0_0_8_2:%.*]] = getelementptr i8*, i8** [[PCHR]], i64 2
-; CHECK-NEXT:    [[CHR_0_0_8_2:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) bitcast (i16* getelementptr inbounds ([1 x %struct.A], [1 x %struct.A]* @a, i64 1, i64 0, i32 0, i64 0) to i8*), i32 0, i64 2)
-; CHECK-NEXT:    store i8* [[CHR_0_0_8_2]], i8** [[PST_0_0_8_2]], align 8
+; CHECK-NEXT:    [[CHR_1_0_0_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0), i32 0, i64 2)
+; CHECK-NEXT:    store ptr [[CHR_1_0_0_2]], ptr [[PCHR:%.*]], align 8
+; CHECK-NEXT:    [[PST_1_0_1_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 1
+; CHECK-NEXT:    [[CHR_1_0_1_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0), i32 0, i64 2)
+; CHECK-NEXT:    store ptr [[CHR_1_0_1_2]], ptr [[PST_1_0_1_2]], align 8
+; CHECK-NEXT:    [[PST_0_0_8_2:%.*]] = getelementptr ptr, ptr [[PCHR]], i64 2
+; CHECK-NEXT:    [[CHR_0_0_8_2:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([1 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 0), i32 0, i64 2)
+; CHECK-NEXT:    store ptr [[CHR_0_0_8_2]], ptr [[PST_0_0_8_2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 ; Verify that the call isn't folded when the first GEP index is excessive.
-  %pa1 = getelementptr [1 x %struct.A], [1 x %struct.A]* @a, i64 1, i64 0
-  %pi8a1 = bitcast %struct.A* %pa1 to i8*
+  %pa1 = getelementptr [1 x %struct.A], ptr @a, i64 1, i64 0
 
-  %pi8a1p0 = getelementptr i8, i8* %pi8a1, i32 0
 
   ; Don't fold memchr((char*)&a[1] + 0, '\0', 2).
-  %pst_1_0_0_2 = getelementptr i8*, i8** %pchr, i32 0
-  %chr_1_0_0_2 = call i8* @memchr(i8* %pi8a1p0, i32 0, i64 2)
-  store i8* %chr_1_0_0_2, i8** %pst_1_0_0_2
+  %chr_1_0_0_2 = call ptr @memchr(ptr %pa1, i32 0, i64 2)
+  store ptr %chr_1_0_0_2, ptr %pchr
 
-  %pi8a1p1 = getelementptr i8, i8* %pi8a1, i32 1
+  %pi8a1p1 = getelementptr i8, ptr %pa1, i32 1
 
   ; Likewise, don't fold memchr((char*)&a[1] + 1, '\0', 2).
-  %pst_1_0_1_2 = getelementptr i8*, i8** %pchr, i32 1
-  %chr_1_0_1_2 = call i8* @memchr(i8* %pi8a1p0, i32 0, i64 2)
-  store i8* %chr_1_0_1_2, i8** %pst_1_0_1_2
+  %pst_1_0_1_2 = getelementptr ptr, ptr %pchr, i32 1
+  %chr_1_0_1_2 = call ptr @memchr(ptr %pa1, i32 0, i64 2)
+  store ptr %chr_1_0_1_2, ptr %pst_1_0_1_2
 
 ; Verify that the call isn't folded when the first GEP index is in bounds
 ; but the byte offset is excessive.
-  %pa0 = getelementptr [1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0
-  %pi8a0 = bitcast %struct.A* %pa0 to i8*
 
-  %pi8a0p8 = getelementptr i8, i8* %pi8a0, i32 8
+  %pi8a0p8 = getelementptr i8, ptr @a, i32 8
 
   ; Don't fold memchr((char*)&a[0] + 8, '\0', 2).
-  %pst_0_0_8_2 = getelementptr i8*, i8** %pchr, i32 2
-  %chr_0_0_8_2 = call i8* @memchr(i8* %pi8a0p8, i32 0, i64 2)
-  store i8* %chr_0_0_8_2, i8** %pst_0_0_8_2
+  %pst_0_0_8_2 = getelementptr ptr, ptr %pchr, i32 2
+  %chr_0_0_8_2 = call ptr @memchr(ptr %pi8a0p8, i32 0, i64 2)
+  store ptr %chr_0_0_8_2, ptr %pst_0_0_8_2
 
   ret void
 }
@@ -287,21 +274,18 @@ define void @call_memchr_A_pIb_xs_cst(i8** %pchr) {
 ; Verify that a memchr call with an argument consisting of three GEPs
 ; is folded.
 
-define i8* @fold_memchr_gep_gep_gep() {
+define ptr @fold_memchr_gep_gep_gep() {
 ; CHECK-LABEL: @fold_memchr_gep_gep_gep(
-; CHECK-NEXT:    ret i8* bitcast (i16* getelementptr (i16, i16* bitcast (i32* getelementptr (i32, i32* bitcast (i64* getelementptr inbounds ([2 x i64], [2 x i64]* @ai64, i64 0, i64 1) to i32*), i64 1) to i16*), i64 1) to i8*)
+; CHECK-NEXT:    ret ptr getelementptr (i16, ptr getelementptr (i32, ptr getelementptr inbounds ([2 x i64], ptr @ai64, i64 0, i64 1), i64 1), i64 1)
 ;
 
-  %p8_1 = getelementptr [2 x i64], [2 x i64]* @ai64, i64 0, i64 1
-  %p4_0 = bitcast i64* %p8_1 to i32*
-  %p4_1 = getelementptr i32, i32* %p4_0, i64 1
+  %p8_1 = getelementptr [2 x i64], ptr @ai64, i64 0, i64 1
+  %p4_1 = getelementptr i32, ptr %p8_1, i64 1
 
-  %p2_0 = bitcast i32* %p4_1 to i16*
-  %p2_1 = getelementptr i16, i16* %p2_0, i64 1
-  %q2_1 = bitcast i16* %p2_1 to i8*
+  %p2_1 = getelementptr i16, ptr %p4_1, i64 1
 
-  %pc = call i8* @memchr(i8* %q2_1, i32 -1, i64 2)
-  ret i8* %pc
+  %pc = call ptr @memchr(ptr %p2_1, i32 -1, i64 2)
+  ret ptr %pc
 }
 
 
@@ -311,14 +295,14 @@ define i8* @fold_memchr_gep_gep_gep() {
 
 ; Verify memchr folding of a union member.
 
-define i8* @fold_memchr_union_member() {
-; CHECK-LABEL: @fold_memchr_union_member(
-; BE-CHECK-NEXT:    ret i8* getelementptr (i8, i8* bitcast (%union.U* @u to i8*), i64 5)
-; LE-CHECK-NEXT:    ret i8* bitcast (i32* getelementptr inbounds (%union.U, %union.U* @u, i64 0, i32 0, i64 1) to i8*)
+define ptr @fold_memchr_union_member() {
+; BE-CHECK-LABEL: @fold_memchr_union_member(
+; BE-CHECK-NEXT:    ret ptr getelementptr inbounds (i8, ptr @u, i64 5)
 ;
-  %pu = getelementptr %union.U, %union.U* @u, i64 0
-  %pi8u = bitcast %union.U* %pu to i8*
-  %pi8u_p1 = getelementptr i8, i8* %pi8u, i64 1
-  %pc = call i8* @memchr(i8* %pi8u_p1, i32 34, i64 8)
-  ret i8* %pc
+; LE-CHECK-LABEL: @fold_memchr_union_member(
+; LE-CHECK-NEXT:    ret ptr getelementptr inbounds ([[UNION_U:%.*]], ptr @u, i64 0, i32 0, i64 1)
+;
+  %pi8u_p1 = getelementptr i8, ptr @u, i64 1
+  %pc = call ptr @memchr(ptr %pi8u_p1, i32 34, i64 8)
+  ret ptr %pc
 }

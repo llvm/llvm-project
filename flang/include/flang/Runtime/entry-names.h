@@ -21,3 +21,9 @@
   prefix##revision##name
 #define RTNAME(name) NAME_WITH_PREFIX_AND_REVISION(_Fortran, A, name)
 #endif
+
+#ifndef RTNAME_STRING
+#define RTNAME_STRINGIFY_(x) #x
+#define RTNAME_STRINGIFY(x) RTNAME_STRINGIFY_(x)
+#define RTNAME_STRING(name) RTNAME_STRINGIFY(RTNAME(name))
+#endif

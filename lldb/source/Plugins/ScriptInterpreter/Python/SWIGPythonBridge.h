@@ -9,6 +9,7 @@
 #ifndef LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_SWIGPYTHONBRIDGE_H
 
+#include <optional>
 #include <string>
 
 #include "lldb/Host/Config.h"
@@ -23,28 +24,68 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 
+namespace lldb {
+class SBEvent;
+class SBCommandReturnObject;
+class SBValue;
+class SBStream;
+class SBStructuredData;
+} // namespace lldb
+
 namespace lldb_private {
+namespace python {
 
-// GetPythonValueFormatString provides a system independent type safe way to
-// convert a variable's type into a python value format. Python value formats
-// are defined in terms of builtin C types and could change from system to as
-// the underlying typedef for uint* types, size_t, off_t and other values
-// change.
+typedef struct swig_type_info swig_type_info;
 
-template <typename T> const char *GetPythonValueFormatString(T t);
-template <> const char *GetPythonValueFormatString(char *);
-template <> const char *GetPythonValueFormatString(char);
-template <> const char *GetPythonValueFormatString(unsigned char);
-template <> const char *GetPythonValueFormatString(short);
-template <> const char *GetPythonValueFormatString(unsigned short);
-template <> const char *GetPythonValueFormatString(int);
-template <> const char *GetPythonValueFormatString(unsigned int);
-template <> const char *GetPythonValueFormatString(long);
-template <> const char *GetPythonValueFormatString(unsigned long);
-template <> const char *GetPythonValueFormatString(long long);
-template <> const char *GetPythonValueFormatString(unsigned long long);
-template <> const char *GetPythonValueFormatString(float t);
-template <> const char *GetPythonValueFormatString(double t);
+python::PythonObject ToSWIGHelper(void *obj, swig_type_info *info);
+
+/// A class that automatically clears an SB object when it goes out of scope.
+/// Use for cases where the SB object points to a temporary/unowned entity.
+template <typename T> class ScopedPythonObject : PythonObject {
+public:
+  ScopedPythonObject(T *sb, swig_type_info *info)
+      : PythonObject(ToSWIGHelper(sb, info)), m_sb(sb) {}
+  ~ScopedPythonObject() {
+    if (m_sb)
+      *m_sb = T();
+  }
+  ScopedPythonObject(ScopedPythonObject &&rhs)
+      : PythonObject(std::move(rhs)), m_sb(std::exchange(rhs.m_sb, nullptr)) {}
+  ScopedPythonObject(const ScopedPythonObject &) = delete;
+  ScopedPythonObject &operator=(const ScopedPythonObject &) = delete;
+  ScopedPythonObject &operator=(ScopedPythonObject &&) = delete;
+
+  const PythonObject &obj() const { return *this; }
+
+private:
+  T *m_sb;
+};
+
+PythonObject ToSWIGWrapper(lldb::ValueObjectSP value_sp);
+PythonObject ToSWIGWrapper(lldb::TargetSP target_sp);
+PythonObject ToSWIGWrapper(lldb::ProcessSP process_sp);
+PythonObject ToSWIGWrapper(lldb::ThreadPlanSP thread_plan_sp);
+PythonObject ToSWIGWrapper(lldb::BreakpointSP breakpoint_sp);
+PythonObject ToSWIGWrapper(const Status &status);
+PythonObject ToSWIGWrapper(const StructuredDataImpl &data_impl);
+PythonObject ToSWIGWrapper(lldb::ThreadSP thread_sp);
+PythonObject ToSWIGWrapper(lldb::StackFrameSP frame_sp);
+PythonObject ToSWIGWrapper(lldb::DebuggerSP debugger_sp);
+PythonObject ToSWIGWrapper(lldb::WatchpointSP watchpoint_sp);
+PythonObject ToSWIGWrapper(lldb::BreakpointLocationSP bp_loc_sp);
+PythonObject ToSWIGWrapper(lldb::ExecutionContextRefSP ctx_sp);
+PythonObject ToSWIGWrapper(const TypeSummaryOptions &summary_options);
+PythonObject ToSWIGWrapper(const SymbolContext &sym_ctx);
+
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBValue> value_sb);
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb);
+PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
+
+python::ScopedPythonObject<lldb::SBCommandReturnObject>
+ToSWIGWrapper(CommandReturnObject &cmd_retobj);
+python::ScopedPythonObject<lldb::SBEvent> ToSWIGWrapper(Event *event);
+
+} // namespace python
 
 void *LLDBSWIGPython_CastPyObjectToSBData(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBError(PyObject *data);
@@ -55,14 +96,10 @@ void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 // Although these are scripting-language specific, their definition depends on
 // the public API.
 
-python::PythonObject LLDBSwigPythonCreateScriptedProcess(
+python::PythonObject LLDBSwigPythonCreateScriptedObject(
     const char *python_class_name, const char *session_dictionary_name,
-    const lldb::TargetSP &target_sp, const StructuredDataImpl &args_impl,
-    std::string &error_string);
-
-python::PythonObject LLDBSwigPythonCreateScriptedThread(
-    const char *python_class_name, const char *session_dictionary_name,
-    const lldb::ProcessSP &process_sp, const StructuredDataImpl &args_impl,
+    lldb::ExecutionContextRefSP exe_ctx_sp,
+    const lldb_private::StructuredDataImpl &args_impl,
     std::string &error_string);
 
 llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
@@ -74,6 +111,10 @@ llvm::Expected<bool> LLDBSwigPythonBreakpointCallbackFunction(
 bool LLDBSwigPythonWatchpointCallbackFunction(
     const char *python_function_name, const char *session_dictionary_name,
     const lldb::StackFrameSP &sb_frame, const lldb::WatchpointSP &sb_wp);
+
+bool LLDBSwigPythonFormatterCallbackFunction(
+    const char *python_function_name, const char *session_dictionary_name,
+    lldb::TypeImplSP type_impl_sp);
 
 bool LLDBSwigPythonCallTypeScript(const char *python_function_name,
                                   const void *session_dictionary,
@@ -167,7 +208,7 @@ bool LLDBSWIGPythonRunScriptKeywordProcess(const char *python_function_name,
                                            const lldb::ProcessSP &process,
                                            std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordThread(const char *python_function_name,
                                      const char *session_dictionary_name,
                                      lldb::ThreadSP thread);
@@ -177,7 +218,7 @@ bool LLDBSWIGPythonRunScriptKeywordTarget(const char *python_function_name,
                                           const lldb::TargetSP &target,
                                           std::string &output);
 
-llvm::Optional<std::string>
+std::optional<std::string>
 LLDBSWIGPythonRunScriptKeywordFrame(const char *python_function_name,
                                     const char *session_dictionary_name,
                                     lldb::StackFrameSP frame);

@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
@@ -19,6 +20,9 @@ add_llvm_tool(llvm-rc
   ResourceScriptParser.cpp
   ResourceScriptStmt.cpp
   ResourceScriptToken.cpp
+  DEPENDS
+  WindresOptsTableGen
+  GENERATE_DRIVER
   )
 
 add_llvm_tool_symlink(llvm-windres llvm-rc)

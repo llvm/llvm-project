@@ -212,7 +212,7 @@ define i128 @i128_increment_by_val(i128 %a, i128 %b) nounwind {
 ; callee. See comments for individual functions above for details on registers
 ; used for parameters.
 define <1 x i128> @call_v1i128_increment_by_one() nounwind {
-       %tmp = load <1 x i128>, <1 x i128>* @x, align 16
+       %tmp = load <1 x i128>, ptr @x, align 16
        %ret = call <1 x i128> @v1i128_increment_by_one(<1 x i128> %tmp)
        ret <1 x i128> %ret
 
@@ -241,8 +241,8 @@ define <1 x i128> @call_v1i128_increment_by_one() nounwind {
 }
 
 define <1 x i128> @call_v1i128_increment_by_val() nounwind {
-       %tmp = load <1 x i128>, <1 x i128>* @x, align 16
-       %tmp2 = load <1 x i128>, <1 x i128>* @y, align 16
+       %tmp = load <1 x i128>, ptr @x, align 16
+       %tmp2 = load <1 x i128>, ptr @y, align 16
        %ret = call <1 x i128> @v1i128_increment_by_val(<1 x i128> %tmp, <1 x i128> %tmp2)
        ret <1 x i128> %ret
 
@@ -280,7 +280,7 @@ define <1 x i128> @call_v1i128_increment_by_val() nounwind {
 }
 
 define i128 @call_i128_increment_by_one() nounwind {
-       %tmp = load i128, i128* @a, align 16
+       %tmp = load i128, ptr @a, align 16
        %ret = call i128 @i128_increment_by_one(i128 %tmp)
        ret i128 %ret
 ;       %ret4 = call i128 @i128_increment_by_val(i128 %tmp2, i128 %tmp2)
@@ -304,8 +304,8 @@ define i128 @call_i128_increment_by_one() nounwind {
 }
 
 define i128 @call_i128_increment_by_val() nounwind {
-       %tmp = load i128, i128* @a, align 16
-       %tmp2 = load i128, i128* @b, align 16
+       %tmp = load i128, ptr @a, align 16
+       %tmp2 = load i128, ptr @b, align 16
        %ret = call i128 @i128_increment_by_val(i128 %tmp, i128 %tmp2)
        ret i128 %ret
 ; CHECK-LE-LABEL: @call_i128_increment_by_val
@@ -363,8 +363,8 @@ entry:
 
 define i128 @i128_split() {
 entry:
-  %0 = load i128, i128* @a, align 16
-  %1 = load i128, i128* @b, align 16
+  %0 = load i128, ptr @a, align 16
+  %1 = load i128, ptr @b, align 16
   %call = tail call i128 @callee_i128_split(i32 1, i128 %0, i32 4, i32 5,
                                            i32 6, i32 7, i128 %1, i32 8, i128 9)
   ret i128 %call

@@ -39,7 +39,6 @@
 ; CHECK-NEXT:     .private_segment_fixed_size: 32
 ; CHECK-NEXT:     .sgpr_count:     14
 ; CHECK-NEXT:     .symbol:         'test_kernel@kd'
-; CHECK-NEXT:     .uses_dynamic_stack: true
 ; CHECK-NEXT:     .vgpr_count:     40
 ; CHECK-NEXT:     .wavefront_size: 128
 ; CHECK-NEXT: amdhsa.printf:   
@@ -66,7 +65,6 @@
       .kernarg_segment_size: 8
       .group_segment_fixed_size: 16
       .private_segment_fixed_size: 32
-      .uses_dynamic_stack: true
       .kernarg_segment_align: 64
       .wavefront_size: 128
       .sgpr_count: 14

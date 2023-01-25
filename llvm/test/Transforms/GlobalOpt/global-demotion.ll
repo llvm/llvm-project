@@ -9,8 +9,8 @@
 ; CHECK-LABEL: @test1
 define internal i32 @test1() norecurse {
 ; CHECK-NOT: @G1
-  store i32 4, i32* @G1
-  %a = load i32, i32* @G1
+  store i32 4, ptr @G1
+  %a = load i32, ptr @G1
 ; CHECK: ret
   ret i32 %a
 }
@@ -19,8 +19,8 @@ define internal i32 @test1() norecurse {
 ; CHECK-LABEL: @test2
 define internal i32 @test2() norecurse {
 ; CHECK-NOT: %G2
-  %a = load i32, i32* @G2
-  store i32 4, i32* @G2
+  %a = load i32, ptr @G2
+  store i32 4, ptr @G2
 ; CHECK: ret
   ret i32 %a
 }
@@ -31,9 +31,8 @@ define internal i32 @test2() norecurse {
 ; CHECK-LABEL: @test3
 define internal i32 @test3() norecurse {
 ; CHECK-NOT: %G3
-  %x = getelementptr i32,i32* @G3, i32 0
-  %a = load i32, i32* %x
-  store i32 4, i32* @G3
+  %a = load i32, ptr @G3
+  store i32 4, ptr @G3
 ; CHECK: ret
   ret i32 %a
 }
@@ -44,9 +43,8 @@ define internal i32 @test3() norecurse {
 ; CHECK-LABEL: @test4
 define internal i32 @test4() norecurse {
 ; CHECK-NOT: %G4
-  store i32 4, i32* @G4
-  %x = bitcast i32* @G4 to i64*
-  %a = load i64, i64* %x
+  store i32 4, ptr @G4
+  %a = load i64, ptr @G4
   %b = trunc i64 %a to i32
 ; CHECK: ret
   ret i32 %b
@@ -57,9 +55,8 @@ define internal i32 @test4() norecurse {
 ; CHECK-LABEL: @test5
 define internal i32 @test5() norecurse {
 ; CHECK-NOT: @G5
-  store i32 4, i32* @G5
-  %x = bitcast i32* @G5 to i16*
-  %a = load i16, i16* %x
+  store i32 4, ptr @G5
+  %a = load i16, ptr @G5
   %b = zext i16 %a to i32
 ; CHECK: ret
   ret i32 %b

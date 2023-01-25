@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("OrcJITTests") {
   deps = [
@@ -10,6 +10,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

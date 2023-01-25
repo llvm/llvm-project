@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <iomanip>
+#include <optional>
 
 #include "lldb/Host/Editline.h"
 
@@ -582,12 +583,12 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     // interrupted.
     m_output_mutex.unlock();
     int read_count =
-        m_input_connection.Read(&ch, 1, llvm::None, status, nullptr);
+        m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
     m_output_mutex.lock();
     if (m_editor_status == EditorStatus::Interrupted) {
       while (read_count > 0 && status == lldb::eConnectionStatusSuccess)
         read_count =
-            m_input_connection.Read(&ch, 1, llvm::None, status, nullptr);
+            m_input_connection.Read(&ch, 1, std::nullopt, status, nullptr);
       lldbassert(status == lldb::eConnectionStatusInterrupted);
       return 0;
     }
@@ -1062,7 +1063,7 @@ unsigned char Editline::ApplyAutosuggestCommand(int ch) {
   llvm::StringRef line(line_info->buffer,
                        line_info->lastchar - line_info->buffer);
 
-  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line))
+  if (std::optional<std::string> to_add = m_suggestion_callback(line))
     el_insertstr(m_editline, to_add->c_str());
 
   return CC_REDISPLAY;
@@ -1085,8 +1086,8 @@ unsigned char Editline::TypedCharacter(int ch) {
   const char *ansi_suffix =
       m_color_prompts ? m_suggestion_ansi_suffix.c_str() : "";
 
-  if (llvm::Optional<std::string> to_add = m_suggestion_callback(line)) {
-    std::string to_add_color = ansi_prefix + to_add.getValue() + ansi_suffix;
+  if (std::optional<std::string> to_add = m_suggestion_callback(line)) {
+    std::string to_add_color = ansi_prefix + to_add.value() + ansi_suffix;
     fputs(typed.c_str(), m_output_file);
     fputs(to_add_color.c_str(), m_output_file);
     size_t new_autosuggestion_size = line.size() + to_add->length();
@@ -1609,7 +1610,7 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
     switch (cvt.in(state, input.begin(), input.end(), from_next, &out, &out + 1,
                    to_next)) {
     case std::codecvt_base::ok:
-      return out != (int)WEOF;
+      return out != (EditLineGetCharType)WEOF;
 
     case std::codecvt_base::error:
     case std::codecvt_base::noconv:

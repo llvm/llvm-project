@@ -300,7 +300,7 @@ public:
         for (unsigned i = 0; i < NumSrcs; ++i)
           SrcRegs[i] = SrcMerge->getSourceReg(i);
 
-        Builder.buildMerge(DstReg, SrcRegs);
+        Builder.buildMergeValues(DstReg, SrcRegs);
         UpdatedDefs.push_back(DstReg);
       } else {
         // Unable to combine
@@ -724,7 +724,10 @@ public:
     /// and its callees rely upon.
     Register findValueFromDefImpl(Register DefReg, unsigned StartBit,
                                   unsigned Size) {
-      MachineInstr *Def = getDefIgnoringCopies(DefReg, MRI);
+      std::optional<DefinitionAndSourceRegister> DefSrcReg =
+          getDefSrcRegIgnoringCopies(DefReg, MRI);
+      MachineInstr *Def = DefSrcReg->MI;
+      DefReg = DefSrcReg->Reg;
       // If the instruction has a single def, then simply delegate the search.
       // For unmerge however with multiple defs, we need to compute the offset
       // into the source of the unmerge.
@@ -807,6 +810,134 @@ public:
         DeadDefs[DefIdx] = true;
       }
       return DeadDefs.all();
+    }
+
+    GUnmerge *findUnmergeThatDefinesReg(Register Reg, unsigned Size,
+                                        unsigned &DefOperandIdx) {
+      if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
+        if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
+          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def);
+          return Unmerge;
+        }
+      }
+      return nullptr;
+    }
+
+    // Check if sequence of elements from merge-like instruction is defined by
+    // another sequence of elements defined by unmerge. Most often this is the
+    // same sequence. Search for elements using findValueFromDefImpl.
+    bool isSequenceFromUnmerge(GMergeLikeInstr &MI, unsigned MergeStartIdx,
+                               GUnmerge *Unmerge, unsigned UnmergeIdxStart,
+                               unsigned NumElts, unsigned EltSize) {
+      assert(MergeStartIdx + NumElts <= MI.getNumSources());
+      for (unsigned i = MergeStartIdx; i < MergeStartIdx + NumElts; ++i) {
+        unsigned EltUnmergeIdx;
+        GUnmerge *EltUnmerge = findUnmergeThatDefinesReg(
+            MI.getSourceReg(i), EltSize, EltUnmergeIdx);
+        // Check if source i comes from the same Unmerge.
+        if (!EltUnmerge || EltUnmerge != Unmerge)
+          return false;
+        // Check that source i's def has same index in sequence in Unmerge.
+        if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+          return false;
+      }
+      return true;
+    }
+
+    bool tryCombineMergeLike(GMergeLikeInstr &MI,
+                             SmallVectorImpl<MachineInstr *> &DeadInsts,
+                             SmallVectorImpl<Register> &UpdatedDefs,
+                             GISelChangeObserver &Observer) {
+      Register Elt0 = MI.getSourceReg(0);
+      LLT EltTy = MRI.getType(Elt0);
+      unsigned EltSize = EltTy.getSizeInBits();
+
+      unsigned Elt0UnmergeIdx;
+      // Search for unmerge that will be candidate for combine.
+      auto *Unmerge = findUnmergeThatDefinesReg(Elt0, EltSize, Elt0UnmergeIdx);
+      if (!Unmerge)
+        return false;
+
+      unsigned NumMIElts = MI.getNumSources();
+      Register Dst = MI.getReg(0);
+      LLT DstTy = MRI.getType(Dst);
+      Register UnmergeSrc = Unmerge->getSourceReg();
+      LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
+
+      // Recognize copy of UnmergeSrc to Dst.
+      // Unmerge UnmergeSrc and reassemble it using merge-like opcode into Dst.
+      //
+      // %0:_(EltTy), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(Ty)
+      // %Dst:_(Ty) = G_merge_like_opcode %0:_(EltTy), %1, ...
+      //
+      // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
+      if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize))
+          return false;
+        replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs, Observer);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
+      // Recognize UnmergeSrc that can be unmerged to DstTy directly.
+      // Types have to be either both vector or both non-vector types.
+      // Merge-like opcodes are combined one at the time. First one creates new
+      // unmerge, following should use the same unmerge (builder performs CSE).
+      //
+      // %0:_(EltTy), %1, %2, %3 = G_UNMERGE_VALUES %UnmergeSrc:_(UnmergeSrcTy)
+      // %Dst:_(DstTy) = G_merge_like_opcode %0:_(EltTy), %1
+      // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
+      //
+      // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
+      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+          (Elt0UnmergeIdx % NumMIElts == 0) &&
+          getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
+                                   EltSize))
+          return false;
+        MIB.setInstrAndDebugLoc(MI);
+        auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
+        unsigned DstIdx = (Elt0UnmergeIdx * EltSize) / DstTy.getSizeInBits();
+        replaceRegOrBuildCopy(Dst, NewUnmerge.getReg(DstIdx), MRI, MIB,
+                              UpdatedDefs, Observer);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
+      // Recognize when multiple unmerged sources with UnmergeSrcTy type
+      // can be merged into Dst with DstTy type directly.
+      // Types have to be either both vector or both non-vector types.
+
+      // %0:_(EltTy), %1 = G_UNMERGE_VALUES %UnmergeSrc:_(UnmergeSrcTy)
+      // %2:_(EltTy), %3 = G_UNMERGE_VALUES %AnotherUnmergeSrc:_(UnmergeSrcTy)
+      // %Dst:_(DstTy) = G_merge_like_opcode %0:_(EltTy), %1, %2, %3
+      //
+      // %Dst:_(DstTy) = G_merge_like_opcode %UnmergeSrc, %AnotherUnmergeSrc
+
+      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+          getCoverTy(DstTy, UnmergeSrcTy) == DstTy) {
+        SmallVector<Register, 4> ConcatSources;
+        unsigned NumElts = Unmerge->getNumDefs();
+        for (unsigned i = 0; i < MI.getNumSources(); i += NumElts) {
+          unsigned EltUnmergeIdx;
+          auto *UnmergeI = findUnmergeThatDefinesReg(MI.getSourceReg(i),
+                                                     EltSize, EltUnmergeIdx);
+          // All unmerges have to be the same size.
+          if ((!UnmergeI) || (UnmergeI->getNumDefs() != NumElts) ||
+              (EltUnmergeIdx != 0))
+            return false;
+          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize))
+            return false;
+          ConcatSources.push_back(UnmergeI->getSourceReg());
+        }
+
+        MIB.setInstrAndDebugLoc(MI);
+        MIB.buildMergeLikeInstr(Dst, ConcatSources);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
+      return false;
     }
   };
 
@@ -968,7 +1099,7 @@ public:
           Regs.push_back(MergeI->getOperand(Idx).getReg());
 
         Register DefReg = MI.getReg(DefIdx);
-        Builder.buildMerge(DefReg, Regs);
+        Builder.buildMergeLikeInstr(DefReg, Regs);
         UpdatedDefs.push_back(DefReg);
       }
 
@@ -1031,7 +1162,7 @@ public:
 
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
     MachineInstr *MergeI = MRI.getVRegDef(SrcReg);
-    if (!MergeI || !isa<GMergeLikeOp>(MergeI))
+    if (!MergeI || !isa<GMergeLikeInstr>(MergeI))
       return false;
 
     Register DstReg = MI.getOperand(0).getReg();
@@ -1068,6 +1199,8 @@ public:
   bool tryCombineInstruction(MachineInstr &MI,
                              SmallVectorImpl<MachineInstr *> &DeadInsts,
                              GISelObserverWrapper &WrapperObserver) {
+    ArtifactValueFinder Finder(MRI, Builder, LI);
+
     // This might be a recursive call, and we might have DeadInsts already
     // populated. To avoid bad things happening later with multiple vreg defs
     // etc, process the dead instructions now if any.
@@ -1108,6 +1241,8 @@ public:
           break;
         }
       }
+      Changed = Finder.tryCombineMergeLike(cast<GMergeLikeInstr>(MI), DeadInsts,
+                                           UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_EXTRACT:
       Changed = tryCombineExtract(MI, DeadInsts, UpdatedDefs);
@@ -1139,6 +1274,7 @@ public:
         case TargetOpcode::G_UNMERGE_VALUES:
         case TargetOpcode::G_EXTRACT:
         case TargetOpcode::G_TRUNC:
+        case TargetOpcode::G_BUILD_VECTOR:
           // Adding Use to ArtifactList.
           WrapperObserver.changedInstr(Use);
           break;

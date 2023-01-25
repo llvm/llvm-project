@@ -13,13 +13,13 @@
 # CONFLICT: error: cannot use both -non_global_symbols_no_strip_list and -non_global_symbols_strip_list
 
 ## Check that -x causes none of the local symbols to be emitted.
-# RUN: %lld %t/main.o -x -o %t/no_local.out
-# RUN: llvm-nm %t/no_local.out | FileCheck --check-prefix NO_LOCAL %s
+# RUN: %lld %t/main.o -x -o %t/NO-LOCAL.out
+# RUN: llvm-nm %t/NO-LOCAL.out | FileCheck --check-prefix NO-LOCAL %s
 
-# NO_LOCAL-NOT: t _foo
-# NO_LOCAL-NOT: t _bar
-# NO_LOCAL-NOT: t _baz
-# NO_LOCAL: T _main
+# NO-LOCAL-NOT: t _foo
+# NO-LOCAL-NOT: t _bar
+# NO-LOCAL-NOT: t _baz
+# NO-LOCAL: T _main
 
 ## Check that when using -x with -non_global_symbols_no_strip_list, whichever appears
 ## last in the command line arg list will take precedence.
@@ -27,7 +27,7 @@
 # RUN: llvm-nm %t/x_then_no_strip.out | FileCheck --check-prefix X-NO-STRIP %s
 
 # RUN: %lld %t/main.o -non_global_symbols_no_strip_list %t/foo.txt -x -o %t/no_strip_then_x.out
-# RUN: llvm-nm %t/no_strip_then_x.out | FileCheck --check-prefix NO_LOCAL %s
+# RUN: llvm-nm %t/no_strip_then_x.out | FileCheck --check-prefix NO-LOCAL %s
 
 # X-NO-STRIP-NOT: t _bar
 # X-NO-STRIP-DAG: t _foo
@@ -51,7 +51,7 @@
 # RUN: llvm-nm %t/x_then_strip.out | FileCheck --check-prefix X-STRIP %s
 
 # RUN: %lld %t/main.o -non_global_symbols_strip_list %t/foo.txt -x -o %t/strip_then_x.out
-# RUN: llvm-nm %t/no_strip_then_x.out | FileCheck --check-prefix NO_LOCAL %s
+# RUN: llvm-nm %t/no_strip_then_x.out | FileCheck --check-prefix NO-LOCAL %s
 
 # X-STRIP-NOT: t _foo
 # X-STRIP-DAG: t _bar
@@ -77,6 +77,7 @@
 # RUN: llvm-nm %t/strip_all_export_one.out | FileCheck --check-prefix STRIP-EXP %s
 
 # STRIP-EXP: U _foo
+# STRIP-EXP: U dyld_stub_binder
 # STRIP-EXP-EMPTY:
 
 ## Test interactions of -x and -non_global_symbols_strip_list with unexported_symbol.
@@ -97,6 +98,7 @@
 ## -unexported_symbol made _globby a local, therefore it should be stripped by -x too
 # STRIP-UNEXP: T __mh_execute_header
 # STRIP-UNEXP-DAG: T _main
+# STRIP-UNEXP-DAG: U dyld_stub_binder
 # STRIP-UNEXP-EMPTY:
 
 ## Test interactions of -non_global_symbols_strip_list and unexported_symbol.
@@ -109,6 +111,7 @@
 # NOSTRIP-UNEXP: T __mh_execute_header
 # NOSTRIP-UNEXP-DAG: T _main
 # NOSTRIP-UNEXP-DAG: t _globby
+# NOSTRIP-UNEXP-DAG: U dyld_stub_binder
 # NOSTRIP-UNEXP-EMPTY:
 
 #--- foo.txt

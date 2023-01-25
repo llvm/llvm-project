@@ -15,7 +15,9 @@
 //     param_type(InputIterator firstW, InputIterator lastW);
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

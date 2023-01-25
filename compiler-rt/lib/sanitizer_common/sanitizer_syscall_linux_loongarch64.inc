@@ -14,18 +14,22 @@
 // About local register variables:
 // https://gcc.gnu.org/onlinedocs/gcc/Local-Register-Variables.html#Local-Register-Variables
 //
-// Kernel ABI...
-//  syscall number is passed in a7
-//  (http://man7.org/linux/man-pages/man2/syscall.2.html) results are return in
-//  a0 and a1 (http://man7.org/linux/man-pages/man2/syscall.2.html) arguments
-//  are passed in: a0-a7 (confirmed by inspecting glibc sources).
+// Kernel ABI:
+// https://lore.kernel.org/loongarch/1f353678-3398-e30b-1c87-6edb278f74db@xen0n.name/T/#m1613bc86c2d7bf5f6da92bd62984302bfd699a2f
+//  syscall number is placed in a7
+//  parameters, if present, are placed in a0-a6
+//  upon return:
+//    the return value is placed in a0
+//    t0-t8 should be considered clobbered
+//    all other registers are preserved
 #define SYSCALL(name) __NR_##name
 
-#define INTERNAL_SYSCALL_CLOBBERS "memory"
+#define INTERNAL_SYSCALL_CLOBBERS \
+  "memory", "$t0", "$t1", "$t2", "$t3", "$t4", "$t5", "$t6", "$t7", "$t8"
 
 static uptr __internal_syscall(u64 nr) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0");
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0");
   __asm__ volatile("syscall 0\n\t"
                    : "=r"(a0)
                    : "r"(a7)
@@ -35,8 +39,8 @@ static uptr __internal_syscall(u64 nr) {
 #define __internal_syscall0(n) (__internal_syscall)(n)
 
 static uptr __internal_syscall(u64 nr, u64 arg1) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7)
@@ -46,9 +50,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1) {
 #define __internal_syscall1(n, a1) (__internal_syscall)(n, (u64)(a1))
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1)
@@ -59,10 +63,10 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
   (__internal_syscall)(n, (u64)(a1), (long)(a2))
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2)
@@ -74,11 +78,11 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
                                u64 arg4) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3)
@@ -90,12 +94,12 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4)
@@ -108,13 +112,13 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5, long arg6) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
-  register u64 a5 asm("a5") = arg6;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
+  register u64 a5 asm("$a5") = arg6;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5)
@@ -127,14 +131,14 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5, long arg6, long arg7) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
-  register u64 a5 asm("a5") = arg6;
-  register u64 a6 asm("a6") = arg7;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
+  register u64 a5 asm("$a5") = arg6;
+  register u64 a6 asm("$a6") = arg7;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5),

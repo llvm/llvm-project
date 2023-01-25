@@ -187,3 +187,9 @@ Options
    When `true`, the check will warn on an expression like
    ``sizeof(expr) <= k`` for a suspicious constant `k` while `k` is `0` or
    greater than `0x8000`. Default is `true`.
+
+.. option:: WarnOnSizeOfPointerToAggregate
+
+   When `true, the check will warn on an expression like
+   ``sizeof(expr)`` where the expression is a pointer
+   to aggregate. Default is `true`.

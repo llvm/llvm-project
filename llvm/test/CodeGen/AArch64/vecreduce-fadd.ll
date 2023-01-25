@@ -238,7 +238,7 @@ define float @add_S_init_42(<4 x float> %bin.rdx)  {
 
 ; FIXME: The faddp.4s in the loop should not use v0.4s as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
-define float @fadd_reduction_v4f32_in_loop(float* %ptr.start) {
+define float @fadd_reduction_v4f32_in_loop(ptr %ptr.start) {
 ; CHECK-LABEL: fadd_reduction_v4f32_in_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d0, #0000000000000000
@@ -259,14 +259,13 @@ entry:
 
 loop:
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
-  %ptr = phi float* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %ptr = phi ptr [ %ptr.start, %entry ], [ %ptr.next, %loop ]
   %red = phi float [ 0.000000e+00, %entry ], [ %red.next, %loop ]
-  %ptr.bc = bitcast float* %ptr to <4 x float>*
-  %lv = load <4 x float>, <4 x float>* %ptr.bc, align 4
+  %lv = load <4 x float>, ptr %ptr, align 4
   %r = call fast float @llvm.vector.reduce.fadd.f32.v4f32(float -0.0, <4 x float> %lv)
   %red.next = fadd fast float %r, %red
   %ec = icmp eq i32 %iv, 7
-  %ptr.next = getelementptr inbounds float, float* %ptr, i64 4
+  %ptr.next = getelementptr inbounds float, ptr %ptr, i64 4
   %iv.next= add nuw nsw i32 %iv, 1
   br i1 %ec, label %exit, label %loop
 
@@ -276,7 +275,7 @@ exit:
 
 ; FIXME: The faddp.4h in the loop should not use v0.4h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
-define half @fadd_reduction_v4f16_in_loop(half* %ptr.start) {
+define half @fadd_reduction_v4f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v4f16_in_loop:
 ; FULLFP16:       // %bb.0: // %entry
 ; FULLFP16-NEXT:    movi d0, #0000000000000000
@@ -330,14 +329,13 @@ entry:
 
 loop:
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
-  %ptr = phi half* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %ptr = phi ptr [ %ptr.start, %entry ], [ %ptr.next, %loop ]
   %red = phi half [ 0.000000e+00, %entry ], [ %red.next, %loop ]
-  %ptr.bc = bitcast half* %ptr to <4 x half>*
-  %lv = load <4 x half>, <4 x half>* %ptr.bc, align 4
+  %lv = load <4 x half>, ptr %ptr, align 4
   %r = call fast half @llvm.vector.reduce.fadd.f16.v4f16(half -0.0, <4 x half> %lv)
   %red.next = fadd fast half %r, %red
   %ec = icmp eq i32 %iv, 7
-  %ptr.next = getelementptr inbounds half, half* %ptr, i64 4
+  %ptr.next = getelementptr inbounds half, ptr %ptr, i64 4
   %iv.next= add nuw nsw i32 %iv, 1
   br i1 %ec, label %exit, label %loop
 
@@ -347,7 +345,7 @@ exit:
 
 ; FIXME: The faddp.8h in the loop should not use v0.8h as second operand,
 ; because this introduces an unnecessary cross-iteration dependency.
-define half @fadd_reduction_v8f16_in_loop(half* %ptr.start) {
+define half @fadd_reduction_v8f16_in_loop(ptr %ptr.start) {
 ; FULLFP16-LABEL: fadd_reduction_v8f16_in_loop:
 ; FULLFP16:       // %bb.0: // %entry
 ; FULLFP16-NEXT:    movi d0, #0000000000000000
@@ -422,14 +420,13 @@ entry:
 
 loop:
   %iv = phi i32 [ 1, %entry ], [ %iv.next, %loop ]
-  %ptr = phi half* [ %ptr.start, %entry ], [ %ptr.next, %loop ]
+  %ptr = phi ptr [ %ptr.start, %entry ], [ %ptr.next, %loop ]
   %red = phi half [ 0.000000e+00, %entry ], [ %red.next, %loop ]
-  %ptr.bc = bitcast half* %ptr to <8 x half>*
-  %lv = load <8 x half>, <8 x half>* %ptr.bc, align 4
+  %lv = load <8 x half>, ptr %ptr, align 4
   %r = call fast half @llvm.vector.reduce.fadd.f16.v8f16(half -0.0, <8 x half> %lv)
   %red.next = fadd fast half %r, %red
   %ec = icmp eq i32 %iv, 7
-  %ptr.next = getelementptr inbounds half, half* %ptr, i64 4
+  %ptr.next = getelementptr inbounds half, ptr %ptr, i64 4
   %iv.next= add nuw nsw i32 %iv, 1
   br i1 %ec, label %exit, label %loop
 

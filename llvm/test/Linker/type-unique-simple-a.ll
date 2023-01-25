@@ -53,9 +53,9 @@ define void @_Z1fi(i32 %a) #0 !dbg !10 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !17, metadata !DIExpression()), !dbg !18
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !17, metadata !DIExpression()), !dbg !18
   ret void, !dbg !19
 }
 

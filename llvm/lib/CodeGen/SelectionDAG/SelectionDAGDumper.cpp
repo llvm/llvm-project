@@ -79,6 +79,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::DELETED_NODE:               return "<<Deleted Node!>>";
 #endif
   case ISD::PREFETCH:                   return "Prefetch";
+  case ISD::MEMBARRIER:                 return "MemBarrier";
   case ISD::ATOMIC_FENCE:               return "AtomicFence";
   case ISD::ATOMIC_CMP_SWAP:            return "AtomicCmpSwap";
   case ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS: return "AtomicCmpSwapWithSuccess";
@@ -422,7 +423,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
     return "call_alloc";
 
   // Floating point environment manipulation
-  case ISD::FLT_ROUNDS_:                return "flt_rounds";
+  case ISD::GET_ROUNDING:               return "get_rounding";
   case ISD::SET_ROUNDING:               return "set_rounding";
 
   // Bit manipulation
@@ -1059,6 +1060,9 @@ LLVM_DUMP_METHOD void SDNode::dumprFull(const SelectionDAG *G) const {
 
 void SDNode::print(raw_ostream &OS, const SelectionDAG *G) const {
   printr(OS, G);
+  // Under VerboseDAGDumping divergence will be printed always.
+  if (isDivergent() && !VerboseDAGDumping)
+    OS << " # D:1";
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i) {
     if (i) OS << ", "; else OS << " ";
     printOperand(OS, G, getOperand(i));

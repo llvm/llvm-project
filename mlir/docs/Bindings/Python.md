@@ -743,6 +743,34 @@ with Context():
   dictionary = DictAttr.get({"array": array, "unit": UnitAttr.get()})
 ```
 
+Custom builders for Attributes to be used during Operation creation can be
+registered by way of the `register_attribute_builder`. In particular the
+following is how a custom builder is registered for `I32Attr`:
+
+```python
+@register_attribute_builder("I32Attr")
+def _i32Attr(x: int, context: Context):
+  return IntegerAttr.get(
+        IntegerType.get_signless(32, context=context), x)
+```
+
+This allows to invoke op creation of an op with a `I32Attr` with
+
+```python
+foo.Op(30)
+```
+
+The registration is based on the ODS name but registry is via pure python
+method. Only single custom builder is allowed to be registered per ODS attribute
+type (e.g., I32Attr can have only one, which can correspond to multiple of the
+underlying IntegerAttr type).
+
+instead of
+
+```python
+foo.Op(IntegerAttr.get(IndexType.get_signless(32, context=context), 30))
+```
+
 ## Style
 
 In general, for the core parts of MLIR, the Python bindings should be largely
@@ -940,7 +968,7 @@ Each concrete `OpView` subclass further defines several public-intended
 attributes:
 
 *   `OPERATION_NAME` attribute with the `str` fully qualified operation name
-    (i.e. `math.abs`).
+    (i.e. `math.absf`).
 *   An `__init__` method for the *default builder* if one is defined or inferred
     for the operation.
 *   `@property` getter for each operand or result (using an auto-generated name
@@ -1170,4 +1198,3 @@ exist for this functionality, which can then be wrapped using pybind11 and
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate pybind11 module or in the same module as attributes and types, and
 loaded along with the dialect.
-

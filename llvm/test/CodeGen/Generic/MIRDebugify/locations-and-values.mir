@@ -1,6 +1,8 @@
 # RUN: llc -run-pass=mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
 # RUN: llc -run-pass=mir-debugify -debugify-level=locations -o - %s | FileCheck --check-prefixes=ALL --implicit-check-not=dbg.value %s
 # RUN: llc -run-pass=mir-debugify,mir-strip-debug,mir-debugify -o - %s | FileCheck --check-prefixes=ALL,VALUE %s
+# RUN: llc -run-pass=mir-debugify,mir-strip-debug -o - %s | FileCheck --check-prefix=STRIP %s
+
 --- |
   ; ModuleID = 'loc-only.ll'
   source_filename = "loc-only.ll"
@@ -24,6 +26,8 @@
   ; ALL: ![[VERSION]] = !{i32 2, !"Debug Info Version", i32 3}
   ; VALUE: [[VAR1:![0-9]+]] = !DILocalVariable(name: "1"
   ; VALUE: [[VAR2:![0-9]+]] = !DILocalVariable(name: "2"
+  ; STRIP-NOT: !llvm.debugify
+  ; STRIP-NOT: !llvm.mir.debugify
 
 ...
 ---

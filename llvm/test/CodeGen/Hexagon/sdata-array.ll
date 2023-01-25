@@ -7,7 +7,7 @@
 
 define void @set(i8 %x) nounwind {
 entry:
-  store i8 %x, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @foo, i32 0, i32 0), align 1
+  store i8 %x, ptr @foo, align 1
   ret void
 }
 

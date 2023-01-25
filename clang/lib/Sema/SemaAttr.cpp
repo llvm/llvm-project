@@ -18,6 +18,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/SemaInternal.h"
+#include <optional>
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
@@ -34,6 +35,7 @@ Sema::PragmaStackSentinelRAII::PragmaStackSentinelRAII(Sema &S,
     S.BSSSegStack.SentinelAction(PSK_Push, SlotLabel);
     S.ConstSegStack.SentinelAction(PSK_Push, SlotLabel);
     S.CodeSegStack.SentinelAction(PSK_Push, SlotLabel);
+    S.StrictGuardStackCheckStack.SentinelAction(PSK_Push, SlotLabel);
   }
 }
 
@@ -44,6 +46,7 @@ Sema::PragmaStackSentinelRAII::~PragmaStackSentinelRAII() {
     S.BSSSegStack.SentinelAction(PSK_Pop, SlotLabel);
     S.ConstSegStack.SentinelAction(PSK_Pop, SlotLabel);
     S.CodeSegStack.SentinelAction(PSK_Pop, SlotLabel);
+    S.StrictGuardStackCheckStack.SentinelAction(PSK_Pop, SlotLabel);
   }
 }
 
@@ -335,7 +338,7 @@ void Sema::ActOnPragmaPack(SourceLocation PragmaLoc, PragmaMsStackAction Action,
   AlignPackInfo::Mode ModeVal = CurVal.getAlignMode();
 
   if (Alignment) {
-    Optional<llvm::APSInt> Val;
+    std::optional<llvm::APSInt> Val;
     Val = Alignment->getIntegerConstantExpr(Context);
 
     // pack(0) is like pack(), which just works out since that is what
@@ -774,6 +777,17 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
   Stack->Act(PragmaLocation, Action, StackSlotLabel, SegmentName);
 }
 
+/// Called on well formed \#pragma strict_gs_check().
+void Sema::ActOnPragmaMSStrictGuardStackCheck(SourceLocation PragmaLocation,
+                                              PragmaMsStackAction Action,
+                                              bool Value) {
+  if (Action & PSK_Pop && StrictGuardStackCheckStack.Stack.empty())
+    Diag(PragmaLocation, diag::warn_pragma_pop_failed) << "strict_gs_check"
+                                                       << "stack empty";
+
+  StrictGuardStackCheckStack.Act(PragmaLocation, Action, StringRef(), Value);
+}
+
 /// Called on well formed \#pragma bss_seg().
 void Sema::ActOnPragmaMSSection(SourceLocation PragmaLocation,
                                 int SectionFlags, StringLiteral *SegmentName) {
@@ -872,12 +886,12 @@ void Sema::AddCFAuditedAttribute(Decl *D) {
 
 namespace {
 
-Optional<attr::SubjectMatchRule>
+std::optional<attr::SubjectMatchRule>
 getParentAttrMatcherRule(attr::SubjectMatchRule Rule) {
   using namespace attr;
   switch (Rule) {
   default:
-    return None;
+    return std::nullopt;
 #define ATTR_MATCH_RULE(Value, Spelling, IsAbstract)
 #define ATTR_MATCH_SUB_RULE(Value, Spelling, IsAbstract, Parent, IsNegated)    \
   case Value:                                                                  \
@@ -947,7 +961,7 @@ void Sema::ActOnPragmaAttributeAttribute(
         RulesToFirstSpecifiedNegatedSubRule;
     for (const auto &Rule : Rules) {
       attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
-      Optional<attr::SubjectMatchRule> ParentRule =
+      std::optional<attr::SubjectMatchRule> ParentRule =
           getParentAttrMatcherRule(MatchRule);
       if (!ParentRule)
         continue;
@@ -971,7 +985,7 @@ void Sema::ActOnPragmaAttributeAttribute(
     bool IgnoreNegatedSubRules = false;
     for (const auto &Rule : Rules) {
       attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);
-      Optional<attr::SubjectMatchRule> ParentRule =
+      std::optional<attr::SubjectMatchRule> ParentRule =
           getParentAttrMatcherRule(MatchRule);
       if (!ParentRule)
         continue;

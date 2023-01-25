@@ -641,5 +641,5 @@
 @tls_global_long_long_internal_zero_initialized = internal thread_local global i64 0, align 8
 @tls_global_long_long_weak_val_initialized = weak thread_local global i64 1, align 8
 @tls_global_long_long_weak_zero_initialized = weak thread_local global i64 0, align 8
-@tls_global_alias_int_external_val_initialized = thread_local alias i32, i32* @tls_global_int_external_val_initialized
+@tls_global_alias_int_external_val_initialized = thread_local alias i32, ptr @tls_global_int_external_val_initialized
 @const_ivar = constant i32 6, align 4

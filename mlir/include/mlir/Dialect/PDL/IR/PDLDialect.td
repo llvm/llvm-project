@@ -66,13 +66,10 @@ def PDL_Dialect : Dialect {
   let cppNamespace = "::mlir::pdl";
 
   let useDefaultTypePrinterParser = 1;
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let extraClassDeclaration = [{
     void registerTypes();
   }];
-
-  // FIXME: Prefixed accessors overlap with builtin Operation members. Flip
-  // once resolved.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 #endif // MLIR_DIALECT_PDL_IR_PDLDIALECT

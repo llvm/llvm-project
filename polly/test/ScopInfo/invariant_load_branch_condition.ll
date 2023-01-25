@@ -24,21 +24,21 @@
 ; CHECK-NEXT:             [val] -> { Stmt_loop[i0] -> MemRef_X[0] };
 ; CHECK-NEXT: }
 
-define void @foo(i1* %ptr, float* %X) {
+define void @foo(ptr %ptr, ptr %X) {
 entry:
   br label %next
 
 next:
-  %val = load i1, i1* %ptr
+  %val = load i1, ptr %ptr
   br i1 %val, label %a, label %loop
 
 a:
-  store float 1.0, float* %X
+  store float 1.0, ptr %X
   br label %merge
 
 loop:
   %indvar = phi i64 [0, %next], [%indvar.next, %loop]
-  store float 1.0, float* %X
+  store float 1.0, ptr %X
   %indvar.next = add nsw i64 %indvar, 1
   %cmp = icmp sle i64 %indvar, 1024
   br i1 %cmp, label %loop, label %merge

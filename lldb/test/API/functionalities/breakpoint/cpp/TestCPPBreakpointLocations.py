@@ -2,9 +2,6 @@
 Test lldb breakpoint ids.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,7 +12,16 @@ class TestCPPBreakpointLocations(TestBase):
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test(self):
-        self.build()
+        self.do_test(dict())
+
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @skipIf(compiler=no_match("clang"))
+    @skipIf(compiler_version=["<", "15.0"])
+    def test_simple_template_names(self):
+        self.do_test(dict(CFLAGS_EXTRAS="-gsimple-template-names"))
+
+    def do_test(self, debug_flags):
+        self.build(dictionary=debug_flags)
         self.breakpoint_id_tests()
 
     def verify_breakpoint_locations(self, target, bp_dict):
@@ -57,6 +63,36 @@ class TestCPPBreakpointLocations(TestBase):
             {'name': 'a::c::func1()', 'loc_names': ['a::c::func1()']},
             {'name': 'b::c::func1()', 'loc_names': ['b::c::func1()']},
             {'name': 'c::d::func2()', 'loc_names': ['c::d::func2()']},
+
+            # Template cases
+            {'name': 'func<float>', 'loc_names': []},
+            {'name': 'Foo::func<float>', 'loc_names': []},
+            {'name': 'ns::Foo::func<float>', 'loc_names': []},
+            {'name': 'func<int>', 'loc_names': ['auto ns::Foo<double>::func<int>()']},
+            {'name': 'Foo<double>::func<int>', 'loc_names': ['auto ns::Foo<double>::func<int>()']},
+            {'name': 'ns::Foo<double>::func<int>', 'loc_names': ['auto ns::Foo<double>::func<int>()']},
+            {'name': 'func', 'loc_names': ['auto ns::Foo<double>::func<int>()',
+                                           'auto ns::Foo<double>::func<ns::Foo<int>>()']},
+
+            {'name': 'operator', 'loc_names': []},
+            {'name': 'ns::Foo<double>::operator bool', 'loc_names': ['ns::Foo<double>::operator bool()']},
+
+            {'name': 'operator a::c', 'loc_names': ['ns::Foo<double>::operator a::c<a::c>()']},
+            {'name': 'operator ns::Foo<int>', 'loc_names': ['ns::Foo<double>::operator ns::Foo<int><ns::Foo<int>>()']},
+
+            {'name': 'operator<<<a::c>', 'loc_names': []},
+            {'name': 'operator<<<int>', 'loc_names': ['void ns::Foo<double>::operator<<<int>(int)']},
+            {'name': 'ns::Foo<double>::operator<<', 'loc_names': ['void ns::Foo<double>::operator<<<int>(int)',
+                                                                  'void ns::Foo<double>::operator<<<ns::Foo<int>>(ns::Foo<int>)']},
+
+            {'name': 'g<float>', 'loc_names': []},
+            {'name': 'g<int>', 'loc_names': ['void ns::g<int>()']},
+            {'name': 'g<char>', 'loc_names': ['void ns::g<char>()']},
+            {'name': 'g', 'loc_names': ['void ns::g<int>()', 'void ns::g<char>()']},
+            {'name': 'ns::g<float>', 'loc_names': []},
+            {'name': 'ns::g<int>', 'loc_names': ['void ns::g<int>()']},
+            {'name': 'ns::g<char>', 'loc_names': ['void ns::g<char>()']},
+            {'name': 'ns::g', 'loc_names': ['void ns::g<int>()', 'void ns::g<char>()']},
         ]
 
         for bp_dict in bp_dicts:

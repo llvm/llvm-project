@@ -18,9 +18,10 @@ def run(f):
 
 @run
 def getParentLoop():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
-    loop.GetParentForOp(sequence.bodyTarget, num_loops=2)
+    loop.GetParentForOp(transform.OperationType.get("scf.for"), sequence.bodyTarget, num_loops=2)
     transform.YieldOp()
   # CHECK-LABEL: TEST: getParentLoop
   # CHECK: = transform.loop.get_parent_for %
@@ -29,9 +30,10 @@ def getParentLoop():
 
 @run
 def loopOutline():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.OperationType.get("scf.for"))
   with InsertionPoint(sequence.body):
-    loop.LoopOutlineOp(sequence.bodyTarget, func_name="foo")
+    loop.LoopOutlineOp(pdl.OperationType.get(), sequence.bodyTarget, func_name="foo")
     transform.YieldOp()
   # CHECK-LABEL: TEST: loopOutline
   # CHECK: = transform.loop.outline %
@@ -40,9 +42,10 @@ def loopOutline():
 
 @run
 def loopPeel():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.OperationType.get("scf.for"))
   with InsertionPoint(sequence.body):
-    loop.LoopPeelOp(sequence.bodyTarget)
+    loop.LoopPeelOp(pdl.OperationType.get(), sequence.bodyTarget)
     transform.YieldOp()
   # CHECK-LABEL: TEST: loopPeel
   # CHECK: = transform.loop.peel %
@@ -50,19 +53,21 @@ def loopPeel():
 
 @run
 def loopPipeline():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.OperationType.get("scf.for"))
   with InsertionPoint(sequence.body):
-    loop.LoopPipelineOp(sequence.bodyTarget, iteration_interval=3)
+    loop.LoopPipelineOp(pdl.OperationType.get(), sequence.bodyTarget, iteration_interval=3)
     transform.YieldOp()
   # CHECK-LABEL: TEST: loopPipeline
   # CHECK: = transform.loop.pipeline %
   # CHECK-DAG: iteration_interval = 3
-  # CHECK-DAG: read_latency = 10
+  # (read_latency has default value and is not printed)
 
 
 @run
 def loopUnroll():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [], transform.OperationType.get("scf.for"))
   with InsertionPoint(sequence.body):
     loop.LoopUnrollOp(sequence.bodyTarget, factor=42)
     transform.YieldOp()

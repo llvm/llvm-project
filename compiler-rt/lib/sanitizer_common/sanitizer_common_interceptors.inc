@@ -23,10 +23,6 @@
 //   COMMON_INTERCEPTOR_SET_THREAD_NAME
 //   COMMON_INTERCEPTOR_DLOPEN
 //   COMMON_INTERCEPTOR_ON_EXIT
-//   COMMON_INTERCEPTOR_MUTEX_PRE_LOCK
-//   COMMON_INTERCEPTOR_MUTEX_POST_LOCK
-//   COMMON_INTERCEPTOR_MUTEX_UNLOCK
-//   COMMON_INTERCEPTOR_MUTEX_REPAIR
 //   COMMON_INTERCEPTOR_SET_PTHREAD_NAME
 //   COMMON_INTERCEPTOR_HANDLE_RECVMSG
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
@@ -221,26 +217,6 @@ extern const short *_tolower_tab_;
 
 #ifndef COMMON_INTERCEPTOR_FD_ACCESS
 #define COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_PRE_LOCK
-#define COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_POST_LOCK
-#define COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_UNLOCK
-#define COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_REPAIR
-#define COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m) {}
-#endif
-
-#ifndef COMMON_INTERCEPTOR_MUTEX_INVALID
-#define COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m) {}
 #endif
 
 #ifndef COMMON_INTERCEPTOR_HANDLE_RECVMSG
@@ -2530,13 +2506,36 @@ INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
 #define INIT___B64_TO
 #endif  // SANITIZER_INTERCEPT___B64_TO
 
-#if SANITIZER_INTERCEPT___DN_EXPAND
+#if SANITIZER_INTERCEPT_DN_COMP_EXPAND
 #  if __GLIBC_PREREQ(2, 34)
 // Changed with https://sourceware.org/git/?p=glibc.git;h=640bbdf
+#    define DN_COMP_INTERCEPTOR_NAME dn_comp
 #    define DN_EXPAND_INTERCEPTOR_NAME dn_expand
 #  else
+#    define DN_COMP_INTERCEPTOR_NAME __dn_comp
 #    define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
 #  endif
+INTERCEPTOR(int, DN_COMP_INTERCEPTOR_NAME, unsigned char *exp_dn,
+            unsigned char *comp_dn, int length, unsigned char **dnptrs,
+            unsigned char **lastdnptr) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, DN_COMP_INTERCEPTOR_NAME, exp_dn, comp_dn,
+                           length, dnptrs, lastdnptr);
+  int res = REAL(DN_COMP_INTERCEPTOR_NAME)(exp_dn, comp_dn, length, dnptrs,
+                                           lastdnptr);
+  if (res >= 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, comp_dn, res);
+    if (dnptrs && lastdnptr) {
+      unsigned char **p = dnptrs;
+      for (; p != lastdnptr && *p; ++p)
+        ;
+      if (p != lastdnptr)
+        ++p;
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dnptrs, (p - dnptrs) * sizeof(*p));
+    }
+  }
+  return res;
+}
 INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
             unsigned char const *end, unsigned char const *src, char *dest,
             int space) {
@@ -2549,11 +2548,12 @@ INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, internal_strlen(dest) + 1);
   return res;
 }
-#  define INIT___DN_EXPAND \
+#  define INIT_DN_COMP_EXPAND                            \
+    COMMON_INTERCEPT_FUNCTION(DN_COMP_INTERCEPTOR_NAME); \
     COMMON_INTERCEPT_FUNCTION(DN_EXPAND_INTERCEPTOR_NAME);
-#else  // SANITIZER_INTERCEPT___DN_EXPAND
-#  define INIT___DN_EXPAND
-#endif  // SANITIZER_INTERCEPT___DN_EXPAND
+#else  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
+#  define INIT_DN_COMP_EXPAND
+#endif  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
 
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
 
@@ -4451,90 +4451,13 @@ INTERCEPTOR(void, _exit, int status) {
 #define INIT__EXIT
 #endif
 
-#if SANITIZER_INTERCEPT_PTHREAD_MUTEX
-INTERCEPTOR(int, pthread_mutex_lock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_lock, m);
-  COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
-  int res = REAL(pthread_mutex_lock)(m);
-  if (res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
-  if (res == 0 || res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, pthread_mutex_unlock, m);
-  COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
-  int res = REAL(pthread_mutex_unlock)(m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-#define INIT_PTHREAD_MUTEX_LOCK COMMON_INTERCEPT_FUNCTION(pthread_mutex_lock)
-#define INIT_PTHREAD_MUTEX_UNLOCK \
-  COMMON_INTERCEPT_FUNCTION(pthread_mutex_unlock)
-#else
-#define INIT_PTHREAD_MUTEX_LOCK
-#define INIT_PTHREAD_MUTEX_UNLOCK
-#endif
-
-#if SANITIZER_INTERCEPT___PTHREAD_MUTEX
-INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_lock, m);
-  COMMON_INTERCEPTOR_MUTEX_PRE_LOCK(ctx, m);
-  int res = REAL(__pthread_mutex_lock)(m);
-  if (res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_REPAIR(ctx, m);
-  if (res == 0 || res == errno_EOWNERDEAD)
-    COMMON_INTERCEPTOR_MUTEX_POST_LOCK(ctx, m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __pthread_mutex_unlock, m);
-  COMMON_INTERCEPTOR_MUTEX_UNLOCK(ctx, m);
-  int res = REAL(__pthread_mutex_unlock)(m);
-  if (res == errno_EINVAL)
-    COMMON_INTERCEPTOR_MUTEX_INVALID(ctx, m);
-  return res;
-}
-
-#define INIT___PTHREAD_MUTEX_LOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_lock)
-#define INIT___PTHREAD_MUTEX_UNLOCK \
-  COMMON_INTERCEPT_FUNCTION(__pthread_mutex_unlock)
-#else
-#define INIT___PTHREAD_MUTEX_LOCK
-#define INIT___PTHREAD_MUTEX_UNLOCK
-#endif
-
 #if SANITIZER_INTERCEPT___LIBC_MUTEX
-INTERCEPTOR(int, __libc_mutex_lock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_lock));
-
-INTERCEPTOR(int, __libc_mutex_unlock, void *m)
-ALIAS(WRAPPER_NAME(pthread_mutex_unlock));
-
 INTERCEPTOR(int, __libc_thr_setcancelstate, int state, int *oldstate)
 ALIAS(WRAPPER_NAME(pthread_setcancelstate));
 
-#define INIT___LIBC_MUTEX_LOCK COMMON_INTERCEPT_FUNCTION(__libc_mutex_lock)
-#define INIT___LIBC_MUTEX_UNLOCK COMMON_INTERCEPT_FUNCTION(__libc_mutex_unlock)
 #define INIT___LIBC_THR_SETCANCELSTATE \
   COMMON_INTERCEPT_FUNCTION(__libc_thr_setcancelstate)
 #else
-#define INIT___LIBC_MUTEX_LOCK
-#define INIT___LIBC_MUTEX_UNLOCK
 #define INIT___LIBC_THR_SETCANCELSTATE
 #endif
 
@@ -6703,7 +6626,7 @@ INTERCEPTOR(int, sem_init, __sanitizer_sem_t *s, int pshared, unsigned value) {
   COMMON_INTERCEPTOR_ENTER(ctx, sem_init, s, pshared, value);
   // Workaround a bug in glibc's "old" semaphore implementation by
   // zero-initializing the sem_t contents. This has to be done here because
-  // interceptors bind to the lowest symbols version by default, hitting the
+  // interceptors bind to the lowest version before glibc 2.36, hitting the
   // buggy code path while the non-sanitized build of the same code works fine.
   REAL(memset)(s, 0, sizeof(*s));
   int res = REAL(sem_init)(s, pshared, value);
@@ -10434,6 +10357,20 @@ INTERCEPTOR(int, __xuname, int size, void *utsname) {
 #define INIT___XUNAME
 #endif
 
+#if SANITIZER_INTERCEPT_HEXDUMP
+INTERCEPTOR(void, hexdump, const void *ptr, int length, const char *header, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, hexdump, ptr, length, header, flags);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, length);
+  COMMON_INTERCEPTOR_READ_RANGE(ctx, header, internal_strlen(header) + 1);
+  REAL(hexdump)(ptr, length, header, flags);
+}
+
+#define INIT_HEXDUMP COMMON_INTERCEPT_FUNCTION(hexdump);
+#else
+#define INIT_HEXDUMP
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10513,7 +10450,7 @@ static void InitializeCommonInterceptors() {
   INIT_GLOB;
   INIT_GLOB64;
   INIT___B64_TO;
-  INIT___DN_EXPAND;
+  INIT_DN_COMP_EXPAND;
   INIT_POSIX_SPAWN;
   INIT_WAIT;
   INIT_WAIT4;
@@ -10580,12 +10517,6 @@ static void InitializeCommonInterceptors() {
   INIT_PTHREAD_SIGMASK;
   INIT_BACKTRACE;
   INIT__EXIT;
-  INIT_PTHREAD_MUTEX_LOCK;
-  INIT_PTHREAD_MUTEX_UNLOCK;
-  INIT___PTHREAD_MUTEX_LOCK;
-  INIT___PTHREAD_MUTEX_UNLOCK;
-  INIT___LIBC_MUTEX_LOCK;
-  INIT___LIBC_MUTEX_UNLOCK;
   INIT___LIBC_THR_SETCANCELSTATE;
   INIT_GETMNTENT;
   INIT_GETMNTENT_R;
@@ -10758,6 +10689,7 @@ static void InitializeCommonInterceptors() {
   INIT_PROCCTL
   INIT_UNAME;
   INIT___XUNAME;
+  INIT_HEXDUMP;
 
   INIT___PRINTF_CHK;
 }

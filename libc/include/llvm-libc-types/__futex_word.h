@@ -10,16 +10,11 @@
 #define __LLVM_LIBC_TYPES_FUTEX_WORD_H__
 
 typedef struct {
-#if defined(__unix__) && (defined(__x86_64__) || defined(__aarch64__))
   // Futex word should be aligned appropriately to allow target atomic
   // instructions. This declaration mimics the internal setup.
-  _Alignas(sizeof(unsigned int) > _Alignof(unsigned int)
-               ? sizeof(unsigned int)
-               : _Alignof(unsigned int)) unsigned int __word;
-  _Static_assert(sizeof(unsigned int) == 4, "Unexpected size of unsigned int.");
-#else
-#error "A type to represent a futex word is not available for the target arch."
-#endif
+  _Alignas(sizeof(__UINT32_TYPE__) > _Alignof(__UINT32_TYPE__)
+               ? sizeof(__UINT32_TYPE__)
+               : _Alignof(__UINT32_TYPE__)) __UINT32_TYPE__ __word;
 } __futex_word;
 
 #endif // __LLVM_LIBC_TYPES_FUTEX_WORD_H__

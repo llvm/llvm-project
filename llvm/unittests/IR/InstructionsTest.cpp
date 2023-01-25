@@ -731,11 +731,11 @@ TEST(InstructionsTest, CloneCall) {
   // Test cloning an attribute.
   {
     AttrBuilder AB(C);
-    AB.addAttribute(Attribute::ReadOnly);
+    AB.addAttribute(Attribute::NoUnwind);
     Call->setAttributes(
         AttributeList::get(C, AttributeList::FunctionIndex, AB));
     std::unique_ptr<CallInst> Clone(cast<CallInst>(Call->clone()));
-    EXPECT_TRUE(Clone->onlyReadsMemory());
+    EXPECT_TRUE(Clone->doesNotThrow());
   }
 }
 
@@ -752,7 +752,7 @@ TEST(InstructionsTest, AlterCallBundles) {
   AttrBuilder AB(C);
   AB.addAttribute(Attribute::Cold);
   Call->setAttributes(AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Call->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+  Call->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<CallInst> Clone(CallInst::Create(Call.get(), NewBundle));
@@ -782,7 +782,7 @@ TEST(InstructionsTest, AlterInvokeBundles) {
   AB.addAttribute(Attribute::Cold);
   Invoke->setAttributes(
       AttributeList::get(C, AttributeList::FunctionIndex, AB));
-  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, None)));
+  Invoke->setDebugLoc(DebugLoc(MDNode::get(C, std::nullopt)));
 
   OperandBundleDef NewBundle("after", ConstantInt::get(Int32Ty, 7));
   std::unique_ptr<InvokeInst> Clone(
@@ -1516,7 +1516,7 @@ if.end:
 }
 )");
   Function *Foo = M->getFunction("foo");
-  auto BBs = Foo->getBasicBlockList().begin();
+  auto BBs = Foo->begin();
   CallBrInst &CBI = cast<CallBrInst>(BBs->front());
   ++BBs;
   ++BBs;
@@ -1679,6 +1679,44 @@ TEST(InstructionsTest, AllocaInst) {
   EXPECT_EQ(F.getAllocationSizeInBits(DL), TypeSize::getFixed(32));
   EXPECT_EQ(G.getAllocationSizeInBits(DL), TypeSize::getFixed(768));
   EXPECT_EQ(H.getAllocationSizeInBits(DL), TypeSize::getFixed(160));
+}
+
+TEST(InstructionsTest, InsertAtBegin) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertInto(BB, BB->begin());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(I->getNextNode(), Ret);
+}
+
+TEST(InstructionsTest, InsertAtEnd) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M = parseIR(Ctx, R"(
+    define void @f(i32 %a, i32 %b) {
+     entry:
+       ret void
+    }
+)");
+  Function *F = &*M->begin();
+  Argument *ArgA = F->getArg(0);
+  Argument *ArgB = F->getArg(1);
+  BasicBlock *BB = &*F->begin();
+  Instruction *Ret = &*BB->begin();
+  Instruction *I = BinaryOperator::CreateAdd(ArgA, ArgB);
+  auto It = I->insertInto(BB, BB->end());
+  EXPECT_EQ(&*It, I);
+  EXPECT_EQ(Ret->getNextNode(), I);
 }
 
 } // end anonymous namespace

@@ -37,12 +37,26 @@ constexpr size_t SectionHeaderSize64 = 72;
 constexpr size_t SymbolTableEntrySize = 18;
 constexpr size_t RelocationSerializationSize32 = 10;
 constexpr size_t RelocationSerializationSize64 = 14;
+constexpr size_t ExceptionSectionEntrySize32 = 6;
+constexpr size_t ExceptionSectionEntrySize64 = 10;
 constexpr uint16_t RelocOverflow = 65535;
 constexpr uint8_t AllocRegNo = 31;
 
 enum ReservedSectionNum : int16_t { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
 enum MagicNumber : uint16_t { XCOFF32 = 0x01DF, XCOFF64 = 0x01F7 };
+
+// Masks for packing/unpacking the r_rsize field of relocations.
+
+// The msb is used to indicate if the bits being relocated are signed or
+// unsigned.
+static constexpr uint8_t XR_SIGN_INDICATOR_MASK = 0x80;
+// The 2nd msb is used to indicate that the binder has replaced/modified the
+// original instruction.
+static constexpr uint8_t XR_FIXUP_INDICATOR_MASK = 0x40;
+// The remaining bits specify the bit length of the relocatable reference
+// minus one.
+static constexpr uint8_t XR_BIASED_LENGTH_MASK = 0x3f;
 
 // This field only exists in the XCOFF64 definition.
 enum AuxHeaderFlags64 : uint16_t {

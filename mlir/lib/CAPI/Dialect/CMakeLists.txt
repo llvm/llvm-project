@@ -60,6 +60,15 @@ add_mlir_upstream_c_api_library(MLIRCAPILinalg
   MLIRLinalgTransforms
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIMLProgram
+  MLProgram.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRMLProgramDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPISCF
   SCF.cpp
 
@@ -105,6 +114,15 @@ add_mlir_upstream_c_api_library(MLIRCAPITensor
   LINK_LIBS PUBLIC
   MLIRCAPIIR
   MLIRTensorDialect
+)
+
+add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
+  Transform.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRTransformDialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIQuant

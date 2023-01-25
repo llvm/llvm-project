@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fblocks -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fblocks -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 // Make sure we do not generate line info for debugging-related frame setup.
 // CHECK: define {{.*}}block_invoke
-// CHECK-NOT: store {{.*}}%struct.__block_descriptor*{{.*}}dbg
-// CHECK: store {{.*}}%struct.__block_descriptor*{{.*}}, align
+// CHECK-NOT: store {{.*}}ptr{{.*}}dbg
+// CHECK: store {{.*}}ptr{{.*}}, align
 // CHECK: ret
 // CHECK: define {{.*}}block_invoke
-// CHECK-NOT: store {{.*}}%struct.__block_descriptor*{{.*}}dbg
-// CHECK: store {{.*}}%struct.__block_descriptor*{{.*}}, align
+// CHECK-NOT: store {{.*}}ptr{{.*}}dbg
+// CHECK: store {{.*}}ptr{{.*}}, align
 // CHECK: ret
 // CHECK: define {{.*}}block_invoke
-// CHECK-NOT: store {{.*}}%struct.__block_descriptor*{{.*}}dbg
-// CHECK: store {{.*}}%struct.__block_descriptor*{{.*}}, align
+// CHECK-NOT: store {{.*}}ptr{{.*}}dbg
+// CHECK: store {{.*}}ptr{{.*}}, align
 // CHECK: ret
 int printf(const char*, ...);
 

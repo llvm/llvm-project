@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <type_traits>
+#include <optional>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -25,6 +25,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTVECTORTOSCF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using vector::TransferReadOp;
@@ -48,9 +53,9 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
 
 /// Given a vector transfer op, calculate which dimension of the `source`
 /// memref should be unpacked in the next application of TransferOpConversion.
-/// A return value of None indicates a broadcast.
+/// A return value of std::nullopt indicates a broadcast.
 template <typename OpTy>
-static Optional<int64_t> unpackedDim(OpTy xferOp) {
+static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
@@ -59,7 +64,7 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
   }
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Compute the permutation map for the new (N-1)-D vector transfer op. This
@@ -94,9 +99,8 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
   if (!isBroadcast) {
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value offset = adaptor.getIndices()[dim.value()];
-    indices[dim.value()] =
-        makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    Value offset = adaptor.getIndices()[*dim];
+    indices[*dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 
@@ -155,7 +159,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
 /// `resultTypes`.
 template <typename OpTy>
 static Value generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     TypeRange resultTypes,
     function_ref<Value(OpBuilder &, Location)> inBoundsCase,
     function_ref<Value(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
@@ -188,7 +192,7 @@ static Value generateInBoundsCheck(
   // If the condition is non-empty, generate an SCF::IfOp.
   if (cond) {
     auto check = lb.create<scf::IfOp>(
-        resultTypes, cond,
+        cond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           maybeYieldValue(b, loc, hasRetVal, inBoundsCase(b, loc));
@@ -213,7 +217,7 @@ static Value generateInBoundsCheck(
 /// a return value. Consequently, this function does not have a return value.
 template <typename OpTy>
 static void generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     function_ref<void(OpBuilder &, Location)> inBoundsCase,
     function_ref<void(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
   generateInBoundsCheck(
@@ -295,7 +299,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
     auto maskBuffer = b.create<memref::AllocaOp>(loc, maskType);
     b.setInsertionPoint(xferOp);
     b.create<memref::StoreOp>(loc, xferOp.getMask(), maskBuffer);
-    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer);
+    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer, ValueRange());
   }
 
   return result;
@@ -1086,9 +1090,10 @@ namespace lowering_1_d {
 
 /// Compute the indices into the memref for the LoadOp/StoreOp generated as
 /// part of TransferOp1dConversion. Return the memref dimension on which
-/// the transfer is operating. A return value of None indicates a broadcast.
+/// the transfer is operating. A return value of std::nullopt indicates a
+/// broadcast.
 template <typename OpTy>
-static Optional<int64_t>
+static std::optional<int64_t>
 get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
                    SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.getIndices();
@@ -1110,7 +1115,7 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
 
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Codegen strategy for TransferOp1dConversion, depending on the
@@ -1281,12 +1286,11 @@ void mlir::populateVectorToSCFConversionPatterns(
 namespace {
 
 struct ConvertVectorToSCFPass
-    : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
+    : public impl::ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
   ConvertVectorToSCFPass() = default;
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
     this->targetRank = options.targetRank;
-    this->lowerPermutationMaps = options.lowerPermutationMaps;
     this->lowerTensors = options.lowerTensors;
   }
 
@@ -1294,17 +1298,14 @@ struct ConvertVectorToSCFPass
     VectorTransferToSCFOptions options;
     options.unroll = fullUnroll;
     options.targetRank = targetRank;
-    options.lowerPermutationMaps = lowerPermutationMaps;
     options.lowerTensors = lowerTensors;
 
     // Lower permutation maps first.
-    if (lowerPermutationMaps) {
-      RewritePatternSet lowerTransferPatterns(&getContext());
-      mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
-          lowerTransferPatterns);
-      (void)applyPatternsAndFoldGreedily(getOperation(),
-                                         std::move(lowerTransferPatterns));
-    }
+    RewritePatternSet lowerTransferPatterns(&getContext());
+    mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
+        lowerTransferPatterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(),
+                                       std::move(lowerTransferPatterns));
 
     RewritePatternSet patterns(&getContext());
     populateVectorToSCFConversionPatterns(patterns, options);

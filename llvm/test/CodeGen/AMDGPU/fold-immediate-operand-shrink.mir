@@ -160,6 +160,7 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   $vcc = S_MOV_B64 -1
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64 = V_ADD_CO_U32_e64 [[S_MOV_B32_]], [[DEF]], 0, implicit $exec

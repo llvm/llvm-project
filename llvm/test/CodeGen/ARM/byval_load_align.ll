@@ -7,7 +7,7 @@
 ; CHECK: ldr r2, [r[[REG]], #4]
 ; CHECK: ldr r3, [r[[REG]], #8]
 ; CHECK-NOT: ldm
-; CHECK: .p2align	1 @ @sID
+; CHECK: .p2align	1, 0x0 @ @sID
 
 %struct.ModuleID = type { [32 x i8], [32 x i8], i16 }
 
@@ -16,11 +16,11 @@
 ; Function Attrs: nounwind ssp
 define void @Client() #0 {
 entry:
-  tail call void @Logger(i8 signext 97, %struct.ModuleID* byval(%struct.ModuleID) @sID) #2
+  tail call void @Logger(i8 signext 97, ptr byval(%struct.ModuleID) @sID) #2
   ret void
 }
 
-declare void @Logger(i8 signext, %struct.ModuleID* byval(%struct.ModuleID)) #1
+declare void @Logger(i8 signext, ptr byval(%struct.ModuleID)) #1
 
 attributes #0 = { nounwind ssp "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

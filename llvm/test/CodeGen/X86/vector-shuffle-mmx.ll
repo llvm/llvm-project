@@ -74,8 +74,8 @@ define void @test2() nounwind {
 ; X64-LABEL: test2:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    movq _tmp_V2i@GOTPCREL(%rip), %rax
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; X64-NEXT:    movq %xmm0, (%rax)
 ; X64-NEXT:    retq
 entry:

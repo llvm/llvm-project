@@ -100,7 +100,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
       Return the default dialect used when printing/parsing operations in
       regions nested under this operation. This allows for eliding the dialect
       prefix from the operation name, for example it would be possible to omit
-      the `spv.` prefix from all operations within a SpirV module if this method
+      the `spirv.` prefix from all operations within a SpirV module if this method
       returned `spv`. The default implementation returns an empty string which
       is ignored.
       }],
@@ -116,7 +116,7 @@ def OpAsmOpInterface : OpInterface<"OpAsmOpInterface"> {
 /// This parameter represents a handle to a resource that is encoded into the
 /// "dialect_resources" section of the assembly format. This parameter expects a
 /// C++ `handleType` that derives from `AsmDialectResourceHandleBase` and
-/// implements a derived handle to the desired resource type. 
+/// implements a derived handle to the desired resource type.
 class ResourceHandleParameter<string handleType, string desc = "">
     : AttrOrTypeParameter<handleType, desc> {
   let parser = "$_parser.parseResourceHandle<" # handleType # ">()";

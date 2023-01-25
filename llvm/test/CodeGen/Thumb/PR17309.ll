@@ -10,10 +10,9 @@
 define void @pass_C() #0 {
 entry:
   %c = alloca %struct.C, align 1
-  %0 = getelementptr inbounds %struct.C, %struct.C* %c, i32 0, i32 0, i32 0
-  call void @llvm.lifetime.start.p0i8(i64 1000, i8* %0) #1
-  call void @use_C(%struct.C* byval(%struct.C) %c) #3
-  call void @llvm.lifetime.end.p0i8(i64 1000, i8* %0) #1
+  call void @llvm.lifetime.start.p0(i64 1000, ptr %c) #1
+  call void @use_C(ptr byval(%struct.C) %c) #3
+  call void @llvm.lifetime.end.p0(i64 1000, ptr %c) #1
   ret void
 }
 
@@ -23,10 +22,9 @@ entry:
 define void @pass_S() #0 {
 entry:
   %s = alloca %struct.S, align 2
-  %0 = bitcast %struct.S* %s to i8*
-  call void @llvm.lifetime.start.p0i8(i64 2000, i8* %0) #1
-  call void @use_S(%struct.S* byval(%struct.S) %s) #3
-  call void @llvm.lifetime.end.p0i8(i64 2000, i8* %0) #1
+  call void @llvm.lifetime.start.p0(i64 2000, ptr %s) #1
+  call void @use_S(ptr byval(%struct.S) %s) #3
+  call void @llvm.lifetime.end.p0(i64 2000, ptr %s) #1
   ret void
 }
 
@@ -36,19 +34,18 @@ entry:
 define void @pass_I() #0 {
 entry:
   %i = alloca %struct.I, align 4
-  %0 = bitcast %struct.I* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4000, i8* %0) #1
-  call void @use_I(%struct.I* byval(%struct.I) %i) #3
-  call void @llvm.lifetime.end.p0i8(i64 4000, i8* %0) #1
+  call void @llvm.lifetime.start.p0(i64 4000, ptr %i) #1
+  call void @use_I(ptr byval(%struct.I) %i) #3
+  call void @llvm.lifetime.end.p0(i64 4000, ptr %i) #1
   ret void
 }
 
-declare void @use_C(%struct.C* byval(%struct.C)) #2
-declare void @use_S(%struct.S* byval(%struct.S)) #2
-declare void @use_I(%struct.I* byval(%struct.I)) #2
+declare void @use_C(ptr byval(%struct.C)) #2
+declare void @use_S(ptr byval(%struct.S)) #2
+declare void @use_I(ptr byval(%struct.I)) #2
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 
 attributes #0 = { nounwind optsize "less-precise-fpmad"="false" "frame-pointer"="non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

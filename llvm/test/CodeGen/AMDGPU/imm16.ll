@@ -6,7 +6,7 @@
 
 ; FIXME: Merge into imm.ll
 
-define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(i16 addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_neg_0.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -51,11 +51,11 @@ define amdgpu_kernel void @store_inline_imm_neg_0.0_i16(i16 addrspace(1)* %out) 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
-  store volatile i16 -32768, i16 addrspace(1)* %out
+  store volatile i16 -32768, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_0.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_0.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_0.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -96,11 +96,11 @@ define amdgpu_kernel void @store_inline_imm_0.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 0.0, half addrspace(1)* %out
+  store half 0.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_imm_neg_0.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_imm_neg_0.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_imm_neg_0.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -141,11 +141,11 @@ define amdgpu_kernel void @store_imm_neg_0.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half -0.0, half addrspace(1)* %out
+  store half -0.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_0.5_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_0.5_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_0.5_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -186,11 +186,11 @@ define amdgpu_kernel void @store_inline_imm_0.5_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 0.5, half addrspace(1)* %out
+  store half 0.5, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_m_0.5_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_m_0.5_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_m_0.5_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -231,11 +231,11 @@ define amdgpu_kernel void @store_inline_imm_m_0.5_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half -0.5, half addrspace(1)* %out
+  store half -0.5, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_1.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_1.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_1.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -276,11 +276,11 @@ define amdgpu_kernel void @store_inline_imm_1.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 1.0, half addrspace(1)* %out
+  store half 1.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_m_1.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_m_1.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_m_1.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -321,11 +321,11 @@ define amdgpu_kernel void @store_inline_imm_m_1.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half -1.0, half addrspace(1)* %out
+  store half -1.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_2.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_2.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_2.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -366,11 +366,11 @@ define amdgpu_kernel void @store_inline_imm_2.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 2.0, half addrspace(1)* %out
+  store half 2.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_m_2.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_m_2.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_m_2.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -411,11 +411,11 @@ define amdgpu_kernel void @store_inline_imm_m_2.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half -2.0, half addrspace(1)* %out
+  store half -2.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_4.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_4.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_4.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -456,11 +456,11 @@ define amdgpu_kernel void @store_inline_imm_4.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 4.0, half addrspace(1)* %out
+  store half 4.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_m_4.0_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_m_4.0_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_m_4.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -501,11 +501,11 @@ define amdgpu_kernel void @store_inline_imm_m_4.0_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half -4.0, half addrspace(1)* %out
+  store half -4.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_inv_2pi_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_inv_2pi_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_inv_2pi_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -546,11 +546,11 @@ define amdgpu_kernel void @store_inline_imm_inv_2pi_f16(half addrspace(1)* %out)
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 0xH3118, half addrspace(1)* %out
+  store half 0xH3118, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_inline_imm_m_inv_2pi_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_inline_imm_m_inv_2pi_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_inline_imm_m_inv_2pi_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -591,11 +591,11 @@ define amdgpu_kernel void @store_inline_imm_m_inv_2pi_f16(half addrspace(1)* %ou
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 0xHB118, half addrspace(1)* %out
+  store half 0xHB118, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @store_literal_imm_f16(half addrspace(1)* %out) {
+define amdgpu_kernel void @store_literal_imm_f16(ptr addrspace(1) %out) {
 ; GFX10-LABEL: store_literal_imm_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0 ; encoding: [0x02,0x00,0x04,0xf4,0x00,0x00,0x00,0xfa]
@@ -636,11 +636,11 @@ define amdgpu_kernel void @store_literal_imm_f16(half addrspace(1)* %out) {
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
-  store half 4096.0, half addrspace(1)* %out
+  store half 4096.0, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_0.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_0.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_0.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -690,11 +690,11 @@ define amdgpu_kernel void @add_inline_imm_0.0_f16(half addrspace(1)* %out, half 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_0.5_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_0.5_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_0.5_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -744,11 +744,11 @@ define amdgpu_kernel void @add_inline_imm_0.5_f16(half addrspace(1)* %out, half 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0.5
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_0.5_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_neg_0.5_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_neg_0.5_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -798,11 +798,11 @@ define amdgpu_kernel void @add_inline_imm_neg_0.5_f16(half addrspace(1)* %out, h
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, -0.5
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_1.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_1.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_1.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -852,11 +852,11 @@ define amdgpu_kernel void @add_inline_imm_1.0_f16(half addrspace(1)* %out, half 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 1.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_1.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_neg_1.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_neg_1.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -906,11 +906,11 @@ define amdgpu_kernel void @add_inline_imm_neg_1.0_f16(half addrspace(1)* %out, h
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, -1.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_2.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_2.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_2.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -960,11 +960,11 @@ define amdgpu_kernel void @add_inline_imm_2.0_f16(half addrspace(1)* %out, half 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 2.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_2.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_neg_2.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_neg_2.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1014,11 +1014,11 @@ define amdgpu_kernel void @add_inline_imm_neg_2.0_f16(half addrspace(1)* %out, h
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, -2.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_4.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_4.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_4.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1068,11 +1068,11 @@ define amdgpu_kernel void @add_inline_imm_4.0_f16(half addrspace(1)* %out, half 
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 4.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_4.0_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_neg_4.0_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_neg_4.0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1122,11 +1122,11 @@ define amdgpu_kernel void @add_inline_imm_neg_4.0_f16(half addrspace(1)* %out, h
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, -4.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @commute_add_inline_imm_0.5_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
+define amdgpu_kernel void @commute_add_inline_imm_0.5_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-LABEL: commute_add_inline_imm_0.5_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0 ; encoding: [0x02,0x00,0x08,0xf4,0x00,0x00,0x00,0xfa]
@@ -1201,13 +1201,13 @@ define amdgpu_kernel void @commute_add_inline_imm_0.5_f16(half addrspace(1)* %ou
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
-  %x = load half, half addrspace(1)* %in
+  %x = load half, ptr addrspace(1) %in
   %y = fadd half %x, 0.5
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @commute_add_literal_f16(half addrspace(1)* %out, half addrspace(1)* %in) {
+define amdgpu_kernel void @commute_add_literal_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-LABEL: commute_add_literal_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0 ; encoding: [0x02,0x00,0x08,0xf4,0x00,0x00,0x00,0xfa]
@@ -1282,13 +1282,13 @@ define amdgpu_kernel void @commute_add_literal_f16(half addrspace(1)* %out, half
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
-  %x = load half, half addrspace(1)* %in
+  %x = load half, ptr addrspace(1) %in
   %y = fadd half %x, 1024.0
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_1_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_1_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1338,11 +1338,11 @@ define amdgpu_kernel void @add_inline_imm_1_f16(half addrspace(1)* %out, half %x
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0xH0001
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_2_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_2_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_2_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1392,11 +1392,11 @@ define amdgpu_kernel void @add_inline_imm_2_f16(half addrspace(1)* %out, half %x
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0xH0002
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_16_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_16_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_16_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1446,11 +1446,11 @@ define amdgpu_kernel void @add_inline_imm_16_f16(half addrspace(1)* %out, half %
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0xH0010
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_1_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+define amdgpu_kernel void @add_inline_imm_neg_1_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-LABEL: add_inline_imm_neg_1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0 ; encoding: [0x02,0x00,0x08,0xf4,0x00,0x00,0x00,0xfa]
@@ -1523,14 +1523,14 @@ define amdgpu_kernel void @add_inline_imm_neg_1_f16(half addrspace(1)* %out, i16
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, -1, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
-  %x = load i16, i16 addrspace(1)* %in
+  %x = load i16, ptr addrspace(1) %in
   %y = add i16 %x, -1
   %ybc = bitcast i16 %y to half
-  store half %ybc, half addrspace(1)* %out
+  store half %ybc, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_2_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+define amdgpu_kernel void @add_inline_imm_neg_2_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-LABEL: add_inline_imm_neg_2_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0 ; encoding: [0x02,0x00,0x08,0xf4,0x00,0x00,0x00,0xfa]
@@ -1603,14 +1603,14 @@ define amdgpu_kernel void @add_inline_imm_neg_2_f16(half addrspace(1)* %out, i16
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, -2, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
-  %x = load i16, i16 addrspace(1)* %in
+  %x = load i16, ptr addrspace(1) %in
   %y = add i16 %x, -2
   %ybc = bitcast i16 %y to half
-  store half %ybc, half addrspace(1)* %out
+  store half %ybc, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_neg_16_f16(half addrspace(1)* %out, i16 addrspace(1)* %in) {
+define amdgpu_kernel void @add_inline_imm_neg_16_f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GFX10-LABEL: add_inline_imm_neg_16_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0 ; encoding: [0x02,0x00,0x08,0xf4,0x00,0x00,0x00,0xfa]
@@ -1683,14 +1683,14 @@ define amdgpu_kernel void @add_inline_imm_neg_16_f16(half addrspace(1)* %out, i1
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, -16, v0
 ; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
-  %x = load i16, i16 addrspace(1)* %in
+  %x = load i16, ptr addrspace(1) %in
   %y = add i16 %x, -16
   %ybc = bitcast i16 %y to half
-  store half %ybc, half addrspace(1)* %out
+  store half %ybc, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_63_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_63_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_63_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1740,11 +1740,11 @@ define amdgpu_kernel void @add_inline_imm_63_f16(half addrspace(1)* %out, half %
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0xH003F
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @add_inline_imm_64_f16(half addrspace(1)* %out, half %x) {
+define amdgpu_kernel void @add_inline_imm_64_f16(ptr addrspace(1) %out, half %x) {
 ; GFX10-LABEL: add_inline_imm_64_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1 ; encoding: [0x01,0x00,0xa1,0xbf]
@@ -1794,13 +1794,13 @@ define amdgpu_kernel void @add_inline_imm_64_f16(half addrspace(1)* %out, half %
 ; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
   %y = fadd half %x, 0xH0040
-  store half %y, half addrspace(1)* %out
+  store half %y, ptr addrspace(1) %out
   ret void
 }
 
 ; This needs to be emitted as a literal constant since the 16-bit
 ; float values do not work for 16-bit integer operations.
-define void @mul_inline_imm_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_0.5_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_0.5_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -1840,11 +1840,11 @@ define void @mul_inline_imm_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 0.5 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_neg_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_neg_0.5_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_neg_0.5_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -1884,11 +1884,11 @@ define void @mul_inline_imm_neg_0.5_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -0.5 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_1.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_1.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -1928,11 +1928,11 @@ define void @mul_inline_imm_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 1.0 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_neg_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_neg_1.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_neg_1.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -1972,11 +1972,11 @@ define void @mul_inline_imm_neg_1.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -1.0 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @shl_inline_imm_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @shl_inline_imm_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: shl_inline_imm_2.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -2016,11 +2016,11 @@ define void @shl_inline_imm_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = shl i16 bitcast (half 2.0 to i16), %x
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @shl_inline_imm_neg_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @shl_inline_imm_neg_2.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: shl_inline_imm_neg_2.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -2060,11 +2060,11 @@ define void @shl_inline_imm_neg_2.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = shl i16 bitcast (half -2.0 to i16), %x
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_4.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_4.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -2104,11 +2104,11 @@ define void @mul_inline_imm_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 4.0 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_neg_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_neg_4.0_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_neg_4.0_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -2148,11 +2148,11 @@ define void @mul_inline_imm_neg_4.0_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half -4.0 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }
 
-define void @mul_inline_imm_inv2pi_i16(i16 addrspace(1)* %out, i16 %x) {
+define void @mul_inline_imm_inv2pi_i16(ptr addrspace(1) %out, i16 %x) {
 ; GFX10-LABEL: mul_inline_imm_inv2pi_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x8c,0xbf]
@@ -2192,6 +2192,6 @@ define void @mul_inline_imm_inv2pi_i16(i16 addrspace(1)* %out, i16 %x) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; SI-NEXT:    s_setpc_b64 s[30:31]
   %y = mul i16 %x, bitcast (half 0xH3118 to i16)
-  store i16 %y, i16 addrspace(1)* %out
+  store i16 %y, ptr addrspace(1) %out
   ret void
 }

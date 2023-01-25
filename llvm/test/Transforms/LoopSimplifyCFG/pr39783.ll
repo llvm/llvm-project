@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -mcpu=z13 -S -loop-simplifycfg -enable-loop-simplifycfg-term-folding -verify-memoryssa 2>&1 < %s | FileCheck %s
+; RUN: opt -mcpu=z13 -S -passes=loop-simplifycfg -enable-loop-simplifycfg-term-folding -verify-memoryssa 2>&1 < %s | FileCheck %s
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 @global = external dso_local local_unnamed_addr global i8, align 2
@@ -12,7 +12,7 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 
 define internal fastcc void @test_01() unnamed_addr {
 bb:
-  %tmp = load i32, i32* @global.2, align 4
+  %tmp = load i32, ptr @global.2, align 4
   %tmp1 = icmp eq i32 %tmp, 0
   br i1 %tmp1, label %bb3, label %bb2
 
@@ -26,7 +26,7 @@ bb4:                                              ; preds = %bb6, %bb3
   br i1 true, label %bb5, label %bb6
 
 bb5:                                              ; preds = %bb4
-  store i16 0, i16* @global.3, align 2
+  store i16 0, ptr @global.3, align 2
   br label %bb6
 
 bb6:                                              ; preds = %bb5, %bb4
@@ -45,7 +45,7 @@ bb11:                                             ; preds = %bb13, %bb10
   br i1 %tmp12, label %bb13, label %bb14
 
 bb13:                                             ; preds = %bb11
-  store i32 0, i32* @global.1, align 4
+  store i32 0, ptr @global.1, align 4
   br label %bb11
 
 bb14:                                             ; preds = %bb11
@@ -70,7 +70,7 @@ bb:
 
 bb1:                                              ; preds = %bb16, %bb
   %tmp = phi i8 [ %arg, %bb ], [ %tmp17, %bb16 ]
-  %tmp2 = load i16, i16* @global.5, align 2
+  %tmp2 = load i16, ptr @global.5, align 2
   %tmp3 = icmp ugt i16 %tmp2, 56
   br i1 %tmp3, label %bb4, label %bb18
 

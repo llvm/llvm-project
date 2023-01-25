@@ -24,11 +24,12 @@ int printf_main(Writer *writer, const char *__restrict str,
   Parser parser(str, args);
   int result = 0;
   for (FormatSection cur_section = parser.get_next_section();
-       cur_section.raw_len > 0; cur_section = parser.get_next_section()) {
+       !cur_section.raw_string.empty();
+       cur_section = parser.get_next_section()) {
     if (cur_section.has_conv)
       result = convert(writer, cur_section);
     else
-      result = writer->write(cur_section.raw_string, cur_section.raw_len);
+      result = writer->write(cur_section.raw_string);
 
     if (result < 0)
       return result;

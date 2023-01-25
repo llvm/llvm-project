@@ -1014,6 +1014,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM";
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return "COFF-ARM64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "COFF-ARM64EC";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1028,6 +1030,7 @@ Triple::ArchType COFFObjectFile::getArch() const {
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return Triple::thumb;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     return Triple::aarch64;
   default:
     return Triple::UnknownArch;
@@ -1131,7 +1134,7 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
            "Aux Symbol data did not point to the beginning of a symbol");
 #endif
   }
-  return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
+  return ArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
 }
 
 uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
@@ -1196,7 +1199,7 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
   uint32_t SectionSize = getSectionSize(Sec);
   if (Error E = checkOffset(Data, ConStart, SectionSize))
     return E;
-  Res = makeArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
+  Res = ArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
   return Error::success();
 }
 
@@ -1314,6 +1317,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1896,6 +1900,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       RVAReloc = COFF::IMAGE_REL_ARM_ADDR32NB;
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
+    case COFF::IMAGE_FILE_MACHINE_ARM64EC:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

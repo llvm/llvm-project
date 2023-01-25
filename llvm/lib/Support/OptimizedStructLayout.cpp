@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/OptimizedStructLayout.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -345,9 +346,8 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Helper function to try to find a field in the given queue that'll
   // fit starting at StartOffset but before EndOffset (if present).
   // Note that this never fails if EndOffset is not provided.
-  auto tryAddFillerFromQueue = [&](AlignmentQueue *Queue,
-                                   uint64_t StartOffset,
-                                   Optional<uint64_t> EndOffset) -> bool {
+  auto tryAddFillerFromQueue = [&](AlignmentQueue *Queue, uint64_t StartOffset,
+                                   std::optional<uint64_t> EndOffset) -> bool {
     assert(Queue->Head);
     assert(StartOffset == alignTo(LastEnd, Queue->Alignment));
     assert(!EndOffset || StartOffset < *EndOffset);
@@ -356,7 +356,8 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
     // queue if there's nothing in it that small.
     auto MaxViableSize =
       (EndOffset ? *EndOffset - StartOffset : ~(uint64_t)0);
-    if (Queue->MinSize > MaxViableSize) return false;
+    if (Queue->MinSize > MaxViableSize)
+      return false;
 
     // Find the matching field.  Note that this should always find
     // something because of the MinSize check above.
@@ -372,7 +373,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
 
   // Helper function to find the "best" flexible-offset field according
   // to the criteria described above.
-  auto tryAddBestField = [&](Optional<uint64_t> BeforeOffset) -> bool {
+  auto tryAddBestField = [&](std::optional<uint64_t> BeforeOffset) -> bool {
     assert(!BeforeOffset || LastEnd < *BeforeOffset);
     auto QueueB = FlexibleFieldsByAlignment.begin();
     auto QueueE = FlexibleFieldsByAlignment.end();
@@ -436,7 +437,7 @@ llvm::performOptimizedStructLayout(MutableArrayRef<Field> Fields) {
   // Phase 2: repeatedly add the best flexible-offset field until
   // they're all gone.
   while (!FlexibleFieldsByAlignment.empty()) {
-    bool Success = tryAddBestField(None);
+    bool Success = tryAddBestField(std::nullopt);
     assert(Success && "didn't find a field with no fixed limit?");
     (void) Success;
   }

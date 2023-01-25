@@ -2,9 +2,6 @@
 Test some ARM instruction emulation.
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.decorators import *

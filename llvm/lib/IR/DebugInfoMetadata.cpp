@@ -17,10 +17,12 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
 #include <numeric>
+#include <optional>
 
 using namespace llvm;
 
@@ -33,6 +35,11 @@ cl::opt<bool> EnableFSDiscriminator(
 
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
+
+DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
+    : Variable(DII->getVariable()),
+      Fragment(DII->getExpression()->getFragmentInfo()),
+      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
@@ -106,42 +113,68 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   if (LocA == LocB)
     return LocA;
 
-  SmallPtrSet<DILocation *, 5> InlinedLocationsA;
-  for (DILocation *L = LocA->getInlinedAt(); L; L = L->getInlinedAt())
-    InlinedLocationsA.insert(L);
-  SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
+  LLVMContext &C = LocA->getContext();
+  SmallDenseMap<std::pair<DILocalScope *, DILocation *>,
+                std::pair<unsigned, unsigned>, 4>
+      Locations;
+
   DIScope *S = LocA->getScope();
   DILocation *L = LocA->getInlinedAt();
-  while (S) {
-    Locations.insert(std::make_pair(S, L));
+  unsigned Line = LocA->getLine();
+  unsigned Col = LocA->getColumn();
+
+  // Walk from the current source locaiton until the file scope;
+  // then, do the same for the inlined-at locations.
+  auto AdvanceToParentLoc = [&S, &L, &Line, &Col]() {
     S = S->getScope();
     if (!S && L) {
+      Line = L->getLine();
+      Col = L->getColumn();
       S = L->getScope();
       L = L->getInlinedAt();
     }
+  };
+
+  while (S) {
+    if (auto *LS = dyn_cast<DILocalScope>(S))
+      Locations.try_emplace(std::make_pair(LS, L), std::make_pair(Line, Col));
+    AdvanceToParentLoc();
   }
-  const DILocation *Result = LocB;
+
+  // Walk the source locations of LocB until a match with LocA is found.
   S = LocB->getScope();
   L = LocB->getInlinedAt();
+  Line = LocB->getLine();
+  Col = LocB->getColumn();
   while (S) {
-    if (Locations.count(std::make_pair(S, L)))
-      break;
-    S = S->getScope();
-    if (!S && L) {
-      S = L->getScope();
-      L = L->getInlinedAt();
+    if (auto *LS = dyn_cast<DILocalScope>(S)) {
+      auto MatchLoc = Locations.find(std::make_pair(LS, L));
+      if (MatchLoc != Locations.end()) {
+        // If the lines match, keep the line, but set the column to '0'
+        // If the lines don't match, pick a "line 0" location but keep
+        // the current scope and inlined-at.
+        bool SameLine = Line == MatchLoc->second.first;
+        bool SameCol = Col == MatchLoc->second.second;
+        Line = SameLine ? Line : 0;
+        Col = SameLine && SameCol ? Col : 0;
+        break;
+      }
     }
+    AdvanceToParentLoc();
   }
 
-  // If the two locations are irreconsilable, just pick one. This is misleading,
-  // but on the other hand, it's a "line 0" location.
-  if (!S || !isa<DILocalScope>(S))
+  if (!S) {
+    // If the two locations are irreconsilable, pick any scope,
+    // and return a "line 0" location.
+    Line = Col = 0;
     S = LocA->getScope();
-  return DILocation::get(Result->getContext(), 0, 0, S, L);
+  }
+
+  return DILocation::get(C, Line, Col, S, L);
 }
 
-Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
-                                                   unsigned CI) {
+std::optional<unsigned>
+DILocation::encodeDiscriminator(unsigned BD, unsigned DF, unsigned CI) {
   std::array<unsigned, 3> Components = {BD, DF, CI};
   uint64_t RemainingWork = 0U;
   // We use RemainingWork to figure out if we have no remaining components to
@@ -171,7 +204,7 @@ Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
   decodeDiscriminator(Ret, TBD, TDF, TCI);
   if (TBD == BD && TDF == DF && TCI == CI)
     return Ret;
-  return None;
+  return std::nullopt;
 }
 
 void DILocation::decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
@@ -329,7 +362,7 @@ void GenericDINode::recalculateHash() {
     }                                                                          \
   } while (false)
 #define DEFINE_GETIMPL_STORE(CLASS, ARGS, OPS)                                 \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
+  return storeImpl(new (std::size(OPS), Storage)                               \
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS), OPS),        \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_OPS(CLASS, ARGS)                               \
@@ -337,8 +370,7 @@ void GenericDINode::recalculateHash() {
                        CLASS(Context, Storage, UNWRAP_ARGS(ARGS)),             \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_NO_CONSTRUCTOR_ARGS(CLASS, OPS)                   \
-  return storeImpl(new (array_lengthof(OPS), Storage)                          \
-                       CLASS(Context, Storage, OPS),                           \
+  return storeImpl(new (std::size(OPS), Storage) CLASS(Context, Storage, OPS), \
                    Storage, Context.pImpl->CLASS##s)
 #define DEFINE_GETIMPL_STORE_N(CLASS, ARGS, OPS, NUM_OPS)                      \
   return storeImpl(new (NUM_OPS, Storage)                                      \
@@ -570,7 +602,7 @@ DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                        (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
 }
 
-Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
+std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   switch (getEncoding()) {
   case dwarf::DW_ATE_signed:
   case dwarf::DW_ATE_signed_char:
@@ -579,7 +611,7 @@ Optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   case dwarf::DW_ATE_unsigned_char:
     return Signedness::Unsigned;
   default:
-    return None;
+    return std::nullopt;
   }
 }
 
@@ -630,12 +662,14 @@ Constant *DIDerivedType::getDiscriminantValue() const {
   return nullptr;
 }
 
-DIDerivedType *DIDerivedType::getImpl(
-    LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
-    unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
-    uint32_t AlignInBits, uint64_t OffsetInBits,
-    Optional<unsigned> DWARFAddressSpace, DIFlags Flags, Metadata *ExtraData,
-    Metadata *Annotations, StorageType Storage, bool ShouldCreate) {
+DIDerivedType *
+DIDerivedType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                       Metadata *File, unsigned Line, Metadata *Scope,
+                       Metadata *BaseType, uint64_t SizeInBits,
+                       uint32_t AlignInBits, uint64_t OffsetInBits,
+                       std::optional<unsigned> DWARFAddressSpace, DIFlags Flags,
+                       Metadata *ExtraData, Metadata *Annotations,
+                       StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   DEFINE_GETIMPL_LOOKUP(DIDerivedType,
                         (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
@@ -767,7 +801,7 @@ DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,
 }
 
 DIFile::DIFile(LLVMContext &C, StorageType Storage,
-               Optional<ChecksumInfo<MDString *>> CS, Optional<MDString *> Src,
+               std::optional<ChecksumInfo<MDString *>> CS, MDString *Src,
                ArrayRef<Metadata *> Ops)
     : DIScope(C, DIFileKind, Storage, dwarf::DW_TAG_file_type, Ops),
       Checksum(CS), Source(Src) {}
@@ -788,26 +822,27 @@ StringRef DIFile::getChecksumKindAsString(ChecksumKind CSKind) {
   return ChecksumKindName[CSKind - 1];
 }
 
-Optional<DIFile::ChecksumKind> DIFile::getChecksumKind(StringRef CSKindStr) {
-  return StringSwitch<Optional<DIFile::ChecksumKind>>(CSKindStr)
+std::optional<DIFile::ChecksumKind>
+DIFile::getChecksumKind(StringRef CSKindStr) {
+  return StringSwitch<std::optional<DIFile::ChecksumKind>>(CSKindStr)
       .Case("CSK_MD5", DIFile::CSK_MD5)
       .Case("CSK_SHA1", DIFile::CSK_SHA1)
       .Case("CSK_SHA256", DIFile::CSK_SHA256)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
                         MDString *Directory,
-                        Optional<DIFile::ChecksumInfo<MDString *>> CS,
-                        Optional<MDString *> Source, StorageType Storage,
+                        std::optional<DIFile::ChecksumInfo<MDString *>> CS,
+                        MDString *Source, StorageType Storage,
                         bool ShouldCreate) {
   assert(isCanonical(Filename) && "Expected canonical MDString");
   assert(isCanonical(Directory) && "Expected canonical MDString");
   assert((!CS || isCanonical(CS->Value)) && "Expected canonical MDString");
-  assert((!Source || isCanonical(*Source)) && "Expected canonical MDString");
+  // We do *NOT* expect Source to be a canonical MDString because nullptr
+  // means none, so we need something to represent the empty file.
   DEFINE_GETIMPL_LOOKUP(DIFile, (Filename, Directory, CS, Source));
-  Metadata *Ops[] = {Filename, Directory, CS ? CS->Value : nullptr,
-                     Source.value_or(nullptr)};
+  Metadata *Ops[] = {Filename, Directory, CS ? CS->Value : nullptr, Source};
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
@@ -850,7 +885,7 @@ DICompileUnit *DICompileUnit::getImpl(
                      Macros,
                      SysRoot,
                      SDK};
-  return storeImpl(new (array_lengthof(Ops), Storage) DICompileUnit(
+  return storeImpl(new (std::size(Ops), Storage) DICompileUnit(
                        Context, Storage, SourceLanguage, IsOptimized,
                        RuntimeVersion, EmissionKind, DWOId, SplitDebugInlining,
                        DebugInfoForProfiling, NameTableKind, RangesBaseAddress,
@@ -858,23 +893,23 @@ DICompileUnit *DICompileUnit::getImpl(
                    Storage);
 }
 
-Optional<DICompileUnit::DebugEmissionKind>
+std::optional<DICompileUnit::DebugEmissionKind>
 DICompileUnit::getEmissionKind(StringRef Str) {
-  return StringSwitch<Optional<DebugEmissionKind>>(Str)
+  return StringSwitch<std::optional<DebugEmissionKind>>(Str)
       .Case("NoDebug", NoDebug)
       .Case("FullDebug", FullDebug)
       .Case("LineTablesOnly", LineTablesOnly)
       .Case("DebugDirectivesOnly", DebugDirectivesOnly)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
-Optional<DICompileUnit::DebugNameTableKind>
+std::optional<DICompileUnit::DebugNameTableKind>
 DICompileUnit::getNameTableKind(StringRef Str) {
-  return StringSwitch<Optional<DebugNameTableKind>>(Str)
+  return StringSwitch<std::optional<DebugNameTableKind>>(Str)
       .Case("Default", DebugNameTableKind::Default)
       .Case("GNU", DebugNameTableKind::GNU)
       .Case("None", DebugNameTableKind::None)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
 const char *DICompileUnit::emissionKindString(DebugEmissionKind EK) {
@@ -937,6 +972,35 @@ DILocalScope *DILocalScope::getNonLexicalBlockFileScope() const {
   if (auto *File = dyn_cast<DILexicalBlockFile>(this))
     return File->getScope()->getNonLexicalBlockFileScope();
   return const_cast<DILocalScope *>(this);
+}
+
+DILocalScope *DILocalScope::cloneScopeForSubprogram(
+    DILocalScope &RootScope, DISubprogram &NewSP, LLVMContext &Ctx,
+    DenseMap<const MDNode *, MDNode *> &Cache) {
+  SmallVector<DIScope *> ScopeChain;
+  DIScope *CachedResult = nullptr;
+
+  for (DIScope *Scope = &RootScope; !isa<DISubprogram>(Scope);
+       Scope = Scope->getScope()) {
+    if (auto It = Cache.find(Scope); It != Cache.end()) {
+      CachedResult = cast<DIScope>(It->second);
+      break;
+    }
+    ScopeChain.push_back(Scope);
+  }
+
+  // Recreate the scope chain, bottom-up, starting at the new subprogram (or a
+  // cached result).
+  DIScope *UpdatedScope = CachedResult ? CachedResult : &NewSP;
+  for (DIScope *ScopeToUpdate : reverse(ScopeChain)) {
+    TempMDNode ClonedScope = ScopeToUpdate->clone();
+    cast<DILexicalBlockBase>(*ClonedScope).replaceScope(UpdatedScope);
+    UpdatedScope =
+        cast<DIScope>(MDNode::replaceWithUniqued(std::move(ClonedScope)));
+    Cache[ScopeToUpdate] = UpdatedScope;
+  }
+
+  return cast<DILocalScope>(UpdatedScope);
 }
 
 DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {
@@ -1173,7 +1237,7 @@ DIVariable::DIVariable(LLVMContext &C, unsigned ID, StorageType Storage,
                        uint32_t AlignInBits)
     : DINode(C, ID, Storage, dwarf::DW_TAG_variable, Ops), Line(Line),
       AlignInBits(AlignInBits) {}
-Optional<uint64_t> DIVariable::getSizeInBits() const {
+std::optional<uint64_t> DIVariable::getSizeInBits() const {
   // This is used by the Verifier so be mindful of broken types.
   const Metadata *RawType = getRawType();
   while (RawType) {
@@ -1193,7 +1257,7 @@ Optional<uint64_t> DIVariable::getSizeInBits() const {
   }
 
   // Fail gracefully.
-  return None;
+  return std::nullopt;
 }
 
 DILabel::DILabel(LLVMContext &C, StorageType Storage, unsigned Line,
@@ -1220,6 +1284,13 @@ bool DIExpression::isEntryValue() const {
 }
 bool DIExpression::startsWithDeref() const {
   return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
+}
+
+DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
+                                bool ShouldCreate) {
+  // Uniqued DIAssignID are not supported as the instance address *is* the ID.
+  assert(Storage != StorageType::Uniqued && "uniqued DIAssignID unsupported");
+  return storeImpl(new (0u, Storage) DIAssignID(Context, Storage), Storage);
 }
 
 unsigned DIExpression::ExprOperand::getSize() const {
@@ -1287,12 +1358,15 @@ bool DIExpression::isValid() const {
       break;
     }
     case dwarf::DW_OP_LLVM_entry_value: {
-      // An entry value operator must appear at the beginning and the number of
-      // operations it cover can currently only be 1, because we support only
-      // entry values of a simple register location. One reason for this is that
-      // we currently can't calculate the size of the resulting DWARF block for
-      // other expressions.
-      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1;
+      // An entry value operator must appear at the beginning or immediately
+      // following `DW_OP_LLVM_arg 0`, and the number of operations it cover can
+      // currently only be 1, because we support only entry values of a simple
+      // register location. One reason for this is that we currently can't
+      // calculate the size of the resulting DWARF block for other expressions.
+      auto FirstOp = expr_op_begin();
+      if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
+        ++FirstOp;
+      return I->get() == FirstOp->get() && I->getArg(0) == 1;
     }
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
@@ -1361,6 +1435,7 @@ bool DIExpression::isComplex() const {
     switch (It.getOp()) {
     case dwarf::DW_OP_LLVM_tag_offset:
     case dwarf::DW_OP_LLVM_fragment:
+    case dwarf::DW_OP_LLVM_arg:
       continue;
     default:
       return true;
@@ -1370,14 +1445,117 @@ bool DIExpression::isComplex() const {
   return false;
 }
 
-Optional<DIExpression::FragmentInfo>
+bool DIExpression::isSingleLocationExpression() const {
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return true;
+
+  auto ExprOpBegin = expr_ops().begin();
+  auto ExprOpEnd = expr_ops().end();
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg)
+    ++ExprOpBegin;
+
+  return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_arg;
+  });
+}
+
+const DIExpression *
+DIExpression::convertToUndefExpression(const DIExpression *Expr) {
+  SmallVector<uint64_t, 3> UndefOps;
+  if (auto FragmentInfo = Expr->getFragmentInfo()) {
+    UndefOps.append({dwarf::DW_OP_LLVM_fragment, FragmentInfo->OffsetInBits,
+                     FragmentInfo->SizeInBits});
+  }
+  return DIExpression::get(Expr->getContext(), UndefOps);
+}
+
+const DIExpression *
+DIExpression::convertToVariadicExpression(const DIExpression *Expr) {
+  if (any_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    return Expr;
+  SmallVector<uint64_t> NewOps;
+  NewOps.reserve(Expr->getNumElements() + 2);
+  NewOps.append({dwarf::DW_OP_LLVM_arg, 0});
+  NewOps.append(Expr->elements_begin(), Expr->elements_end());
+  return DIExpression::get(Expr->getContext(), NewOps);
+}
+
+std::optional<const DIExpression *>
+DIExpression::convertToNonVariadicExpression(const DIExpression *Expr) {
+  // Check for `isValid` covered by `isSingleLocationExpression`.
+  if (!Expr->isSingleLocationExpression())
+    return std::nullopt;
+
+  // An empty expression is already non-variadic.
+  if (!Expr->getNumElements())
+    return Expr;
+
+  auto ElementsBegin = Expr->elements_begin();
+  // If Expr does not have a leading DW_OP_LLVM_arg then we don't need to do
+  // anything.
+  if (*ElementsBegin != dwarf::DW_OP_LLVM_arg)
+    return Expr;
+
+  SmallVector<uint64_t> NonVariadicOps(
+      make_range(ElementsBegin + 2, Expr->elements_end()));
+  return DIExpression::get(Expr->getContext(), NonVariadicOps);
+}
+
+void DIExpression::canonicalizeExpressionOps(SmallVectorImpl<uint64_t> &Ops,
+                                             const DIExpression *Expr,
+                                             bool IsIndirect) {
+  // If Expr is not already variadic, insert the implied `DW_OP_LLVM_arg 0`
+  // to the existing expression ops.
+  if (none_of(Expr->expr_ops(), [](auto ExprOp) {
+        return ExprOp.getOp() == dwarf::DW_OP_LLVM_arg;
+      }))
+    Ops.append({dwarf::DW_OP_LLVM_arg, 0});
+  // If Expr is not indirect, we only need to insert the expression elements and
+  // we're done.
+  if (!IsIndirect) {
+    Ops.append(Expr->elements_begin(), Expr->elements_end());
+    return;
+  }
+  // If Expr is indirect, insert the implied DW_OP_deref at the end of the
+  // expression but before DW_OP_{stack_value, LLVM_fragment} if they are
+  // present.
+  for (auto Op : Expr->expr_ops()) {
+    if (Op.getOp() == dwarf::DW_OP_stack_value ||
+        Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+      Ops.push_back(dwarf::DW_OP_deref);
+      IsIndirect = false;
+    }
+    Op.appendToVector(Ops);
+  }
+  if (IsIndirect)
+    Ops.push_back(dwarf::DW_OP_deref);
+}
+
+bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
+                                     bool FirstIndirect,
+                                     const DIExpression *SecondExpr,
+                                     bool SecondIndirect) {
+  SmallVector<uint64_t> FirstOps;
+  DIExpression::canonicalizeExpressionOps(FirstOps, FirstExpr, FirstIndirect);
+  SmallVector<uint64_t> SecondOps;
+  DIExpression::canonicalizeExpressionOps(SecondOps, SecondExpr,
+                                          SecondIndirect);
+  return FirstOps == SecondOps;
+}
+
+std::optional<DIExpression::FragmentInfo>
 DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   for (auto I = Start; I != End; ++I)
     if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
       DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
       return Info;
     }
-  return None;
+  return std::nullopt;
 }
 
 void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
@@ -1387,7 +1565,10 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
     Ops.push_back(Offset);
   } else if (Offset < 0) {
     Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(-Offset);
+    // Avoid UB when encountering LLONG_MIN, because in 2's complement
+    // abs(LLONG_MIN) is LLONG_MAX+1.
+    uint64_t AbsMinusOne = -(Offset+1);
+    Ops.push_back(AbsMinusOne + 1);
     Ops.push_back(dwarf::DW_OP_minus);
   }
 }
@@ -1442,8 +1623,8 @@ const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
     if (Expr->Elements.size() == PatternSize)
       return nullptr;
     return DIExpression::get(Expr->getContext(),
-                             makeArrayRef(&*Expr->Elements.begin(),
-                                          Expr->Elements.size() - PatternSize));
+                             ArrayRef(&*Expr->Elements.begin(),
+                                      Expr->Elements.size() - PatternSize));
   }
   return Expr;
 }
@@ -1480,10 +1661,21 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
 
   SmallVector<uint64_t, 8> NewOps;
   for (auto Op : Expr->expr_ops()) {
+    // A DW_OP_stack_value comes at the end, but before a DW_OP_LLVM_fragment.
+    if (StackValue) {
+      if (Op.getOp() == dwarf::DW_OP_stack_value)
+        StackValue = false;
+      else if (Op.getOp() == dwarf::DW_OP_LLVM_fragment) {
+        NewOps.push_back(dwarf::DW_OP_stack_value);
+        StackValue = false;
+      }
+    }
     Op.appendToVector(NewOps);
     if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
       NewOps.insert(NewOps.end(), Ops.begin(), Ops.end());
   }
+  if (StackValue)
+    NewOps.push_back(dwarf::DW_OP_stack_value);
 
   return DIExpression::get(Expr->getContext(), NewOps);
 }
@@ -1556,7 +1748,7 @@ DIExpression *DIExpression::append(const DIExpression *Expr,
       NewOps.append(Ops.begin(), Ops.end());
 
       // Ensure that the new opcodes are only appended once.
-      Ops = None;
+      Ops = std::nullopt;
     }
     Op.appendToVector(NewOps);
   }
@@ -1581,7 +1773,7 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   // has no DW_OP_stack_value.
   //
   // Match .* DW_OP_stack_value (DW_OP_LLVM_fragment A B)?.
-  Optional<FragmentInfo> FI = Expr->getFragmentInfo();
+  std::optional<FragmentInfo> FI = Expr->getFragmentInfo();
   unsigned DropUntilStackValue = FI ? 3 : 0;
   ArrayRef<uint64_t> ExprOpsBeforeFragment =
       Expr->getElements().drop_back(DropUntilStackValue);
@@ -1600,9 +1792,12 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
   return DIExpression::append(Expr, NewOps);
 }
 
-Optional<DIExpression *> DIExpression::createFragmentExpression(
+std::optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
+  // Track whether it's safe to split the value at the top of the DWARF stack,
+  // assuming that it'll be used as an implicit location value.
+  bool CanSplitValue = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1620,7 +1815,23 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
         //
         // FIXME: We *could* preserve the lowest fragment of a constant offset
         // operation if the offset fits into SizeInBits.
-        return None;
+        CanSplitValue = false;
+        break;
+      case dwarf::DW_OP_deref:
+      case dwarf::DW_OP_deref_size:
+      case dwarf::DW_OP_deref_type:
+      case dwarf::DW_OP_xderef:
+      case dwarf::DW_OP_xderef_size:
+      case dwarf::DW_OP_xderef_type:
+        // Preceeding arithmetic operations have been applied to compute an
+        // address. It's okay to split the value loaded from that address.
+        CanSplitValue = true;
+        break;
+      case dwarf::DW_OP_stack_value:
+        // Bail if this expression computes a value that cannot be split.
+        if (!CanSplitValue)
+          return std::nullopt;
+        break;
       case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
@@ -1635,6 +1846,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
       Op.appendToVector(Ops);
     }
   }
+  assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
   Ops.push_back(dwarf::DW_OP_LLVM_fragment);
   Ops.push_back(OffsetInBits);
@@ -1691,7 +1903,7 @@ uint64_t DIExpression::getNumLocationOperands() const {
   return Result;
 }
 
-llvm::Optional<DIExpression::SignedOrUnsignedConstant>
+std::optional<DIExpression::SignedOrUnsignedConstant>
 DIExpression::isConstant() const {
 
   // Recognize signed and unsigned constants.
@@ -1704,7 +1916,7 @@ DIExpression::isConstant() const {
        getNumElements() != 6) ||
       (getElement(0) != dwarf::DW_OP_consts &&
        getElement(0) != dwarf::DW_OP_constu))
-    return None;
+    return std::nullopt;
 
   if (getNumElements() == 2 && getElement(0) == dwarf::DW_OP_consts)
     return SignedOrUnsignedConstant::SignedConstant;
@@ -1712,7 +1924,7 @@ DIExpression::isConstant() const {
   if ((getNumElements() == 3 && getElement(2) != dwarf::DW_OP_stack_value) ||
       (getNumElements() == 6 && (getElement(2) != dwarf::DW_OP_stack_value ||
                                  getElement(3) != dwarf::DW_OP_LLVM_fragment)))
-    return None;
+    return std::nullopt;
   return getElement(0) == dwarf::DW_OP_constu
              ? SignedOrUnsignedConstant::UnsignedConstant
              : SignedOrUnsignedConstant::SignedConstant;

@@ -31,15 +31,15 @@ class TestReadMemCString(TestBase):
 
         empty_str_addr = frame.FindVariable("empty_string").GetValueAsUnsigned(err)
         self.assertSuccess(err)
-        self.assertTrue(empty_str_addr != lldb.LLDB_INVALID_ADDRESS)
+        self.assertNotEqual(empty_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
         one_letter_str_addr = frame.FindVariable("one_letter_string").GetValueAsUnsigned(err)
         self.assertSuccess(err)
-        self.assertTrue(one_letter_str_addr != lldb.LLDB_INVALID_ADDRESS)
+        self.assertNotEqual(one_letter_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
         invalid_memory_str_addr = frame.FindVariable("invalid_memory_string").GetValueAsUnsigned(err)
         self.assertSuccess(err)
-        self.assertTrue(invalid_memory_str_addr != lldb.LLDB_INVALID_ADDRESS)
+        self.assertNotEqual(invalid_memory_str_addr, lldb.LLDB_INVALID_ADDRESS)
 
         # Important:  An empty (0-length) c-string must come back as a Python string, not a
         # None object.

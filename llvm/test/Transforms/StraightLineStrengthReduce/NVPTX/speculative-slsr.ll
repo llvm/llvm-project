@@ -68,4 +68,4 @@ declare void @use(i32)
 
 !nvvm.annotations = !{!0}
 
-!0 = !{void (i32, i32)* @foo, !"kernel", i32 1}
+!0 = !{ptr @foo, !"kernel", i32 1}

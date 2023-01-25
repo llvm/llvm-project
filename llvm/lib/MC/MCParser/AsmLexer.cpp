@@ -339,7 +339,7 @@ AsmToken AsmLexer::LexDigit() {
         if (!FirstNonDecimal) {
           FirstNonDecimal = CurPtr;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case '9':
       case '8':
       case '7':
@@ -684,12 +684,12 @@ StringRef AsmLexer::LexUntilEndOfLine() {
 
 size_t AsmLexer::peekTokens(MutableArrayRef<AsmToken> Buf,
                             bool ShouldSkipSpace) {
-  SaveAndRestore<const char *> SavedTokenStart(TokStart);
-  SaveAndRestore<const char *> SavedCurPtr(CurPtr);
-  SaveAndRestore<bool> SavedAtStartOfLine(IsAtStartOfLine);
-  SaveAndRestore<bool> SavedAtStartOfStatement(IsAtStartOfStatement);
-  SaveAndRestore<bool> SavedSkipSpace(SkipSpace, ShouldSkipSpace);
-  SaveAndRestore<bool> SavedIsPeeking(IsPeeking, true);
+  SaveAndRestore SavedTokenStart(TokStart);
+  SaveAndRestore SavedCurPtr(CurPtr);
+  SaveAndRestore SavedAtStartOfLine(IsAtStartOfLine);
+  SaveAndRestore SavedAtStartOfStatement(IsAtStartOfStatement);
+  SaveAndRestore SavedSkipSpace(SkipSpace, ShouldSkipSpace);
+  SaveAndRestore SavedIsPeeking(IsPeeking, true);
   std::string SavedErr = getErr();
   SMLoc SavedErrLoc = getErrLoc();
 
@@ -716,7 +716,7 @@ bool AsmLexer::isAtStartOfComment(const char *Ptr) {
   if (CommentString.size() == 1)
     return CommentString[0] == Ptr[0];
 
-  // Allow # preprocessor commments also be counted as comments for "##" cases
+  // Allow # preprocessor comments also be counted as comments for "##" cases
   if (CommentString[1] == '#')
     return CommentString[0] == Ptr[0];
 

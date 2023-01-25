@@ -4,10 +4,10 @@
 ; more callee-saved registers and introduce copies.
 ; rdar://9329627
 
-%struct.FF = type { i32 (i32*)*, i32 (i32*, i32*, i32, i32, i32, i32)*, i32 (i32, i32, i8*)*, void ()*, i32 (i32, i8*, i32*)*, i32 ()* }
-%struct.BD = type { %struct.BD*, i32, i32, i32, i32, i64, i32 (%struct.BD*, i8*, i64, i32)*, i32 (%struct.BD*, i8*, i32, i32)*, i32 (%struct.BD*, i8*, i64, i32)*, i32 (%struct.BD*, i8*, i32, i32)*, i32 (%struct.BD*, i64, i32)*, [16 x i8], i64, i64 }
+%struct.FF = type { ptr, ptr, ptr, ptr, ptr, ptr }
+%struct.BD = type { ptr, i32, i32, i32, i32, i64, ptr, ptr, ptr, ptr, ptr, [16 x i8], i64, i64 }
 
-@FuncPtr = external hidden unnamed_addr global %struct.FF*
+@FuncPtr = external hidden unnamed_addr global ptr
 @.str1 = external hidden unnamed_addr constant [6 x i8], align 4
 @G = external unnamed_addr global i32
 @.str2 = external hidden unnamed_addr constant [58 x i8], align 4
@@ -21,8 +21,8 @@ entry:
   %block_size = alloca i32, align 4
   %block_count = alloca i32, align 4
   %index_cache = alloca i32, align 4
-  store i32 0, i32* %index_cache, align 4
-  %tmp = load i32, i32* @G, align 4
+  store i32 0, ptr %index_cache, align 4
+  %tmp = load i32, ptr @G, align 4
   %tmp1 = call i32 @bar(i32 0, i32 0, i32 %tmp) nounwind
   switch i32 %tmp1, label %bb8 [
     i32 0, label %bb
@@ -31,7 +31,7 @@ entry:
   ]
 
 bb:
-  %tmp2 = load i32, i32* @G, align 4
+  %tmp2 = load i32, ptr @G, align 4
   %tmp4 = icmp eq i32 %tmp2, 0
   br i1 %tmp4, label %bb1, label %bb8
 
@@ -41,14 +41,14 @@ bb1:
 ; CHECK: bl _Get
 ; CHECK: umull
 ; CHECK: bl _foo
-  %tmp5 = load i32, i32* %block_size, align 4
-  %tmp6 = load i32, i32* %block_count, align 4
-  %tmp7 = call %struct.FF* @Get() nounwind
-  store %struct.FF* %tmp7, %struct.FF** @FuncPtr, align 4
+  %tmp5 = load i32, ptr %block_size, align 4
+  %tmp6 = load i32, ptr %block_count, align 4
+  %tmp7 = call ptr @Get() nounwind
+  store ptr %tmp7, ptr @FuncPtr, align 4
   %tmp10 = zext i32 %tmp6 to i64
   %tmp11 = zext i32 %tmp5 to i64
   %tmp12 = mul nsw i64 %tmp10, %tmp11
-  %tmp13 = call i32 @foo(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str1, i32 0, i32 0), i64 %tmp12, i32 %tmp5) nounwind
+  %tmp13 = call i32 @foo(ptr @.str1, i64 %tmp12, i32 %tmp5) nounwind
   br label %bb8
 
 bb4:
@@ -61,10 +61,10 @@ bb8:
   ret i32 -1
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
-declare %struct.FF* @Get()
+declare ptr @Get()
 
-declare i32 @foo(i8*, i64, i32)
+declare i32 @foo(ptr, i64, i32)
 
 declare i32 @bar(i32, i32, i32)

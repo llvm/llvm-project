@@ -20,6 +20,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 
+#include <optional>
 #include <stdlib.h> // for _Exit
 
 using namespace llvm;
@@ -30,24 +31,23 @@ using namespace sys;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-Optional<std::string>
+std::optional<std::string>
 Process::FindInEnvPath(StringRef EnvName, StringRef FileName, char Separator) {
   return FindInEnvPath(EnvName, FileName, {}, Separator);
 }
 
-Optional<std::string> Process::FindInEnvPath(StringRef EnvName,
-                                             StringRef FileName,
-                                             ArrayRef<std::string> IgnoreList,
-                                             char Separator) {
+std::optional<std::string>
+Process::FindInEnvPath(StringRef EnvName, StringRef FileName,
+                       ArrayRef<std::string> IgnoreList, char Separator) {
   assert(!path::is_absolute(FileName));
-  Optional<std::string> FoundPath;
-  Optional<std::string> OptPath = Process::GetEnv(EnvName);
+  std::optional<std::string> FoundPath;
+  std::optional<std::string> OptPath = Process::GetEnv(EnvName);
   if (!OptPath)
     return FoundPath;
 
   const char EnvPathSeparatorStr[] = {Separator, '\0'};
   SmallVector<StringRef, 8> Dirs;
-  SplitString(OptPath.value(), Dirs, EnvPathSeparatorStr);
+  SplitString(*OptPath, Dirs, EnvPathSeparatorStr);
 
   for (StringRef Dir : Dirs) {
     if (Dir.empty())

@@ -3,17 +3,20 @@
 
 llvm_canonicalize_cmake_booleans(
   CLANG_BUILD_EXAMPLES
+  CLANG_BUILT_STANDALONE
   CLANG_DEFAULT_PIE_ON_LINUX
-  CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL
   CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   CLANG_PLUGIN_SUPPORT
   CLANG_SPAWN_CC1
   ENABLE_BACKTRACES
   LLVM_ENABLE_ZLIB
+  LLVM_ENABLE_ZSTD
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_THREADS
   LLVM_WITH_Z3
+  PPC_LINUX_DEFAULT_IEEELONGDOUBLE
+  LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
 configure_lit_site_cfg(
@@ -66,7 +69,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-import-test
   clang-rename
   clang-refactor
-  clang-repl
   clang-diff
   clang-scan-deps
   diagtool
@@ -147,6 +149,12 @@ if(CLANG_ENABLE_STATIC_ANALYZER)
   endif()
 endif()
 
+if (HAVE_CLANG_REPL_SUPPORT)
+  list(APPEND CLANG_TEST_DEPS
+    clang-repl
+    )
+endif()
+
 # Copy gen_ast_dump_json_test.py to the clang build dir. This allows invoking
 # it without having to pass the --clang= argument
 configure_file(AST/gen_ast_dump_json_test.py
@@ -167,6 +175,7 @@ set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
   PARAMS ${CLANG_TEST_PARAMS}
   DEPENDS ${CLANG_TEST_DEPS}
+  FOLDER "Clang tests/Suites"
 )
 
 # Add a legacy target spelling: clang-test

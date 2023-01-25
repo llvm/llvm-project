@@ -22,8 +22,8 @@ entry:
 define i32 @call1(i32 %a) nounwind {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %tmp = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %tmp = load i32, ptr %a.addr, align 4
   ret i32 %tmp
 }
 
@@ -34,8 +34,8 @@ entry:
 ; CHECK-NEXT:  ldur w0, [x29, #-4]
 ; CHECK-NEXT:  bl _call1
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %tmp = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %tmp = load i32, ptr %a.addr, align 4
   %call = call i32 @call1(i32 %tmp)
   ret i32 %call
 }
@@ -63,7 +63,7 @@ entry:
 
 declare void @foo_zext_(i8 %a, i16 %b)
 
-define i32 @t1(i32 %argc, i8** nocapture %argv) {
+define i32 @t1(i32 %argc, ptr nocapture %argv) {
 entry:
 ; CHECK-LABEL: @t1
 ; The last parameter will be passed on stack via i8.
@@ -259,10 +259,10 @@ define void @call_blr(i64 %Fn, i1 %c) {
 ; CHECK:       blr
   br i1 %c, label %bb1, label %bb2
 bb1:
-  %1 = inttoptr i64 %Fn to void (i64)*
+  %1 = inttoptr i64 %Fn to ptr
   br label %bb2
 bb2:
-  %2 = phi void (i64)* [ %1, %bb1 ], [ undef, %0 ]
+  %2 = phi ptr [ %1, %bb1 ], [ undef, %0 ]
   call void %2(i64 1)
   ret void
 }

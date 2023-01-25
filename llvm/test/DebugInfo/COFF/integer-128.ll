@@ -60,28 +60,25 @@ target triple = "x86_64-unknown-windows-gnu"
 define dso_local <2 x i64> @_Z2t1v() #0 !dbg !23 {
 entry:
   %retval = alloca i128, align 16
-  store i128 18446744073709551616, i128* %retval, align 16, !dbg !27
-  %0 = bitcast i128* %retval to <2 x i64>*, !dbg !27
-  %1 = load <2 x i64>, <2 x i64>* %0, align 16, !dbg !27
-  ret <2 x i64> %1, !dbg !27
+  store i128 18446744073709551616, ptr %retval, align 16, !dbg !27
+  %0 = load <2 x i64>, ptr %retval, align 16, !dbg !27
+  ret <2 x i64> %0, !dbg !27
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone
 define dso_local <2 x i64> @_Z2t2v() #0 !dbg !28 {
 entry:
   %retval = alloca i128, align 16
-  store i128 -18446744073709551616, i128* %retval, align 16, !dbg !31
-  %0 = bitcast i128* %retval to <2 x i64>*, !dbg !31
-  %1 = load <2 x i64>, <2 x i64>* %0, align 16, !dbg !31
-  ret <2 x i64> %1, !dbg !31
+  store i128 -18446744073709551616, ptr %retval, align 16, !dbg !31
+  %0 = load <2 x i64>, ptr %retval, align 16, !dbg !31
+  ret <2 x i64> %0, !dbg !31
 }
 
 ; Function Attrs: mustprogress noinline nounwind optnone
 define dso_local i8 @_Z2t3v() #1 !dbg !32 {
 entry:
   %retval = alloca %struct.test, align 1
-  %coerce.dive = getelementptr inbounds %struct.test, %struct.test* %retval, i32 0, i32 0, !dbg !41
-  %0 = load i8, i8* %coerce.dive, align 1, !dbg !41
+  %0 = load i8, ptr %retval, align 1, !dbg !41
   ret i8 %0, !dbg !41
 }
 

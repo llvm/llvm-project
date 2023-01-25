@@ -599,7 +599,7 @@ public:
   /// Return true if this instruction implicitly
   /// uses the specified physical register.
   bool hasImplicitUseOfPhysReg(unsigned Reg) const {
-    if (const MCPhysReg *ImpUses = ImplicitUses)
+    if (const MCPhysReg *ImpUses = getImplicitUses())
       for (; *ImpUses; ++ImpUses)
         if (*ImpUses == Reg)
           return true;

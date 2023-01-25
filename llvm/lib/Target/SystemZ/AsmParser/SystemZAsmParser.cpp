@@ -432,6 +432,7 @@ private:
 
   bool ParseDirectiveInsn(SMLoc L);
   bool ParseDirectiveMachine(SMLoc L);
+  bool ParseGNUAttribute(SMLoc L);
 
   OperandMatchResultTy parseAddress(OperandVector &Operands,
                                     MemoryKind MemKind,
@@ -494,10 +495,11 @@ public:
 
   // Override MCTargetAsmParser.
   bool ParseDirective(AsmToken DirectiveID) override;
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  bool ParseRegister(MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
                      bool RestoreOnFailure);
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
@@ -1224,6 +1226,8 @@ bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
     return ParseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
     return ParseDirectiveMachine(DirectiveID.getLoc());
+  if (IDVal.startswith(".gnu_attribute"))
+    return ParseGNUAttribute(DirectiveID.getLoc());
 
   return true;
 }
@@ -1358,7 +1362,25 @@ bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
+  int64_t Tag;
+  int64_t IntegerValue;
+  if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
+    return false;
+
+  // Tag_GNU_S390_ABI_Vector tag is '8' and can be 0, 1, or 2.
+  if (Tag != 8 || (IntegerValue < 0 || IntegerValue > 2)) {
+    Error(Parser.getTok().getLoc(),
+          "Unrecognized .gnu_attribute tag/value pair.");
+    return false;
+  }
+
+  Parser.getStreamer().emitGNUAttribute(Tag, IntegerValue);
+
+  return true;
+}
+
+bool SystemZAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc, bool RestoreOnFailure) {
   Register Reg;
   if (parseRegister(Reg, RestoreOnFailure))
@@ -1378,12 +1400,12 @@ bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
   return false;
 }
 
-bool SystemZAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool SystemZAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
   return ParseRegister(RegNo, StartLoc, EndLoc, /*RestoreOnFailure=*/false);
 }
 
-OperandMatchResultTy SystemZAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy SystemZAsmParser::tryParseRegister(MCRegister &RegNo,
                                                         SMLoc &StartLoc,
                                                         SMLoc &EndLoc) {
   bool Result =

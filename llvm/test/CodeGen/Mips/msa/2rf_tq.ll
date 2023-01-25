@@ -10,10 +10,10 @@
 
 define void @llvm_mips_ftq_h_test() nounwind {
 entry:
-  %0 = load <4 x float>, <4 x float>* @llvm_mips_ftq_h_ARG1
-  %1 = load <4 x float>, <4 x float>* @llvm_mips_ftq_h_ARG2
+  %0 = load <4 x float>, ptr @llvm_mips_ftq_h_ARG1
+  %1 = load <4 x float>, ptr @llvm_mips_ftq_h_ARG2
   %2 = tail call <8 x i16> @llvm.mips.ftq.h(<4 x float> %0, <4 x float> %1)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_ftq_h_RES
+  store <8 x i16> %2, ptr @llvm_mips_ftq_h_RES
   ret void
 }
 
@@ -32,10 +32,10 @@ declare <8 x i16> @llvm.mips.ftq.h(<4 x float>, <4 x float>) nounwind
 
 define void @llvm_mips_ftq_w_test() nounwind {
 entry:
-  %0 = load <2 x double>, <2 x double>* @llvm_mips_ftq_w_ARG1
-  %1 = load <2 x double>, <2 x double>* @llvm_mips_ftq_w_ARG2
+  %0 = load <2 x double>, ptr @llvm_mips_ftq_w_ARG1
+  %1 = load <2 x double>, ptr @llvm_mips_ftq_w_ARG2
   %2 = tail call <4 x i32> @llvm.mips.ftq.w(<2 x double> %0, <2 x double> %1)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_ftq_w_RES
+  store <4 x i32> %2, ptr @llvm_mips_ftq_w_RES
   ret void
 }
 

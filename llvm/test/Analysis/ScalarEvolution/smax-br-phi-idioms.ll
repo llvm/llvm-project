@@ -34,14 +34,14 @@ define i32 @f1(i32 %x, i32 %y) {
   ret i32 %v
 }
 
-define i32 @f2(i32 %x, i32 %y, i32* %ptr) {
+define i32 @f2(i32 %x, i32 %y, ptr %ptr) {
 ; CHECK-LABEL: Classifying expressions for: @f2
  entry:
   %c = icmp sge i32 %y, 0
   br i1 %c, label %add, label %merge
 
  add:
-  %lv = load i32, i32* %ptr
+  %lv = load i32, ptr %ptr
   br label %merge
 
  merge:
@@ -103,7 +103,7 @@ define i32 @f4(i32 %x, i32 %init, i32 %lim) {
   ret i32 %v
 }
 
-define i32 @f5(i32* %val) {
+define i32 @f5(ptr %val) {
 ; CHECK-LABEL: Classifying expressions for: @f5
 entry:
   br label %for.end
@@ -112,7 +112,7 @@ for.condt:
   br i1 true, label %for.cond.0, label %for.end
 
 for.end:
-  %inc = load i32, i32* %val
+  %inc = load i32, ptr %val
   br i1 false, label %for.condt, label %for.cond.0
 
 for.cond.0:

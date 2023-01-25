@@ -140,8 +140,8 @@ TEST(DwarfTest, getVirtuality) {
 }
 
 TEST(DwarfTest, FixedFormSizes) {
-  Optional<uint8_t> RefSize;
-  Optional<uint8_t> AddrSize;
+  std::optional<uint8_t> RefSize;
+  std::optional<uint8_t> AddrSize;
 
   // Test 32 bit DWARF version 2 with 4 byte addresses.
   FormParams Params_2_4_32 = {2, 4, DWARF32};

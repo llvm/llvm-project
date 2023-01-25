@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelType.h"
@@ -129,15 +130,29 @@ protected:
 
 } // end anonymous namespace
 
+bool X86CallLowering::canLowerReturn(
+    MachineFunction &MF, CallingConv::ID CallConv,
+    SmallVectorImpl<CallLowering::BaseArgInfo> &Outs, bool IsVarArg) const {
+  LLVMContext &Context = MF.getFunction().getContext();
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return checkReturn(CCInfo, Outs, RetCC_X86);
+}
+
 bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                   const Value *Val, ArrayRef<Register> VRegs,
                                   FunctionLoweringInfo &FLI) const {
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
+  MachineFunction &MF = MIRBuilder.getMF();
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
+  bool Is64Bit = STI.is64Bit();
 
-  if (!VRegs.empty()) {
-    MachineFunction &MF = MIRBuilder.getMF();
+  if (!FLI.CanLowerReturn) {
+    insertSRetStores(MIRBuilder, Val->getType(), VRegs, FLI.DemoteRegister);
+    MIRBuilder.buildCopy(Is64Bit ? X86::RAX : X86::EAX, FLI.DemoteRegister);
+  } else if (!VRegs.empty()) {
     const Function &F = MF.getFunction();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     const DataLayout &DL = MF.getDataLayout();
@@ -238,18 +253,19 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                            const Function &F,
                                            ArrayRef<ArrayRef<Register>> VRegs,
                                            FunctionLoweringInfo &FLI) const {
-  if (F.arg_empty())
-    return true;
-
-  // TODO: handle variadic function
-  if (F.isVarArg())
-    return false;
-
   MachineFunction &MF = MIRBuilder.getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto DL = MF.getDataLayout();
 
   SmallVector<ArgInfo, 8> SplitArgs;
+
+  if (!FLI.CanLowerReturn)
+    insertSRetIncomingArgument(F, SplitArgs, FLI.DemoteRegister, MRI, DL);
+
+  // TODO: handle variadic function
+  if (F.isVarArg())
+    return false;
+
   unsigned Idx = 0;
   for (const auto &Arg : F.args()) {
     // TODO: handle not simple cases.
@@ -266,6 +282,9 @@ bool X86CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv());
     Idx++;
   }
+
+  if (SplitArgs.empty())
+    return true;
 
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   if (!MBB.empty())
@@ -363,7 +382,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // symmetry with the arguments, the physical register must be an
   // implicit-define of the call instruction.
 
-  if (!Info.OrigRet.Ty->isVoidTy()) {
+  if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy()) {
     if (Info.OrigRet.Regs.size() > 1)
       return false;
 
@@ -379,7 +398,7 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     if (!NewRegs.empty())
-      MIRBuilder.buildMerge(Info.OrigRet.Regs[0], NewRegs);
+      MIRBuilder.buildMergeLikeInstr(Info.OrigRet.Regs[0], NewRegs);
   }
 
   CallSeqStart.addImm(Assigner.getStackSize())
@@ -390,6 +409,10 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   MIRBuilder.buildInstr(AdjStackUp)
       .addImm(Assigner.getStackSize())
       .addImm(0 /* NumBytesForCalleeToPop */);
+
+  if (!Info.CanLowerReturn)
+    insertSRetLoads(MIRBuilder, Info.OrigRet.Ty, Info.OrigRet.Regs,
+                    Info.DemoteRegister, Info.DemoteStackIndex);
 
   return true;
 }

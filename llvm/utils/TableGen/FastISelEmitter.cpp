@@ -381,14 +381,9 @@ class FastISelMap {
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
   // This is used to check that there are no duplicate predicates
-  typedef std::multimap<std::string, bool> PredCheckMap;
-  typedef std::map<MVT::SimpleValueType, PredCheckMap> RetPredCheckMap;
-  typedef std::map<MVT::SimpleValueType, RetPredCheckMap> TypeRetPredCheckMap;
-  typedef std::map<std::string, TypeRetPredCheckMap> OpcodeTypeRetPredCheckMap;
-  typedef std::map<OperandsSignature, OpcodeTypeRetPredCheckMap>
-            OperandsOpcodeTypeRetPredCheckMap;
-
-  OperandsOpcodeTypeRetPredCheckMap SimplePatternsCheck;
+  std::set<std::tuple<OperandsSignature, std::string, MVT::SimpleValueType,
+                      MVT::SimpleValueType, std::string>>
+      SimplePatternsCheck;
 
   std::map<OperandsSignature, std::vector<OperandsSignature> >
     SignaturesWithConstantForms;
@@ -587,16 +582,15 @@ void FastISelMap::collectPatterns(CodeGenDAGPatterns &CGP) {
 
     int complexity = Pattern.getPatternComplexity(CGP);
 
-    if (SimplePatternsCheck[Operands][OpcodeName][VT]
-         [RetVT].count(PredicateCheck)) {
+    auto inserted_simple_pattern = SimplePatternsCheck.insert(
+        std::make_tuple(Operands, OpcodeName, VT, RetVT, PredicateCheck));
+    if (!inserted_simple_pattern.second) {
       PrintFatalError(Pattern.getSrcRecord()->getLoc(),
                     "Duplicate predicate in FastISel table!");
     }
-    SimplePatternsCheck[Operands][OpcodeName][VT][RetVT].insert(
-            std::make_pair(PredicateCheck, true));
 
-       // Note: Instructions with the same complexity will appear in the order
-          // that they are encountered.
+    // Note: Instructions with the same complexity will appear in the order
+    // that they are encountered.
     SimplePatterns[Operands][OpcodeName][VT][RetVT].emplace(complexity,
                                                             std::move(Memo));
 
@@ -655,7 +649,7 @@ void FastISelMap::emitInstructionCode(raw_ostream &OS,
 
     for (unsigned i = 0; i < Memo.PhysRegs.size(); ++i) {
       if (Memo.PhysRegs[i] != "")
-        OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, "
+        OS << "  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, "
            << "TII.get(TargetOpcode::COPY), " << Memo.PhysRegs[i]
            << ").addReg(Op" << i << ");\n";
     }

@@ -1,7 +1,7 @@
 ; RUN: llvm-as %s -o %t.bc
 ; RUN: llvm-link %t.bc -S | FileCheck %s
 
-declare void @f(i8*)
+declare void @f(ptr)
 
 ; Test that a blockaddress in @y referring to %label in @x can be moved when @y
 ; appears after @x.
@@ -15,8 +15,8 @@ label:
 
 define void @y() {
 ; CHECK: define void @y() {
-; CHECK-NEXT: call void @f(i8* blockaddress(@x, %label))
-  call void @f(i8* blockaddress(@x, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@x, %label))
+  call void @f(ptr blockaddress(@x, %label))
   ret void
 }
 
@@ -24,8 +24,8 @@ define void @y() {
 ; appears before @b.
 define void @a() {
 ; CHECK: define void @a() {
-; CHECK-NEXT: call void @f(i8* blockaddress(@b, %label))
-  call void @f(i8* blockaddress(@b, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@b, %label))
+  call void @f(ptr blockaddress(@b, %label))
   ret void
 }
 
@@ -45,11 +45,11 @@ define void @c() {
 ; CHECK-NEXT:  br label %label
 ; CHECK-EMPTY:
 ; CHECK-NEXT: label:
-; CHECK-NEXT: call void @f(i8* blockaddress(@d, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@d, %label))
   br label %label
 
 label:
-  call void @f(i8* blockaddress(@d, %label))
+  call void @f(ptr blockaddress(@d, %label))
   ret void
 }
 
@@ -58,11 +58,11 @@ define void @d() {
 ; CHECK-NEXT:  br label %label
 ; CHECK-EMPTY:
 ; CHECK-NEXT: label:
-; CHECK-NEXT: call void @f(i8* blockaddress(@c, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@c, %label))
   br label %label
 
 label:
-  call void @f(i8* blockaddress(@c, %label))
+  call void @f(ptr blockaddress(@c, %label))
   ret void
 }
 
@@ -80,11 +80,11 @@ define linkonce_odr void @lazy() {
 ; CHECK-NEXT: br label %label
 ; CHECK-EMPTY:
 ; CHECK-NEXT: label:
-; CHECK-NEXT: call void @f(i8* blockaddress(@parsed, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@parsed, %label))
   br label %label
 
 label:
-  call void @f(i8* blockaddress(@parsed, %label))
+  call void @f(ptr blockaddress(@parsed, %label))
   ret void
 }
 
@@ -106,11 +106,11 @@ define linkonce_odr void @lazy1() {
 ; CHECK-NEXT: br label %label
 ; CHECK-EMPTY:
 ; CHECK-NEXT: label:
-; CHECK-NEXT: call void @f(i8* blockaddress(@parsed3, %label))
+; CHECK-NEXT: call void @f(ptr blockaddress(@parsed3, %label))
   br label %label
 
 label:
-  call void @f(i8* blockaddress(@parsed3, %label))
+  call void @f(ptr blockaddress(@parsed3, %label))
   ret void
 }
 

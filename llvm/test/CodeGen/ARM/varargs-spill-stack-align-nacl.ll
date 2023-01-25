@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=arm-nacl-gnueabi | FileCheck %s
 
-declare void @llvm.va_start(i8*)
-declare void @external_func(i8*)
+declare void @llvm.va_start(ptr)
+declare void @external_func(ptr)
 
-@va_list = external global i8*
+@va_list = external global ptr
 
 ; On ARM, varargs arguments are passed in r0-r3 with the rest on the
 ; stack.  A varargs function must therefore spill rN-r3 just below the
@@ -14,8 +14,8 @@ declare void @external_func(i8*)
 ; alignment.
 
 define void @varargs_func(i32 %arg1, ...) {
-  call void @llvm.va_start(i8* bitcast (i8** @va_list to i8*))
-  call void @external_func(i8* bitcast (i8** @va_list to i8*))
+  call void @llvm.va_start(ptr @va_list)
+  call void @external_func(ptr @va_list)
   ret void
 }
 ; CHECK-LABEL: varargs_func:

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve,+fullfp16 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-BE
 
-define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_zero(<4 x i32> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_zero(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -18,11 +18,11 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_zero(<4 x i32> *%dest, <4 
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %dest, i32 4, <4 x i1> %c, <4 x i32> zeroinitializer)
+  %l = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x i32> zeroinitializer)
   ret <4 x i32> %l
 }
 
-define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_undef(<4 x i32> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_align4_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -38,11 +38,11 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_undef(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %dest, i32 4, <4 x i1> %c, <4 x i32> undef)
+  %l = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x i32> undef)
   ret <4 x i32> %l
 }
 
-define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align1_undef(<4 x i32> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align1_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -124,11 +124,11 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align1_undef(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %dest, i32 1, <4 x i1> %c, <4 x i32> undef)
+  %l = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i32> undef)
   ret <4 x i32> %l
 }
 
-define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_other(<4 x i32> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_other(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_align4_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -146,11 +146,11 @@ define arm_aapcs_vfpcc <4 x i32> @masked_v4i32_align4_other(<4 x i32> *%dest, <4
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %dest, i32 4, <4 x i1> %c, <4 x i32> %a)
+  %l = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x i32> %a)
   ret <4 x i32> %l
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_zero(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_zero(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: zext16_masked_v4i32_align2_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -166,12 +166,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_zero(<4 x i16> *%de
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
   %ext = zext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_undef(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: zext16_masked_v4i32_align2_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -187,12 +187,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_undef(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> undef)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> undef)
   %ext = zext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align1_undef(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align1_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: zext16_masked_v4i32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -276,12 +276,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align1_undef(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 1, <4 x i1> %c, <4 x i16> undef)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i16> undef)
   %ext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_other(<4 x i16> *%dest, <4 x i16> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_other(ptr %dest, <4 x i16> %a) {
 ; CHECK-LE-LABEL: zext16_masked_v4i32_align2_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.u16 q1, q0
@@ -303,12 +303,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext16_masked_v4i32_align2_other(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i16> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> %a)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> %a)
   %ext = zext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_zero(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_zero(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: sext16_masked_v4i32_align2_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -324,12 +324,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_zero(<4 x i16> *%de
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
   %sext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %sext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_undef(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: sext16_masked_v4i32_align2_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -345,12 +345,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_undef(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> undef)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> undef)
   %sext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %sext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align1_undef(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align1_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: sext16_masked_v4i32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -434,12 +434,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align1_undef(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 1, <4 x i1> %c, <4 x i16> undef)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i16> undef)
   %sext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %sext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_other(<4 x i16> *%dest, <4 x i16> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_other(ptr %dest, <4 x i16> %a) {
 ; CHECK-LE-LABEL: sext16_masked_v4i32_align2_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s16 q0, q0
@@ -459,12 +459,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext16_masked_v4i32_align2_other(<4 x i16> *%d
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i16> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> %a)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> %a)
   %sext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %sext
 }
 
-define arm_aapcs_vfpcc i8* @masked_v4i32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
+define arm_aapcs_vfpcc ptr @masked_v4i32_preinc(ptr %x, ptr %y, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_preinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -480,16 +480,14 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %z to <4 x i32>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %0, i32 4, <4 x i1> %c, <4 x i32> undef)
-  %2 = bitcast i8* %y to <4 x i32>*
-  store <4 x i32> %1, <4 x i32>* %2, align 4
-  ret i8* %z
+  %0 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %z, i32 4, <4 x i1> %c, <4 x i32> undef)
+  store <4 x i32> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc i8* @masked_v4i32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
+define arm_aapcs_vfpcc ptr @masked_v4i32_postinc(ptr %x, ptr %y, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4i32_postinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -505,16 +503,14 @@ define arm_aapcs_vfpcc i8* @masked_v4i32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %x to <4 x i32>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %1 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %0, i32 4, <4 x i1> %c, <4 x i32> undef)
-  %2 = bitcast i8* %y to <4 x i32>*
-  store <4 x i32> %1, <4 x i32>* %2, align 4
-  ret i8* %z
+  %0 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %x, i32 4, <4 x i1> %c, <4 x i32> undef)
+  store <4 x i32> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_zero(<8 x i16> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_zero(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -530,11 +526,11 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_zero(<8 x i16> *%dest, <8 
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %dest, i32 2, <8 x i1> %c, <8 x i16> zeroinitializer)
+  %l = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x i16> zeroinitializer)
   ret <8 x i16> %l
 }
 
-define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align2_undef(<8 x i16> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align2_undef(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align2_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -550,11 +546,11 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align2_undef(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %dest, i32 2, <8 x i1> %c, <8 x i16> undef)
+  %l = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x i16> undef)
   ret <8 x i16> %l
 }
 
-define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align1_undef(<8 x i16> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align1_undef(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -694,11 +690,11 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align1_undef(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %dest, i32 1, <8 x i1> %c, <8 x i16> undef)
+  %l = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i16> undef)
   ret <8 x i16> %l
 }
 
-define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_other(<8 x i16> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_other(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_align4_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -716,11 +712,11 @@ define arm_aapcs_vfpcc <8 x i16> @masked_v8i16_align4_other(<8 x i16> *%dest, <8
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %dest, i32 2, <8 x i1> %c, <8 x i16> %a)
+  %l = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x i16> %a)
   ret <8 x i16> %l
 }
 
-define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_zero(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_zero(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v8i16_align1_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -738,12 +734,12 @@ define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_zero(<8 x i8> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
   %ext = sext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_undef(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_undef(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v8i16_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -761,12 +757,12 @@ define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_undef(<8 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> undef)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> undef)
   %ext = sext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_other(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_other(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v8i16_align1_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -786,12 +782,12 @@ define arm_aapcs_vfpcc <8 x i16> @sext8_masked_v8i16_align1_other(<8 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> %a)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> %a)
   %ext = sext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_zero(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_zero(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v4i32_align1_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -811,12 +807,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_zero(<4 x i8> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
   %ext = sext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_undef(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_undef(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v4i32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -836,12 +832,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_undef(<4 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> undef)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> undef)
   %ext = sext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_other(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_other(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: sext8_masked_v4i32_align1_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -863,12 +859,12 @@ define arm_aapcs_vfpcc <4 x i32> @sext8_masked_v4i32_align1_other(<4 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> %a)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> %a)
   %ext = sext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_zero(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_zero(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v4i32_align1_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -888,12 +884,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_zero(<4 x i8> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
   %ext = zext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_undef(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_undef(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v4i32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -913,12 +909,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_undef(<4 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> undef)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> undef)
   %ext = zext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_other(<4 x i8> *%dest, <4 x i8> %a) {
+define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_other(ptr %dest, <4 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v4i32_align1_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmov.i32 q1, #0xff
@@ -944,12 +940,12 @@ define arm_aapcs_vfpcc <4 x i32> @zext8_masked_v4i32_align1_other(<4 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i8> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> %a)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> %a)
   %ext = zext <4 x i8> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_zero(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_zero(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v8i16_align1_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -967,12 +963,12 @@ define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_zero(<8 x i8> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
   %ext = zext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_undef(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_undef(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v8i16_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.s8 q0, q0
@@ -990,12 +986,12 @@ define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_undef(<8 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> undef)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> undef)
   %ext = zext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_other(<8 x i8> *%dest, <8 x i8> %a) {
+define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_other(ptr %dest, <8 x i8> %a) {
 ; CHECK-LE-LABEL: zext8_masked_v8i16_align1_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vmovlb.u8 q1, q0
@@ -1017,12 +1013,12 @@ define arm_aapcs_vfpcc <8 x i16> @zext8_masked_v8i16_align1_other(<8 x i8> *%des
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i8> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> %a)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> %a)
   %ext = zext <8 x i8> %l to <8 x i16>
   ret <8 x i16> %ext
 }
 
-define i8* @masked_v8i16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
+define ptr @masked_v8i16_preinc(ptr %x, ptr %y, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_preinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldr d1, [sp]
@@ -1042,16 +1038,14 @@ define i8* @masked_v8i16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %z to <8 x i16>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %1 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %0, i32 4, <8 x i1> %c, <8 x i16> undef)
-  %2 = bitcast i8* %y to <8 x i16>*
-  store <8 x i16> %1, <8 x i16>* %2, align 4
-  ret i8* %z
+  %0 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %z, i32 4, <8 x i1> %c, <8 x i16> undef)
+  store <8 x i16> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc i8* @masked_v8i16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
+define arm_aapcs_vfpcc ptr @masked_v8i16_postinc(ptr %x, ptr %y, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8i16_postinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1067,17 +1061,15 @@ define arm_aapcs_vfpcc i8* @masked_v8i16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %x to <8 x i16>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %1 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %0, i32 4, <8 x i1> %c, <8 x i16> undef)
-  %2 = bitcast i8* %y to <8 x i16>*
-  store <8 x i16> %1, <8 x i16>* %2, align 4
-  ret i8* %z
+  %0 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %x, i32 4, <8 x i1> %c, <8 x i16> undef)
+  store <8 x i16> %0, ptr %y, align 4
+  ret ptr %z
 }
 
 
-define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_zero(<16 x i8> *%dest, <16 x i8> %a) {
+define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_zero(ptr %dest, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
@@ -1093,11 +1085,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_zero(<16 x i8> *%dest, <16
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <16 x i8> %a, zeroinitializer
-  %l = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %dest, i32 1, <16 x i1> %c, <16 x i8> zeroinitializer)
+  %l = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %dest, i32 1, <16 x i1> %c, <16 x i8> zeroinitializer)
   ret <16 x i8> %l
 }
 
-define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_undef(<16 x i8> *%dest, <16 x i8> %a) {
+define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_undef(ptr %dest, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8_align4_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
@@ -1113,11 +1105,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_undef(<16 x i8> *%dest, <1
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <16 x i8> %a, zeroinitializer
-  %l = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %dest, i32 1, <16 x i1> %c, <16 x i8> undef)
+  %l = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %dest, i32 1, <16 x i1> %c, <16 x i8> undef)
   ret <16 x i8> %l
 }
 
-define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_other(<16 x i8> *%dest, <16 x i8> %a) {
+define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_other(ptr %dest, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8_align4_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
@@ -1135,11 +1127,11 @@ define arm_aapcs_vfpcc <16 x i8> @masked_v16i8_align4_other(<16 x i8> *%dest, <1
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <16 x i8> %a, zeroinitializer
-  %l = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %dest, i32 1, <16 x i1> %c, <16 x i8> %a)
+  %l = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %dest, i32 1, <16 x i1> %c, <16 x i8> %a)
   ret <16 x i8> %l
 }
 
-define arm_aapcs_vfpcc i8* @masked_v16i8_preinc(i8* %x, i8* %y, <16 x i8> %a) {
+define arm_aapcs_vfpcc ptr @masked_v16i8_preinc(ptr %x, ptr %y, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8_preinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
@@ -1155,16 +1147,14 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_preinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vstrb.8 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %z to <16 x i8>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <16 x i8> %a, zeroinitializer
-  %1 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %0, i32 4, <16 x i1> %c, <16 x i8> undef)
-  %2 = bitcast i8* %y to <16 x i8>*
-  store <16 x i8> %1, <16 x i8>* %2, align 4
-  ret i8* %z
+  %0 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %z, i32 4, <16 x i1> %c, <16 x i8> undef)
+  store <16 x i8> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc i8* @masked_v16i8_postinc(i8* %x, i8* %y, <16 x i8> %a) {
+define arm_aapcs_vfpcc ptr @masked_v16i8_postinc(ptr %x, ptr %y, <16 x i8> %a) {
 ; CHECK-LE-LABEL: masked_v16i8_postinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s8 gt, q0, zr
@@ -1180,17 +1170,15 @@ define arm_aapcs_vfpcc i8* @masked_v16i8_postinc(i8* %x, i8* %y, <16 x i8> %a) {
 ; CHECK-BE-NEXT:    vstrb.8 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %x to <16 x i8>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <16 x i8> %a, zeroinitializer
-  %1 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %0, i32 4, <16 x i1> %c, <16 x i8> undef)
-  %2 = bitcast i8* %y to <16 x i8>*
-  store <16 x i8> %1, <16 x i8>* %2, align 4
-  ret i8* %z
+  %0 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %x, i32 4, <16 x i1> %c, <16 x i8> undef)
+  store <16 x i8> %0, ptr %y, align 4
+  ret ptr %z
 }
 
 
-define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_zero(<4 x float> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_zero(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4f32_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1206,11 +1194,11 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_zero(<4 x float> *%dest,
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %dest, i32 4, <4 x i1> %c, <4 x float> zeroinitializer)
+  %l = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x float> zeroinitializer)
   ret <4 x float> %l
 }
 
-define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_undef(<4 x float> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4f32_align4_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1226,11 +1214,11 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_undef(<4 x float> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %dest, i32 4, <4 x i1> %c, <4 x float> undef)
+  %l = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x float> undef)
   ret <4 x float> %l
 }
 
-define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(<4 x float> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4f32_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -1312,11 +1300,11 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align1_undef(<4 x float> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %dest, i32 1, <4 x i1> %c, <4 x float> undef)
+  %l = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x float> undef)
   ret <4 x float> %l
 }
 
-define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_other(<4 x float> *%dest, <4 x i32> %a, <4 x float> %b) {
+define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_other(ptr %dest, <4 x i32> %a, <4 x float> %b) {
 ; CHECK-LE-LABEL: masked_v4f32_align4_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1335,11 +1323,11 @@ define arm_aapcs_vfpcc <4 x float> @masked_v4f32_align4_other(<4 x float> *%dest
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %dest, i32 4, <4 x i1> %c, <4 x float> %b)
+  %l = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %dest, i32 4, <4 x i1> %c, <4 x float> %b)
   ret <4 x float> %l
 }
 
-define arm_aapcs_vfpcc i8* @masked_v4f32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
+define arm_aapcs_vfpcc ptr @masked_v4f32_preinc(ptr %x, ptr %y, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4f32_preinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1355,16 +1343,14 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_preinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %z to <4 x float>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %1 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %c, <4 x float> undef)
-  %2 = bitcast i8* %y to <4 x float>*
-  store <4 x float> %1, <4 x float>* %2, align 4
-  ret i8* %z
+  %0 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %z, i32 4, <4 x i1> %c, <4 x float> undef)
+  store <4 x float> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc i8* @masked_v4f32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
+define arm_aapcs_vfpcc ptr @masked_v4f32_postinc(ptr %x, ptr %y, <4 x i32> %a) {
 ; CHECK-LE-LABEL: masked_v4f32_postinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1380,17 +1366,15 @@ define arm_aapcs_vfpcc i8* @masked_v4f32_postinc(i8* %x, i8* %y, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %x to <4 x float>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %1 = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %0, i32 4, <4 x i1> %c, <4 x float> undef)
-  %2 = bitcast i8* %y to <4 x float>*
-  store <4 x float> %1, <4 x float>* %2, align 4
-  ret i8* %z
+  %0 = call <4 x float> @llvm.masked.load.v4f32.p0(ptr %x, i32 4, <4 x i1> %c, <4 x float> undef)
+  store <4 x float> %0, ptr %y, align 4
+  ret ptr %z
 }
 
 
-define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_zero(<8 x half> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_zero(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8f16_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1406,11 +1390,11 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_zero(<8 x half> *%dest, <
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %dest, i32 2, <8 x i1> %c, <8 x half> zeroinitializer)
+  %l = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x half> zeroinitializer)
   ret <8 x half> %l
 }
 
-define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_undef(<8 x half> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_undef(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8f16_align4_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1426,11 +1410,11 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %dest, i32 2, <8 x i1> %c, <8 x half> undef)
+  %l = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x half> undef)
   ret <8 x half> %l
 }
 
-define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8f16_align1_undef:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #36
@@ -1669,11 +1653,11 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align1_undef(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    b .LBB45_9
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %dest, i32 1, <8 x i1> %c, <8 x half> undef)
+  %l = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x half> undef)
   ret <8 x half> %l
 }
 
-define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_other(<8 x half> *%dest, <8 x i16> %a, <8 x half> %b) {
+define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_other(ptr %dest, <8 x i16> %a, <8 x half> %b) {
 ; CHECK-LE-LABEL: masked_v8f16_align4_other:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1692,11 +1676,11 @@ define arm_aapcs_vfpcc <8 x half> @masked_v8f16_align4_other(<8 x half> *%dest, 
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %dest, i32 2, <8 x i1> %c, <8 x half> %b)
+  %l = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %dest, i32 2, <8 x i1> %c, <8 x half> %b)
   ret <8 x half> %l
 }
 
-define arm_aapcs_vfpcc i8* @masked_v8f16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
+define arm_aapcs_vfpcc ptr @masked_v8f16_preinc(ptr %x, ptr %y, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8f16_preinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1712,16 +1696,14 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_preinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %z to <8 x half>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %1 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %0, i32 4, <8 x i1> %c, <8 x half> undef)
-  %2 = bitcast i8* %y to <8 x half>*
-  store <8 x half> %1, <8 x half>* %2, align 4
-  ret i8* %z
+  %0 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %z, i32 4, <8 x i1> %c, <8 x half> undef)
+  store <8 x half> %0, ptr %y, align 4
+  ret ptr %z
 }
 
-define arm_aapcs_vfpcc i8* @masked_v8f16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
+define arm_aapcs_vfpcc ptr @masked_v8f16_postinc(ptr %x, ptr %y, <8 x i16> %a) {
 ; CHECK-LE-LABEL: masked_v8f16_postinc:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -1737,17 +1719,15 @@ define arm_aapcs_vfpcc i8* @masked_v8f16_postinc(i8* %x, i8* %y, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %z = getelementptr inbounds i8, i8* %x, i32 4
-  %0 = bitcast i8* %x to <8 x half>*
+  %z = getelementptr inbounds i8, ptr %x, i32 4
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %1 = call <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>* %0, i32 4, <8 x i1> %c, <8 x half> undef)
-  %2 = bitcast i8* %y to <8 x half>*
-  store <8 x half> %1, <8 x half>* %2, align 4
-  ret i8* %z
+  %0 = call <8 x half> @llvm.masked.load.v8f16.p0(ptr %x, i32 4, <8 x i1> %c, <8 x half> undef)
+  store <8 x half> %0, ptr %y, align 4
+  ret ptr %z
 }
 
 
-define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(<2 x i64> *%dest, <2 x i64> %a) {
+define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(ptr %dest, <2 x i64> %a) {
 ; CHECK-LE-LABEL: masked_v2i64_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -1824,11 +1804,11 @@ define arm_aapcs_vfpcc <2 x i64> @masked_v2i64_align4_zero(<2 x i64> *%dest, <2 
 ; CHECK-BE-NEXT:    .long 0
 entry:
   %c = icmp sgt <2 x i64> %a, zeroinitializer
-  %l = call <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>* %dest, i32 8, <2 x i1> %c, <2 x i64> zeroinitializer)
+  %l = call <2 x i64> @llvm.masked.load.v2i64.p0(ptr %dest, i32 8, <2 x i1> %c, <2 x i64> zeroinitializer)
   ret <2 x i64> %l
 }
 
-define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(<2 x double> *%dest, <2 x double> %a, <2 x i64> %b) {
+define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(ptr %dest, <2 x double> %a, <2 x i64> %b) {
 ; CHECK-LE-LABEL: masked_v2f64_align4_zero:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -1905,11 +1885,11 @@ define arm_aapcs_vfpcc <2 x double> @masked_v2f64_align4_zero(<2 x double> *%des
 ; CHECK-BE-NEXT:    .long 0
 entry:
   %c = icmp sgt <2 x i64> %b, zeroinitializer
-  %l = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %dest, i32 8, <2 x i1> %c, <2 x double> zeroinitializer)
+  %l = call <2 x double> @llvm.masked.load.v2f64.p0(ptr %dest, i32 8, <2 x i1> %c, <2 x double> zeroinitializer)
   ret <2 x double> %l
 }
 
-define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: anyext_v4i16:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -1925,11 +1905,11 @@ define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16(<4 x i16> *%dest, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
   ret <4 x i16> %l
 }
 
-define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16_align1(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16_align1(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: anyext_v4i16_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .pad #4
@@ -2023,11 +2003,11 @@ define arm_aapcs_vfpcc <4 x i16> @anyext_v4i16_align1(<4 x i16> *%dest, <4 x i32
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 1, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i16> zeroinitializer)
   ret <4 x i16> %l
 }
 
-define arm_aapcs_vfpcc <4 x i8> @anyext_v4i8(<4 x i8> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i8> @anyext_v4i8(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: anyext_v4i8:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s32 gt, q0, zr
@@ -2043,11 +2023,11 @@ define arm_aapcs_vfpcc <4 x i8> @anyext_v4i8(<4 x i8> *%dest, <4 x i32> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>* %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
+  %l = call <4 x i8> @llvm.masked.load.v4i8.p0(ptr %dest, i32 1, <4 x i1> %c, <4 x i8> zeroinitializer)
   ret <4 x i8> %l
 }
 
-define arm_aapcs_vfpcc <8 x i8> @anyext_v8i8(<8 x i8> *%dest, <8 x i16> %a) {
+define arm_aapcs_vfpcc <8 x i8> @anyext_v8i8(ptr %dest, <8 x i16> %a) {
 ; CHECK-LE-LABEL: anyext_v8i8:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vpt.s16 gt, q0, zr
@@ -2063,11 +2043,11 @@ define arm_aapcs_vfpcc <8 x i8> @anyext_v8i8(<8 x i8> *%dest, <8 x i16> %a) {
 ; CHECK-BE-NEXT:    bx lr
 entry:
   %c = icmp sgt <8 x i16> %a, zeroinitializer
-  %l = call <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>* %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
+  %l = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %dest, i32 1, <8 x i1> %c, <8 x i8> zeroinitializer)
   ret <8 x i8> %l
 }
 
-define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: multi_user_zext:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -2079,7 +2059,7 @@ define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(<4 x i16> *%dest, <4 x i32> %a
 ; CHECK-LE-NEXT:    vmov r0, r1, d8
 ; CHECK-LE-NEXT:    vmov r2, r3, d9
 ; CHECK-LE-NEXT:    bl foo
-; CHECK-LE-NEXT:    vmovlb.u16 q0, q4
+; CHECK-LE-NEXT:    vmov q0, q4
 ; CHECK-LE-NEXT:    vpop {d8, d9}
 ; CHECK-LE-NEXT:    pop {r7, pc}
 ;
@@ -2091,24 +2071,23 @@ define arm_aapcs_vfpcc <4 x i32> @multi_user_zext(<4 x i16> *%dest, <4 x i32> %a
 ; CHECK-BE-NEXT:    vpush {d8, d9}
 ; CHECK-BE-NEXT:    vrev64.32 q1, q0
 ; CHECK-BE-NEXT:    vpt.s32 gt, q1, zr
-; CHECK-BE-NEXT:    vldrht.u32 q4, [r0]
-; CHECK-BE-NEXT:    vrev64.32 q0, q4
-; CHECK-BE-NEXT:    vmov r1, r0, d0
-; CHECK-BE-NEXT:    vmov r3, r2, d1
+; CHECK-BE-NEXT:    vldrht.u32 q0, [r0]
+; CHECK-BE-NEXT:    vrev64.32 q4, q0
+; CHECK-BE-NEXT:    vmov r1, r0, d8
+; CHECK-BE-NEXT:    vmov r3, r2, d9
 ; CHECK-BE-NEXT:    bl foo
-; CHECK-BE-NEXT:    vmovlb.u16 q1, q4
-; CHECK-BE-NEXT:    vrev64.32 q0, q1
+; CHECK-BE-NEXT:    vmov q0, q4
 ; CHECK-BE-NEXT:    vpop {d8, d9}
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
   call void @foo(<4 x i16> %l)
   %ext = zext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-define arm_aapcs_vfpcc <4 x i32> @multi_user_sext(<4 x i16> *%dest, <4 x i32> %a) {
+define arm_aapcs_vfpcc <4 x i32> @multi_user_sext(ptr %dest, <4 x i32> %a) {
 ; CHECK-LE-LABEL: multi_user_sext:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r7, lr}
@@ -2143,20 +2122,20 @@ define arm_aapcs_vfpcc <4 x i32> @multi_user_sext(<4 x i16> *%dest, <4 x i32> %a
 ; CHECK-BE-NEXT:    pop {r7, pc}
 entry:
   %c = icmp sgt <4 x i32> %a, zeroinitializer
-  %l = call <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>* %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
+  %l = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr %dest, i32 2, <4 x i1> %c, <4 x i16> zeroinitializer)
   call void @foo(<4 x i16> %l)
   %ext = sext <4 x i16> %l to <4 x i32>
   ret <4 x i32> %ext
 }
 
-declare <4 x i16> @llvm.masked.load.v4i16.p0v4i16(<4 x i16>*, i32, <4 x i1>, <4 x i16>)
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
-declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
-declare <4 x i8> @llvm.masked.load.v4i8.p0v4i8(<4 x i8>*, i32, <4 x i1>, <4 x i8>)
-declare <8 x i8> @llvm.masked.load.v8i8.p0v8i8(<8 x i8>*, i32, <8 x i1>, <8 x i8>)
-declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
-declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
-declare <8 x half> @llvm.masked.load.v8f16.p0v8f16(<8 x half>*, i32, <8 x i1>, <8 x half>)
-declare <2 x i64> @llvm.masked.load.v2i64.p0v2i64(<2 x i64>*, i32, <2 x i1>, <2 x i64>)
-declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
+declare <4 x i16> @llvm.masked.load.v4i16.p0(ptr, i32, <4 x i1>, <4 x i16>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32, <4 x i1>, <4 x i32>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32, <8 x i1>, <8 x i16>)
+declare <4 x i8> @llvm.masked.load.v4i8.p0(ptr, i32, <4 x i1>, <4 x i8>)
+declare <8 x i8> @llvm.masked.load.v8i8.p0(ptr, i32, <8 x i1>, <8 x i8>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32, <16 x i1>, <16 x i8>)
+declare <4 x float> @llvm.masked.load.v4f32.p0(ptr, i32, <4 x i1>, <4 x float>)
+declare <8 x half> @llvm.masked.load.v8f16.p0(ptr, i32, <8 x i1>, <8 x half>)
+declare <2 x i64> @llvm.masked.load.v2i64.p0(ptr, i32, <2 x i1>, <2 x i64>)
+declare <2 x double> @llvm.masked.load.v2f64.p0(ptr, i32, <2 x i1>, <2 x double>)
 declare void @foo(<4 x i16>)

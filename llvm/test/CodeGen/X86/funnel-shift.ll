@@ -178,9 +178,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX2-NEXT:    movq %rdx, %rcx
 ; X64-AVX2-NEXT:    movabsq $137438953471, %rax # imm = 0x1FFFFFFFFF
 ; X64-AVX2-NEXT:    andq %rdx, %rax
-; X64-AVX2-NEXT:    movabsq $-2492803253203993461, %rdx # imm = 0xDD67C8A60DD67C8B
+; X64-AVX2-NEXT:    movabsq $498560650640798693, %rdx # imm = 0x6EB3E45306EB3E5
 ; X64-AVX2-NEXT:    mulq %rdx
-; X64-AVX2-NEXT:    shrq $5, %rdx
 ; X64-AVX2-NEXT:    leal (%rdx,%rdx,8), %eax
 ; X64-AVX2-NEXT:    leal (%rdx,%rax,4), %eax
 ; X64-AVX2-NEXT:    subl %eax, %ecx
@@ -346,9 +345,8 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X64-AVX2-NEXT:    movq %rdx, %rcx
 ; X64-AVX2-NEXT:    movabsq $137438953471, %rax # imm = 0x1FFFFFFFFF
 ; X64-AVX2-NEXT:    andq %rdx, %rax
-; X64-AVX2-NEXT:    movabsq $-2492803253203993461, %rdx # imm = 0xDD67C8A60DD67C8B
+; X64-AVX2-NEXT:    movabsq $498560650640798693, %rdx # imm = 0x6EB3E45306EB3E5
 ; X64-AVX2-NEXT:    mulq %rdx
-; X64-AVX2-NEXT:    shrq $5, %rdx
 ; X64-AVX2-NEXT:    leal (%rdx,%rdx,8), %eax
 ; X64-AVX2-NEXT:    leal (%rdx,%rax,4), %eax
 ; X64-AVX2-NEXT:    subl %eax, %ecx

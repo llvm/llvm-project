@@ -6,6 +6,7 @@ set(LLVM_LINK_COMPONENTS
   MIRParser
   Support
   Target
+  TargetParser
   )
 
 add_llvm_unittest(MITests

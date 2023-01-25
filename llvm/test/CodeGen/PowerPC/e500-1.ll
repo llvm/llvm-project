@@ -4,12 +4,12 @@
 target datalayout = "E-m:e-p:32:32-i64:64-n32"
 target triple = "powerpc-unknown-linux-gnu"
 
-define internal i32 @func_49(i64 %p_50, i16 zeroext %p_51, i8* %p_52, i32 %p_53) {
+define internal i32 @func_49(i64 %p_50, i16 zeroext %p_51, ptr %p_52, i32 %p_53) {
 ; CHECK-LABEL: @func_49
 ; CHECK-NOT: mfocrf
 
-  %1 = load i64, i64* undef, align 8
-  %2 = load i64, i64* undef, align 8
+  %1 = load i64, ptr undef, align 8
+  %2 = load i64, ptr undef, align 8
   %3 = icmp sge i32 undef, undef
   %4 = zext i1 %3 to i32
   %5 = sext i32 %4 to i64

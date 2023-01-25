@@ -24,11 +24,11 @@ class TestStdGen(unittest.TestCase):
 
     actual = _ParseIndexPage(html)
     expected = [
-      ("abs", "abs.html", True),
-      ("abs", "complex/abs.html", True),
-      ("acos", "acos.html", False),
-      ("acosh", "acosh.html", False),
-      ("as_bytes", "as_bytes.html", False),
+      ("abs", "abs.html", 'int'),
+      ("abs", "complex/abs.html", 'std::complex'),
+      ("acos", "acos.html", None),
+      ("acosh", "acosh.html", None),
+      ("as_bytes", "as_bytes.html", None),
     ]
     self.assertEqual(len(actual), len(expected))
     for i in range(0, len(actual)):

@@ -9,12 +9,12 @@
 ; CHECK-NEXT:       MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:           { Stmt_Stmt[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:       Instructions {
-; CHECK-NEXT:             store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
+; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   }
 ;
 ; Function Attrs: noinline nounwind uwtable
-define void @func(i32* %A) #0 {
+define void @func(ptr %A) #0 {
 entry:
   br label %for.cond
 
@@ -28,8 +28,8 @@ for.body:                                         ; preds = %for.cond
 
 Stmt:
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
   br label %for.inc
 
 for.inc:                                          ; preds = %Stmt

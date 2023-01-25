@@ -43,6 +43,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/raw_ostream.h"
 #include <atomic>
+#include <mutex>
 #include <string>
 
 using namespace clang::ast_matchers;
@@ -130,64 +131,27 @@ std::string GetExecutablePath(const char *Argv0, void *MainAddr) {
   return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
 }
 
-bool CreateDirectory(const Twine &DirName, bool ClearDirectory = false) {
-  std::error_code OK;
-  llvm::SmallString<128> DocsRootPath;
-  if (ClearDirectory) {
-    std::error_code RemoveStatus = llvm::sys::fs::remove_directories(DirName);
-    if (RemoveStatus != OK) {
-      llvm::errs() << "Unable to remove existing documentation directory for "
-                   << DirName << ".\n";
-      return true;
-    }
-  }
-  std::error_code DirectoryStatus = llvm::sys::fs::create_directories(DirName);
-  if (DirectoryStatus != OK) {
-    llvm::errs() << "Unable to create documentation directories.\n";
-    return true;
-  }
-  return false;
-}
-
-// A function to extract the appropriate file name for a given info's
-// documentation. The path returned is a composite of the output directory, the
-// info's relative path and name and the extension. The relative path should
-// have been constructed in the serialization phase.
-//
-// Example: Given the below, the <ext> path for class C will be
-// <root>/A/B/C.<ext>
-//
-// namespace A {
-// namespace B {
-//
-// class C {};
-//
-// }
-// }
-llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
-                                                         StringRef RelativePath,
-                                                         StringRef Name,
-                                                         StringRef Ext) {
-  llvm::SmallString<128> Path;
-  llvm::sys::path::native(Root, Path);
-  llvm::sys::path::append(Path, RelativePath);
-  if (CreateDirectory(Path))
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "failed to create directory");
-  llvm::sys::path::append(Path, Name + Ext);
-  return Path;
-}
-
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
-  ExecutorName.setInitialValue("all-TUs");
-  auto Exec = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, ClangDocCategory);
+  const char *Overview =
+    R"(Generates documentation from source code and comments.
 
-  if (!Exec) {
-    llvm::errs() << toString(Exec.takeError()) << "\n";
+Example usage for files without flags (default):
+
+  $ clang-doc File1.cpp File2.cpp ... FileN.cpp
+
+Example usage for a project using a compile commands database:
+
+  $ clang-doc --executor=all-TUs compile_commands.json
+)";
+
+  auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
+      argc, argv, ClangDocCategory, Overview);
+
+  if (!Executor) {
+    llvm::errs() << toString(Executor.takeError()) << "\n";
     return 1;
   }
 
@@ -208,7 +172,7 @@ int main(int argc, const char **argv) {
         ArgAdjuster);
 
   clang::doc::ClangDocContext CDCtx = {
-      Exec->get()->getExecutionContext(),
+      Executor->get()->getExecutionContext(),
       ProjectName,
       PublicOnly,
       OutDirectory,
@@ -220,9 +184,10 @@ int main(int argc, const char **argv) {
   if (Format == "html") {
     void *MainAddr = (void *)(intptr_t)GetExecutablePath;
     std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
+    llvm::SmallString<128> NativeClangDocPath;
+    llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
     llvm::SmallString<128> AssetsPath;
-    llvm::sys::path::native(ClangDocPath, AssetsPath);
-    AssetsPath = llvm::sys::path::parent_path(AssetsPath);
+    AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
     llvm::sys::path::append(AssetsPath, "..", "share", "clang");
     llvm::SmallString<128> DefaultStylesheet;
     llvm::sys::path::native(AssetsPath, DefaultStylesheet);
@@ -239,7 +204,7 @@ int main(int argc, const char **argv) {
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
   auto Err =
-      Exec->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
+      Executor->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
     if (IgnoreMappingFailures)
       llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
@@ -256,11 +221,16 @@ int main(int argc, const char **argv) {
   // bitcode-encoded representation of the Info object.
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
-  Exec->get()->getToolResults()->forEachResult(
+  Executor->get()->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
         auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
         R.first->second.emplace_back(Value);
       });
+
+  // Collects all Infos according to their unique USR value. This map is added
+  // to from the thread pool below and is protected by the USRToInfoMutex.
+  llvm::sys::Mutex USRToInfoMutex;
+  llvm::StringMap<std::unique_ptr<doc::Info>> USRToInfo;
 
   // First reducing phase (reduce all decls into one info per decl).
   llvm::outs() << "Reducing " << USRToBitcode.size() << " infos...\n";
@@ -292,31 +262,17 @@ int main(int argc, const char **argv) {
         return;
       }
 
-      doc::Info *I = Reduced.get().get();
-      auto InfoPath =
-          getInfoOutputFile(OutDirectory, I->getRelativeFilePath(""),
-                            I->getFileBaseName(), "." + Format);
-      if (!InfoPath) {
-        llvm::errs() << toString(InfoPath.takeError()) << "\n";
-        Error = true;
-        return;
-      }
-      std::error_code FileErr;
-      llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr,
-                                  llvm::sys::fs::OF_None);
-      if (FileErr) {
-        llvm::errs() << "Error opening info file " << InfoPath.get() << ": "
-                     << FileErr.message() << "\n";
-        return;
-      }
-
-      IndexMutex.lock();
       // Add a reference to this Info in the Index
-      clang::doc::Generator::addInfoToIndex(CDCtx.Idx, I);
-      IndexMutex.unlock();
+      {
+        std::lock_guard<llvm::sys::Mutex> Guard(IndexMutex);
+        clang::doc::Generator::addInfoToIndex(CDCtx.Idx, Reduced.get().get());
+      }
 
-      if (auto Err = G->get()->generateDocForInfo(I, InfoOS, CDCtx))
-        llvm::errs() << toString(std::move(Err)) << "\n";
+      // Save in the result map (needs a lock due to threaded access).
+      {
+        std::lock_guard<llvm::sys::Mutex> Guard(USRToInfoMutex);
+        USRToInfo[Group.getKey()] = std::move(Reduced.get());
+      }
     });
   }
 
@@ -324,6 +280,21 @@ int main(int argc, const char **argv) {
 
   if (Error)
     return 1;
+
+  // Ensure the root output directory exists.
+  if (std::error_code Err = llvm::sys::fs::create_directories(OutDirectory);
+      Err != std::error_code()) {
+    llvm::errs() << "Failed to create directory '" << OutDirectory << "'\n";
+    return 1;
+  }
+
+  // Run the generator.
+  llvm::outs() << "Generating docs...\n";
+  if (auto Err =
+          G->get()->generateDocs(OutDirectory, std::move(USRToInfo), CDCtx)) {
+    llvm::errs() << toString(std::move(Err)) << "\n";
+    return 1;
+  }
 
   llvm::outs() << "Generating assets for docs...\n";
   Err = G->get()->createResources(CDCtx);

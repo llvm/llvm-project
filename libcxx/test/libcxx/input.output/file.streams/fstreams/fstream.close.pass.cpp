@@ -12,7 +12,7 @@
 
 // close();
 
-//	Inspired by PR#38052 - std::fstream still good after closing and updating content
+// Inspired by PR#38052 - std::fstream still good after closing and updating content
 
 #include <fstream>
 #include <cassert>
@@ -33,5 +33,5 @@ int main(int, char**)
 
     std::remove(temp.c_str());
 
-  return 0;
+    return 0;
 }

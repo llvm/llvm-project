@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-vectorize -transform-warning -S 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,transform-warning -S 2>&1 | FileCheck %s
 
 ; Verify warning is generated when vectorization/ interleaving is explicitly specified and fails to occur.
 ; CHECK: warning: no_array_bounds.cpp:5:5: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
@@ -17,7 +17,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind ssp uwtable
-define void @_Z4testPiS_i(i32* nocapture %A, i32* nocapture %B, i32 %number) #0 !dbg !4 {
+define void @_Z4testPiS_i(ptr nocapture %A, ptr nocapture %B, i32 %number) #0 !dbg !4 {
 entry:
   %cmp25 = icmp sgt i32 %number, 0, !dbg !10
   br i1 %cmp25, label %for.body.preheader, label %for.end15, !dbg !10, !llvm.loop !12
@@ -33,13 +33,13 @@ for.body7.preheader:                              ; preds = %for.cond5.preheader
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv27 = phi i64 [ %indvars.iv.next28, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv27, !dbg !14
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !14, !tbaa !22
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv27, !dbg !14
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !14, !tbaa !22
   %idxprom1 = sext i32 %0 to i64, !dbg !14
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %idxprom1, !dbg !14
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !14, !tbaa !22
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !14
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !14, !tbaa !22
   %inc = add nsw i32 %1, 1, !dbg !14
-  store i32 %inc, i32* %arrayidx2, align 4, !dbg !14, !tbaa !22
+  store i32 %inc, ptr %arrayidx2, align 4, !dbg !14, !tbaa !22
   %indvars.iv.next28 = add nuw nsw i64 %indvars.iv27, 1, !dbg !10
   %lftr.wideiv29 = trunc i64 %indvars.iv.next28 to i32, !dbg !10
   %exitcond30 = icmp eq i32 %lftr.wideiv29, %number, !dbg !10
@@ -47,13 +47,13 @@ for.body:                                         ; preds = %for.body.preheader,
 
 for.body7:                                        ; preds = %for.body7.preheader, %for.body7
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body7 ], [ 0, %for.body7.preheader ]
-  %arrayidx9 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !20
-  %2 = load i32, i32* %arrayidx9, align 4, !dbg !20, !tbaa !22
+  %arrayidx9 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !20
+  %2 = load i32, ptr %arrayidx9, align 4, !dbg !20, !tbaa !22
   %idxprom10 = sext i32 %2 to i64, !dbg !20
-  %arrayidx11 = getelementptr inbounds i32, i32* %B, i64 %idxprom10, !dbg !20
-  %3 = load i32, i32* %arrayidx11, align 4, !dbg !20, !tbaa !22
+  %arrayidx11 = getelementptr inbounds i32, ptr %B, i64 %idxprom10, !dbg !20
+  %3 = load i32, ptr %arrayidx11, align 4, !dbg !20, !tbaa !22
   %inc12 = add nsw i32 %3, 1, !dbg !20
-  store i32 %inc12, i32* %arrayidx11, align 4, !dbg !20, !tbaa !22
+  store i32 %inc12, ptr %arrayidx11, align 4, !dbg !20, !tbaa !22
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !16
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !16
   %exitcond = icmp eq i32 %lftr.wideiv, %number, !dbg !16

@@ -73,24 +73,24 @@
 ;   D::virt<bar> t;
 ; }
 
-%struct.C = type { i32 (...)** }
+%struct.C = type { ptr }
 %struct.bar = type { i8 }
 %"struct.D::Nested" = type { i8 }
 %"struct.D::Nested2" = type { i8 }
-%"struct.D::virt" = type { %struct.bar* }
+%"struct.D::virt" = type { ptr }
 
-@_ZTV1C = unnamed_addr constant [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1C to i8*), i8* bitcast (void (%struct.C*)* @_ZN1C3fooEv to i8*)]
-@_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
+@_ZTV1C = unnamed_addr constant [3 x ptr] [ptr null, ptr @_ZTI1C, ptr @_ZN1C3fooEv]
+@_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 @_ZTS1C = constant [3 x i8] c"1C\00"
-@_ZTI1C = unnamed_addr constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZTS1C, i32 0, i32 0) }
+@_ZTI1C = unnamed_addr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1C }
 
 ; Function Attrs: nounwind ssp uwtable
-define void @_ZN1C3fooEv(%struct.C* %this) unnamed_addr #0 align 2 !dbg !31 {
+define void @_ZN1C3fooEv(ptr %this) unnamed_addr #0 align 2 !dbg !31 {
 entry:
-  %this.addr = alloca %struct.C*, align 8
-  store %struct.C* %this, %struct.C** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.C** %this.addr, metadata !36, metadata !DIExpression()), !dbg !38
-  %this1 = load %struct.C*, %struct.C** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !36, metadata !DIExpression()), !dbg !38
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !39
 }
 
@@ -104,14 +104,14 @@ entry:
   %A = alloca [3 x %struct.bar], align 1
   %B2 = alloca %struct.bar, align 1
   %e = alloca %"struct.D::Nested", align 1
-  %p = alloca %"struct.D::Nested2"*, align 8
+  %p = alloca ptr, align 8
   %t = alloca %"struct.D::virt", align 8
-  call void @llvm.dbg.declare(metadata %struct.bar* %B, metadata !40, metadata !DIExpression()), !dbg !42
-  call void @llvm.dbg.declare(metadata [3 x %struct.bar]* %A, metadata !43, metadata !DIExpression()), !dbg !47
-  call void @llvm.dbg.declare(metadata %struct.bar* %B2, metadata !48, metadata !DIExpression()), !dbg !50
-  call void @llvm.dbg.declare(metadata %"struct.D::Nested"* %e, metadata !51, metadata !DIExpression()), !dbg !52
-  call void @llvm.dbg.declare(metadata %"struct.D::Nested2"** %p, metadata !53, metadata !DIExpression()), !dbg !55
-  call void @llvm.dbg.declare(metadata %"struct.D::virt"* %t, metadata !56, metadata !DIExpression()), !dbg !57
+  call void @llvm.dbg.declare(metadata ptr %B, metadata !40, metadata !DIExpression()), !dbg !42
+  call void @llvm.dbg.declare(metadata ptr %A, metadata !43, metadata !DIExpression()), !dbg !47
+  call void @llvm.dbg.declare(metadata ptr %B2, metadata !48, metadata !DIExpression()), !dbg !50
+  call void @llvm.dbg.declare(metadata ptr %e, metadata !51, metadata !DIExpression()), !dbg !52
+  call void @llvm.dbg.declare(metadata ptr %p, metadata !53, metadata !DIExpression()), !dbg !55
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !56, metadata !DIExpression()), !dbg !57
   ret void, !dbg !58
 }
 

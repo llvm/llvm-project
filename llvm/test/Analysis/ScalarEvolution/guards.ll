@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; Check that SCEV is able to recognize and use guards to prove
 ; conditions gaurding loop entries and backedges.  This isn't intended
@@ -12,10 +12,10 @@ declare void @llvm.experimental.guard(i1, ...)
 
 declare void @use(i64 %x)
 
-define void @test_1(i1* %cond_buf, i32* %len_buf) {
+define void @test_1(ptr %cond_buf, ptr %len_buf) {
 ; CHECK-LABEL: @test_1(
 entry:
-  %len = load i32, i32* %len_buf, !range !{i32 1, i32 2147483648}
+  %len = load i32, ptr %len_buf, !range !{i32 1, i32 2147483648}
   br label %loop
 
 loop:
@@ -34,20 +34,20 @@ loop:
   %iv.inc.cmp = icmp slt i32 %iv.inc, %len
   call void(i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]
 
-  %becond = load volatile i1, i1* %cond_buf
+  %becond = load volatile i1, ptr %cond_buf
   br i1 %becond, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @test_2(i32 %n, i32* %len_buf) {
+define void @test_2(i32 %n, ptr %len_buf) {
 ; CHECK-LABEL: @test_2(
 ; CHECK:  [[LEN_ZEXT:%[^ ]+]] = zext i32 %len to i64
 ; CHECK:  br label %loop
 
 entry:
-  %len = load i32, i32* %len_buf, !range !{i32 0, i32 2147483648}
+  %len = load i32, ptr %len_buf, !range !{i32 0, i32 2147483648}
   br label %loop
 
 loop:
@@ -74,11 +74,11 @@ leave:
   ret void
 }
 
-define void @test_3(i1* %cond_buf, i32* %len_buf) {
+define void @test_3(ptr %cond_buf, ptr %len_buf) {
 ; CHECK-LABEL: @test_3(
 
 entry:
-  %len = load i32, i32* %len_buf
+  %len = load i32, ptr %len_buf
   %entry.cond = icmp sgt i32 %len, 0
   call void(i1, ...) @llvm.experimental.guard(i1 %entry.cond) [ "deopt"() ]
   br label %loop
@@ -98,18 +98,18 @@ loop:
   %iv.inc.cmp = icmp slt i32 %iv.inc, %len
   call void(i1, ...) @llvm.experimental.guard(i1 %iv.inc.cmp) [ "deopt"() ]
 
-  %becond = load volatile i1, i1* %cond_buf
+  %becond = load volatile i1, ptr %cond_buf
   br i1 %becond, label %loop, label %leave
 
 leave:
   ret void
 }
 
-define void @test_4(i1* %cond_buf, i32* %len_buf) {
+define void @test_4(ptr %cond_buf, ptr %len_buf) {
 ; CHECK-LABEL: @test_4(
 
 entry:
-  %len = load i32, i32* %len_buf
+  %len = load i32, ptr %len_buf
   %entry.cond = icmp sgt i32 %len, 0
   call void(i1, ...) @llvm.experimental.guard(i1 %entry.cond) [ "deopt"() ]
   br label %loop
@@ -118,7 +118,7 @@ loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.inc, %be ]
   %iv.inc = add i32 %iv, 1
 
-  %cond = load volatile i1, i1* %cond_buf
+  %cond = load volatile i1, ptr %cond_buf
   br i1 %cond, label %left, label %be
 
 left:
@@ -136,7 +136,7 @@ be:
   %iv.cmp = icmp slt i32 %iv, %len
   call void(i1, ...) @llvm.experimental.guard(i1 %iv.cmp) [ "deopt"() ]
 
-  %becond = load volatile i1, i1* %cond_buf
+  %becond = load volatile i1, ptr %cond_buf
   br i1 %becond, label %loop, label %leave
 
 leave:

@@ -11,21 +11,21 @@
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @set1() #0 !dbg !11 {
 entry:
-  store i32 111, i32* @foo, align 4, !dbg !14
+  store i32 111, ptr @foo, align 4, !dbg !14
   ret void, !dbg !15
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define void @set2() #0 !dbg !16 {
 entry:
-  store i32 0, i32* @foo, align 4, !dbg !17
+  store i32 0, ptr @foo, align 4, !dbg !17
   ret void, !dbg !18
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define i32 @get() #0 !dbg !19 {
 entry:
-  %0 = load i32, i32* @foo, align 4, !dbg !22
+  %0 = load i32, ptr @foo, align 4, !dbg !22
   ret i32 %0, !dbg !23
 }
 

@@ -40,7 +40,7 @@
 #include "Types.h"
 #include "Utils.h"
 
-using namespace _OMP;
+using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
@@ -86,11 +86,16 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   uint32_t TId = mapping::getThreadIdInBlock();
 
+  // Assert the parallelism level is zero if disabled by the user.
+  ASSERT((config::mayUseNestedParallelism() || icv::Level == 0) &&
+         "nested parallelism while disabled");
+
   // Handle the serialized case first, same for SPMD/non-SPMD:
   // 1) if-clause(0)
-  // 2) nested parallel regions
-  // 3) parallel in task or other thread state inducing construct
-  if (OMP_UNLIKELY(!if_expr || icv::Level || state::HasThreadState)) {
+  // 2) parallel in task or other thread state inducing construct
+  // 3) nested parallel regions
+  if (OMP_UNLIKELY(!if_expr || state::HasThreadState ||
+                   (config::mayUseNestedParallelism() && icv::Level))) {
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);

@@ -195,7 +195,7 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     SplitBlockCache LocalBlockSymbolsCache;
     if (!Cache)
       Cache = &LocalBlockSymbolsCache;
-    if (*Cache == None) {
+    if (*Cache == std::nullopt) {
       *Cache = SplitBlockCache::value_type();
       for (auto *Sym : B.getSection().symbols())
         if (&Sym->getBlock() == &B)
@@ -309,14 +309,14 @@ void LinkGraph::dump(raw_ostream &OS) {
   }
 
   OS << "Absolute symbols:\n";
-  if (!llvm::empty(absolute_symbols())) {
+  if (!absolute_symbols().empty()) {
     for (auto *Sym : absolute_symbols())
       OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else
     OS << "  none\n";
 
   OS << "\nExternal symbols:\n";
-  if (!llvm::empty(external_symbols())) {
+  if (!external_symbols().empty()) {
     for (auto *Sym : external_symbols())
       OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else

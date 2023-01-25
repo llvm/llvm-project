@@ -45,6 +45,7 @@
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 #include "llvm/Transforms/Yk/ControlPoint.h"
+#include <optional>
 
 using namespace llvm;
 using namespace lto;
@@ -208,14 +209,14 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   for (const std::string &A : Conf.MAttrs)
     Features.AddFeature(A);
 
-  Optional<Reloc::Model> RelocModel = None;
+  std::optional<Reloc::Model> RelocModel;
   if (Conf.RelocModel)
     RelocModel = *Conf.RelocModel;
   else if (M.getModuleFlag("PIC Level"))
     RelocModel =
         M.getPICLevel() == PICLevel::NotPIC ? Reloc::Static : Reloc::PIC_;
 
-  Optional<CodeModel::Model> CodeModel;
+  std::optional<CodeModel::Model> CodeModel;
   if (Conf.CodeModel)
     CodeModel = *Conf.CodeModel;
   else
@@ -232,7 +233,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
-  Optional<PGOOptions> PGOOpt;
+  std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
                         PGOOptions::SampleUse, PGOOptions::NoCSAction, true);
@@ -257,7 +258,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(Conf.DebugPassManager);
+  StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager);
   SI.registerCallbacks(PIC, &FAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
@@ -392,7 +393,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                          EC.message());
   }
 
-  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr = AddStream(Task);
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+      AddStream(Task, Mod.getModuleIdentifier());
   if (Error Err = StreamOrErr.takeError())
     report_fatal_error(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;

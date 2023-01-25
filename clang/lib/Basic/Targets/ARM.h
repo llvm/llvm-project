@@ -17,9 +17,9 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/Support/ARMTargetParserCommon.h"
+#include "llvm/Support/Compiler.h"
 
 namespace clang {
 namespace targets {
@@ -99,8 +99,6 @@ class LLVM_LIBRARY_VISIBILITY ARMTargetInfo : public TargetInfo {
     HW_FP_DP = (1 << 3), /// double (64-bit)
   };
   uint32_t HW_FP;
-
-  static const Builtin::Info BuiltinInfo[];
 
   void setABIAAPCS();
   void setABIAPCS(bool IsAAPCS16);

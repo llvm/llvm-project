@@ -18,8 +18,8 @@
 define i16 @test(i32 %key) {
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i16, i8 } @gen(i32 %0)
   %v3 = extractvalue { i16, i8 } %call, 0
   %v1 = sext i16 %v3 to i32
@@ -61,8 +61,8 @@ declare swiftcc { i16, i8 } @gen(i32)
 define i32 @test2(i32 %key) #0 {
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %0)
 
   %v3 = extractvalue { i32, i32, i32, i32, i32 } %call, 0
@@ -115,8 +115,8 @@ define swiftcc { i32, i32, i32, i32, i32 } @gen2(i32 %key) {
 define i32 @test3(i32 %key) #0 {
 entry:
   %key.addr = alloca i32, align 4
-  store i32 %key, i32* %key.addr, align 4
-  %0 = load i32, i32* %key.addr, align 4
+  store i32 %key, ptr %key.addr, align 4
+  %0 = load i32, ptr %key.addr, align 4
   %call = call swiftcc { i32, i32, i32, i32 } @gen3(i32 %0)
 
   %v3 = extractvalue { i32, i32, i32, i32 } %call, 0
@@ -147,8 +147,8 @@ declare swiftcc { i32, i32, i32, i32 } @gen3(i32 %key)
 define float @test4(float %key) #0 {
 entry:
   %key.addr = alloca float, align 4
-  store float %key, float* %key.addr, align 4
-  %0 = load float, float* %key.addr, align 4
+  store float %key, ptr %key.addr, align 4
+  %0 = load float, ptr %key.addr, align 4
   %call = call swiftcc { float, float, float, float } @gen4(float %0)
 
   %v3 = extractvalue { float, float, float, float } %call, 0

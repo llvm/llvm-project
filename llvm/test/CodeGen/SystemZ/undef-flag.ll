@@ -5,11 +5,11 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs | FileCheck %s
 
 ; LLCRMux
-define void @f1(i8*) {
+define void @f1(ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: *** Bad machine code: Using an undefined physical register ***
 BB:
-  %L5 = load i8, i8* %0
+  %L5 = load i8, ptr %0
   %B9 = lshr i8 %L5, -1
   br label %CF
 

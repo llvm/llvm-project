@@ -1,4 +1,3 @@
-# RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s -experimental-debug-variable-locations=false | FileCheck %s --check-prefixes=CHECK,VARLOCLDV
 # RUN: llc -debug-entry-values -run-pass=livedebugvalues -march=x86-64 -o - %s -experimental-debug-variable-locations=true | FileCheck %s --check-prefixes=CHECK,INSTRREFLDV
 #
 # The test case was artificially adjusted, in order to make proper diamond basic
@@ -22,12 +21,10 @@
 # CHECK-NEXT: $ebp = MOV32ri 2
 # CHECK-NEXT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # CHECK: bb.3.if.end
-# VARLOCLDV-NOT: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 # INSTRREFLDV: DBG_VALUE $esi, $noreg, ![[ARG_B]], !DIExpression(DW_OP_LLVM_entry_value, 1)
 #
-## Final two lines: VarLoc LiveDebugValues cannot determine that the DBG_VALUEs
-## down either path of the diamond set the variable to be its original value,
-## wheras instruction referencing LiveDebugValues can.
+## NB: an identical test in llvm/test/DebugInfo/MIR/X86/kill-entry-value-after-diamond-bbs2.mir
+## checks the same things for VarLocBasedLDV.
 #
 --- |
   ; ModuleID = 'test.c'
@@ -114,6 +111,7 @@
 ---
 name:            fn2
 alignment:       16
+debugInstrRef: true
 fixedStack:
   - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '',

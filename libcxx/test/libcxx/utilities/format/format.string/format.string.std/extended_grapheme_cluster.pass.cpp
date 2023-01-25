@@ -40,13 +40,13 @@ constexpr int count_entries(cluster::__property property) {
       });
 }
 
-static_assert(count_entries(cluster::__property::__Prepend) == 26);
+static_assert(count_entries(cluster::__property::__Prepend) == 27);
 static_assert(count_entries(cluster::__property::__CR) == 1);
 static_assert(count_entries(cluster::__property::__LF) == 1);
-static_assert(count_entries(cluster::__property::__Control) == 3886);
-static_assert(count_entries(cluster::__property::__Extend) == 2095);
+static_assert(count_entries(cluster::__property::__Control) == 3893);
+static_assert(count_entries(cluster::__property::__Extend) == 2130);
 static_assert(count_entries(cluster::__property::__Regional_Indicator) == 26);
-static_assert(count_entries(cluster::__property::__SpacingMark) == 388);
+static_assert(count_entries(cluster::__property::__SpacingMark) == 395);
 static_assert(count_entries(cluster::__property::__L) == 125);
 static_assert(count_entries(cluster::__property::__V) == 95);
 static_assert(count_entries(cluster::__property::__T) == 137);

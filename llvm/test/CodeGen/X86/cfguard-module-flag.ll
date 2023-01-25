@@ -1,6 +1,8 @@
 
 ; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s -check-prefix=X64
+; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s -check-prefix=X64
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are not added in modules with the

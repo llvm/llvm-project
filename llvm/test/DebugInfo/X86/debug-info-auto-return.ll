@@ -29,12 +29,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 %struct.myClass = type { i8 }
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local double @_ZN7myClass7findMaxEv(%struct.myClass* %this) #0 align 2 !dbg !7 {
+define dso_local double @_ZN7myClass7findMaxEv(ptr %this) #0 align 2 !dbg !7 {
 entry:
-  %this.addr = alloca %struct.myClass*, align 8
-  store %struct.myClass* %this, %struct.myClass** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.myClass** %this.addr, metadata !17, metadata !DIExpression()), !dbg !19
-  %this1 = load %struct.myClass*, %struct.myClass** %this.addr, align 8
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !17, metadata !DIExpression()), !dbg !19
+  %this1 = load ptr, ptr %this.addr, align 8
   ret double 0.000000e+00, !dbg !20
 }
 ; Function Attrs: nounwind readnone speculatable willreturn

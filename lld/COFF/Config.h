@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
@@ -21,8 +22,7 @@
 #include <set>
 #include <string>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
@@ -96,7 +96,7 @@ enum class ICFLevel {
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
-  bool is64() { return machine == AMD64 || machine == ARM64; }
+  bool is64() const { return machine == AMD64 || machine == ARM64; }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   size_t wordsize;
@@ -124,6 +124,7 @@ struct Configuration {
   bool showTiming = false;
   bool showSummary = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
+  llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;
@@ -209,6 +210,9 @@ struct Configuration {
   // Used for /map.
   std::string mapFile;
 
+  // Used for /mapinfo.
+  bool mapInfo = false;
+
   // Used for /thinlto-index-only:
   llvm::StringRef thinLTOIndexOnlyArg;
 
@@ -285,11 +289,9 @@ struct Configuration {
   bool autoImport = false;
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
+  bool writeCheckSum = false;
 };
 
-extern std::unique_ptr<Configuration> config;
-
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

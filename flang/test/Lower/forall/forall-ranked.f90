@@ -40,7 +40,7 @@
 ! CHECK:           %[[VAL_36:.*]] = fir.convert %[[VAL_35]] : (i32) -> i64
 ! CHECK:           %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (i64) -> index
 ! CHECK:           %[[VAL_38:.*]] = arith.subi %[[VAL_37]], %[[VAL_16]] : index
-! CHECK:           %[[VAL_45:.*]] = fir.call @_QPf(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
+! CHECK:           %[[VAL_45:.*]] = fir.call @_QPf(%[[VAL_0]]) {{.*}}: (!fir.ref<i32>) -> i32
 ! CHECK:           %[[VAL_39:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_40:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_41:.*]] = arith.subi %[[VAL_31]], %[[VAL_39]] : index

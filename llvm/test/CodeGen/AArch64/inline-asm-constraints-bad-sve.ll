@@ -8,9 +8,9 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK: error: couldn't allocate output register for constraint 'w'
 ; CHECK: error: unknown token in expression
 
-define <vscale x 16 x i1> @foo1(i32 *%in) {
+define <vscale x 16 x i1> @foo1(ptr %in) {
 entry:
-  %0 = load i32, i32* %in, align 4
+  %0 = load i32, ptr %in, align 4
   %1 = call <vscale x 16 x i1> asm sideeffect "mov $0.b, $1.b \0A", "=@3Upa,@3Upa"(i32 %0)
   ret <vscale x 16 x i1> %1
 }

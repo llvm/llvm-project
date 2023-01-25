@@ -18,9 +18,9 @@
 // CHECK-NEXT: core.CallAndMessageModeling
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.NonNullParamChecker
-// CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.StdCLibraryFunctions
 // CHECK-NEXT: alpha.unix.StdCLibraryFunctionArgs
+// CHECK-NEXT: alpha.unix.Stream
 // CHECK-NEXT: apiModeling.Errno
 // CHECK-NEXT: apiModeling.TrustNonnull
 // CHECK-NEXT: apiModeling.TrustReturnsNonnull

@@ -36,6 +36,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
+#include <optional>
 
 namespace clang {
   class APValue;
@@ -523,15 +524,25 @@ public:
   /// semantically correspond to a bool.
   bool isKnownToHaveBooleanValue(bool Semantic = true) const;
 
+  /// Check whether this array fits the idiom of a flexible array member,
+  /// depending on the value of -fstrict-flex-array.
+  /// When IgnoreTemplateOrMacroSubstitution is set, it doesn't consider sizes
+  /// resulting from the substitution of a macro or a template as special sizes.
+  bool isFlexibleArrayMemberLike(
+      ASTContext &Context,
+      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+      bool IgnoreTemplateOrMacroSubstitution = false) const;
+
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return None and fill
-  /// in Loc (if specified) with the location of the invalid expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
+  /// and fill in Loc (if specified) with the location of the invalid
+  /// expression.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  Optional<llvm::APSInt> getIntegerConstantExpr(const ASTContext &Ctx,
-                                                SourceLocation *Loc = nullptr,
-                                                bool isEvaluated = true) const;
+  std::optional<llvm::APSInt>
+  getIntegerConstantExpr(const ASTContext &Ctx, SourceLocation *Loc = nullptr,
+                         bool isEvaluated = true) const;
   bool isIntegerConstantExpr(const ASTContext &Ctx,
                              SourceLocation *Loc = nullptr) const;
 
@@ -1973,7 +1984,7 @@ public:
     LFunction, // Same as Function, but as wide string.
     FuncDName,
     FuncSig,
-    LFuncSig, // Same as FuncSig, but as as wide string
+    LFuncSig, // Same as FuncSig, but as wide string
     PrettyFunction,
     /// The same as PrettyFunction, except that the
     /// 'virtual' keyword is omitted for virtual member functions.
@@ -3010,7 +3021,7 @@ public:
   /// Compute and set dependence bits.
   void computeDependence() {
     setDependence(clang::computeDependence(
-        this, llvm::makeArrayRef(
+        this, llvm::ArrayRef(
                   reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
                   getNumPreArgs())));
   }
@@ -3057,13 +3068,9 @@ public:
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
   ArrayRef<Stmt *> getRawSubExprs() {
-    return llvm::makeArrayRef(getTrailingStmts(),
-                              PREARGS_START + getNumPreArgs() + getNumArgs());
+    return llvm::ArrayRef(getTrailingStmts(),
+                          PREARGS_START + getNumPreArgs() + getNumArgs());
   }
-
-  /// getNumCommas - Return the number of commas that must have been present in
-  /// this function call.
-  unsigned getNumCommas() const { return getNumArgs() ? getNumArgs() - 1 : 0; }
 
   /// Get FPOptionsOverride from trailing storage.
   FPOptionsOverride getStoredFPFeatures() const {
@@ -4009,7 +4016,7 @@ public:
   }
 
   // This is used in ASTImporter
-  FPOptionsOverride getFPFeatures(const LangOptions &LO) const {
+  FPOptionsOverride getFPFeatures() const {
     if (BinaryOperatorBits.HasFPFeatures)
       return getStoredFPFeatures();
     return FPOptionsOverride();
@@ -4828,12 +4835,10 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() {
-    return llvm::makeArrayRef(getInits(), getNumInits());
-  }
+  ArrayRef<Expr *> inits() { return llvm::ArrayRef(getInits(), getNumInits()); }
 
   ArrayRef<Expr *> inits() const {
-    return llvm::makeArrayRef(getInits(), getNumInits());
+    return llvm::ArrayRef(getInits(), getNumInits());
   }
 
   const Expr *getInit(unsigned Init) const {
@@ -5575,9 +5580,7 @@ public:
     return reinterpret_cast<Expr **>(getTrailingObjects<Stmt *>());
   }
 
-  ArrayRef<Expr *> exprs() {
-    return llvm::makeArrayRef(getExprs(), getNumExprs());
-  }
+  ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -6428,7 +6431,7 @@ public:
 
   ArrayRef<Expr *> subExpressions() {
     auto *B = getTrailingObjects<Expr *>();
-    return llvm::makeArrayRef(B, B + NumExprs);
+    return llvm::ArrayRef(B, B + NumExprs);
   }
 
   ArrayRef<const Expr *> subExpressions() const {

@@ -11,7 +11,7 @@
 ; };
 ;
 ; class C1 {
-;   alignas(64) static void *p;
+;   alignas(64) static ptr p;
 ; };
 ;
 ; enum alignas(16) E {
@@ -95,15 +95,14 @@ entry:
   %c1 = alloca %class.C1, align 1
   %i = alloca i32, align 32
   %Lambda = alloca %class.anon, align 4
-  call void @llvm.dbg.declare(metadata %struct.S* %ss, metadata !27, metadata !28), !dbg !29
-  call void @llvm.dbg.declare(metadata i32* %e, metadata !30, metadata !28), !dbg !31
-  call void @llvm.dbg.declare(metadata %class.C1* %c1, metadata !32, metadata !28), !dbg !37
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !38, metadata !28), !dbg !40
-  store i32 42, i32* %i, align 32, !dbg !40
-  call void @llvm.dbg.declare(metadata %class.anon* %Lambda, metadata !41, metadata !28), !dbg !50
-  %0 = getelementptr inbounds %class.anon, %class.anon* %Lambda, i32 0, i32 0, !dbg !51
-  %1 = load i32, i32* %i, align 32, !dbg !52
-  store i32 %1, i32* %0, align 4, !dbg !51
+  call void @llvm.dbg.declare(metadata ptr %ss, metadata !27, metadata !28), !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %e, metadata !30, metadata !28), !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %c1, metadata !32, metadata !28), !dbg !37
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !38, metadata !28), !dbg !40
+  store i32 42, ptr %i, align 32, !dbg !40
+  call void @llvm.dbg.declare(metadata ptr %Lambda, metadata !41, metadata !28), !dbg !50
+  %0 = load i32, ptr %i, align 32, !dbg !52
+  store i32 %0, ptr %Lambda, align 4, !dbg !51
   ret void, !dbg !53
 }
 

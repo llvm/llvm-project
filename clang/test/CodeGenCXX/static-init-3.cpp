@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin10.0.0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin10.0.0 -o - %s | FileCheck %s
 
 // PR7050
 template<class T> struct X0 : public T { };
@@ -16,8 +16,8 @@ struct X1
     }
 };
 
-// CHECK: @_ZN2X1I2X2I1BEE8instanceE = linkonce_odr global %struct.X2* null, align 8
-// CHECJ: @_ZN2X1I2X2I1AEE8instanceE = linkonce_odr global %struct.X2* null, align 8
+// CHECK: @_ZN2X1I2X2I1BEE8instanceE = linkonce_odr global ptr null, align 8
+// CHECJ: @_ZN2X1I2X2I1AEE8instanceE = linkonce_odr global ptr null, align 8
 template<class T> T & X1<T>::instance = X1<T>::get();
 
 class A { };

@@ -26,43 +26,6 @@ EmulationStateARM::EmulationStateARM() : m_vfp_regs(), m_memory() {
 
 EmulationStateARM::~EmulationStateARM() = default;
 
-bool EmulationStateARM::LoadPseudoRegistersFromFrame(StackFrame &frame) {
-  RegisterContext *reg_ctx = frame.GetRegisterContext().get();
-  bool success = true;
-  uint32_t reg_num;
-
-  for (int i = dwarf_r0; i < dwarf_r0 + 17; ++i) {
-    reg_num =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(eRegisterKindDWARF, i);
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
-    RegisterValue reg_value;
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-      m_gpr[i - dwarf_r0] = reg_value.GetAsUInt32();
-    } else
-      success = false;
-  }
-
-  for (int i = dwarf_d0; i < dwarf_d0 + 32; ++i) {
-    reg_num =
-        reg_ctx->ConvertRegisterKindToRegisterNumber(eRegisterKindDWARF, i);
-    RegisterValue reg_value;
-    const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_num);
-
-    if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-      uint64_t value = reg_value.GetAsUInt64();
-      uint32_t idx = i - dwarf_d0;
-      if (i < 16) {
-        m_vfp_regs.s_regs[idx * 2] = (uint32_t)value;
-        m_vfp_regs.s_regs[idx * 2 + 1] = (uint32_t)(value >> 32);
-      } else
-        m_vfp_regs.d_regs[idx - 16] = value;
-    } else
-      success = false;
-  }
-
-  return success;
-}
-
 bool EmulationStateARM::StorePseudoRegisterValue(uint32_t reg_num,
                                                  uint64_t value) {
   if (reg_num <= dwarf_cpsr)
@@ -92,7 +55,7 @@ uint64_t EmulationStateARM::ReadPseudoRegisterValue(uint32_t reg_num,
     value = m_gpr[reg_num - dwarf_r0];
   else if ((dwarf_s0 <= reg_num) && (reg_num <= dwarf_s31)) {
     uint32_t idx = reg_num - dwarf_s0;
-    value = m_vfp_regs.d_regs[idx];
+    value = m_vfp_regs.s_regs[idx];
   } else if ((dwarf_d0 <= reg_num) && (reg_num <= dwarf_d31)) {
     uint32_t idx = reg_num - dwarf_d0;
     if (idx < 16)

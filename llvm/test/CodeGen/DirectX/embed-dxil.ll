@@ -3,13 +3,19 @@
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 target triple = "dxil-unknown-shadermodel6.5-library"
 
+; Make sure triple is restored after updated to dxil.
+; CHECK:target triple = "dxil-unknown-shadermodel6.5-library"
+
 define i32 @add(i32 %a, i32 %b) {
   %sum = add i32 %a, %b
   ret i32 %sum
 }
 
 ; CHECK: @dx.dxil = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "DXIL", align 4
-; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @dx.dxil], section "llvm.metadata"
+
+; The dxil global should be the first here because we generate it before the
+; other globals. If it isn't the first here, that's probably a bug.
+; CHECK: @llvm.compiler.used = appending global {{\[[0-9]+ x ptr\]}} [ptr @dx.dxil
 
 ; This is using regex matches on some sizes, offsets and fields. These are all
 ; going to change as the DirectX backend continues to evolve and implement more
@@ -36,8 +42,11 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXC-NEXT:       MajorVersion:    6
 ; DXC-NEXT:       MinorVersion:    5
 ; DXC-NEXT:       ShaderKind:      6
-; DXC-NEXT:       Size:            [[#div(SIZE,4) - 2]]
+; DXC-NEXT:       Size:            [[#div(SIZE,4)]]
 ; DXC-NEXT:       DXILMajorVersion: [[#]]
 ; DXC-NEXT:       DXILMinorVersion: [[#]]
-; DXC-NEXT:       DXILSize:        [[#SIZE - 32]]
+; DXC-NEXT:       DXILSize:        [[#SIZE - 24]]
 ; DXC-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
+; DXC:      - Name:            SFI0
+; DXC-NEXT:   Size:            8
+; DXC-NOT:    Flags:

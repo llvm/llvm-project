@@ -6,11 +6,10 @@
 ; GCN-LABEL: {{^}}test:
 ; GCN: enable_sgpr_dispatch_ptr = 1
 ; GCN: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
-define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %header_ptr = bitcast i8 addrspace(4)* %dispatch_ptr to i32 addrspace(4)*
-  %value = load i32, i32 addrspace(4)* %header_ptr
-  store i32 %value, i32 addrspace(1)* %out
+define amdgpu_kernel void @test(ptr addrspace(1) %out) {
+  %dispatch_ptr = call noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
+  %value = load i32, ptr addrspace(4) %dispatch_ptr
+  store i32 %value, ptr addrspace(1) %out
   ret void
 }
 
@@ -20,16 +19,15 @@ define amdgpu_kernel void @test(i32 addrspace(1)* %out) {
 ; GCN: s_lshr_b32 s{{[0-9]+}}, s[[REG]], 16
 ; GCN-NOT: load_ushort
 ; GCN: s_endpgm
-define amdgpu_kernel void @test2(i32 addrspace(1)* %out) {
-  %dispatch_ptr = call noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
-  %d1 = getelementptr inbounds i8, i8 addrspace(4)* %dispatch_ptr, i64 6
-  %h1 = bitcast i8 addrspace(4)* %d1 to i16 addrspace(4)*
-  %v1 = load i16, i16 addrspace(4)* %h1
+define amdgpu_kernel void @test2(ptr addrspace(1) %out) {
+  %dispatch_ptr = call noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
+  %d1 = getelementptr inbounds i8, ptr addrspace(4) %dispatch_ptr, i64 6
+  %v1 = load i16, ptr addrspace(4) %d1
   %e1 = zext i16 %v1 to i32
-  store i32 %e1, i32 addrspace(1)* %out
+  store i32 %e1, ptr addrspace(1) %out
   ret void
 }
 
-declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #0
+declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr() #0
 
 attributes #0 = { readnone }

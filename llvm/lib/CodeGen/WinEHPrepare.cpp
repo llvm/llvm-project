@@ -556,8 +556,8 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
       // Create the entry for this cleanup with the appropriate handler
       // properties.  Finally and fault handlers are distinguished by arity.
       ClrHandlerType HandlerType =
-          (Cleanup->getNumArgOperands() ? ClrHandlerType::Fault
-                                        : ClrHandlerType::Finally);
+          (Cleanup->arg_size() ? ClrHandlerType::Fault
+                               : ClrHandlerType::Finally);
       int CleanupState = addClrEHHandler(FuncInfo, HandlerParentState, -1,
                                          HandlerType, 0, Pad->getParent());
       // Queue any child EH pads on the worklist.
@@ -733,7 +733,7 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F,
 
   for (auto *PN : PHINodes) {
     // There may be lingering uses on other EH PHIs being removed
-    PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+    PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
     PN->eraseFromParent();
   }
 }
@@ -847,10 +847,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
           ColorVector &IncomingColors = BlockColors[IncomingBlock];
           assert(!IncomingColors.empty() && "Block not colored!");
           assert((IncomingColors.size() == 1 ||
-                  llvm::all_of(IncomingColors,
-                               [&](BasicBlock *Color) {
-                                 return Color != FuncletPadBB;
-                               })) &&
+                  !llvm::is_contained(IncomingColors, FuncletPadBB)) &&
                  "Cloning should leave this funclet's blocks monochromatic");
           EdgeTargetsFunclet = (IncomingColors.front() == FuncletPadBB);
         }
@@ -1215,8 +1212,8 @@ void WinEHPrepare::replaceUseWithLoad(Value *V, Use &U, AllocaInst *&SpillSlot,
       BranchInst *Goto = cast<BranchInst>(IncomingBlock->getTerminator());
       Goto->removeFromParent();
       CatchRet->removeFromParent();
-      IncomingBlock->getInstList().push_back(CatchRet);
-      NewBlock->getInstList().push_back(Goto);
+      CatchRet->insertInto(IncomingBlock, IncomingBlock->end());
+      Goto->insertInto(NewBlock, NewBlock->end());
       Goto->setSuccessor(0, PHIBlock);
       CatchRet->setSuccessor(NewBlock);
       // Update the color mapping for the newly split edge.

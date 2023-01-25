@@ -10,6 +10,7 @@
 #define LLDB_TARGET_REMOTEAWAREPLATFORM_H
 
 #include "lldb/Target/Platform.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -64,8 +65,8 @@ public:
                          FileSpec &local_file) override;
 
   bool GetRemoteOSVersion() override;
-  llvm::Optional<std::string> GetRemoteOSBuildString() override;
-  llvm::Optional<std::string> GetRemoteOSKernelDescription() override;
+  std::optional<std::string> GetRemoteOSBuildString() override;
+  std::optional<std::string> GetRemoteOSKernelDescription() override;
   ArchSpec GetRemoteSystemArchitecture() override;
 
   Status RunShellCommand(llvm::StringRef command, const FileSpec &working_dir,

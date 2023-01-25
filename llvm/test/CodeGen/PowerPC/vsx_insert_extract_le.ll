@@ -15,7 +15,7 @@
 ; RUN:   -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-P9 --implicit-check-not xxswapd
 
-define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
+define <2 x double> @testi0(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: testi0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -45,15 +45,15 @@ define <2 x double> @testi0(<2 x double>* %p1, double* %p2) {
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-P9-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %p1
-  %s = load double, double* %p2
+  %v = load <2 x double>, ptr %p1
+  %s = load double, ptr %p2
   %r = insertelement <2 x double> %v, double %s, i32 0
   ret <2 x double> %r
 
 
 }
 
-define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
+define <2 x double> @testi1(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: testi1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lxvd2x vs0, 0, r3
@@ -83,15 +83,15 @@ define <2 x double> @testi1(<2 x double>* %p1, double* %p2) {
 ; CHECK-P9-NEXT:    lfd f1, 0(r4)
 ; CHECK-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-P9-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %p1
-  %s = load double, double* %p2
+  %v = load <2 x double>, ptr %p1
+  %s = load double, ptr %p2
   %r = insertelement <2 x double> %v, double %s, i32 1
   ret <2 x double> %r
 
 
 }
 
-define double @teste0(<2 x double>* %p1) {
+define double @teste0(ptr %p1) {
 ; CHECK-LABEL: teste0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lfd f1, 0(r3)
@@ -111,14 +111,14 @@ define double @teste0(<2 x double>* %p1) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 0(r3)
 ; CHECK-P9-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %p1
+  %v = load <2 x double>, ptr %p1
   %r = extractelement <2 x double> %v, i32 0
   ret double %r
 
 
 }
 
-define double @teste1(<2 x double>* %p1) {
+define double @teste1(ptr %p1) {
 ; CHECK-LABEL: teste1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lfd f1, 8(r3)
@@ -138,7 +138,7 @@ define double @teste1(<2 x double>* %p1) {
 ; CHECK-P9:       # %bb.0:
 ; CHECK-P9-NEXT:    lfd f1, 8(r3)
 ; CHECK-P9-NEXT:    blr
-  %v = load <2 x double>, <2 x double>* %p1
+  %v = load <2 x double>, ptr %p1
   %r = extractelement <2 x double> %v, i32 1
   ret double %r
 

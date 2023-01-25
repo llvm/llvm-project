@@ -9,6 +9,8 @@
 // Information about the process mappings (Solaris-specific parts).
 //===----------------------------------------------------------------------===//
 
+// Before Solaris 11.4, <procfs.h> doesn't work in a largefile environment.
+#undef _FILE_OFFSET_BITS
 #include "sanitizer_platform.h"
 #if SANITIZER_SOLARIS
 #  include <fcntl.h>

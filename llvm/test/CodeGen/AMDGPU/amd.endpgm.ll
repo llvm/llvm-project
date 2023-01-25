@@ -40,7 +40,7 @@ define void @test1() {
   unreachable
 }
 
-define amdgpu_kernel void @test2(i32* %p, i32 %x) {
+define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX9-LABEL: test2:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dword s2, s[0:1], 0x2c
@@ -99,7 +99,7 @@ then:
   unreachable
 
 else:
-  store i32 %x, i32* %p
+  store i32 %x, ptr %p
   ret void
 }
 

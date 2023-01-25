@@ -14,8 +14,12 @@
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/MemoryBuffer.h"
+
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 
@@ -40,11 +44,18 @@ namespace lldb_private {
 
 class DataFileCache {
 public:
-  /// Create a data file cache in the directory path that is specified.
+  /// Create a data file cache in the directory path that is specified, using
+  /// the specified policy.
   ///
   /// Data will be cached in files created in this directory when clients call
   /// DataFileCache::SetCacheData.
-  DataFileCache(llvm::StringRef path);
+  DataFileCache(llvm::StringRef path,
+                llvm::CachePruningPolicy policy =
+                    DataFileCache::GetLLDBIndexCachePolicy());
+
+  /// Gets the default LLDB index cache policy, which is controlled by the
+  /// "LLDBIndexCache" family of settings.
+  static llvm::CachePruningPolicy GetLLDBIndexCachePolicy();
 
   /// Get cached data from the cache directory for the specified key.
   ///
@@ -97,13 +108,13 @@ private:
 /// it is out of date.
 struct CacheSignature {
   /// UUID of object file or module.
-  llvm::Optional<UUID> m_uuid = llvm::None;
+  std::optional<UUID> m_uuid;
   /// Modification time of file on disk.
-  llvm::Optional<std::time_t> m_mod_time = llvm::None;
+  std::optional<std::time_t> m_mod_time;
   /// If this describes a .o file with a BSD archive, the BSD archive's
   /// modification time will be in m_mod_time, and the .o file's modification
   /// time will be in this m_obj_mod_time.
-  llvm::Optional<std::time_t> m_obj_mod_time = llvm::None;
+  std::optional<std::time_t> m_obj_mod_time;
 
   CacheSignature() = default;
 
@@ -114,9 +125,9 @@ struct CacheSignature {
   CacheSignature(lldb_private::ObjectFile *objfile);
 
   void Clear() {
-    m_uuid = llvm::None;
-    m_mod_time = llvm::None;
-    m_obj_mod_time = llvm::None;
+    m_uuid = std::nullopt;
+    m_mod_time = std::nullopt;
+    m_obj_mod_time = std::nullopt;
   }
 
   /// Return true only if the CacheSignature is valid.

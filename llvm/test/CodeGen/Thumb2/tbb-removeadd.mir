@@ -6,7 +6,7 @@
   target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8r-arm-none-eabi"
   
-  define void @Func(i32 %i, i32* nocapture %p) local_unnamed_addr {
+  define void @Func(i32 %i, ptr nocapture %p) local_unnamed_addr {
   entry:
     switch i32 %i, label %sw.epilog [
       i32 0, label %sw.bb
@@ -19,7 +19,7 @@
     br label %sw.epilog.sink.split
   
   sw.bb1:                                           ; preds = %entry
-    store i32 0, i32* %p, align 4
+    store i32 0, ptr %p, align 4
     br label %sw.epilog.sink.split
   
   sw.bb3:                                           ; preds = %entry
@@ -27,7 +27,7 @@
   
   sw.epilog.sink.split:                             ; preds = %sw.bb3, %sw.bb1, %sw.bb, %entry
     %.sink = phi i32 [ 2, %sw.bb3 ], [ 0, %sw.bb ], [ 1, %entry ], [ 1, %sw.bb1 ]
-    store i32 %.sink, i32* %p, align 4
+    store i32 %.sink, ptr %p, align 4
     br label %sw.epilog
   
   sw.epilog:                                        ; preds = %sw.epilog.sink.split, %entry

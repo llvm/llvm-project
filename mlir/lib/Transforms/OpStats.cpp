@@ -6,19 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_PRINTOPSTATS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
+struct PrintOpStatsPass : public impl::PrintOpStatsBase<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os) : os(os) {}
 
   explicit PrintOpStatsPass(raw_ostream &os, bool printAsJSON) : os(os) {
@@ -66,16 +71,15 @@ void PrintOpStatsPass::printSummary() {
   };
 
   // Compute the largest dialect and operation name.
-  StringRef dialectName, opName;
   size_t maxLenOpName = 0, maxLenDialect = 0;
   for (const auto &key : sorted) {
-    std::tie(dialectName, opName) = splitOperationName(key);
+    auto [dialectName, opName] = splitOperationName(key);
     maxLenDialect = std::max(maxLenDialect, dialectName.size());
     maxLenOpName = std::max(maxLenOpName, opName.size());
   }
 
   for (const auto &key : sorted) {
-    std::tie(dialectName, opName) = splitOperationName(key);
+    auto [dialectName, opName] = splitOperationName(key);
 
     // Left-align the names (aligning on the dialect) and right-align the count
     // below. The alignment is for readability and does not affect CSV/FileCheck

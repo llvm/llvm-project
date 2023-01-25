@@ -18,10 +18,10 @@
 #include "BitcodeWriter.h"
 #include "Representation.h"
 #include "clang/AST/AST.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace doc {
@@ -65,7 +65,7 @@ private:
   llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);
 
   llvm::BitstreamCursor &Stream;
-  Optional<llvm::BitstreamBlockInfo> BlockInfo;
+  std::optional<llvm::BitstreamBlockInfo> BlockInfo;
   FieldId CurrentReferenceField;
 };
 

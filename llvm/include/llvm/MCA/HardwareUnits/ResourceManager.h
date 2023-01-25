@@ -247,7 +247,7 @@ public:
   }
 
   unsigned getNumUnits() const {
-    return isAResourceGroup() ? 1U : countPopulation(ResourceSizeMask);
+    return isAResourceGroup() ? 1U : llvm::popcount(ResourceSizeMask);
   }
 
   /// Checks if there is an available slot in the resource buffer.

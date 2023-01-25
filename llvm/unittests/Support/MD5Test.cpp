@@ -40,20 +40,20 @@ void TestMD5Sum(StringRef Input, StringRef Final) {
 }
 
 TEST(MD5Test, MD5) {
-  TestMD5Sum(makeArrayRef((const uint8_t *)"", (size_t) 0),
+  TestMD5Sum(ArrayRef((const uint8_t *)"", (size_t)0),
              "d41d8cd98f00b204e9800998ecf8427e");
-  TestMD5Sum(makeArrayRef((const uint8_t *)"a", (size_t) 1),
+  TestMD5Sum(ArrayRef((const uint8_t *)"a", (size_t)1),
              "0cc175b9c0f1b6a831c399e269772661");
-  TestMD5Sum(makeArrayRef((const uint8_t *)"abcdefghijklmnopqrstuvwxyz",
-                          (size_t) 26),
-             "c3fcd3d76192e4007dfb496cca67e13b");
-  TestMD5Sum(makeArrayRef((const uint8_t *)"\0", (size_t) 1),
+  TestMD5Sum(
+      ArrayRef((const uint8_t *)"abcdefghijklmnopqrstuvwxyz", (size_t)26),
+      "c3fcd3d76192e4007dfb496cca67e13b");
+  TestMD5Sum(ArrayRef((const uint8_t *)"\0", (size_t)1),
              "93b885adfe0da089cdf634904fd59f71");
-  TestMD5Sum(makeArrayRef((const uint8_t *)"a\0", (size_t) 2),
+  TestMD5Sum(ArrayRef((const uint8_t *)"a\0", (size_t)2),
              "4144e195f46de78a3623da7364d04f11");
-  TestMD5Sum(makeArrayRef((const uint8_t *)"abcdefghijklmnopqrstuvwxyz\0",
-                          (size_t) 27),
-             "81948d1f1554f58cd1a56ebb01f808cb");
+  TestMD5Sum(
+      ArrayRef((const uint8_t *)"abcdefghijklmnopqrstuvwxyz\0", (size_t)27),
+      "81948d1f1554f58cd1a56ebb01f808cb");
   TestMD5Sum("abcdefghijklmnopqrstuvwxyz", "c3fcd3d76192e4007dfb496cca67e13b");
 }
 

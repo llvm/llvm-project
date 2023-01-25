@@ -3,7 +3,7 @@
 ; transform.
 ;
 ; RUN: opt < %s -disable-output -debug-pass-manager 2>&1 -aa-pipeline=basic-aa,globals-aa \
-; RUN:    -passes='require<globals-aa>,function(require<aa>,instcombine),function(require<aa>)' \
+; RUN: -passes='require<globals-aa>,function(require<aa>,instcombine),function(require<aa>)' \
 ; RUN:    | FileCheck %s --check-prefix=AA
 ; AA: Running analysis: GlobalsAA
 ; AA: Running analysis: AAManager
@@ -18,7 +18,7 @@
 ; AA-NOT: Running analysis: BasicAA
 ;
 ; RUN: opt < %s -disable-output -debug-pass-manager 2>&1 \
-; RUN:    -passes='require<domtree>,instcombine,require<domtree>' \
+; RUN: -passes='require<domtree>,instcombine,require<domtree>' \
 ; RUN:    | FileCheck %s --check-prefix=DT
 ; DT: Running analysis: DominatorTreeAnalysis
 ; DT: Running pass: InstCombinePass on test

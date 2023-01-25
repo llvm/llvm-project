@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes=instcombine -S | FileCheck %s
 
 ; Test to check that instcombine doesn't drop the address space when optimizing
 ; memset.

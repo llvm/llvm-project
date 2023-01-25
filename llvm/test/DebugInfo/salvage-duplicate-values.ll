@@ -1,4 +1,4 @@
-; RUN: opt %s -dce -S | FileCheck %s
+; RUN: opt %s -passes=dce -S | FileCheck %s
 
 ; Tests the results of salvaging variadic dbg.values that use the same SSA value
 ; multiple times.

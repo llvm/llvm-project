@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 # Keyed off LLVM_ENABLE_PLUGINS in the CMake build, which is usually false
 # on Windows and true elsewhere.
@@ -48,7 +48,6 @@ unittest("PluginsTests") {
       ":DoublerPlugin",
       ":TestPlugin",
     ]
-    defines = [ "LLVM_ENABLE_PLUGINS" ]
   }
 
   if (host_os != "mac" && host_os != "win") {

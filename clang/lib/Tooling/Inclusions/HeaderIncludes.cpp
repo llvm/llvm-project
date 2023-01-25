@@ -10,9 +10,9 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -58,7 +58,7 @@ unsigned getOffsetAfterTokenSequence(
 // (second) raw_identifier name is checked.
 bool checkAndConsumeDirectiveWithName(
     Lexer &Lex, StringRef Name, Token &Tok,
-    llvm::Optional<StringRef> RawIDName = llvm::None) {
+    std::optional<StringRef> RawIDName = std::nullopt) {
   bool Matched = Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
                  Tok.is(tok::raw_identifier) &&
                  Tok.getRawIdentifier() == Name && !Lex.LexFromRawLexer(Tok) &&
@@ -266,6 +266,8 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   return false;
 }
 
+const llvm::Regex HeaderIncludes::IncludeRegex(IncludeRegexPattern);
+
 HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
                                const IncludeStyle &Style)
     : FileName(FileName), Code(Code), FirstIncludeOffset(-1),
@@ -274,8 +276,7 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
-      Categories(Style, FileName),
-      IncludeRegex(llvm::Regex(IncludeRegexPattern)) {
+      Categories(Style, FileName) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
   Priorities = {0, INT_MAX};
@@ -295,7 +296,9 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
       addExistingInclude(
           Include(Matches[2],
                   tooling::Range(
-                      Offset, std::min(Line.size() + 1, Code.size() - Offset))),
+                      Offset, std::min(Line.size() + 1, Code.size() - Offset)),
+                  Matches[1] == "import" ? tooling::IncludeDirective::Import
+                                         : tooling::IncludeDirective::Include),
           NextLineOffset);
     }
     Offset = NextLineOffset;
@@ -340,18 +343,21 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
   }
 }
 
-llvm::Optional<tooling::Replacement>
-HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
+std::optional<tooling::Replacement>
+HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
+                       IncludeDirective Directive) const {
   assert(IncludeName == trimInclude(IncludeName));
   // If a <header> ("header") already exists in code, "header" (<header>) with
-  // different quotation will still be inserted.
+  // different quotation and/or directive will still be inserted.
   // FIXME: figure out if this is the best behavior.
   auto It = ExistingIncludes.find(IncludeName);
-  if (It != ExistingIncludes.end())
+  if (It != ExistingIncludes.end()) {
     for (const auto &Inc : It->second)
-      if ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
-          (!IsAngled && StringRef(Inc.Name).startswith("\"")))
-        return llvm::None;
+      if (Inc.Directive == Directive &&
+          ((IsAngled && StringRef(Inc.Name).startswith("<")) ||
+           (!IsAngled && StringRef(Inc.Name).startswith("\""))))
+        return std::nullopt;
+  }
   std::string Quoted =
       std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
   StringRef QuotedName = Quoted;
@@ -370,8 +376,10 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled) const {
     }
   }
   assert(InsertOffset <= Code.size());
+  llvm::StringRef DirectiveSpelling =
+      Directive == IncludeDirective::Include ? "include" : "import";
   std::string NewInclude =
-      std::string(llvm::formatv("#include {0}\n", QuotedName));
+      llvm::formatv("#{0} {1}\n", DirectiveSpelling, QuotedName);
   // When inserting headers at end of the code, also append '\n' to the code
   // if it does not end with '\n'.
   // FIXME: when inserting multiple #includes at the end of code, only one

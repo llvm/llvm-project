@@ -116,7 +116,7 @@ function(darwin_test_archs os valid_archs)
   if(NOT TEST_COMPILE_ONLY)
     message(STATUS "Finding valid architectures for ${os}...")
     set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
-    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main() { printf(__FILE__); return 0; }\n")
+    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main(void) { printf(__FILE__); return 0; }\n")
 
     set(os_linker_flags)
     foreach(flag ${DARWIN_${os}_LINK_FLAGS})
@@ -140,6 +140,11 @@ function(darwin_test_archs os valid_archs)
   # a valid or useful architecture for the iOS simulator we should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
     list(REMOVE_ITEM archs "x86_64h")
+  endif()
+
+  if(${os} MATCHES "iossim")
+    message(STATUS "Disabling i386 slice for iossim")
+    list(REMOVE_ITEM archs "i386")
   endif()
 
   set(working_archs)
@@ -413,6 +418,12 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingInternal.c
                       ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
+    set(macosx_sdk_version 99999)
+    if ("${os}" STREQUAL "osx")
+      find_darwin_sdk_version(macosx_sdk_version "macosx")
+    endif()
+    add_security_warnings(CFLAGS ${macosx_sdk_version})
+
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
 
     if((arm64 IN_LIST DARWIN_BUILTIN_ARCHS OR arm64e IN_LIST DARWIN_BUILTIN_ARCHS) AND NOT TARGET lse_builtin_symlinks)

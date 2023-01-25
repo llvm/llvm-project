@@ -1,29 +1,29 @@
-// RUN: not %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DPROTOEXPR -o - 2>&1 \
+// RUN: not %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DPROTOEXPR -o - 2>&1 \
 // RUN:     | FileCheck -check-prefix=PROTOEXPR %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DREDUNDANCY -o - \
+// RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DREDUNDANCY -o - \
 // RUN:     | FileCheck -check-prefix=REDUNDANCY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DREDUNDANCY -o - \
+// RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DREDUNDANCY -o - \
 // RUN:     | FileCheck -check-prefix=REDUNDANCY2 %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DBASE -o - \
+// RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DBASE -o - \
 // RUN:     | FileCheck -check-prefix=NONFRAGILE %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DINHERITANCE -o - \
+// RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple x86_64-apple-darwin10 %s -DINHERITANCE -o - \
 // RUN:     | FileCheck -check-prefix=INHERITANCE %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 %s -DBASE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 %s -DBASE -o - \
 // RUN:     | FileCheck -check-prefix=FRAGILE %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 %s -DINHERITANCE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 %s -DINHERITANCE -o - \
 // RUN:     | FileCheck -check-prefix=FRAGILEINHERITANCE %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep %s -DBASE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep %s -DBASE -o - \
 // RUN:     | FileCheck -check-prefix=GNU %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep %s -DINHERITANCE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep %s -DINHERITANCE -o - \
 // RUN:     | FileCheck -check-prefix=GNUINHERITANCE %s
 //
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep-2 %s -DBASE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep-2 %s -DBASE -o - \
 // RUN:     | FileCheck -check-prefix=GNU2 %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep-2 %s -DINHERITANCE -o - \
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-linux-gnu -fobjc-runtime=gnustep-2 %s -DINHERITANCE -o - \
 // RUN:     | FileCheck -check-prefix=GNU2INHERITANCE %s
 
 __attribute__((objc_root_class))
@@ -71,8 +71,8 @@ __attribute__((objc_non_runtime_protocol))
 - (void)doThing;
 + (void)doClassThing;
 @end
-// NONFRAGILE: @"_OBJC_METACLASS_RO_$_NonRuntimeImplementer" {{.*}} %struct._objc_protocol_list* null
-// NONFRAGILE: @"_OBJC_CLASS_RO_$_NonRuntimeImplementer" {{.*}} %struct._objc_protocol_list* null
+// NONFRAGILE: @"_OBJC_METACLASS_RO_$_NonRuntimeImplementer" {{.*}} ptr null
+// NONFRAGILE: @"_OBJC_CLASS_RO_$_NonRuntimeImplementer" {{.*}} ptr null
 @interface NonRuntimeImplementer : Root <NonRuntimeProtocol>
 - (void)doThing;
 + (void)doClassThing;

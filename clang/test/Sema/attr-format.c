@@ -7,10 +7,14 @@ void b(const char *a, ...) __attribute__((format(printf, 1, 1)));    // expected
 void c(const char *a, ...) __attribute__((format(printf, 0, 2)));    // expected-error {{'format' attribute parameter 2 is out of bounds}}
 void d(const char *a, int c) __attribute__((format(printf, 1, 2)));  // expected-warning {{GCC requires a function with the 'format' attribute to be variadic}}
 void e(char *str, int c, ...) __attribute__((format(printf, 2, 3))); // expected-error {{format argument not a string type}}
+void f(int a, const char *b, ...) __attribute__((format(printf, 2, 1))); // expected-error {{'format' attribute parameter 3 is out of bounds}}
+void g(int a, const char *b, ...) __attribute__((format(printf, 2, 2))); // expected-error {{'format' attribute parameter 3 is out of bounds}}
+void h(int a, const char *b, ...) __attribute__((format(printf, 2, 3))); // no-error
+void i(const char *a, int b, ...) __attribute__((format(printf, 1, 2))); // expected-error {{'format' attribute parameter 3 is out of bounds}}
 
 typedef const char *xpto;
-void f(xpto c, va_list list) __attribute__((format(printf, 1, 0))); // no-error
-void g(xpto c) __attribute__((format(printf, 1, 0)));               // no-error
+void j(xpto c, va_list list) __attribute__((format(printf, 1, 0))); // no-error
+void k(xpto c) __attribute__((format(printf, 1, 0)));               // no-error
 
 void y(char *str) __attribute__((format(strftime, 1, 0)));             // no-error
 void z(char *str, int c, ...) __attribute__((format(strftime, 1, 2))); // expected-error {{strftime format attribute requires 3rd parameter to be 0}}
@@ -94,3 +98,9 @@ __attribute__((format(printf, 1, 2))) void forward_fixed(const char *fmt, int i)
   forward_fixed(fmt, i);
   a(fmt, i);
 }
+
+__attribute__((format(printf, 1, 2))) void forward_fixed_2(const char *fmt, int i, int j) { // expected-warning{{GCC requires a function with the 'format' attribute to be variadic}}
+  forward_fixed_2(fmt, i, j);
+  a(fmt, i);
+}
+

@@ -184,7 +184,7 @@ CmpInst::Predicate IRInstructionData::getPredicate() const {
          "Can only get a predicate from a compare instruction");
 
   if (RevisedPredicate)
-    return RevisedPredicate.value();
+    return *RevisedPredicate;
 
   return cast<CmpInst>(Inst)->getPredicate();
 }
@@ -1264,7 +1264,8 @@ IRSimilarityIdentifier IRSimilarityAnalysis::run(Module &M,
 PreservedAnalyses
 IRSimilarityAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   IRSimilarityIdentifier &IRSI = AM.getResult<IRSimilarityAnalysis>(M);
-  Optional<SimilarityGroupList> &SimilarityCandidatesOpt = IRSI.getSimilarity();
+  std::optional<SimilarityGroupList> &SimilarityCandidatesOpt =
+      IRSI.getSimilarity();
 
   for (std::vector<IRSimilarityCandidate> &CandVec : *SimilarityCandidatesOpt) {
     OS << CandVec.size() << " candidates of length "

@@ -88,14 +88,14 @@ SBSourceManager::SBSourceManager(const SBSourceManager &rhs) {
   if (&rhs == this)
     return;
 
-  m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(*rhs.m_opaque_up);
 }
 
 const lldb::SBSourceManager &SBSourceManager::
 operator=(const lldb::SBSourceManager &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
-  m_opaque_up = std::make_unique<SourceManagerImpl>(*(rhs.m_opaque_up.get()));
+  m_opaque_up = std::make_unique<SourceManagerImpl>(*rhs.m_opaque_up);
   return *this;
 }
 

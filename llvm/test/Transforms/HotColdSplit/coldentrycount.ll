@@ -10,9 +10,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK: define {{.*}} @fun{{.*}} ![[HOTPROF:[0-9]+]] {{.*}}section_prefix ![[LIKELY:[0-9]+]]
 ; CHECK: call void @fun.cold.1
 
-define void @fun() !prof !14 {
+define void @fun(i1 %c) !prof !14 {
 entry:
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   ret void

@@ -144,7 +144,7 @@ program test_prog
   deallocate(x)
 end
 
-! CHECK: ModuleLike
+! CHECK: Module test
 module test
   !! When derived type processing is implemented, remove all instances of:
   !!  - !![disable]

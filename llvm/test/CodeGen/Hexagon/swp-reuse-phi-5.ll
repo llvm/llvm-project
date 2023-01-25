@@ -31,7 +31,7 @@ b1:                                               ; preds = %b1, %b0
 b2:                                               ; preds = %b1
   %v12 = lshr i64 %v7, 32
   %v13 = trunc i64 %v12 to i32
-  store i32 %v13, i32* undef, align 4
+  store i32 %v13, ptr undef, align 4
   %v14 = lshr i64 %v5, 32
   ret void
 }

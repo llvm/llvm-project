@@ -83,7 +83,7 @@ entry:
 define dso_local i32 @foo(i32 %b, i32 %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: foo:
 entry:
-  %call = tail call i64 bitcast (i64 (...)* @bar to i64 ()*)() #2
+  %call = tail call i64 @bar() #2
   %conv = trunc i64 %call to i32
   %cmp = icmp ult i32 %conv, 10
 ; %call comes from function call returning i64 so the high bits will need
@@ -99,21 +99,21 @@ entry:
 declare dso_local i64 @bar(...) local_unnamed_addr #1
 
 ; Function Attrs: norecurse nounwind readnone
-define dso_local i32* @inc_p(i32* readnone %p, i32 %a) local_unnamed_addr #0 {
+define dso_local ptr @inc_p(ptr readnone %p, i32 %a) local_unnamed_addr #0 {
 ; CHECK-LABEL: inc_p:
 entry:
   %idx.ext = zext i32 %a to i64
 ; CHECK: r{{[0-9]+}} = w{{[0-9]+}}
 ; CHECK-NOT: r{{[0-9]+}} <<= 32
 ; CHECK-NOT: r{{[0-9]+}} >>= 32
-  %add.ptr = getelementptr inbounds i32, i32* %p, i64 %idx.ext
-  ret i32* %add.ptr
+  %add.ptr = getelementptr inbounds i32, ptr %p, i64 %idx.ext
+  ret ptr %add.ptr
 }
 
 define dso_local i32 @test() local_unnamed_addr {
 ; CHECK-LABEL: test:
 entry:
-  %call = tail call i32 bitcast (i32 (...)* @helper to i32 ()*)()
+  %call = tail call i32 @helper()
   %cmp = icmp sgt i32 %call, 6
 ; The shifts can't be optimized out because %call comes from function call
 ; return i32 so the high bits might be invalid.

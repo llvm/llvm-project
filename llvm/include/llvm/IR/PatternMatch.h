@@ -2206,6 +2206,17 @@ inline typename m_Intrinsic_Ty<Opnd0>::Ty m_Sqrt(const Opnd0 &Op0) {
   return m_Intrinsic<Intrinsic::sqrt>(Op0);
 }
 
+template <typename Opnd0, typename Opnd1>
+inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_CopySign(const Opnd0 &Op0,
+                                                            const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::copysign>(Op0, Op1);
+}
+
+template <typename Opnd0>
+inline typename m_Intrinsic_Ty<Opnd0>::Ty m_VecReverse(const Opnd0 &Op0) {
+  return m_Intrinsic<Intrinsic::experimental_vector_reverse>(Op0);
+}
+
 //===----------------------------------------------------------------------===//
 // Matchers for two-operands operators with the operators in either order
 //
@@ -2284,10 +2295,12 @@ m_NSWNeg(const ValTy &V) {
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
+/// NOTE: we first match the 'Not' (by matching '-1'),
+/// and only then match the inner matcher!
 template <typename ValTy>
-inline BinaryOp_match<ValTy, cst_pred_ty<is_all_ones>, Instruction::Xor, true>
+inline BinaryOp_match<cst_pred_ty<is_all_ones>, ValTy, Instruction::Xor, true>
 m_Not(const ValTy &V) {
-  return m_c_Xor(V, m_AllOnes());
+  return m_c_Xor(m_AllOnes(), V);
 }
 
 template <typename ValTy> struct NotForbidUndef_match {
@@ -2477,7 +2490,7 @@ struct VScaleVal_match {
         if (GEP->getNumIndices() == 1 && isa<ScalableVectorType>(DerefTy) &&
             m_Zero().match(GEP->getPointerOperand()) &&
             m_SpecificInt(1).match(GEP->idx_begin()->get()) &&
-            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
+            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinValue() == 8)
           return true;
       }
     }
@@ -2513,6 +2526,12 @@ struct LogicalOp_match {
       auto *Cond = Select->getCondition();
       auto *TVal = Select->getTrueValue();
       auto *FVal = Select->getFalseValue();
+
+      // Don't match a scalar select of bool vectors.
+      // Transforms expect a single type for operands if this matches.
+      if (Cond->getType() != Select->getType())
+        return false;
+
       if (Opcode == Instruction::And) {
         auto *C = dyn_cast<Constant>(FVal);
         if (C && C->isNullValue())
@@ -2565,6 +2584,25 @@ template <typename LHS, typename RHS>
 inline LogicalOp_match<LHS, RHS, Instruction::Or, true>
 m_c_LogicalOr(const LHS &L, const RHS &R) {
   return LogicalOp_match<LHS, RHS, Instruction::Or, true>(L, R);
+}
+
+/// Matches either L && R or L || R,
+/// either one being in the either binary or logical form.
+/// Note that the latter form is poison-blocking.
+template <typename LHS, typename RHS, bool Commutable = false>
+inline auto m_LogicalOp(const LHS &L, const RHS &R) {
+  return m_CombineOr(
+      LogicalOp_match<LHS, RHS, Instruction::And, Commutable>(L, R),
+      LogicalOp_match<LHS, RHS, Instruction::Or, Commutable>(L, R));
+}
+
+/// Matches either L && R or L || R where L and R are arbitrary values.
+inline auto m_LogicalOp() { return m_LogicalOp(m_Value(), m_Value()); }
+
+/// Matches either L && R or L || R with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_LogicalOp(const LHS &L, const RHS &R) {
+  return m_LogicalOp<LHS, RHS, /*Commutable=*/true>(L, R);
 }
 
 } // end namespace PatternMatch

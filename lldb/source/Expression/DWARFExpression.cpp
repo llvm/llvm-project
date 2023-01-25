@@ -10,6 +10,7 @@
 
 #include <cinttypes>
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Core/Module.h"
@@ -69,9 +70,21 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
                                    ABI *abi) const {
+  auto *MCRegInfo = abi ? &abi->GetMCRegisterInfo() : nullptr;
+  auto GetRegName = [&MCRegInfo](uint64_t DwarfRegNum,
+                                 bool IsEH) -> llvm::StringRef {
+    if (!MCRegInfo)
+      return {};
+    if (std::optional<unsigned> LLVMRegNum =
+            MCRegInfo->getLLVMRegNum(DwarfRegNum, IsEH))
+      if (const char *RegName = MCRegInfo->getName(*LLVMRegNum))
+        return llvm::StringRef(RegName);
+    return {};
+  };
+  llvm::DIDumpOptions DumpOpts;
+  DumpOpts.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression(m_data.GetAsLLVM(), m_data.GetAddressByteSize())
-      .print(s->AsRawOstream(), llvm::DIDumpOptions(),
-             abi ? &abi->GetMCRegisterInfo() : nullptr, nullptr);
+      .print(s->AsRawOstream(), DumpOpts, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
@@ -131,7 +144,7 @@ static bool ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
 /// are made on the state of \p data after this call.
 static offset_t GetOpcodeDataSize(const DataExtractor &data,
                                   const lldb::offset_t data_offset,
-                                  const uint8_t op) {
+                                  const uint8_t op, const DWARFUnit *dwarf_cu) {
   lldb::offset_t offset = data_offset;
   switch (op) {
   case DW_OP_addr:
@@ -333,9 +346,12 @@ static offset_t GetOpcodeDataSize(const DataExtractor &data,
   }
 
   default:
-    break;
+    if (!dwarf_cu) {
+      return LLDB_INVALID_OFFSET;
+    }
+    return dwarf_cu->GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(
+        data, data_offset, op);
   }
-  return LLDB_INVALID_OFFSET;
 }
 
 lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
@@ -364,7 +380,8 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
       }
       ++curr_op_addr_idx;
     } else {
-      const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+      const offset_t op_arg_size =
+          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
       if (op_arg_size == LLDB_INVALID_OFFSET) {
         error = true;
         break;
@@ -375,7 +392,8 @@ lldb::addr_t DWARFExpression::GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
   return LLDB_INVALID_ADDRESS;
 }
 
-bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
+bool DWARFExpression::Update_DW_OP_addr(const DWARFUnit *dwarf_cu,
+                                        lldb::addr_t file_addr) {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
@@ -402,7 +420,8 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
       m_data.SetData(encoder.GetDataBuffer());
       return true;
     } else {
-      const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+      const offset_t op_arg_size =
+          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
       if (op_arg_size == LLDB_INVALID_OFFSET)
         break;
       offset += op_arg_size;
@@ -411,14 +430,16 @@ bool DWARFExpression::Update_DW_OP_addr(lldb::addr_t file_addr) {
   return false;
 }
 
-bool DWARFExpression::ContainsThreadLocalStorage() const {
+bool DWARFExpression::ContainsThreadLocalStorage(
+    const DWARFUnit *dwarf_cu) const {
   lldb::offset_t offset = 0;
   while (m_data.ValidOffset(offset)) {
     const uint8_t op = m_data.GetU8(&offset);
 
     if (op == DW_OP_form_tls_address || op == DW_OP_GNU_push_tls_address)
       return true;
-    const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+    const offset_t op_arg_size =
+        GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
     if (op_arg_size == LLDB_INVALID_OFFSET)
       return false;
     offset += op_arg_size;
@@ -426,6 +447,7 @@ bool DWARFExpression::ContainsThreadLocalStorage() const {
   return false;
 }
 bool DWARFExpression::LinkThreadLocalStorage(
+    const DWARFUnit *dwarf_cu,
     std::function<lldb::addr_t(lldb::addr_t file_addr)> const
         &link_address_callback) {
   const uint32_t addr_byte_size = m_data.GetAddressByteSize();
@@ -471,7 +493,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
       // by a file address on the stack. We assume that DW_OP_const4u or
       // DW_OP_const8u is used for these values, and we check that the last
       // opcode we got before either of these was DW_OP_const4u or
-      // DW_OP_const8u. If so, then we can link the value accodingly. For
+      // DW_OP_const8u. If so, then we can link the value accordingly. For
       // Darwin, the value in the DW_OP_const4u or DW_OP_const8u is the file
       // address of a structure that contains a function pointer, the pthread
       // key and the offset into the data pointed to by the pthread key. So we
@@ -496,7 +518,8 @@ bool DWARFExpression::LinkThreadLocalStorage(
     }
 
     if (!decoded_data) {
-      const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+      const offset_t op_arg_size =
+          GetOpcodeDataSize(m_data, offset, op, dwarf_cu);
       if (op_arg_size == LLDB_INVALID_OFFSET)
         return false;
       else
@@ -735,7 +758,7 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
                                             Value *value = nullptr) {
   // Note that this function is conflating DWARF expressions with
   // DWARF location descriptions. Perhaps it would be better to define
-  // a wrapper for DWARFExpresssion::Eval() that deals with DWARF
+  // a wrapper for DWARFExpression::Eval() that deals with DWARF
   // location descriptions (which consist of one or more DWARF
   // expressions). But doing this would mean we'd also need factor the
   // handling of DW_OP_(bit_)piece out of this function.
@@ -773,18 +796,18 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 /// \param dw_op_type C-style string used to vary the error output
 /// \param file_addr the file address we are trying to resolve and turn into a
 ///                  load address
-/// \param so_addr out parameter, will be set to load addresss or section offset
+/// \param so_addr out parameter, will be set to load address or section offset
 /// \param check_sectionoffset bool which determines if having a section offset
 ///                            but not a load address is considerd a success
-/// \returns llvm::Optional containing the load address if resolving and getting
+/// \returns std::optional containing the load address if resolving and getting
 ///          the load address succeed or an empty Optinal otherwise. If
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
-static llvm::Optional<lldb::addr_t>
+static std::optional<lldb::addr_t>
 ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
-                          Status *error_ptr, const char *dw_op_type,
-                          lldb::addr_t file_addr, Address &so_addr,
-                          bool check_sectionoffset = false) {
+                   Status *error_ptr, const char *dw_op_type,
+                   lldb::addr_t file_addr, Address &so_addr,
+                   bool check_sectionoffset = false) {
   if (!module_sp) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat(
@@ -847,10 +870,12 @@ bool DWARFExpression::Evaluate(
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
+  Target *target = nullptr;
 
   if (exe_ctx) {
     process = exe_ctx->GetProcessPtr();
     frame = exe_ctx->GetFramePtr();
+    target = exe_ctx->GetTargetPtr();
   }
   if (reg_ctx == nullptr && frame)
     reg_ctx = frame->GetRegisterContext().get();
@@ -906,12 +931,14 @@ bool DWARFExpression::Evaluate(
     // address and whose size is the size of an address on the target machine.
     case DW_OP_addr:
       stack.push_back(Scalar(opcodes.GetAddress(&offset)));
-      stack.back().SetValueType(Value::ValueType::FileAddress);
-      // Convert the file address to a load address, so subsequent
-      // DWARF operators can operate on it.
-      if (frame)
-        stack.back().ConvertToLoadAddress(module_sp.get(),
-                                          frame->CalculateTarget().get());
+      if (target &&
+          target->GetArchitecture().GetCore() == ArchSpec::eCore_wasm32) {
+        // wasm file sections aren't mapped into memory, therefore addresses can
+        // never point into a file section and are always LoadAddresses.
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
+      } else {
+        stack.back().SetValueType(Value::ValueType::FileAddress);
+      }
       break;
 
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
@@ -985,11 +1012,12 @@ bool DWARFExpression::Evaluate(
 
         stack.back().GetScalar() = *maybe_load_addr;
         // Fall through to load address promotion code below.
-      } LLVM_FALLTHROUGH;
+      }
+        [[fallthrough]];
       case Value::ValueType::Scalar:
         // Promote Scalar to LoadAddress and fall through.
         stack.back().SetValueType(Value::ValueType::LoadAddress);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Value::ValueType::LoadAddress:
         if (exe_ctx) {
           if (process) {
@@ -1134,7 +1162,7 @@ bool DWARFExpression::Evaluate(
         // Fall through to load address promotion code below.
       }
 
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Value::ValueType::Scalar:
       case Value::ValueType::LoadAddress:
         if (exe_ctx) {
@@ -2373,9 +2401,11 @@ bool DWARFExpression::Evaluate(
           return false;
         }
       } else {
-        // Retrieve the type DIE that the value is being converted to.
+        // Retrieve the type DIE that the value is being converted to. This
+        // offset is compile unit relative so we need to fix it up.
+        const uint64_t abs_die_offset = die_offset +  dwarf_cu->GetOffset();
         // FIXME: the constness has annoying ripple effects.
-        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(die_offset);
+        DWARFDIE die = const_cast<DWARFUnit *>(dwarf_cu)->GetDIE(abs_die_offset);
         if (!die) {
           if (error_ptr)
             error_ptr->SetErrorString("Cannot resolve DW_OP_convert type DIE");
@@ -2504,7 +2534,14 @@ bool DWARFExpression::Evaluate(
       uint64_t index = opcodes.GetULEB128(&offset);
       lldb::addr_t value = dwarf_cu->ReadAddressFromDebugAddrSection(index);
       stack.push_back(Scalar(value));
-      stack.back().SetValueType(Value::ValueType::FileAddress);
+      if (target &&
+          target->GetArchitecture().GetCore() == ArchSpec::eCore_wasm32) {
+        // wasm file sections aren't mapped into memory, therefore addresses can
+        // never point into a file section and are always LoadAddresses.
+        stack.back().SetValueType(Value::ValueType::LoadAddress);
+      } else {
+        stack.back().SetValueType(Value::ValueType::FileAddress);
+      }
     } break;
 
     // OPCODE: DW_OP_GNU_const_index
@@ -2538,6 +2575,12 @@ bool DWARFExpression::Evaluate(
     }
 
     default:
+      if (dwarf_cu) {
+        if (dwarf_cu->GetSymbolFileDWARF().ParseVendorDWARFOpcode(
+                op, opcodes, offset, stack)) {
+          break;
+        }
+      }
       if (error_ptr)
         error_ptr->SetErrorStringWithFormatv(
             "Unhandled opcode {0} in DWARFExpression", LocationAtom(op));
@@ -2583,10 +2626,10 @@ bool DWARFExpression::ParseDWARFLocationList(
       dwarf_cu->GetLocationTable(data);
   Log *log = GetLog(LLDBLog::Expressions);
   auto lookup_addr =
-      [&](uint32_t index) -> llvm::Optional<llvm::object::SectionedAddress> {
+      [&](uint32_t index) -> std::optional<llvm::object::SectionedAddress> {
     addr_t address = dwarf_cu->ReadAddressFromDebugAddrSection(index);
     if (address == LLDB_INVALID_ADDRESS)
-      return llvm::None;
+      return std::nullopt;
     return llvm::object::SectionedAddress{address};
   };
   auto process_list = [&](llvm::Expected<llvm::DWARFLocationExpression> loc) {

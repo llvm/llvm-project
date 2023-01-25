@@ -64,9 +64,9 @@ body: |
   bb.0:
   liveins: $b0
   DBG_VALUE $b0, $noreg, !11, !DIExpression(), debug-location !13
-  renamable $s0 = nofpexcept FCVTSHr killed renamable $h0, debug-location !14
+  renamable $s0 = nofpexcept FCVTSHr killed renamable $h0, implicit $fpcr, debug-location !14
   DBG_VALUE $b0, $noreg, !11, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !13
-  nofpexcept FCMPSri killed renamable $s0, implicit-def $nzcv, debug-location !14
+  nofpexcept FCMPSri killed renamable $s0, implicit-def $nzcv, implicit $fpcr, debug-location !14
   renamable $w0 = CSINCWr $wzr, $wzr, 0, implicit killed $nzcv, debug-location !14
   RET undef $lr, implicit killed $w0
 ...

@@ -14,7 +14,7 @@ define void @t1() nounwind uwtable ssp {
 ; THUMB: ldrb
 ; THUMB-NOT: uxtb
 ; THUMB-NOT: and{{.*}}, #255
-  %1 = load i8, i8* @a, align 1
+  %1 = load i8, ptr @a, align 1
   call void @foo1(i8 zeroext %1)
   ret void
 }
@@ -26,7 +26,7 @@ define void @t2() nounwind uwtable ssp {
 ; THUMB: t2
 ; THUMB: ldrh
 ; THUMB-NOT: uxth
-  %1 = load i16, i16* @b, align 2
+  %1 = load i16, ptr @b, align 2
   call void @foo2(i16 zeroext %1)
   ret void
 }
@@ -43,7 +43,7 @@ define i32 @t3() nounwind uwtable ssp {
 ; THUMB: ldrb
 ; THUMB-NOT: uxtb
 ; THUMB-NOT: and{{.*}}, #255
-  %1 = load i8, i8* @a, align 1
+  %1 = load i8, ptr @a, align 1
   %2 = zext i8 %1 to i32
   ret i32 %2
 }
@@ -55,7 +55,7 @@ define i32 @t4() nounwind uwtable ssp {
 ; THUMB: t4
 ; THUMB: ldrh
 ; THUMB-NOT: uxth
-  %1 = load i16, i16* @b, align 2
+  %1 = load i16, ptr @b, align 2
   %2 = zext i16 %1 to i32
   ret i32 %2
 }
@@ -67,7 +67,7 @@ define i32 @t5() nounwind uwtable ssp {
 ; THUMB: t5
 ; THUMB: ldrsh
 ; THUMB-NOT: sxth
-  %1 = load i16, i16* @b, align 2
+  %1 = load i16, ptr @b, align 2
   %2 = sext i16 %1 to i32
   ret i32 %2
 }
@@ -79,7 +79,7 @@ define i32 @t6() nounwind uwtable ssp {
 ; THUMB: t6
 ; THUMB: ldrsb
 ; THUMB-NOT: sxtb
-  %1 = load i8, i8* @a, align 2
+  %1 = load i8, ptr @a, align 2
   %2 = sext i8 %1 to i32
   ret i32 %2
 }

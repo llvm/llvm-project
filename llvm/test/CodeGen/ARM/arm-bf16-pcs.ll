@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple armv8.6a-arm-none-eabi -mattr=+fullfp16 -o - %s | FileCheck %s --check-prefix=FULLFP16 --check-prefix=FULLFP16-ARM
 ; RUN: llc -mtriple thumbv8.6a-arm-none-eabi -mattr=+fullfp16 -o - %s | FileCheck %s --check-prefix=FULLFP16 --check-prefix=FULLFP16-THUMB
 
-define bfloat @bf_load_soft(bfloat* %p) {
+define bfloat @bf_load_soft(ptr %p) {
 ; BASE-LABEL: bf_load_soft:
 ; BASE:       @ %bb.0:
 ; BASE-NEXT:    ldrh r0, [r0]
@@ -15,11 +15,11 @@ define bfloat @bf_load_soft(bfloat* %p) {
 ; FULLFP16-NEXT:    vldr.16 s0, [r0]
 ; FULLFP16-NEXT:    vmov r0, s0
 ; FULLFP16-NEXT:    bx lr
-  %f = load bfloat, bfloat* %p, align 2
+  %f = load bfloat, ptr %p, align 2
   ret bfloat %f
 }
 
-define arm_aapcs_vfpcc bfloat @bf_load_hard(bfloat* %p) {
+define arm_aapcs_vfpcc bfloat @bf_load_hard(ptr %p) {
 ; BASE-LABEL: bf_load_hard:
 ; BASE:       @ %bb.0:
 ; BASE-NEXT:    ldrh r0, [r0]
@@ -30,11 +30,11 @@ define arm_aapcs_vfpcc bfloat @bf_load_hard(bfloat* %p) {
 ; FULLFP16:       @ %bb.0:
 ; FULLFP16-NEXT:    vldr.16 s0, [r0]
 ; FULLFP16-NEXT:    bx lr
-  %f = load bfloat, bfloat* %p, align 2
+  %f = load bfloat, ptr %p, align 2
   ret bfloat %f
 }
 
-define void @bf_store_soft(bfloat* %p, bfloat %f) {
+define void @bf_store_soft(ptr %p, bfloat %f) {
 ; BASE-LABEL: bf_store_soft:
 ; BASE:       @ %bb.0:
 ; BASE-NEXT:    strh r1, [r0]
@@ -45,11 +45,11 @@ define void @bf_store_soft(bfloat* %p, bfloat %f) {
 ; FULLFP16-NEXT:    vmov.f16 s0, r1
 ; FULLFP16-NEXT:    vstr.16 s0, [r0]
 ; FULLFP16-NEXT:    bx lr
-  store bfloat %f, bfloat* %p, align 2
+  store bfloat %f, ptr %p, align 2
   ret void
 }
 
-define arm_aapcs_vfpcc void @bf_store_hard(bfloat* %p, bfloat %f) {
+define arm_aapcs_vfpcc void @bf_store_hard(ptr %p, bfloat %f) {
 ; BASE-LABEL: bf_store_hard:
 ; BASE:       @ %bb.0:
 ; BASE-NEXT:    vmov r1, s0
@@ -60,7 +60,7 @@ define arm_aapcs_vfpcc void @bf_store_hard(bfloat* %p, bfloat %f) {
 ; FULLFP16:       @ %bb.0:
 ; FULLFP16-NEXT:    vstr.16 s0, [r0]
 ; FULLFP16-NEXT:    bx lr
-  store bfloat %f, bfloat* %p, align 2
+  store bfloat %f, ptr %p, align 2
   ret void
 }
 
@@ -155,7 +155,7 @@ define arm_aapcs_vfpcc bfloat @bf_from_int_hard(i32 %w) {
   ret bfloat %f
 }
 
-define bfloat @test_fncall_soft(bfloat %bf, bfloat (bfloat, bfloat)* %f) {
+define bfloat @test_fncall_soft(bfloat %bf, ptr %f) {
 ; BASE-ARM-LABEL: test_fncall_soft:
 ; BASE-ARM:       @ %bb.0:
 ; BASE-ARM-NEXT:    .save {r4, r5, r11, lr}
@@ -238,7 +238,7 @@ define bfloat @test_fncall_soft(bfloat %bf, bfloat (bfloat, bfloat)* %f) {
   ret bfloat %call
 }
 
-define arm_aapcs_vfpcc bfloat @test_fncall_hard(bfloat %bf, bfloat (bfloat, bfloat)* %f) {
+define arm_aapcs_vfpcc bfloat @test_fncall_hard(bfloat %bf, ptr %f) {
 ; BASE-ARM-LABEL: test_fncall_hard:
 ; BASE-ARM:       @ %bb.0:
 ; BASE-ARM-NEXT:    .save {r4, lr}

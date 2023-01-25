@@ -1,4 +1,3 @@
-# RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=false | FileCheck %s --implicit-check-not=DBG_VALUE
 # RUN: llc %s -mtriple=x86_64-unknown-unknown -o - -run-pass=livedebugvalues -experimental-debug-variable-locations=true | FileCheck %s -check-prefix=NEWLDV --implicit-check-not=DBG_VALUE
 #
 # Test that the DBG_VALUE of ecx below does not get propagated. It is considered
@@ -7,19 +6,8 @@
 # loop. There should be no transfer from ecx to ebx -- this is ensured by the
 # FileCheck implicit-check-not option.
 #
-# FIXME: we successfully prevent the false location (ebx) from being
-# propagated into block 2, but the original transfer isn't yet eliminated.
-# Thus we get no DBG_VALUe in block 2, but an invalid one in block 1.
-#
-# CHECK-LABEL: name: foo
-# CHECK-LABEL: bb.0.entry:
-# CHECK:       $ecx = MOV32ri 0
-# CHECK-NEXT:  DBG_VALUE
-# CHECK-LABEL: bb.1.loop:
-# CHECK:       $ebx = COPY killed $ecx
-# CHECK-NEXT:  DBG_VALUE
-#
-# This doesn't occur under value-tracking LiveDebugValues though.
+# An identical test in llvm/test/DebugInfo/MIR/X86/live-debug-values-bad-transfer2.mir
+# checks this for VarLocBasedLDV.
 #
 # NEWLDV-LABEL: name: foo
 # NEWLDV-LABEL: bb.0.entry:
@@ -61,6 +49,7 @@
 name:            foo
 alignment:       4
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$edi' }
 frameInfo:

@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -49,18 +51,34 @@ const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 /// Returns the set of all fields in the type.
 llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
 
+struct ContextSensitiveOptions {
+  /// The maximum depth to analyze. A value of zero is equivalent to disabling
+  /// context-sensitive analysis entirely.
+  unsigned Depth = 2;
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
 public:
+  struct Options {
+    /// Options for analyzing function bodies when present in the translation
+    /// unit, or empty to disable context-sensitive analysis. Note that this is
+    /// fundamentally limited: some constructs, such as recursion, are
+    /// explicitly unsupported.
+    std::optional<ContextSensitiveOptions> ContextSensitiveOpts;
+  };
+
   /// Constructs a dataflow analysis context.
   ///
   /// Requirements:
   ///
   ///  `S` must not be null.
-  DataflowAnalysisContext(std::unique_ptr<Solver> S)
+  DataflowAnalysisContext(std::unique_ptr<Solver> S,
+                          Options Opts = Options{
+                              /*ContextSensitiveOpts=*/std::nullopt})
       : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-        FalseVal(createAtomicBoolValue()) {
+        FalseVal(createAtomicBoolValue()), Opts(Opts) {
     assert(this->S != nullptr);
   }
 
@@ -70,7 +88,7 @@ public:
   ///
   ///  `Loc` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<StorageLocation, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Loc) {
     assert(Loc != nullptr);
     Locs.push_back(std::move(Loc));
@@ -83,19 +101,17 @@ public:
   ///
   ///  `Val` must not be null.
   template <typename T>
-  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
+  std::enable_if_t<std::is_base_of<Value, T>::value, T &>
   takeOwnership(std::unique_ptr<T> Val) {
     assert(Val != nullptr);
     Vals.push_back(std::move(Val));
     return *cast<T>(Vals.back().get());
   }
 
-  /// Returns a stable storage location appropriate for `Type`.
+  /// Returns a new storage location appropriate for `Type`.
   ///
-  /// Requirements:
-  ///
-  ///  `Type` must not be null.
-  StorageLocation &getStableStorageLocation(QualType Type);
+  /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
+  StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
   StorageLocation &getStableStorageLocation(const VarDecl &D);
@@ -138,22 +154,6 @@ public:
     return It == ExprToLoc.end() ? nullptr : It->second;
   }
 
-  /// Assigns `Loc` as the storage location of the `this` pointee.
-  ///
-  /// Requirements:
-  ///
-  ///  The `this` pointee must not be assigned a storage location.
-  void setThisPointeeStorageLocation(StorageLocation &Loc) {
-    assert(ThisPointeeLoc == nullptr);
-    ThisPointeeLoc = &Loc;
-  }
-
-  /// Returns the storage location assigned to the `this` pointee or null if the
-  /// `this` pointee has no assigned storage location.
-  StorageLocation *getThisPointeeStorageLocation() const {
-    return ThisPointeeLoc;
-  }
-
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
@@ -168,6 +168,18 @@ public:
   /// Creates an atomic boolean value.
   AtomicBoolValue &createAtomicBoolValue() {
     return takeOwnership(std::make_unique<AtomicBoolValue>());
+  }
+
+  /// Creates a Top value for booleans. Each instance is unique and can be
+  /// assigned a distinct truth value during solving.
+  ///
+  /// FIXME: `Top iff Top` is true when both Tops are identical (by pointer
+  /// equality), but not when they are distinct values. We should improve the
+  /// implementation so that `Top iff Top` has a consistent meaning, regardless
+  /// of the identity of `Top`. Moreover, I think the meaning should be
+  /// `false`.
+  TopBoolValue &createTopBoolValue() {
+    return takeOwnership(std::make_unique<TopBoolValue>());
   }
 
   /// Returns a boolean value that represents the conjunction of `LHS` and
@@ -254,7 +266,15 @@ public:
 
   LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
 
+  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// returns null.
+  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+
+  const Options &getOptions() { return Opts; }
+
 private:
+  friend class Environment;
+
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
     static QualType getEmptyKey() {
       // Allow a NULL `QualType` by using a different value as the empty key.
@@ -265,6 +285,13 @@ private:
     using DenseMapInfo::getTombstoneKey;
     using DenseMapInfo::isEqual;
   };
+
+  // Extends the set of modeled field declarations.
+  void addModeledFields(const llvm::DenseSet<const FieldDecl *> &Fields);
+
+  /// Returns the fields of `Type`, limited to the set of fields modeled by this
+  /// context.
+  llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
@@ -319,8 +346,6 @@ private:
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
-  StorageLocation *ThisPointeeLoc = nullptr;
-
   // Null pointer values, keyed by the canonical pointee type.
   //
   // FIXME: The pointer values are indexed by the pointee types which are
@@ -332,6 +357,8 @@ private:
 
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;
+
+  Options Opts;
 
   // Indices that are used to avoid recreating the same composite boolean
   // values.
@@ -360,6 +387,11 @@ private:
   llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
       FlowConditionDeps;
   llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
+
+  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+
+  // Fields modeled by environments covered by this context.
+  llvm::DenseSet<const FieldDecl *> ModeledFields;
 };
 
 } // namespace dataflow

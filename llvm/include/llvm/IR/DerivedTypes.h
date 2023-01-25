@@ -128,7 +128,7 @@ public:
   param_iterator param_begin() const { return ContainedTys + 1; }
   param_iterator param_end() const { return &ContainedTys[NumContainedTys]; }
   ArrayRef<Type *> params() const {
-    return makeArrayRef(param_begin(), param_end());
+    return ArrayRef(param_begin(), param_end());
   }
 
   /// Parameter type accessors.
@@ -317,7 +317,7 @@ public:
   element_iterator element_begin() const { return ContainedTys; }
   element_iterator element_end() const { return &ContainedTys[NumContainedTys];}
   ArrayRef<Type *> elements() const {
-    return makeArrayRef(element_begin(), element_end());
+    return ArrayRef(element_begin(), element_end());
   }
 
   /// Return true if this is layout identical to the specified struct.
@@ -728,6 +728,83 @@ Type *Type::getWithNewBitWidth(unsigned NewBitWidth) const {
 
 unsigned Type::getPointerAddressSpace() const {
   return cast<PointerType>(getScalarType())->getAddressSpace();
+}
+
+/// Class to represent target extensions types, which are generally
+/// unintrospectable from target-independent optimizations.
+///
+/// Target extension types have a string name, and optionally have type and/or
+/// integer parameters. The exact meaning of any parameters is dependent on the
+/// target.
+class TargetExtType : public Type {
+  TargetExtType(LLVMContext &C, StringRef Name, ArrayRef<Type *> Types,
+                ArrayRef<unsigned> Ints);
+
+  // These strings are ultimately owned by the context.
+  StringRef Name;
+  unsigned *IntParams;
+
+public:
+  TargetExtType(const TargetExtType &) = delete;
+  TargetExtType &operator=(const TargetExtType &) = delete;
+
+  /// Return a target extension type having the specified name and optional
+  /// type and integer parameters.
+  static TargetExtType *get(LLVMContext &Context, StringRef Name,
+                            ArrayRef<Type *> Types = std::nullopt,
+                            ArrayRef<unsigned> Ints = std::nullopt);
+
+  /// Return the name for this target extension type. Two distinct target
+  /// extension types may have the same name if their type or integer parameters
+  /// differ.
+  StringRef getName() const { return Name; }
+
+  /// Return the type parameters for this particular target extension type. If
+  /// there are no parameters, an empty array is returned.
+  ArrayRef<Type *> type_params() const {
+    return ArrayRef(type_param_begin(), type_param_end());
+  }
+
+  using type_param_iterator = Type::subtype_iterator;
+  type_param_iterator type_param_begin() const { return ContainedTys; }
+  type_param_iterator type_param_end() const {
+    return &ContainedTys[NumContainedTys];
+  }
+
+  Type *getTypeParameter(unsigned i) const { return getContainedType(i); }
+  unsigned getNumTypeParameters() const { return getNumContainedTypes(); }
+
+  /// Return the integer parameters for this particular target extension type.
+  /// If there are no parameters, an empty array is returned.
+  ArrayRef<unsigned> int_params() const {
+    return ArrayRef(IntParams, getNumIntParameters());
+  }
+
+  unsigned getIntParameter(unsigned i) const { return IntParams[i]; }
+  unsigned getNumIntParameters() const { return getSubclassData(); }
+
+  enum Property {
+    /// zeroinitializer is valid for this target extension type.
+    HasZeroInit = 1U << 0,
+    /// This type may be used as the value type of a global variable.
+    CanBeGlobal = 1U << 1,
+  };
+
+  /// Returns true if the target extension type contains the given property.
+  bool hasProperty(Property Prop) const;
+
+  /// Returns an underlying layout type for the target extension type. This
+  /// type can be used to query size and alignment information, if it is
+  /// appropriate (although note that the layout type may also be void). It is
+  /// not legal to bitcast between this type and the layout type, however.
+  Type *getLayoutType() const;
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast.
+  static bool classof(const Type *T) { return T->getTypeID() == TargetExtTyID; }
+};
+
+StringRef Type::getTargetExtName() const {
+  return cast<TargetExtType>(this)->getName();
 }
 
 } // end namespace llvm

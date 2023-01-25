@@ -8,8 +8,8 @@ define dso_local void @ClobberLR() local_unnamed_addr #0 {
 ; PPC64LE-LABEL: ClobberLR:
 ; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    mflr r0
-; PPC64LE-NEXT:    std r0, 16(r1)
 ; PPC64LE-NEXT:    stdu r1, -32(r1)
+; PPC64LE-NEXT:    std r0, 48(r1)
 ; PPC64LE-NEXT:    #APP
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:    addi r1, r1, 32
@@ -20,8 +20,8 @@ define dso_local void @ClobberLR() local_unnamed_addr #0 {
 ; PPC64BE-LABEL: ClobberLR:
 ; PPC64BE:       # %bb.0: # %entry
 ; PPC64BE-NEXT:    mflr r0
-; PPC64BE-NEXT:    std r0, 16(r1)
 ; PPC64BE-NEXT:    stdu r1, -48(r1)
+; PPC64BE-NEXT:    std r0, 64(r1)
 ; PPC64BE-NEXT:    #APP
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:    addi r1, r1, 48
@@ -76,38 +76,38 @@ define dso_local signext i32 @ClobberLR_BR(i32 signext %in) #0 {
 ; PPC64LE-LABEL: ClobberLR_BR:
 ; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    mflr r0
-; PPC64LE-NEXT:    std r0, 16(r1)
 ; PPC64LE-NEXT:    stdu r1, -32(r1)
+; PPC64LE-NEXT:    std r0, 48(r1)
 ; PPC64LE-NEXT:    #APP
 ; PPC64LE-NEXT:    nop
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:  .LBB3_1: # %return
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    addi r1, r1, 32
 ; PPC64LE-NEXT:    ld r0, 16(r1)
 ; PPC64LE-NEXT:    mtlr r0
 ; PPC64LE-NEXT:    blr
-; PPC64LE-NEXT:  .Ltmp0: # Block address taken
-; PPC64LE-NEXT:  .LBB3_2: # %return_early
+; PPC64LE-NEXT:  .LBB3_2: # Block address taken
+; PPC64LE-NEXT:    # %return_early
+; PPC64LE-NEXT:    # Label of block must be emitted
 ; PPC64LE-NEXT:    li r3, 0
 ; PPC64LE-NEXT:    b .LBB3_1
 ;
 ; PPC64BE-LABEL: ClobberLR_BR:
 ; PPC64BE:       # %bb.0: # %entry
 ; PPC64BE-NEXT:    mflr r0
-; PPC64BE-NEXT:    std r0, 16(r1)
 ; PPC64BE-NEXT:    stdu r1, -48(r1)
+; PPC64BE-NEXT:    std r0, 64(r1)
 ; PPC64BE-NEXT:    #APP
 ; PPC64BE-NEXT:    nop
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:  .LBB3_1: # %return
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    addi r1, r1, 48
 ; PPC64BE-NEXT:    ld r0, 16(r1)
 ; PPC64BE-NEXT:    mtlr r0
 ; PPC64BE-NEXT:    blr
-; PPC64BE-NEXT:  .Ltmp0: # Block address taken
-; PPC64BE-NEXT:  .LBB3_2: # %return_early
+; PPC64BE-NEXT:  .LBB3_2: # Block address taken
+; PPC64BE-NEXT:    # %return_early
+; PPC64BE-NEXT:    # Label of block must be emitted
 ; PPC64BE-NEXT:    li r3, 0
 ; PPC64BE-NEXT:    b .LBB3_1
 entry:
@@ -129,12 +129,11 @@ define dso_local signext i32 @ClobberR5_BR(i32 signext %in) #0 {
 ; PPC64LE-NEXT:    nop
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:  # %bb.1: # %return
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    blr
-; PPC64LE-NEXT:  .Ltmp1: # Block address taken
-; PPC64LE-NEXT:  .LBB4_2: # %return_early
+; PPC64LE-NEXT:  .LBB4_2: # Block address taken
+; PPC64LE-NEXT:    # %return_early
+; PPC64LE-NEXT:    # Label of block must be emitted
 ; PPC64LE-NEXT:    li r3, 0
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    blr
 ;
 ; PPC64BE-LABEL: ClobberR5_BR:
@@ -143,12 +142,11 @@ define dso_local signext i32 @ClobberR5_BR(i32 signext %in) #0 {
 ; PPC64BE-NEXT:    nop
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:  # %bb.1: # %return
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    blr
-; PPC64BE-NEXT:  .Ltmp1: # Block address taken
-; PPC64BE-NEXT:  .LBB4_2: # %return_early
+; PPC64BE-NEXT:  .LBB4_2: # Block address taken
+; PPC64BE-NEXT:    # %return_early
+; PPC64BE-NEXT:    # Label of block must be emitted
 ; PPC64BE-NEXT:    li r3, 0
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    blr
 entry:
   callbr void asm sideeffect "nop", "!i,~{r5}"()
@@ -168,8 +166,8 @@ define dso_local void @DefLR() local_unnamed_addr #0 {
 ; PPC64LE-LABEL: DefLR:
 ; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    mflr r0
-; PPC64LE-NEXT:    std r0, 16(r1)
 ; PPC64LE-NEXT:    stdu r1, -32(r1)
+; PPC64LE-NEXT:    std r0, 48(r1)
 ; PPC64LE-NEXT:    #APP
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:    addi r1, r1, 32
@@ -180,8 +178,8 @@ define dso_local void @DefLR() local_unnamed_addr #0 {
 ; PPC64BE-LABEL: DefLR:
 ; PPC64BE:       # %bb.0: # %entry
 ; PPC64BE-NEXT:    mflr r0
-; PPC64BE-NEXT:    std r0, 16(r1)
 ; PPC64BE-NEXT:    stdu r1, -48(r1)
+; PPC64BE-NEXT:    std r0, 64(r1)
 ; PPC64BE-NEXT:    #APP
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:    addi r1, r1, 48
@@ -197,8 +195,8 @@ define dso_local void @EarlyClobberLR() local_unnamed_addr #0 {
 ; PPC64LE-LABEL: EarlyClobberLR:
 ; PPC64LE:       # %bb.0: # %entry
 ; PPC64LE-NEXT:    mflr r0
-; PPC64LE-NEXT:    std r0, 16(r1)
 ; PPC64LE-NEXT:    stdu r1, -32(r1)
+; PPC64LE-NEXT:    std r0, 48(r1)
 ; PPC64LE-NEXT:    #APP
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:    addi r1, r1, 32
@@ -209,8 +207,8 @@ define dso_local void @EarlyClobberLR() local_unnamed_addr #0 {
 ; PPC64BE-LABEL: EarlyClobberLR:
 ; PPC64BE:       # %bb.0: # %entry
 ; PPC64BE-NEXT:    mflr r0
-; PPC64BE-NEXT:    std r0, 16(r1)
 ; PPC64BE-NEXT:    stdu r1, -48(r1)
+; PPC64BE-NEXT:    std r0, 64(r1)
 ; PPC64BE-NEXT:    #APP
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:    addi r1, r1, 48
@@ -228,8 +226,8 @@ define dso_local void @ClobberMulti() local_unnamed_addr #0 {
 ; PPC64LE-NEXT:    mflr r0
 ; PPC64LE-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; PPC64LE-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
-; PPC64LE-NEXT:    std r0, 16(r1)
 ; PPC64LE-NEXT:    stdu r1, -176(r1)
+; PPC64LE-NEXT:    std r0, 192(r1)
 ; PPC64LE-NEXT:    #APP
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:    addi r1, r1, 176
@@ -242,8 +240,8 @@ define dso_local void @ClobberMulti() local_unnamed_addr #0 {
 ; PPC64BE-LABEL: ClobberMulti:
 ; PPC64BE:       # %bb.0: # %entry
 ; PPC64BE-NEXT:    mflr r0
-; PPC64BE-NEXT:    std r0, 16(r1)
 ; PPC64BE-NEXT:    stdu r1, -192(r1)
+; PPC64BE-NEXT:    std r0, 208(r1)
 ; PPC64BE-NEXT:    std r15, 56(r1) # 8-byte Folded Spill
 ; PPC64BE-NEXT:    std r16, 64(r1) # 8-byte Folded Spill
 ; PPC64BE-NEXT:    #APP

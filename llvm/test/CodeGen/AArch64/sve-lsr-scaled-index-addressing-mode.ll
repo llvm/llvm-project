@@ -6,10 +6,10 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnu"
 
-; These tests check that the IR coming out of LSR does not cast input/output pointer from i16* to i8* type.
+; These tests check that the IR coming out of LSR does not cast input/output pointer from ptr to ptr type.
 ; And scaled-index addressing mode is leveraged in the generated assembly, i.e. ld1h { z1.h }, p0/z, [x0, x8, lsl #1].
 
-define void @ld_st_nxv8i16(i16* %in, i16* %out) {
+define void @ld_st_nxv8i16(ptr %in, ptr %out) {
 ; IR-LABEL: @ld_st_nxv8i16(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br label [[LOOP_PH:%.*]]
@@ -21,13 +21,13 @@ define void @ld_st_nxv8i16(i16* %in, i16* %out) {
 ; IR-NEXT:    br label [[LOOP:%.*]]
 ; IR:       loop:
 ; IR-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[LOOP_PH]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
-; IR-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i16, i16* [[IN:%.*]], i64 [[INDVAR]]
-; IR-NEXT:    [[SCEVGEP23:%.*]] = bitcast i16* [[SCEVGEP2]] to <vscale x 8 x i16>*
-; IR-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[OUT:%.*]], i64 [[INDVAR]]
-; IR-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to <vscale x 8 x i16>*
-; IR-NEXT:    [[VAL:%.*]] = load <vscale x 8 x i16>, <vscale x 8 x i16>* [[SCEVGEP23]], align 16
+; IR-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR]], 1
+; IR-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[TMP0]]
+; IR-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 1
+; IR-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 [[TMP1]]
+; IR-NEXT:    [[VAL:%.*]] = load <vscale x 8 x i16>, ptr [[UGLYGEP1]], align 16
 ; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], [[P_VEC_SPLAT]]
-; IR-NEXT:    store <vscale x 8 x i16> [[ADDP_VEC]], <vscale x 8 x i16>* [[SCEVGEP1]], align 16
+; IR-NEXT:    store <vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], align 16
 ; IR-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], [[SCALED_VF]]
 ; IR-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[INDVAR_NEXT]], 1024
 ; IR-NEXT:    br i1 [[EXIT_COND]], label [[LOOP_EXIT:%.*]], label [[LOOP]]
@@ -64,13 +64,11 @@ loop.ph:
 
 loop:                                             ; preds = %loop, %loop.ph
   %indvar = phi i64 [ 0, %loop.ph ], [ %indvar.next, %loop ]
-  %ptr.in = getelementptr inbounds i16, i16* %in, i64 %indvar
-  %ptr.out = getelementptr inbounds i16, i16* %out, i64 %indvar
-  %in.ptrcast = bitcast i16* %ptr.in to <vscale x 8 x i16>*
-  %out.ptrcast = bitcast i16* %ptr.out to <vscale x 8 x i16>*
-  %val = load <vscale x 8 x i16>, <vscale x 8 x i16>* %in.ptrcast, align 16
+  %ptr.in = getelementptr inbounds i16, ptr %in, i64 %indvar
+  %ptr.out = getelementptr inbounds i16, ptr %out, i64 %indvar
+  %val = load <vscale x 8 x i16>, ptr %ptr.in, align 16
   %addp_vec = add <vscale x 8 x i16> %val, %p_vec.splat
-  store <vscale x 8 x i16> %addp_vec, <vscale x 8 x i16>* %out.ptrcast, align 16
+  store <vscale x 8 x i16> %addp_vec, ptr %ptr.out, align 16
   %indvar.next = add nsw i64 %indvar, %scaled_vf
   %exit.cond = icmp eq i64 %indvar.next, 1024
   br i1 %exit.cond, label %loop.exit, label %loop
@@ -82,7 +80,7 @@ exit:
   ret void
 }
 
-define void @masked_ld_st_nxv8i16(i16* %in, i16* %out, i64 %n) {
+define void @masked_ld_st_nxv8i16(ptr %in, ptr %out, i64 %n) {
 ; IR-LABEL: @masked_ld_st_nxv8i16(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    br label [[LOOP_PH:%.*]]
@@ -96,13 +94,13 @@ define void @masked_ld_st_nxv8i16(i16* %in, i16* %out, i64 %n) {
 ; IR-NEXT:    br label [[LOOP:%.*]]
 ; IR:       loop:
 ; IR-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[LOOP_PH]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
-; IR-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i16, i16* [[IN:%.*]], i64 [[INDVAR]]
-; IR-NEXT:    [[SCEVGEP23:%.*]] = bitcast i16* [[SCEVGEP2]] to <vscale x 8 x i16>*
-; IR-NEXT:    [[SCEVGEP:%.*]] = getelementptr i16, i16* [[OUT:%.*]], i64 [[INDVAR]]
-; IR-NEXT:    [[SCEVGEP1:%.*]] = bitcast i16* [[SCEVGEP]] to <vscale x 8 x i16>*
-; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0nxv8i16(<vscale x 8 x i16>* [[SCEVGEP23]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]], <vscale x 8 x i16> undef)
+; IR-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR]], 1
+; IR-NEXT:    [[UGLYGEP1:%.*]] = getelementptr i8, ptr [[IN:%.*]], i64 [[TMP0]]
+; IR-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 1
+; IR-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 [[TMP1]]
+; IR-NEXT:    [[VAL:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr [[UGLYGEP1]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]], <vscale x 8 x i16> undef)
 ; IR-NEXT:    [[ADDP_VEC:%.*]] = add <vscale x 8 x i16> [[VAL]], [[P_VEC_SPLAT]]
-; IR-NEXT:    call void @llvm.masked.store.nxv8i16.p0nxv8i16(<vscale x 8 x i16> [[ADDP_VEC]], <vscale x 8 x i16>* [[SCEVGEP1]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]])
+; IR-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[ADDP_VEC]], ptr [[UGLYGEP]], i32 4, <vscale x 8 x i1> [[PTRUE_VEC_SPLAT]])
 ; IR-NEXT:    [[INDVAR_NEXT]] = add nsw i64 [[INDVAR]], [[SCALED_VF]]
 ; IR-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[N:%.*]], [[INDVAR_NEXT]]
 ; IR-NEXT:    br i1 [[EXIT_COND]], label [[LOOP_EXIT:%.*]], label [[LOOP]]
@@ -141,13 +139,11 @@ loop.ph:
 
 loop:                                             ; preds = %loop, %loop.ph
   %indvar = phi i64 [ 0, %loop.ph ], [ %indvar.next, %loop ]
-  %ptr.in = getelementptr inbounds i16, i16* %in, i64 %indvar
-  %ptr.out = getelementptr inbounds i16, i16* %out, i64 %indvar
-  %in.ptrcast = bitcast i16* %ptr.in to <vscale x 8 x i16>*
-  %out.ptrcast = bitcast i16* %ptr.out to <vscale x 8 x i16>*
-  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0nxv8i16(<vscale x 8 x i16>* %in.ptrcast, i32 4, <vscale x 8 x i1> %ptrue_vec.splat, <vscale x 8 x i16> undef)
+  %ptr.in = getelementptr inbounds i16, ptr %in, i64 %indvar
+  %ptr.out = getelementptr inbounds i16, ptr %out, i64 %indvar
+  %val = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr %ptr.in, i32 4, <vscale x 8 x i1> %ptrue_vec.splat, <vscale x 8 x i16> undef)
   %addp_vec = add <vscale x 8 x i16> %val, %p_vec.splat
-  call void @llvm.masked.store.nxv8i16.p0nxv8i16(<vscale x 8 x i16> %addp_vec, <vscale x 8 x i16>* %out.ptrcast, i32 4, <vscale x 8 x i1> %ptrue_vec.splat)
+  call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> %addp_vec, ptr %ptr.out, i32 4, <vscale x 8 x i1> %ptrue_vec.splat)
   %indvar.next = add nsw i64 %indvar, %scaled_vf
   %exit.cond = icmp eq i64 %indvar.next, %n
   br i1 %exit.cond, label %loop.exit, label %loop
@@ -161,6 +157,6 @@ exit:
 
 declare i64 @llvm.vscale.i64()
 
-declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0nxv8i16(<vscale x 8 x i16>*, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i16>)
 
-declare void @llvm.masked.store.nxv8i16.p0nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>*, i32 immarg, <vscale x 8 x i1>)
+declare void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16>, ptr, i32 immarg, <vscale x 8 x i1>)

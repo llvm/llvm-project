@@ -78,6 +78,8 @@ def UseDeprecatedInsts : Predicate<"Subtarget->useDeprecatedV8Instructions()">;
 // Instruction Pattern Stuff
 //===----------------------------------------------------------------------===//
 
+def simm10  : PatLeaf<(imm), [{ return isInt<10>(N->getSExtValue()); }]>;
+
 def simm11  : PatLeaf<(imm), [{ return isInt<11>(N->getSExtValue()); }]>;
 
 def simm13  : PatLeaf<(imm), [{ return isInt<13>(N->getSExtValue()); }]>;
@@ -211,8 +213,10 @@ def simm13Op : Operand<i32> {
 }
 
 // Operand for printing out a condition code.
-let PrintMethod = "printCCOperand" in
+let PrintMethod = "printCCOperand" in {
   def CCOp : Operand<i32>;
+  def RegCCOp : Operand<i32>;
+}
 
 def SDTSPcmpicc :
 SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>]>;
@@ -222,6 +226,8 @@ def SDTSPbrcc :
 SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>]>;
 def SDTSPselectcc :
 SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i32>]>;
+def SDTSPselectreg :
+SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i32>, SDTCisVT<4, i64>]>;
 def SDTSPFTOI :
 SDTypeProfile<1, 1, [SDTCisVT<0, f32>, SDTCisFP<1>]>;
 def SDTSPITOF :
@@ -241,9 +247,12 @@ SDTypeProfile<1, 2, [SDTCisPtrTy<0>, SDTCisPtrTy<1>]>;
 
 def SPcmpicc : SDNode<"SPISD::CMPICC", SDTSPcmpicc, [SDNPOutGlue]>;
 def SPcmpfcc : SDNode<"SPISD::CMPFCC", SDTSPcmpfcc, [SDNPOutGlue]>;
+def SPcmpfccv9 : SDNode<"SPISD::CMPFCC_V9", SDTSPcmpfcc, [SDNPOutGlue]>;
 def SPbricc : SDNode<"SPISD::BRICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
-def SPbrxcc : SDNode<"SPISD::BRXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpicc : SDNode<"SPISD::BPICC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbpxcc : SDNode<"SPISD::BPXCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 def SPbrfcc : SDNode<"SPISD::BRFCC", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
+def SPbrfccv9 : SDNode<"SPISD::BRFCC_V9", SDTSPbrcc, [SDNPHasChain, SDNPInGlue]>;
 
 def SPhi    : SDNode<"SPISD::Hi", SDTIntUnaryOp>;
 def SPlo    : SDNode<"SPISD::Lo", SDTIntUnaryOp>;
@@ -256,6 +265,7 @@ def SPxtof  : SDNode<"SPISD::XTOF", SDTSPXTOF>;
 def SPselecticc : SDNode<"SPISD::SELECT_ICC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
+def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg, [SDNPInGlue]>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i32>,
@@ -350,6 +360,14 @@ def CPCC_01  : CPCC_VAL<45>;  // 0 or 1
 def CPCC_013 : CPCC_VAL<46>;  // 0 or 1 or 3
 def CPCC_012 : CPCC_VAL<47>;  // 0 or 1 or 2
 
+class RegCC_VAL<int N> : PatLeaf<(i32 N)>;
+def RegCC_Z   : RegCC_VAL<49>;  // Zero
+def RegCC_LEZ : RegCC_VAL<50>;  // Lees or equal than zero
+def RegCC_LZ  : RegCC_VAL<51>;  // Less than zero
+def RegCC_NZ  : RegCC_VAL<53>;  // Not zero
+def RegCC_GZ  : RegCC_VAL<54>;  // Greater than zero
+def RegCC_GEZ : RegCC_VAL<55>;  // Greater or equal to zero
+
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
@@ -387,22 +405,22 @@ multiclass F3_12np<string OpcStr, bits<6> Op3Val, InstrItinClass itin = IIC_iu_i
 multiclass Load<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_iu_instr> {
   def rr  : F3_1<3, Op3Val,
-                 (outs RC:$dst), (ins MEMrr:$addr),
-                 !strconcat(OpcStr, " [$addr], $dst"),
-                 [(set Ty:$dst, (OpNode ADDRrr:$addr))],
+                 (outs RC:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                 !strconcat(OpcStr, " [$addr], $rd"),
+                 [(set Ty:$rd, (OpNode ADDRrr:$addr))],
                  itin>;
   def ri  : F3_2<3, Op3Val,
-                 (outs RC:$dst), (ins MEMri:$addr),
-                 !strconcat(OpcStr, " [$addr], $dst"),
-                 [(set Ty:$dst, (OpNode ADDRri:$addr))],
+                 (outs RC:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                 !strconcat(OpcStr, " [$addr], $rd"),
+                 [(set Ty:$rd, (OpNode ADDRri:$addr))],
                  itin>;
 }
 
 // TODO: Instructions of the LoadASI class are currently asm only; hooking up
 // CodeGen's address spaces to use these is a future task.
 class LoadASI<string OpcStr, bits<6> Op3Val, RegisterClass RC> :
-  F3_1_asi<3, Op3Val, (outs RC:$dst), (ins MEMrr:$addr, i8imm:$asi),
-                !strconcat(OpcStr, "a [$addr] $asi, $dst"),
+  F3_1_asi<3, Op3Val, (outs RC:$rd), (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
+                !strconcat(OpcStr, "a [$addr] $asi, $rd"),
                 []>;
 
 // LoadA multiclass - As above, but also define alternate address space variant
@@ -416,24 +434,24 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
 // The LDSTUB instruction is supported for asm only.
 // It is unlikely that general-purpose code could make use of it.
 // CAS is preferred for sparc v9.
-def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$dst), (ins MEMrr:$addr),
-                    "ldstub [$addr], $dst", []>;
-def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$dst), (ins MEMri:$addr),
-                    "ldstub [$addr], $dst", []>;
-def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$dst),
-                         (ins MEMrr:$addr, i8imm:$asi),
-                         "ldstuba [$addr] $asi, $dst", []>;
+def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                    "ldstub [$addr], $rd", []>;
+def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                    "ldstub [$addr], $rd", []>;
+def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
+                         (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
+                         "ldstuba [$addr] $asi, $rd", []>;
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
            RegisterClass RC, ValueType Ty, InstrItinClass itin = IIC_st> {
   def rr  : F3_1<3, Op3Val,
-                 (outs), (ins MEMrr:$addr, RC:$rd),
+                 (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd),
                  !strconcat(OpcStr, " $rd, [$addr]"),
                  [(OpNode Ty:$rd, ADDRrr:$addr)],
                  itin>;
   def ri  : F3_2<3, Op3Val,
-                 (outs), (ins MEMri:$addr, RC:$rd),
+                 (outs), (ins (MEMri $rs1, $simm13):$addr, RC:$rd),
                  !strconcat(OpcStr, " $rd, [$addr]"),
                  [(OpNode Ty:$rd, ADDRri:$addr)],
                  itin>;
@@ -443,7 +461,7 @@ multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
 // CodeGen's address spaces to use these is a future task.
 class StoreASI<string OpcStr, bits<6> Op3Val, RegisterClass RC,
                InstrItinClass itin = IIC_st> :
-  F3_1_asi<3, Op3Val, (outs), (ins MEMrr:$addr, RC:$rd, i8imm:$asi),
+  F3_1_asi<3, Op3Val, (outs), (ins (MEMrr $rs1, $rs2):$addr, RC:$rd, i8imm:$asi),
            !strconcat(OpcStr, "a $rd, [$addr] $asi"),
            [],
            itin>;
@@ -558,154 +576,129 @@ let usesCustomInserter = 1, Uses = [FCC0] in {
 }
 
 // Section B.1 - Load Integer Instructions, p. 90
-let DecoderMethod = "DecodeLoadInt" in {
-  defm LDSB : LoadA<"ldsb", 0b001001, 0b011001, sextloadi8,  IntRegs, i32>;
-  defm LDSH : LoadA<"ldsh", 0b001010, 0b011010, sextloadi16, IntRegs, i32>;
-  defm LDUB : LoadA<"ldub", 0b000001, 0b010001, zextloadi8,  IntRegs, i32>;
-  defm LDUH : LoadA<"lduh", 0b000010, 0b010010, zextloadi16, IntRegs, i32>;
-  defm LD   : LoadA<"ld",   0b000000, 0b010000, load,        IntRegs, i32>;
-}
-
-let DecoderMethod = "DecodeLoadIntPair" in
-  defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
+defm LDSB : LoadA<"ldsb", 0b001001, 0b011001, sextloadi8,  IntRegs, i32>;
+defm LDSH : LoadA<"ldsh", 0b001010, 0b011010, sextloadi16, IntRegs, i32>;
+defm LDUB : LoadA<"ldub", 0b000001, 0b010001, zextloadi8,  IntRegs, i32>;
+defm LDUH : LoadA<"lduh", 0b000010, 0b010010, zextloadi16, IntRegs, i32>;
+defm LD   : LoadA<"ld",   0b000000, 0b010000, load,        IntRegs, i32>;
+defm LDD : LoadA<"ldd", 0b000011, 0b010011, load, IntPair, v2i32, IIC_ldd>;
 
 // Section B.2 - Load Floating-point Instructions, p. 92
-let DecoderMethod = "DecodeLoadFP" in {
-  defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
-  def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
-                Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeLoadDFP" in {
-  defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
-  def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
-                 Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeLoadQFP" in
-  defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
-               Requires<[HasV9, HasHardQuad]>;
+defm LDF   : Load<"ld",  0b100000, load,    FPRegs,  f32, IIC_iu_or_fpu_instr>;
+def LDFArr : LoadASI<"ld",  0b110000, FPRegs>,
+             Requires<[HasV9]>;
 
-let DecoderMethod = "DecodeLoadCP" in
-  defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
-let DecoderMethod = "DecodeLoadCPPair" in
-  defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+defm LDDF   : Load<"ldd", 0b100011, load,    DFPRegs, f64, IIC_ldd>;
+def LDDFArr : LoadASI<"ldd", 0b110011, DFPRegs>,
+              Requires<[HasV9]>;
+defm LDQF  : LoadA<"ldq", 0b100010, 0b110010, load, QFPRegs, f128>,
+             Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeLoadCP", Defs = [CPSR] in {
+defm LDC   : Load<"ld", 0b110000, load, CoprocRegs, i32>;
+defm LDDC   : Load<"ldd", 0b110011, load, CoprocPair, v2i32, IIC_ldd>;
+
+let Defs = [CPSR] in {
   let rd = 0 in {
-    def LDCSRrr : F3_1<3, 0b110001, (outs), (ins MEMrr:$addr),
+    def LDCSRrr : F3_1<3, 0b110001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "ld [$addr], %csr", []>;
-    def LDCSRri : F3_2<3, 0b110001, (outs), (ins MEMri:$addr),
+    def LDCSRri : F3_2<3, 0b110001, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "ld [$addr], %csr", []>;
   }
 }
 
-let DecoderMethod = "DecodeLoadFP" in
-  let Defs = [FSR] in {
-    let rd = 0 in {
-      def LDFSRrr : F3_1<3, 0b100001, (outs), (ins MEMrr:$addr),
-                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
-      def LDFSRri : F3_2<3, 0b100001, (outs), (ins MEMri:$addr),
-                     "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
-    }
-    let rd = 1 in {
-      def LDXFSRrr : F3_1<3, 0b100001, (outs), (ins MEMrr:$addr),
-                     "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
-      def LDXFSRri : F3_2<3, 0b100001, (outs), (ins MEMri:$addr),
-                     "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
-    }
+let Defs = [FSR] in {
+  let rd = 0 in {
+    def LDFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
+		   "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
+    def LDFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
+		   "ld [$addr], %fsr", [], IIC_iu_or_fpu_instr>;
   }
+  let rd = 1 in {
+    def LDXFSRrr : F3_1<3, 0b100001, (outs), (ins (MEMrr $rs1, $rs2):$addr),
+		   "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
+    def LDXFSRri : F3_2<3, 0b100001, (outs), (ins (MEMri $rs1, $simm13):$addr),
+		   "ldx [$addr], %fsr", []>, Requires<[HasV9]>;
+  }
+}
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def GDOP_LDrr : F3_1<3, 0b000000,
-                      (outs IntRegs:$dst),
-                      (ins MEMrr:$addr, TailRelocSymGOTLoad:$sym),
-                      "ld [$addr], $dst, $sym",
-                      [(set i32:$dst,
+                      (outs IntRegs:$rd),
+                      (ins (MEMrr $rs1, $rs2):$addr, TailRelocSymGOTLoad:$sym),
+                      "ld [$addr], $rd, $sym",
+                      [(set i32:$rd,
                           (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
 
 // Section B.4 - Store Integer Instructions, p. 95
-let DecoderMethod = "DecodeStoreInt" in {
-  defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
-  defm STH   : StoreA<"sth", 0b000110, 0b010110, truncstorei16, IntRegs, i32>;
-  defm ST    : StoreA<"st",  0b000100, 0b010100, store,         IntRegs, i32>;
-}
-
-let DecoderMethod = "DecodeStoreIntPair" in
-  defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
+defm STB   : StoreA<"stb", 0b000101, 0b010101, truncstorei8,  IntRegs, i32>;
+defm STH   : StoreA<"sth", 0b000110, 0b010110, truncstorei16, IntRegs, i32>;
+defm ST    : StoreA<"st",  0b000100, 0b010100, store,         IntRegs, i32>;
+defm STD   : StoreA<"std", 0b000111, 0b010111, store, IntPair, v2i32>;
 
 // Section B.5 - Store Floating-point Instructions, p. 97
-let DecoderMethod = "DecodeStoreFP" in {
-  defm STF   : Store<"st",  0b100100, store,         FPRegs,  f32>;
-  def STFArr : StoreASI<"st",  0b110100, FPRegs>,
-               Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeStoreDFP" in {
-  defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
-  def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
-                Requires<[HasV9]>;
-}
-let DecoderMethod = "DecodeStoreQFP" in
-  defm STQF  : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
-               Requires<[HasV9, HasHardQuad]>;
+defm STF    : Store<"st",  0b100100, store,         FPRegs,  f32>;
+def STFArr  : StoreASI<"st",  0b110100, FPRegs>,
+              Requires<[HasV9]>;
+defm STDF   : Store<"std", 0b100111, store,         DFPRegs, f64, IIC_std>;
+def STDFArr : StoreASI<"std", 0b110111, DFPRegs>,
+              Requires<[HasV9]>;
+defm STQF   : StoreA<"stq", 0b100110, 0b110110, store, QFPRegs, f128>,
+              Requires<[HasV9, HasHardQuad]>;
 
-let DecoderMethod = "DecodeStoreCP" in
-  defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+defm STC   : Store<"st", 0b110100, store, CoprocRegs, i32>;
+defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
 
-let DecoderMethod = "DecodeStoreCPPair" in
-  defm STDC   : Store<"std", 0b110111, store, CoprocPair, v2i32, IIC_std>;
-
-let DecoderMethod = "DecodeStoreCP", rd = 0 in {
+let rd = 0 in {
   let Defs = [CPSR] in {
-    def STCSRrr : F3_1<3, 0b110101, (outs MEMrr:$addr), (ins),
+    def STCSRrr : F3_1<3, 0b110101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
                        "st %csr, [$addr]", [], IIC_st>;
-    def STCSRri : F3_2<3, 0b110101, (outs MEMri:$addr), (ins),
+    def STCSRri : F3_2<3, 0b110101, (outs (MEMri $rs1, $simm13):$addr), (ins),
                        "st %csr, [$addr]", [], IIC_st>;
   }
   let Defs = [CPQ] in {
-    def STDCQrr : F3_1<3, 0b110110, (outs MEMrr:$addr), (ins),
+    def STDCQrr : F3_1<3, 0b110110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
                        "std %cq, [$addr]", [], IIC_std>;
-    def STDCQri : F3_2<3, 0b110110, (outs MEMri:$addr), (ins),
+    def STDCQri : F3_2<3, 0b110110, (outs (MEMri $rs1, $simm13):$addr), (ins),
                        "std %cq, [$addr]", [], IIC_std>;
   }
 }
 
-let DecoderMethod = "DecodeStoreFP" in {
-  let rd = 0 in {
-    let Defs = [FSR] in {
-      def STFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
-                     "st %fsr, [$addr]", [], IIC_st>;
-      def STFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
-                     "st %fsr, [$addr]", [], IIC_st>;
-    }
-    let Defs = [FQ] in {
-      def STDFQrr : F3_1<3, 0b100110, (outs MEMrr:$addr), (ins),
-                     "std %fq, [$addr]", [], IIC_std>;
-      def STDFQri : F3_2<3, 0b100110, (outs MEMri:$addr), (ins),
-                     "std %fq, [$addr]", [], IIC_std>;
-    }
+let rd = 0 in {
+  let Defs = [FSR] in {
+    def STFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		   "st %fsr, [$addr]", [], IIC_st>;
+    def STFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		   "st %fsr, [$addr]", [], IIC_st>;
   }
-  let rd = 1, Defs = [FSR] in {
-    def STXFSRrr : F3_1<3, 0b100101, (outs MEMrr:$addr), (ins),
-                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
-    def STXFSRri : F3_2<3, 0b100101, (outs MEMri:$addr), (ins),
-                   "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  let Defs = [FQ] in {
+    def STDFQrr : F3_1<3, 0b100110, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		   "std %fq, [$addr]", [], IIC_std>;
+    def STDFQri : F3_2<3, 0b100110, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		   "std %fq, [$addr]", [], IIC_std>;
   }
+}
+let rd = 1, Defs = [FSR] in {
+  def STXFSRrr : F3_1<3, 0b100101, (outs (MEMrr $rs1, $rs2):$addr), (ins),
+		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
+  def STXFSRri : F3_2<3, 0b100101, (outs (MEMri $rs1, $simm13):$addr), (ins),
+		 "stx %fsr, [$addr]", []>, Requires<[HasV9]>;
 }
 
 // Section B.8 - SWAP Register with Memory Instruction
 // (Atomic swap)
-let Constraints = "$val = $dst", DecoderMethod = "DecodeSWAP" in {
+let Constraints = "$val = $rd" in {
   def SWAPrr : F3_1<3, 0b001111,
-                 (outs IntRegs:$dst), (ins MEMrr:$addr, IntRegs:$val),
-                 "swap [$addr], $dst",
-                 [(set i32:$dst, (atomic_swap_32 ADDRrr:$addr, i32:$val))]>;
+                 (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, IntRegs:$val),
+                 "swap [$addr], $rd",
+                 [(set i32:$rd, (atomic_swap_32 ADDRrr:$addr, i32:$val))]>;
   def SWAPri : F3_2<3, 0b001111,
-                 (outs IntRegs:$dst), (ins MEMri:$addr, IntRegs:$val),
-                 "swap [$addr], $dst",
-                 [(set i32:$dst, (atomic_swap_32 ADDRri:$addr, i32:$val))]>;
+                 (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr, IntRegs:$val),
+                 "swap [$addr], $rd",
+                 [(set i32:$rd, (atomic_swap_32 ADDRri:$addr, i32:$val))]>;
   def SWAPArr : F3_1_asi<3, 0b011111,
-                 (outs IntRegs:$dst), (ins MEMrr:$addr, i8imm:$asi, IntRegs:$val),
-                 "swapa [$addr] $asi, $dst",
+                 (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi, IntRegs:$val),
+                 "swapa [$addr] $asi, $rd",
                  [/*FIXME: pattern?*/]>;
 }
 
@@ -778,9 +771,9 @@ defm ADD   : F3_12<"add", 0b000000, add, IntRegs, i32, simm13Op>;
 // "LEA" forms of add (patterns to make tblgen happy)
 let Predicates = [Is32Bit], isCodeGenOnly = 1 in
   def LEA_ADDri   : F3_2<2, 0b000000,
-                     (outs IntRegs:$dst), (ins MEMri:$addr),
-                     "add ${addr:arith}, $dst",
-                     [(set iPTR:$dst, ADDRri:$addr)]>;
+                     (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                     "add ${addr:arith}, $rd",
+                     [(set iPTR:$rd, ADDRri:$addr)]>;
 
 let Defs = [ICC] in
   defm ADDCC  : F3_12<"addcc", 0b010000, addc, IntRegs, i32, simm13Op>;
@@ -845,19 +838,27 @@ defm SAVE    : F3_12np<"save"   , 0b111100>;
 defm RESTORE : F3_12np<"restore", 0b111101>;
 
 // Section B.21 - Branch on Integer Condition Codes Instructions, p. 119
+// Section A.7 - Branch on Integer Condition Codes with Prediction (SPARC v9)
 
+let isBranch = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
 // unconditional branch class.
 class BranchAlways<dag ins, string asmstr, list<dag> pattern>
-  : F2_2<0b010, 0, (outs), ins, asmstr, pattern> {
-  let isBranch     = 1;
-  let isTerminator = 1;
-  let hasDelaySlot = 1;
-  let isBarrier    = 1;
+  : F2_2<0b010, 0, (outs), ins, asmstr, pattern>;
+
+// Same as BranchAlways but uses the new v9 encoding
+class BranchPredictAlways<dag ins, string asmstr, list<dag> pattern>
+  : F2_3<0b001, 0, 1, (outs), ins, asmstr, pattern>;
 }
 
-let cond = 8 in
-  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+let cond = 8 in {
+  // If we're compiling for v9, prefer BPA rather than BA
+  // TODO: Disallow BA emission when FeatureV8Deprecated isn't enabled
+  let Predicates = [HasV9], cc = 0b00 in
+    def BPA : BranchPredictAlways<(ins bprtarget:$imm19),
+      "ba %icc, $imm19", [(br bb:$imm19)]>;
 
+  def BA : BranchAlways<(ins brtarget:$imm22), "ba $imm22", [(br bb:$imm22)]>;
+}
 
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
 
@@ -896,13 +897,13 @@ multiclass IPredBranch<string regstr, list<dag> CCPattern> {
 let isTerminator = 1, isBarrier = 1,  hasDelaySlot = 1, isBranch =1,
      isIndirectBranch = 1, rd = 0, isCodeGenOnly = 1 in {
   def BINDrr  : F3_1<2, 0b111000,
-                   (outs), (ins MEMrr:$ptr),
-                   "jmp $ptr",
-                   [(brind ADDRrr:$ptr)]>;
+                   (outs), (ins (MEMrr $rs1, $rs2):$addr),
+                   "jmp $addr",
+                   [(brind ADDRrr:$addr)]>;
   def BINDri  : F3_2<2, 0b111000,
-                   (outs), (ins MEMri:$ptr),
-                   "jmp $ptr",
-                   [(brind ADDRri:$ptr)]>;
+                   (outs), (ins (MEMri $rs1, $simm13):$addr),
+                   "jmp $addr",
+                   [(brind ADDRri:$addr)]>;
 }
 
 let Uses = [ICC] in {
@@ -913,7 +914,7 @@ let Uses = [ICC] in {
                          "b$cond,a $imm22", []>;
 
   let Predicates = [HasV9], cc = 0b00 in
-    defm BPI : IPredBranch<"%icc", []>;
+    defm BPI : IPredBranch<"%icc", [(SPbpicc bb:$imm19, imm:$cond)]>;
 }
 
 // Section B.22 - Branch on Floating-point Condition Codes Instructions, p. 121
@@ -951,6 +952,19 @@ let Uses = [FCC0] in {
                               [(SPbrfcc bb:$imm22, imm:$cond)]>;
   def FBCONDA : FPBranchSPA<(ins brtarget:$imm22, CCOp:$cond),
                              "fb$cond,a $imm22", []>;
+}
+
+// Variants of FBCOND that uses V9 opcode
+let Predicates = [HasV9], Uses = [FCC0], cc = 0,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in {
+  def FBCOND_V9  : F2_3<0b101, 0, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
+  def FBCONDA_V9 : F2_3<0b101, 1, 1, (outs),
+                    (ins bprtarget:$imm19, CCOp:$cond),
+                    "fb$cond,a %fcc0, $imm19",
+                    [(SPbrfccv9 bb:$imm19, imm:$cond)], IIC_fpu_normal_instr>;
 }
 
 let Predicates = [HasV9] in
@@ -991,14 +1005,14 @@ let Uses = [O6],
   // indirect calls: special cases of JMPL.
   let isCodeGenOnly = 1, rd = 15 in {
     def CALLrr : F3_1<2, 0b111000,
-                      (outs), (ins MEMrr:$ptr, variable_ops),
-                      "call $ptr",
-                      [(call ADDRrr:$ptr)],
+                      (outs), (ins (MEMrr $rs1, $rs2):$addr, variable_ops),
+                      "call $addr",
+                      [(call ADDRrr:$addr)],
                       IIC_jmp_or_call>;
     def CALLri : F3_2<2, 0b111000,
-                      (outs), (ins MEMri:$ptr, variable_ops),
-                      "call $ptr",
-                      [(call ADDRri:$ptr)],
+                      (outs), (ins (MEMri $rs1, $simm13):$addr, variable_ops),
+                      "call $addr",
+                      [(call ADDRri:$addr)],
                       IIC_jmp_or_call>;
   }
 }
@@ -1006,16 +1020,15 @@ let Uses = [O6],
 // Section B.25 - Jump and Link Instruction
 
 // JMPL Instruction.
-let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
-    DecoderMethod = "DecodeJMPL" in {
+let isTerminator = 1, hasDelaySlot = 1, isBarrier = 1 in {
   def JMPLrr: F3_1<2, 0b111000,
-                   (outs IntRegs:$dst), (ins MEMrr:$addr),
-                   "jmpl $addr, $dst",
+                   (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                   "jmpl $addr, $rd",
                    [],
                    IIC_jmp_or_call>;
   def JMPLri: F3_2<2, 0b111000,
-                   (outs IntRegs:$dst), (ins MEMri:$addr),
-                   "jmpl $addr, $dst",
+                   (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                   "jmpl $addr, $rd",
                    [],
                    IIC_jmp_or_call>;
 }
@@ -1026,29 +1039,29 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     isCodeGenOnly = 1 in {
   let rd = 0, rs1 = 15 in
     def RETL: F3_2<2, 0b111000,
-                   (outs), (ins i32imm:$val),
-                   "jmp %o7+$val",
-                   [(retflag simm13:$val)],
+                   (outs), (ins i32imm:$simm13),
+                   "jmp %o7+$simm13",
+                   [(retflag simm13:$simm13)],
                    IIC_jmp_or_call>;
 
   let rd = 0, rs1 = 31 in
     def RET: F3_2<2, 0b111000,
-                  (outs), (ins i32imm:$val),
-                  "jmp %i7+$val",
+                  (outs), (ins i32imm:$simm13),
+                  "jmp %i7+$simm13",
                   [],
                   IIC_jmp_or_call>;
 }
 
 // Section B.26 - Return from Trap Instruction
 let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
-     isBarrier = 1, rd = 0, DecoderMethod = "DecodeReturn" in {
+     isBarrier = 1, rd = 0 in {
   def RETTrr : F3_1<2, 0b111001,
-                   (outs), (ins MEMrr:$addr),
+                   (outs), (ins (MEMrr $rs1, $rs2):$addr),
                    "rett $addr",
                    [],
                    IIC_jmp_or_call>;
   def RETTri : F3_2<2, 0b111001,
-                    (outs), (ins MEMri:$addr),
+                    (outs), (ins (MEMri $rs1, $simm13):$addr),
                     "rett $addr",
                     [],
                     IIC_jmp_or_call>;
@@ -1057,7 +1070,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1,
 
 // Section B.27 - Trap on Integer Condition Codes Instruction
 // conditional branch class:
-let DecoderNamespace = "SparcV8", DecoderMethod = "DecodeTRAP", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+let DecoderNamespace = "SparcV8", hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
 {
   def TRAPrr : TRAPSPrr<0b111010,
                         (outs), (ins IntRegs:$rs1, IntRegs:$rs2, CCOp:$cond),
@@ -1080,7 +1093,7 @@ multiclass TRAP<string regStr> {
                     []>;
 }
 
-let DecoderNamespace = "SparcV9", DecoderMethod = "DecodeTRAP", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
+let DecoderNamespace = "SparcV9", Predicates = [HasV9], hasSideEffects = 1, Uses = [ICC], cc = 0b00 in
   defm TICC : TRAP<"%icc">;
 
 
@@ -1172,9 +1185,9 @@ let rd = 0 in
 
 // Section B.32 - Flush Instruction Memory
 let rd = 0 in {
-  def FLUSHrr : F3_1<2, 0b111011, (outs), (ins MEMrr:$addr),
+  def FLUSHrr : F3_1<2, 0b111011, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "flush $addr", []>;
-  def FLUSHri : F3_2<2, 0b111011, (outs), (ins MEMri:$addr),
+  def FLUSHri : F3_2<2, 0b111011, (outs), (ins (MEMri $rs1, $simm13):$addr),
                        "flush $addr", []>;
 
   // The no-arg FLUSH is only here for the benefit of the InstAlias
@@ -1399,6 +1412,31 @@ let Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
                    Requires<[HasHardQuad]>;
 }
 
+// A.13 Floating-Point Compare (SPARC v9)
+// Note that these always write to %fcc0 instead of having its destination
+// allocated automatically.
+// This avoids complications with the scheduler sometimes wanting to spill
+// the contents of an FCC, since SPARC v9 doesn't have facilities to spill
+// an individual FCC.
+
+let Predicates = [HasV9], Defs = [FCC0], rd = 0, isCodeGenOnly = 1 in {
+  def FCMPS_V9  : F3_3c<2, 0b110101, 0b001010001,
+                   (outs), (ins FPRegs:$rs1, FPRegs:$rs2),
+                   "fcmps %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f32:$rs1, f32:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPD_V9  : F3_3c<2, 0b110101, 0b001010010,
+                   (outs), (ins DFPRegs:$rs1, DFPRegs:$rs2),
+                   "fcmpd %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f64:$rs1, f64:$rs2)],
+                   IIC_fpu_fast_instr>;
+  def FCMPQ_V9  : F3_3c<2, 0b110101, 0b001010011,
+                   (outs), (ins QFPRegs:$rs1, QFPRegs:$rs2),
+                   "fcmpq %fcc0, $rs1, $rs2",
+                   [(SPcmpfccv9 f128:$rs1, f128:$rs2)]>,
+                   Requires<[HasHardQuad]>;
+}
+
 //===----------------------------------------------------------------------===//
 // Instructions for Thread Local Storage(TLS).
 //===----------------------------------------------------------------------===//
@@ -1412,10 +1450,10 @@ def TLS_ADDrr : F3_1<2, 0b000000,
 
 let mayLoad = 1 in {
   def TLS_LDrr : F3_1<3, 0b000000,
-                      (outs IntRegs:$dst),
-                      (ins MEMrr:$addr, TailRelocSymTLSLoad:$sym),
-                      "ld [$addr], $dst, $sym",
-                      [(set i32:$dst,
+                      (outs IntRegs:$rd),
+                      (ins (MEMrr $rs1, $rs2):$addr, TailRelocSymTLSLoad:$sym),
+                      "ld [$addr], $rd, $sym",
+                      [(set i32:$rd,
                           (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
 }
 
@@ -1452,9 +1490,9 @@ def : Pat<(tailcall (iPTR texternalsym:$dst)),
 let isCodeGenOnly = 1, isReturn = 1,  hasDelaySlot = 1,  isTerminator = 1,
     isBarrier = 1, rd = 0 in {
   def TAIL_CALLri : F3_2<2, 0b111000,
-                         (outs), (ins MEMri:$ptr, variable_ops),
-                         "jmp $ptr",
-                         [(tailcall ADDRri:$ptr)]>;
+                         (outs), (ins (MEMri $rs1, $simm13):$addr, variable_ops),
+                         "jmp $addr",
+                         [(tailcall ADDRri:$addr)]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1712,10 +1750,10 @@ let hasSideEffects = 1 in {
 // Section A.42 - Prefetch Data
 let Predicates = [HasV9] in {
   def PREFETCHr : F3_1<3, 0b101101,
-                   (outs), (ins MEMrr:$addr, shift_imm5:$rd),
+                   (outs), (ins (MEMrr $rs1, $rs2):$addr, shift_imm5:$rd),
                    "prefetch [$addr], $rd", []>;
   def PREFETCHi : F3_2<3, 0b101101,
-                   (outs), (ins MEMri:$addr, shift_imm5:$rd),
+                   (outs), (ins (MEMri $rs1, $simm13):$addr, shift_imm5:$rd),
                    "prefetch [$addr], $rd", []>;
 }
 
@@ -1744,8 +1782,7 @@ let Predicates = [HasV9] in {
 //===----------------------------------------------------------------------===//
 
 // Zero immediate.
-def : Pat<(i32 0),
-          (ORrr (i32 G0), (i32 G0))>;
+def : Pat<(i32 0), (COPY (i32 G0))>;
 // Small immediates.
 def : Pat<(i32 simm13:$val),
           (ORri (i32 G0), imm:$val)>;
@@ -1825,6 +1862,16 @@ def : Pat<(atomic_store_16 ADDRrr:$dst, i32:$val), (STHrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_16 ADDRri:$dst, i32:$val), (STHri ADDRri:$dst, $val)>;
 def : Pat<(atomic_store_32 ADDRrr:$dst, i32:$val), (STrr ADDRrr:$dst, $val)>;
 def : Pat<(atomic_store_32 ADDRri:$dst, i32:$val), (STri ADDRri:$dst, $val)>;
+
+// A register pair with zero upper half.
+// The upper part is done with ORrr instead of `COPY G0`
+// or a normal register copy, since `COPY G0`s in that place
+// will be converted into `COPY G0_G1` later on, which is not
+// what we want in this case.
+def : Pat<(build_vector (i32 0), (i32 IntRegs:$a2)),
+          (INSERT_SUBREG (INSERT_SUBREG (v2i32 (IMPLICIT_DEF)),
+            (ORrr (i32 G0), (i32 G0)), sub_even),
+            (i32 IntRegs:$a2), sub_odd)>;
 
 // extract_vector
 def : Pat<(extractelt (v2i32 IntPair:$Rn), 0),

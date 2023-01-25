@@ -152,7 +152,9 @@ public:
   };
 
 private:
-  void modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
+  /// Run the specified layout algorithm on the given function. Returns `true`
+  /// if the order of blocks was changed.
+  bool modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
                             bool MinBranchClusters) const;
 
 public:

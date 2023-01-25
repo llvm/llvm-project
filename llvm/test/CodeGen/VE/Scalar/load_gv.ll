@@ -19,7 +19,7 @@ define fp128 @loadf128com() {
 ; CHECK-NEXT:    ld %s0, 8(, %s2)
 ; CHECK-NEXT:    ld %s1, (, %s2)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load fp128, fp128* @vf128, align 16
+  %1 = load fp128, ptr @vf128, align 16
   ret fp128 %1
 }
 
@@ -32,7 +32,7 @@ define double @loadf64com() {
 ; CHECK-NEXT:    lea.sl %s0, vf64@hi(, %s0)
 ; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load double, double* @vf64, align 8
+  %1 = load double, ptr @vf64, align 8
   ret double %1
 }
 
@@ -45,7 +45,7 @@ define float @loadf32com() {
 ; CHECK-NEXT:    lea.sl %s0, vf32@hi(, %s0)
 ; CHECK-NEXT:    ldu %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load float, float* @vf32, align 4
+  %1 = load float, ptr @vf32, align 4
   ret float %1
 }
 
@@ -59,7 +59,7 @@ define i128 @loadi128com() {
 ; CHECK-NEXT:    ld %s0, (, %s1)
 ; CHECK-NEXT:    ld %s1, 8(, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load i128, i128* @vi128, align 16
+  %1 = load i128, ptr @vi128, align 16
   ret i128 %1
 }
 
@@ -72,7 +72,7 @@ define i64 @loadi64com() {
 ; CHECK-NEXT:    lea.sl %s0, vi64@hi(, %s0)
 ; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load i64, i64* @vi64, align 8
+  %1 = load i64, ptr @vi64, align 8
   ret i64 %1
 }
 
@@ -85,7 +85,7 @@ define i32 @loadi32com() {
 ; CHECK-NEXT:    lea.sl %s0, vi32@hi(, %s0)
 ; CHECK-NEXT:    ldl.sx %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load i32, i32* @vi32, align 4
+  %1 = load i32, ptr @vi32, align 4
   ret i32 %1
 }
 
@@ -98,7 +98,7 @@ define i16 @loadi16com() {
 ; CHECK-NEXT:    lea.sl %s0, vi16@hi(, %s0)
 ; CHECK-NEXT:    ld2b.zx %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load i16, i16* @vi16, align 2
+  %1 = load i16, ptr @vi16, align 2
   ret i16 %1
 }
 
@@ -111,6 +111,6 @@ define i8 @loadi8com() {
 ; CHECK-NEXT:    lea.sl %s0, vi8@hi(, %s0)
 ; CHECK-NEXT:    ld1b.zx %s0, (, %s0)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  %1 = load i8, i8* @vi8, align 1
+  %1 = load i8, ptr @vi8, align 1
   ret i8 %1
 }

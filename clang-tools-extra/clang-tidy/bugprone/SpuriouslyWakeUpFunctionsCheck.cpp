@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
@@ -86,6 +84,4 @@ void SpuriouslyWakeUpFunctionsCheck::check(
        "conditional parameter}1")
       << WaitName << (WaitName != "cnd_wait" && WaitName != "cnd_timedwait");
 }
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -33,12 +33,9 @@ LLVM_C_EXTERN_C_BEGIN
 void LLVMInitializeCore(LLVMPassRegistryRef R);
 void LLVMInitializeTransformUtils(LLVMPassRegistryRef R);
 void LLVMInitializeScalarOpts(LLVMPassRegistryRef R);
-void LLVMInitializeObjCARCOpts(LLVMPassRegistryRef R);
 void LLVMInitializeVectorization(LLVMPassRegistryRef R);
 void LLVMInitializeInstCombine(LLVMPassRegistryRef R);
-void LLVMInitializeAggressiveInstCombiner(LLVMPassRegistryRef R);
 void LLVMInitializeIPO(LLVMPassRegistryRef R);
-void LLVMInitializeInstrumentation(LLVMPassRegistryRef R);
 void LLVMInitializeAnalysis(LLVMPassRegistryRef R);
 void LLVMInitializeIPA(LLVMPassRegistryRef R);
 void LLVMInitializeCodeGen(LLVMPassRegistryRef R);

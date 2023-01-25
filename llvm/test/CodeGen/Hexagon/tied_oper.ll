@@ -5,23 +5,23 @@
 target triple = "hexagon-unknown--elf"
 
 ; Function Attrs: nounwind
-define void @f0(i16* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
   br label %b1
 
 b1:                                               ; preds = %b5, %b0
-  %v0 = phi i16* [ %a0, %b0 ], [ %v5, %b5 ]
+  %v0 = phi ptr [ %a0, %b0 ], [ %v5, %b5 ]
   %v1 = phi i16 [ undef, %b0 ], [ %v10, %b5 ]
   br i1 undef, label %b2, label %b3
 
 b2:                                               ; preds = %b1
-  %v2 = getelementptr inbounds i16, i16* %v0, i32 1
-  %v3 = load i16, i16* %v0, align 2, !tbaa !0
+  %v2 = getelementptr inbounds i16, ptr %v0, i32 1
+  %v3 = load i16, ptr %v0, align 2, !tbaa !0
   br label %b3
 
 b3:                                               ; preds = %b2, %b1
   %v4 = phi i16 [ %v3, %b2 ], [ %v1, %b1 ]
-  %v5 = phi i16* [ %v2, %b2 ], [ %v0, %b1 ]
+  %v5 = phi ptr [ %v2, %b2 ], [ %v0, %b1 ]
   %v6 = lshr i16 %v4, 4
   %v7 = zext i16 %v6 to i32
   %v8 = and i32 %v7, 15

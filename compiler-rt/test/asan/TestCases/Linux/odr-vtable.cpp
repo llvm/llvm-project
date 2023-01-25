@@ -1,5 +1,5 @@
 // Fails with debug checks: https://bugs.llvm.org/show_bug.cgi?id=46862
-// XFAIL: !compiler-rt-optimized && !riscv64
+// XFAIL: !compiler-rt-optimized && !target=riscv64{{.*}}
 
 // REQUIRES: shared_cxxabi
 

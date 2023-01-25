@@ -1,5 +1,5 @@
 
-; RUN: opt < %s -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 ; CHECK-LABEL: func_fast
 ; CHECK:       fadd fast double
@@ -9,8 +9,8 @@ define double @func_fast(double %a, double %b) {
 entry:
   %a.addr = alloca double, align 8
   %add = fadd fast double %b, 3.000000e+00
-  store double %add, double* %a.addr, align 8
-  %load_add = load double, double* %a.addr, align 8
+  store double %add, ptr %a.addr, align 8
+  %load_add = load double, ptr %a.addr, align 8
   ret double %load_add
 }
 
@@ -22,7 +22,7 @@ define double @func_no_fast(double %a, double %b) {
 entry:
   %a.addr = alloca double, align 8
   %add = fadd fast double %b, 3.000000e+00
-  store double %add, double* %a.addr, align 8
+  store double %add, ptr %a.addr, align 8
   %duplicated_add = fadd double %b, 3.000000e+00
   ret double %duplicated_add
 }

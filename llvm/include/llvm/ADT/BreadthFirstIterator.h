@@ -19,11 +19,10 @@
 #define LLVM_ADT_BREADTHFIRSTITERATOR_H
 
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -58,11 +57,11 @@ private:
   using ChildItTy = typename GT::ChildIteratorType;
 
   // First element is the node reference, second is the next child to visit.
-  using QueueElement = std::pair<NodeRef, Optional<ChildItTy>>;
+  using QueueElement = std::pair<NodeRef, std::optional<ChildItTy>>;
 
   // Visit queue - used to maintain BFS ordering.
-  // Optional<> because we need markers for levels.
-  std::queue<Optional<QueueElement>> VisitQueue;
+  // std::optional<> because we need markers for levels.
+  std::queue<std::optional<QueueElement>> VisitQueue;
 
   // Current level.
   unsigned Level = 0;
@@ -72,17 +71,17 @@ private:
     Level = 0;
 
     // Also, insert a dummy node as marker.
-    VisitQueue.push(QueueElement(Node, None));
-    VisitQueue.push(None);
+    VisitQueue.push(QueueElement(Node, std::nullopt));
+    VisitQueue.push(std::nullopt);
   }
 
   inline bf_iterator() = default;
 
   inline void toNext() {
-    Optional<QueueElement> Head = VisitQueue.front();
+    std::optional<QueueElement> Head = VisitQueue.front();
     QueueElement H = *Head;
     NodeRef Node = H.first;
-    Optional<ChildItTy> &ChildIt = H.second;
+    std::optional<ChildItTy> &ChildIt = H.second;
 
     if (!ChildIt)
       ChildIt.emplace(GT::child_begin(Node));
@@ -91,14 +90,14 @@ private:
 
       // Already visited?
       if (this->Visited.insert(Next).second)
-        VisitQueue.push(QueueElement(Next, None));
+        VisitQueue.push(QueueElement(Next, std::nullopt));
     }
     VisitQueue.pop();
 
     // Go to the next element skipping markers if needed.
     if (!VisitQueue.empty()) {
       Head = VisitQueue.front();
-      if (Head != None)
+      if (Head != std::nullopt)
         return;
       Level += 1;
       VisitQueue.pop();
@@ -106,7 +105,7 @@ private:
       // Don't push another marker if this is the last
       // element.
       if (!VisitQueue.empty())
-        VisitQueue.push(None);
+        VisitQueue.push(std::nullopt);
     }
   }
 

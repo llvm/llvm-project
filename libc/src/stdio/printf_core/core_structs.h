@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 #include <inttypes.h>
@@ -37,8 +37,7 @@ enum FormatFlags : uint8_t {
 struct FormatSection {
   bool has_conv;
 
-  const char *__restrict raw_string;
-  size_t raw_len;
+  cpp::string_view raw_string;
 
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
@@ -58,8 +57,7 @@ struct FormatSection {
     if (has_conv != other.has_conv)
       return false;
 
-    if (!cpp::StringView(raw_string, raw_len)
-             .equals(cpp::StringView(other.raw_string, other.raw_len)))
+    if (raw_string != other.raw_string)
       return false;
 
     if (has_conv) {
@@ -86,6 +84,7 @@ constexpr int WRITE_OK = 0;
 constexpr int FILE_WRITE_ERROR = -1;
 constexpr int FILE_STATUS_ERROR = -2;
 constexpr int NULLPTR_WRITE_ERROR = -3;
+constexpr int INT_CONVERSION_ERROR = -4;
 
 } // namespace printf_core
 } // namespace __llvm_libc

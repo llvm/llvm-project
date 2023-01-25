@@ -80,7 +80,7 @@ bool wouldInstructionBeTriviallyDead(Instruction *I,
                                      const TargetLibraryInfo *TLI = nullptr);
 
 /// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than 
+/// any paths other than where it is used. This is less conservative than
 /// wouldInstructionBeTriviallyDead which is based on the assumption
 /// that the use count will be 0. An example usage of this API is for
 /// identifying instructions that can be sunk down to use(s).
@@ -232,7 +232,7 @@ inline Align getKnownAlignment(Value *V, const DataLayout &DL,
 /// uses replaced by the new call.
 CallInst *createCallMatchingInvoke(InvokeInst *II);
 
-/// This function converts the specified invoek into a normall call.
+/// This function converts the specified invoke into a normal call.
 CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 
 ///===---------------------------------------------------------------------===//
@@ -286,7 +286,6 @@ void salvageDebugInfo(Instruction &I);
 
 /// Implementation of salvageDebugInfo, applying only to instructions in
 /// \p Insns, rather than all debug users from findDbgUsers( \p I).
-/// Returns true if any debug users were updated.
 /// Mark undef if salvaging cannot be completed.
 void salvageDebugInfoForDbgValues(Instruction &I,
                                   ArrayRef<DbgVariableIntrinsic *> Insns);
@@ -357,11 +356,12 @@ BasicBlock *changeToInvokeAndSplitBasicBlock(CallInst *CI,
 
 /// Replace 'BB's terminator with one that does not have an unwind successor
 /// block. Rewrites `invoke` to `call`, etc. Updates any PHIs in unwind
-/// successor.
+/// successor. Returns the instruction that replaced the original terminator,
+/// which might be a call in case the original terminator was an invoke.
 ///
 /// \param BB  Block whose terminator will be replaced.  Its terminator must
 ///            have an unwind successor.
-void removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
 ///

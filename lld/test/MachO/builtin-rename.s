@@ -53,6 +53,23 @@
 # YDATA-DAG: __DATA_CONST,__objc_protolist __DATA__objc_protolist
 # YDATA-DAG: __DATA_CONST,__nl_symbol_ptr __IMPORT__pointers
 
+## Check that the SG_READ_ONLY flag is set on __DATA_CONST.
+# RUN: llvm-otool -v -l %t/ydata | \
+# RUN:     FileCheck %s --check-prefix=FLAGS
+
+# FLAGS-LABEL: Load command 2
+# FLAGS-NEXT:      cmd LC_SEGMENT_64
+# FLAGS-NEXT:  cmdsize
+# FLAGS-NEXT:  segname __DATA_CONST
+# FLAGS-NEXT:   vmaddr
+# FLAGS-NEXT:   vmsize
+# FLAGS-NEXT:  fileoff
+# FLAGS-NEXT: filesize
+# FLAGS-NEXT:  maxprot rw-
+# FLAGS-NEXT: initprot rw-
+# FLAGS-NEXT:   nsects 13
+# FLAGS-NEXT:    flags SG_READ_ONLY
+
 ## LLD doesn't support defining symbols in synthetic sections, so we test them
 ## via this slightly more awkward route.
 # RUN: llvm-readobj --section-headers %t/ydata | \

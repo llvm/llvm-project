@@ -1,7 +1,7 @@
 ; RUN: llc %s -mtriple=powerpc -o - | FileCheck %s
 ; RUN: llc %s -mtriple=powerpc64 -o - | FileCheck %s
 
-define i1 @no__mulodi4(i32 %a, i64 %b, i32* %c) {
+define i1 @no__mulodi4(i32 %a, i64 %b, ptr %c) {
 ; CHECK-LABEL: no__mulodi4
 ; CHECK-NOT: bl __mulodi4
 ; CHECK-NOT: bl __multi3
@@ -14,7 +14,7 @@ entry:
   %5 = sext i32 %4 to i64
   %6 = icmp ne i64 %3, %5
   %7 = or i1 %2, %6
-  store i32 %4, i32* %c, align 4
+  store i32 %4, ptr %c, align 4
   ret i1 %7
 }
 

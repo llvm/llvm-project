@@ -344,13 +344,17 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  void printStringEscaped(StringRef Label, StringRef Value) {
+    printStringEscapedImpl(Label, Value);
+  }
+
   void printBinary(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value) {
     printBinaryImpl(Label, Str, Value, false);
   }
 
   void printBinary(StringRef Label, StringRef Str, ArrayRef<char> Value) {
-    auto V = makeArrayRef(reinterpret_cast<const uint8_t *>(Value.data()),
-                          Value.size());
+    auto V =
+        ArrayRef(reinterpret_cast<const uint8_t *>(Value.data()), Value.size());
     printBinaryImpl(Label, Str, V, false);
   }
 
@@ -359,14 +363,14 @@ public:
   }
 
   void printBinary(StringRef Label, ArrayRef<char> Value) {
-    auto V = makeArrayRef(reinterpret_cast<const uint8_t *>(Value.data()),
-                          Value.size());
+    auto V =
+        ArrayRef(reinterpret_cast<const uint8_t *>(Value.data()), Value.size());
     printBinaryImpl(Label, StringRef(), V, false);
   }
 
   void printBinary(StringRef Label, StringRef Value) {
-    auto V = makeArrayRef(reinterpret_cast<const uint8_t *>(Value.data()),
-                          Value.size());
+    auto V =
+        ArrayRef(reinterpret_cast<const uint8_t *>(Value.data()), Value.size());
     printBinaryImpl(Label, StringRef(), V, false);
   }
 
@@ -380,8 +384,8 @@ public:
   }
 
   void printBinaryBlock(StringRef Label, StringRef Value) {
-    auto V = makeArrayRef(reinterpret_cast<const uint8_t *>(Value.data()),
-                          Value.size());
+    auto V =
+        ArrayRef(reinterpret_cast<const uint8_t *>(Value.data()), Value.size());
     printBinaryImpl(Label, StringRef(), V, true);
   }
 
@@ -476,6 +480,12 @@ private:
   virtual void printNumberImpl(StringRef Label, StringRef Str,
                                StringRef Value) {
     startLine() << Label << ": " << Str << " (" << Value << ")\n";
+  }
+
+  virtual void printStringEscapedImpl(StringRef Label, StringRef Value) {
+    startLine() << Label << ": ";
+    OS.write_escaped(Value);
+    OS << '\n';
   }
 
   void scopedBegin(char Symbol) {

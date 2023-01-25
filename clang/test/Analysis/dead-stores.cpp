@@ -11,6 +11,10 @@
 // RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -fblocks -std=c++11    \
 // RUN:  -analyzer-checker=deadcode.DeadStores -Wno-unreachable-code            \
 // RUN:  -verify=non-nested,nested %s
+//
+// RUN: %clang_analyze_cc1 -fcxx-exceptions -fexceptions -fblocks -std=c++17    \
+// RUN:  -analyzer-checker=deadcode.DeadStores -Wno-unreachable-code            \
+// RUN:  -verify=non-nested,nested %s
 
 //===----------------------------------------------------------------------===//
 // Basic dead store checking (but in C++ mode).
@@ -33,6 +37,8 @@ void test1() {
   (void)y;
   if ((y = make_int())) // nested-warning {{Although the value stored}}
     return;
+
+  auto z = "text"; // non-nested-warning {{never read}}
 }
 
 //===----------------------------------------------------------------------===//
@@ -50,6 +56,18 @@ public:
 int test2(int x) {
   { Test2 a(x); } // no-warning
   return x;
+}
+
+class TestConstructor {
+public:
+  TestConstructor(int &y);
+};
+void copy(int x) {
+  // All these calls might have side effects in the opaque constructor
+  TestConstructor tc1 = x;                    // no-warning potential side effects
+  TestConstructor tc2 = TestConstructor(x);   // no-warning potential side effects
+  TestConstructor tc3 = (TestConstructor(x)); // no-warning potential side effects
+  TestConstructor tc4 = (TestConstructor)(x); // no-warning potential side effects
 }
 
 //===----------------------------------------------------------------------===//

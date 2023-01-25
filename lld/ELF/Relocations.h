@@ -14,8 +14,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 class Symbol;
 class InputSection;
 class InputSectionBase;
@@ -126,7 +125,7 @@ struct JumpInstrMod {
 // This function writes undefined symbol diagnostics to an internal buffer.
 // Call reportUndefinedSymbols() after calling scanRelocations() to emit
 // the diagnostics.
-template <class ELFT> void scanRelocations(InputSectionBase &);
+template <class ELFT> void scanRelocations();
 void reportUndefinedSymbols();
 void postScanRelocations();
 
@@ -212,7 +211,6 @@ ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
   }
   return rels;
 }
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

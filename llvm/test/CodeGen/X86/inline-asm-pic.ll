@@ -26,13 +26,14 @@ define void @x() {
 ; CHECK-LABEL: x:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## InlineAsm Start
-; CHECK-NEXT:    ## Ltmp0
+; CHECK-NEXT:    ## LBB1_1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:  ## %bb.2: ## %return
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  Ltmp0: ## Block address taken
 ; CHECK-NEXT:  LBB1_1: ## %overflow
+; CHECK-NEXT:    ## Label of block must be emitted
 ; CHECK-NEXT:    retl
   callbr void asm "#  ${0:l}\0A", "!i"()
           to label %return [label %overflow]

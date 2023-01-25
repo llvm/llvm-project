@@ -472,6 +472,7 @@ def : Pat<(CSKY_LOAD_ADDR tglobaladdr, tconstpool:$src2), (LRW16 tconstpool:$src
 def : Pat<(CSKY_LOAD_ADDR tblockaddress, tconstpool:$src2), (LRW16 tconstpool:$src2)>;
 def : Pat<(CSKY_LOAD_ADDR tjumptable:$src1, tconstpool:$src2), (LRW16_Gen tjumptable:$src1, tconstpool:$src2)>;
 def : Pat<(CSKY_LOAD_ADDR texternalsym, tconstpool:$src2), (LRW16 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tconstpool:$src1, tconstpool:$src2), (LRW16_Gen tconstpool:$src1, tconstpool:$src2)>;
 
 def : Pat<(i32 (load constpool:$src)), (LRW16 (to_tconstpool tconstpool:$src))>;
 

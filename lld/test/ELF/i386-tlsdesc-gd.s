@@ -5,18 +5,18 @@
 
 # RUN: ld.lld -shared -z now %t.o %t1.o -o %t.so
 # RUN: llvm-readobj -r -x .got %t.so | FileCheck --check-prefix=GD-REL %s
-# RUN: llvm-objdump -h -d --no-show-raw-insn %t.so | FileCheck --check-prefix=GD %s
+# RUN: llvm-objdump --no-print-imm-hex -h -d --no-show-raw-insn %t.so | FileCheck --check-prefix=GD %s
 
 # RUN: ld.lld -shared -z now %t.o %t1.o -o %t-rela.so -z rela
 # RUN: llvm-readobj -r -x .got %t-rela.so | FileCheck --check-prefix=GD-RELA %s
 
 # RUN: ld.lld -z now %t.o %t1.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
-# RUN: llvm-objdump -h -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
+# RUN: llvm-objdump --no-print-imm-hex -h -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
 # RUN: ld.lld -z now %t.o %t1.so -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=IE-REL %s
-# RUN: llvm-objdump -h -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
+# RUN: llvm-objdump --no-print-imm-hex -h -d --no-show-raw-insn %t | FileCheck --check-prefix=IE %s
 
 # GD-REL:      .rel.dyn {
 # GD-REL-NEXT:   0x2258 R_386_TLS_DESC -

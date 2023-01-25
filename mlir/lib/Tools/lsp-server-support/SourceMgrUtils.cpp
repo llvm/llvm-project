@@ -8,6 +8,7 @@
 
 #include "SourceMgrUtils.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::lsp;
@@ -63,6 +64,55 @@ SMRange lsp::convertTokenLocToRange(SMLoc loc) {
   }
 
   return SMRange(loc, SMLoc::getFromPointer(curPtr));
+}
+
+std::optional<std::string>
+lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
+  // This is a heuristic, and isn't intended to cover every case, but should
+  // cover the most common. We essentially look for a comment preceding the
+  // line, and if we find one, use that as the documentation.
+  if (!loc.isValid())
+    return std::nullopt;
+  int bufferId = sourceMgr.FindBufferContainingLoc(loc);
+  if (bufferId == 0)
+    return std::nullopt;
+  const char *bufferStart =
+      sourceMgr.getMemoryBuffer(bufferId)->getBufferStart();
+  StringRef buffer(bufferStart, loc.getPointer() - bufferStart);
+
+  // Pop the last line from the buffer string.
+  auto popLastLine = [&]() -> std::optional<StringRef> {
+    size_t newlineOffset = buffer.find_last_of("\n");
+    if (newlineOffset == StringRef::npos)
+      return std::nullopt;
+    StringRef lastLine = buffer.drop_front(newlineOffset).trim();
+    buffer = buffer.take_front(newlineOffset);
+    return lastLine;
+  };
+
+  // Try to pop the current line.
+  if (!popLastLine())
+    return std::nullopt;
+
+  // Try to parse a comment string from the source file.
+  SmallVector<StringRef> commentLines;
+  while (std::optional<StringRef> line = popLastLine()) {
+    // Check for a comment at the beginning of the line.
+    if (!line->startswith("//"))
+      break;
+
+    // Extract the document string from the comment.
+    commentLines.push_back(line->drop_while([](char c) { return c == '/'; }));
+  }
+
+  if (commentLines.empty())
+    return std::nullopt;
+  return llvm::join(llvm::reverse(commentLines), "\n");
+}
+
+bool lsp::contains(SMRange range, SMLoc loc) {
+  return range.Start.getPointer() <= loc.getPointer() &&
+         loc.getPointer() < range.End.getPointer();
 }
 
 //===----------------------------------------------------------------------===//

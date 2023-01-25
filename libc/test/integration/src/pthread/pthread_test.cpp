@@ -55,7 +55,7 @@ void spawn_and_join() {
   }
 }
 
-int main() {
+TEST_MAIN() {
   create_and_join();
   spawn_and_join();
   return 0;

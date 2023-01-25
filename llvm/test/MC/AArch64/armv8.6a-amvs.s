@@ -1,6 +1,7 @@
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+amvs -o - %s  | FileCheck %s
 // RUN:     llvm-mc -triple aarch64 -show-encoding -mattr=+v8.6a -o - %s | FileCheck %s
-// RUN: not llvm-mc -triple aarch64 -show-encoding -o - %p/armv8.6a-amvs.s 2>&1  | FileCheck %s --check-prefix=CHECK-ERROR
+// RUN: not llvm-mc -triple aarch64 -show-encoding -o - %s 2>&1  | FileCheck %s --check-prefix=CHECK-ERROR
+mrs x0, AMCG1IDR_EL0
 msr AMEVCNTVOFF00_EL2, x0
 msr AMEVCNTVOFF01_EL2, x0
 msr AMEVCNTVOFF02_EL2, x0
@@ -67,6 +68,7 @@ mrs x0, AMEVCNTVOFF114_EL2
 mrs x0, AMEVCNTVOFF115_EL2
 
 // CHECK:  .text
+// CHECK-NEXT:  mrs     x0, AMCG1IDR_EL0        // encoding: [0xc0,0xd2,0x3b,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF00_EL2, x0   // encoding: [0x00,0xd8,0x1c,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF01_EL2, x0   // encoding: [0x20,0xd8,0x1c,0xd5]
 // CHECK-NEXT:  msr     AMEVCNTVOFF02_EL2, x0   // encoding: [0x40,0xd8,0x1c,0xd5]

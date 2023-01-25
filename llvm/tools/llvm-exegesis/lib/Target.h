@@ -28,10 +28,15 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace exegesis {
+
+extern cl::OptionCategory Options;
+extern cl::OptionCategory BenchmarkOptions;
+extern cl::OptionCategory AnalysisOptions;
 
 struct PfmCountersInfo {
   // An optional name of a performance counter that can be used to measure
@@ -155,6 +160,7 @@ public:
   // Creates a benchmark runner for the given mode.
   Expected<std::unique_ptr<BenchmarkRunner>> createBenchmarkRunner(
       InstructionBenchmark::ModeE Mode, const LLVMState &State,
+      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode =
           InstructionBenchmark::Min) const;
 
@@ -193,9 +199,10 @@ private:
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, InstructionBenchmark::ModeE Mode,
+      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
   std::unique_ptr<BenchmarkRunner> virtual createUopsBenchmarkRunner(
-      const LLVMState &State,
+      const LLVMState &State, BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
       InstructionBenchmark::ResultAggregationModeE ResultAggMode) const;
 
   const ExegesisTarget *Next = nullptr;

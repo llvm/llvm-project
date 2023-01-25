@@ -23,7 +23,7 @@ entry.split:                                      ; preds = %entry
 
 if.end:                                           ; preds = %entry.split
   tail call void @_ZN8NWindows16NSynchronization8CSynchro5EnterEv()
-  %0 = load i32, i32* null, align 8
+  %0 = load i32, ptr null, align 8
   %add = add nsw i32 %0, %releaseCount
   %cmp2 = icmp sgt i32 %add, 0
   br i1 %cmp2, label %if.then3, label %if.end5

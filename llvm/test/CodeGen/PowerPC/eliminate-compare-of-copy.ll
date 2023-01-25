@@ -12,11 +12,11 @@ entry:
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %call = tail call signext i32 bitcast (i32 (...)* @f1 to i32 ()*)()
+  %call = tail call signext i32 @f1()
   br label %return
 
 if.else:                                          ; preds = %entry
-  %call1 = tail call signext i32 bitcast (i32 (...)* @f2 to i32 ()*)()
+  %call1 = tail call signext i32 @f2()
   br label %return
 
 return:                                           ; preds = %if.else, %if.then

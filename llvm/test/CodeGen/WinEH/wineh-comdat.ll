@@ -2,7 +2,7 @@
 
 $f = comdat any
 
-define void @f() comdat personality i32 (...)* @__CxxFrameHandler3 {
+define void @f() comdat personality ptr @__CxxFrameHandler3 {
   invoke void @g() to label %return unwind label %unwind
 return:
   ret void
@@ -14,4 +14,4 @@ unwind:
 declare void @g()
 declare i32 @__CxxFrameHandler3(...)
 
-; CHECK: define internal i32 @"__ehhandler$f"(i8* %0, i8* %1, i8* %2, i8* %3){{ .+}} comdat($f) {
+; CHECK: define internal i32 @"__ehhandler$f"(ptr %0, ptr %1, ptr %2, ptr %3){{ .+}} comdat($f) {

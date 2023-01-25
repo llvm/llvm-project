@@ -1,8 +1,6 @@
 // RUN: %clangxx_dfsan %s -fno-exceptions -o %t && %run %t
 // RUN: %clangxx_dfsan -DORIGIN_TRACKING -mllvm -dfsan-track-origins=1 %s -fno-exceptions -o %t && %run %t
 //
-// REQUIRES: x86_64-target-arch
-//
 // Use -fno-exceptions to turn off exceptions to avoid instrumenting
 // __cxa_begin_catch, std::terminate and __gxx_personality_v0.
 //

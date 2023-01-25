@@ -1,5 +1,5 @@
 ; Test no suspend coroutines
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse,simplifycfg' -S | FileCheck %s
 
 ; Coroutine with no-suspends will turn into:
 ;

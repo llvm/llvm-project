@@ -11,6 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
+#include <optional>
 
 namespace clang {
 namespace tidy {
@@ -44,7 +45,7 @@ private:
 
   enum class IndirectionType : unsigned char { Pointer, Array };
 
-  Optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
+  std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
 } // namespace mpi

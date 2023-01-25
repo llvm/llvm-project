@@ -29,6 +29,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -503,8 +504,7 @@ static const RegisterInfo g_register_infos[] = {
     },
 };
 
-static const uint32_t k_num_register_infos =
-    llvm::array_lengthof(g_register_infos);
+static const uint32_t k_num_register_infos = std::size(g_register_infos);
 
 const lldb_private::RegisterInfo *
 ABISysV_mips::GetRegisterInfoArray(uint32_t &count) {
@@ -560,7 +560,7 @@ bool ABISysV_mips::PrepareTrivialCall(Thread &thread, addr_t sp,
   llvm::ArrayRef<addr_t>::iterator ai = args.begin(), ae = args.end();
 
   // Write arguments to registers
-  for (size_t i = 0; i < llvm::array_lengthof(reg_names); ++i) {
+  for (size_t i = 0; i < std::size(reg_names); ++i) {
     if (ai == ae)
       break;
 
@@ -768,7 +768,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
 
   // In MIPS register "r2" (v0) holds the integer function return values
   const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
-  llvm::Optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsIntegerOrEnumerationType(is_signed)) {
@@ -835,11 +835,11 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
       default:
         return return_valobj_sp;
       case 32:
-        static_assert(sizeof(float) == sizeof(uint32_t), "");
+        static_assert(sizeof(float) == sizeof(uint32_t));
         value.GetScalar() = *((float *)(&raw_value));
         break;
       case 64:
-        static_assert(sizeof(double) == sizeof(uint64_t), "");
+        static_assert(sizeof(double) == sizeof(uint64_t));
         const RegisterInfo *r3_reg_info =
             reg_ctx->GetRegisterInfoByName("r3", 0);
         if (target_byte_order == eByteOrderLittle)
@@ -867,7 +867,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
         default:
           return return_valobj_sp;
         case 64: {
-          static_assert(sizeof(double) == sizeof(uint64_t), "");
+          static_assert(sizeof(double) == sizeof(uint64_t));
           const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
           RegisterValue f1_value;
           DataExtractor f1_data;
@@ -899,7 +899,7 @@ ValueObjectSP ABISysV_mips::GetReturnValueObjectImpl(
           break;
         }
         case 32: {
-          static_assert(sizeof(float) == sizeof(uint32_t), "");
+          static_assert(sizeof(float) == sizeof(uint32_t));
           value.GetScalar() = (float)f0_data.GetFloat(&offset);
           break;
         }

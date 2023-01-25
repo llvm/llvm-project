@@ -5,8 +5,8 @@
 # RUN: llvm-symbolizer --verbose 0x0 --obj=test.o | FileCheck --check-prefix=SYM %s
 # RUN: llvm-dwarfdump -lookup=0x1 test.o | FileCheck --check-prefix=LOOKUP %s
 
-# SYM: Filename: .{{[/\\]}}.{{[/\\]}}test.c
-# SYM: Function start filename: .{{[/\\]}}.{{[/\\]}}test.c
+# SYM: Filename: .{{[/\\]}}test.c
+# SYM: Function start filename: .{{[/\\]}}test.c
 
 # LOOKUP: Line info: line 0, column 0, start file 'test.c', start line 1
 

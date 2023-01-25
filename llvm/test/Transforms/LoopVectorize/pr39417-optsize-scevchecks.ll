@@ -1,10 +1,10 @@
-; RUN: opt -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; PR39417
 ; Check that the need for overflow check prevents vectorizing a loop with tiny
-; trip count (which implies opt for size).
+; trip count (which implies opt -opaque-pointers=0 for size).
 ; CHECK-LABEL: @func_34
 ; CHECK-NOT: vector.scevcheck
 ; CHECK-NOT: vector.body:
@@ -34,7 +34,7 @@ define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture read
 ; CHECK-NEXT:  for.body.preheader:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[K:%.*]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[K:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:

@@ -11,14 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTESPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 using namespace mlir;
 
@@ -37,8 +48,8 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
       funcOp.getName().str() + "_arg_" + std::to_string(argIndex);
 
   // Get the type of variable. If this is a scalar/vector type and has an ABI
-  // info create a variable of type !spv.ptr<!spv.struct<elementType>>. If not
-  // it must already be a !spv.ptr<!spv.struct<...>>.
+  // info create a variable of type !spirv.ptr<!spirv.struct<elementType>>. If
+  // not it must already be a !spirv.ptr<!spirv.struct<...>>.
   auto varType = funcOp.getFunctionType().getInput(argIndex);
   if (varType.cast<spirv::SPIRVType>().isScalarOrVector()) {
     auto storageClass = abiInfo.getStorageClass();
@@ -66,7 +77,7 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
 }
 
 /// Gets the global variables that need to be specified as interface variable
-/// with an spv.EntryPointOp. Traverses the body of a entry function to do so.
+/// with an spirv.EntryPointOp. Traverses the body of a entry function to do so.
 static LogicalResult
 getInterfaceVariables(spirv::FuncOp funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
@@ -81,13 +92,13 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   // instructions in this function.
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
     auto var =
-        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
+        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.getVariable());
     // TODO: Per SPIR-V spec: "Before version 1.4, the interface’s
     // storage classes are limited to the Input and Output storage classes.
     // Starting with version 1.4, the interface’s storage classes are all
     // storage classes used in declaring all global variables referenced by the
     // entry point’s call tree." We should consider the target environment here.
-    switch (var.type().cast<spirv::PointerType>().getStorageClass()) {
+    switch (var.getType().cast<spirv::PointerType>().getStorageClass()) {
     case spirv::StorageClass::Input:
     case spirv::StorageClass::Output:
       interfaceVarSet.insert(var.getOperation());
@@ -98,7 +109,7 @@ getInterfaceVariables(spirv::FuncOp funcOp,
   });
   for (auto &var : interfaceVarSet) {
     interfaceVars.push_back(SymbolRefAttr::get(
-        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).sym_name()));
+        funcOp.getContext(), cast<spirv::GlobalVariableOp>(var).getSymName()));
   }
   return success();
 }
@@ -117,32 +128,55 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
   auto spirvModule = funcOp->getParentOfType<spirv::ModuleOp>();
   builder.setInsertionPointToEnd(spirvModule.getBody());
 
-  // Adds the spv.EntryPointOp after collecting all the interface variables
+  // Adds the spirv.EntryPointOp after collecting all the interface variables
   // needed.
   SmallVector<Attribute, 1> interfaceVars;
   if (failed(getInterfaceVariables(funcOp, interfaceVars))) {
     return failure();
   }
 
-  spirv::TargetEnvAttr targetEnv = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
+  spirv::TargetEnv targetEnv(targetEnvAttr);
   FailureOr<spirv::ExecutionModel> executionModel =
-      spirv::getExecutionModel(targetEnv);
+      spirv::getExecutionModel(targetEnvAttr);
   if (failed(executionModel))
     return funcOp.emitRemark("lower entry point failure: could not select "
-                             "execution model based on 'spv.target_env'");
+                             "execution model based on 'spirv.target_env'");
 
-  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), executionModel.value(),
-                                      funcOp, interfaceVars);
+  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), *executionModel, funcOp,
+                                      interfaceVars);
 
-  // Specifies the spv.ExecutionModeOp.
-  auto localSizeAttr = entryPointAttr.getLocalSize();
-  if (localSizeAttr) {
-    auto values = localSizeAttr.getValues<int32_t>();
-    SmallVector<int32_t, 3> localSize(values);
-    builder.create<spirv::ExecutionModeOp>(
-        funcOp.getLoc(), funcOp, spirv::ExecutionMode::LocalSize, localSize);
-    funcOp->removeAttr(entryPointAttrName);
+  // Specifies the spirv.ExecutionModeOp.
+  if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {
+    std::optional<ArrayRef<spirv::Capability>> caps =
+        spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
+    if (!caps || targetEnv.allows(*caps)) {
+      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+                                             spirv::ExecutionMode::LocalSize,
+                                             workgroupSizeAttr.asArrayRef());
+      // Erase workgroup size.
+      entryPointAttr = spirv::EntryPointABIAttr::get(
+          entryPointAttr.getContext(), DenseI32ArrayAttr(),
+          entryPointAttr.getSubgroupSize());
+    }
   }
+  if (std::optional<int> subgroupSize = entryPointAttr.getSubgroupSize()) {
+    std::optional<ArrayRef<spirv::Capability>> caps =
+        spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
+    if (!caps || targetEnv.allows(*caps)) {
+      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
+                                             spirv::ExecutionMode::SubgroupSize,
+                                             *subgroupSize);
+      // Erase subgroup size.
+      entryPointAttr = spirv::EntryPointABIAttr::get(
+          entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
+          std::nullopt);
+    }
+  }
+  if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize())
+    funcOp->setAttr(entryPointAttrName, entryPointAttr);
+  else
+    funcOp->removeAttr(entryPointAttrName);
   return success();
 }
 
@@ -165,7 +199,8 @@ public:
 
 /// Pass to implement the ABI information specified as attributes.
 class LowerABIAttributesPass final
-    : public SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
+    : public spirv::impl::SPIRVLowerABIAttributesPassBase<
+          LowerABIAttributesPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -216,7 +251,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
-          funcOp.getLoc(), replacement, zero.constant());
+          funcOp.getLoc(), replacement, zero.getConstant());
       replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);
@@ -228,7 +263,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   // Creates a new function with the update signature.
   rewriter.updateRootInPlace(funcOp, [&] {
     funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), llvm::None));
+        signatureConverter.getConvertedTypes(), std::nullopt));
   });
   return success();
 }
@@ -239,7 +274,12 @@ void LowerABIAttributesPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnv targetEnv(spirv::lookupTargetEnv(module));
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  if (!targetEnvAttr) {
+    module->emitOpError("missing SPIR-V target env attribute");
+    return signalPassFailure();
+  }
+  spirv::TargetEnv targetEnv(targetEnvAttr);
 
   SPIRVTypeConverter typeConverter(targetEnv);
 
@@ -287,9 +327,4 @@ void LowerABIAttributesPass::runOnOperation() {
       return signalPassFailure();
     }
   }
-}
-
-std::unique_ptr<OperationPass<spirv::ModuleOp>>
-mlir::spirv::createLowerABIAttributesPass() {
-  return std::make_unique<LowerABIAttributesPass>();
 }

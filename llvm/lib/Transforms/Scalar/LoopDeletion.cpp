@@ -82,23 +82,22 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
       // blocks, then it is impossible to statically determine which value
       // should be used.
       AllOutgoingValuesSame =
-          all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
+          all_of(ArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
             return incoming == P.getIncomingValueForBlock(BB);
           });
 
       if (!AllOutgoingValuesSame)
         break;
 
-      if (Instruction *I = dyn_cast<Instruction>(incoming))
-        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
+      if (Instruction *I = dyn_cast<Instruction>(incoming)) {
+        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator(),
+                                  /*MSSAU=*/nullptr, &SE)) {
           AllEntriesInvariant = false;
           break;
         }
+      }
     }
   }
-
-  if (Changed)
-    SE.forgetLoopDispositions(L);
 
   if (!AllEntriesInvariant || !AllOutgoingValuesSame)
     return false;
@@ -106,7 +105,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // Make sure that no instructions in the block have potential side-effects.
   // This includes instructions that could write to memory, and loads that are
   // marked volatile.
-  for (auto &I : L->blocks())
+  for (const auto &I : L->blocks())
     if (any_of(*I, [](Instruction &I) {
           return I.mayHaveSideEffects() && !I.isDroppable();
         }))
@@ -456,7 +455,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
   if (ExitBlock && isLoopNeverExecuted(L)) {
-    LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
+    LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!\n");
     // We need to forget the loop before setting the incoming values of the exit
     // phis to poison, so we properly invalidate the SCEV expressions for those
     // phis.
@@ -497,7 +496,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
                    : LoopDeletionResult::Unmodified;
   }
 
-  LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!");
+  LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!\n");
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "Invariant", L->getStartLoc(),
                               L->getHeader())

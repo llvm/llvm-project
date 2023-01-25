@@ -129,7 +129,7 @@ Error RawCoverageFilenamesReader::read(CovMapVersion Version) {
     // Read compressed filenames.
     StringRef CompressedFilenames = Data.substr(0, CompressedLen);
     Data = Data.substr(CompressedLen);
-    auto Err = compression::zlib::uncompress(
+    auto Err = compression::zlib::decompress(
         arrayRefFromStringRef(CompressedFilenames), StorageBuf,
         UncompressedLen);
     if (Err) {
@@ -517,11 +517,11 @@ struct CovMapFuncRecordReader {
   //
   // Prior to Version4, \p OutOfLineMappingBuf points to a sequence of coverage
   // mappings associated with the function records. It is unused in Version4.
-  virtual Error readFunctionRecords(const char *FuncRecBuf,
-                                    const char *FuncRecBufEnd,
-                                    Optional<FilenameRange> OutOfLineFileRange,
-                                    const char *OutOfLineMappingBuf,
-                                    const char *OutOfLineMappingBufEnd) = 0;
+  virtual Error
+  readFunctionRecords(const char *FuncRecBuf, const char *FuncRecBufEnd,
+                      std::optional<FilenameRange> OutOfLineFileRange,
+                      const char *OutOfLineMappingBuf,
+                      const char *OutOfLineMappingBufEnd) = 0;
 
   template <class IntPtrT, support::endianness Endian>
   static Expected<std::unique_ptr<CovMapFuncRecordReader>>
@@ -695,7 +695,7 @@ public:
   }
 
   Error readFunctionRecords(const char *FuncRecBuf, const char *FuncRecBufEnd,
-                            Optional<FilenameRange> OutOfLineFileRange,
+                            std::optional<FilenameRange> OutOfLineFileRange,
                             const char *OutOfLineMappingBuf,
                             const char *OutOfLineMappingBufEnd) override {
     auto CFR = reinterpret_cast<const FuncRecordType *>(FuncRecBuf);
@@ -710,7 +710,7 @@ public:
           return make_error<CoverageMapError>(coveragemap_error::malformed);
 
       // Look up the set of filenames associated with this function record.
-      Optional<FilenameRange> FileRange;
+      std::optional<FilenameRange> FileRange;
       if (Version < CovMapVersion::Version4) {
         FileRange = OutOfLineFileRange;
       } else {
@@ -817,8 +817,8 @@ static Error readCoverageMappingData(
   // In Version4, function records are not affixed to coverage headers. Read
   // the records from their dedicated section.
   if (Version >= CovMapVersion::Version4)
-    return Reader->readFunctionRecords(FuncRecBuf, FuncRecBufEnd, None, nullptr,
-                                       nullptr);
+    return Reader->readFunctionRecords(FuncRecBuf, FuncRecBufEnd, std::nullopt,
+                                       nullptr, nullptr);
   return Error::success();
 }
 
@@ -1161,7 +1161,7 @@ Error BinaryCoverageReader::readNextRecord(CoverageMappingRecord &Record) {
   Expressions.clear();
   MappingRegions.clear();
   auto &R = MappingRecords[CurrentRecord];
-  auto F = makeArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
+  auto F = ArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
   RawCoverageMappingReader Reader(R.CoverageMapping, F, FunctionsFilenames,
                                   Expressions, MappingRegions);
   if (auto Err = Reader.read())

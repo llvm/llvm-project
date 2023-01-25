@@ -13,9 +13,11 @@
 // _Tp midpoint(_Tp __a, _Tp __b) noexcept
 //
 
-#include <numeric>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
+#include <numeric>
+
 #include "test_macros.h"
 
 //  Users are not supposed to provide template argument lists for

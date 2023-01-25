@@ -570,8 +570,7 @@ void ModuleSummaryIndex::exportToDot(
         " [color=brown]; // call (hotness : Hot)",
         " [style=bold,color=red]; // call (hotness : Critical)"};
 
-    assert(static_cast<size_t>(TypeOrHotness) <
-           sizeof(EdgeAttrs) / sizeof(EdgeAttrs[0]));
+    assert(static_cast<size_t>(TypeOrHotness) < std::size(EdgeAttrs));
     OS << Pfx << NodeId(SrcMod, SrcId) << " -> " << NodeId(DstMod, DstId)
        << EdgeAttrs[TypeOrHotness] << "\n";
   };

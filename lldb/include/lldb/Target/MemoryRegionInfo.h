@@ -10,11 +10,11 @@
 #ifndef LLDB_TARGET_MEMORYREGIONINFO_H
 #define LLDB_TARGET_MEMORYREGIONINFO_H
 
+#include <optional>
 #include <vector>
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RangeMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FormatProviders.h"
 
 namespace lldb_private {
@@ -120,7 +120,7 @@ public:
   /// modified -- within this memory region.  This is an Optional return
   /// value; it will only be available if the remote stub was able to
   /// detail this.
-  const llvm::Optional<std::vector<lldb::addr_t>> &GetDirtyPageList() const {
+  const std::optional<std::vector<lldb::addr_t>> &GetDirtyPageList() const {
     return m_dirty_pages;
   }
 
@@ -132,7 +132,7 @@ public:
 
   void SetDirtyPageList(std::vector<lldb::addr_t> pagelist) {
     if (m_dirty_pages)
-      m_dirty_pages.value().clear();
+      m_dirty_pages->clear();
     m_dirty_pages = std::move(pagelist);
   }
 
@@ -149,7 +149,7 @@ protected:
   OptionalBool m_memory_tagged = eDontKnow;
   OptionalBool m_is_stack_memory = eDontKnow;
   int m_pagesize = 0;
-  llvm::Optional<std::vector<lldb::addr_t>> m_dirty_pages;
+  std::optional<std::vector<lldb::addr_t>> m_dirty_pages;
 };
   
 inline bool operator<(const MemoryRegionInfo &lhs,

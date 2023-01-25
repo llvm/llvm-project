@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
@@ -11,15 +11,15 @@
 ; DWARF v5 hash function: A copy constructor and an assignment operator for a
 ; class will always hash to the same value.
 ;
-; typedef void *_ZN4lldb7SBBlockaSERKS0_;
+; typedef ptr_ZN4lldb7SBBlockaSERKS0_;
 ; _ZN4lldb7SBBlockaSERKS0_ _ZN4lldb7SBBlockC1ERKS0_;
-; typedef void *_ZN4lldb7SBErroraSERKS0_;
+; typedef ptr_ZN4lldb7SBErroraSERKS0_;
 ; _ZN4lldb7SBErroraSERKS0_ _ZN4lldb7SBErrorC1ERKS0_;
-; typedef void *_ZN4lldb7SBValueaSERKS0_;
+; typedef ptr_ZN4lldb7SBValueaSERKS0_;
 ; _ZN4lldb7SBValueaSERKS0_ _ZN4lldb7SBValueC1ERKS0_;
-; typedef void *_ZL11numCommutes;
+; typedef ptr_ZL11numCommutes;
 ; _ZL11numCommutes _ZL11NumCommutes;
-; typedef void *_ZL9NumRemats;
+; typedef ptr_ZL9NumRemats;
 ; _ZL9NumRemats _ZL9NumReMats;
 
 ; Check that we have the right amount of hashes and names.
@@ -60,11 +60,11 @@
 
 ; VERIFY: No errors.
 
-@_ZN4lldb7SBBlockC1ERKS0_ = common dso_local global i8* null, align 8, !dbg !0
-@_ZN4lldb7SBErrorC1ERKS0_ = common dso_local global i8* null, align 8, !dbg !6
-@_ZN4lldb7SBValueC1ERKS0_ = common dso_local global i8* null, align 8, !dbg !10
-@_ZL11NumCommutes = common dso_local global i8* null, align 8, !dbg !13
-@_ZL9NumReMats = common dso_local global i8* null, align 8, !dbg !16
+@_ZN4lldb7SBBlockC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !0
+@_ZN4lldb7SBErrorC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !6
+@_ZN4lldb7SBValueC1ERKS0_ = common dso_local global ptr null, align 8, !dbg !10
+@_ZL11NumCommutes = common dso_local global ptr null, align 8, !dbg !13
+@_ZL9NumReMats = common dso_local global ptr null, align 8, !dbg !16
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!20, !21, !22}

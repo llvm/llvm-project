@@ -6,13 +6,13 @@
   target triple = "arm-arm-none-eabi"
 
   ; Function Attrs: nofree norecurse nounwind
-  define void @test(i8* noalias nocapture %X, i8* noalias nocapture readonly %Y, i32 %n) {
+  define void @test(ptr noalias nocapture %X, ptr noalias nocapture readonly %Y, i32 %n) {
   entry:
     %cmp6 = icmp sgt i32 %n, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %X, i8* align 4 %Y, i32 %n, i1 false)
+    call void @llvm.memcpy.p0.p0.i32(ptr align 4 %X, ptr align 4 %Y, i32 %n, i1 false)
     br label %for.cond.cleanup
 
   for.cond.cleanup:                                 ; preds = %for.body.preheader, %entry
@@ -20,7 +20,7 @@
   }
 
   ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-  declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg)
+  declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg)
 
 ...
 ---

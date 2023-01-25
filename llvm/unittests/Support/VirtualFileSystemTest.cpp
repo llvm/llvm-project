@@ -1129,7 +1129,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithUser) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithGroup) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, 0xDABBAD00);
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             0xDABBAD00);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1146,8 +1147,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithGroup) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithFileType) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None,
-             sys::fs::file_type::socket_file);
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             std::nullopt, sys::fs::file_type::socket_file);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1161,7 +1162,8 @@ TEST_F(InMemoryFileSystemTest, AddFileWithFileType) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
-  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), None, None, None,
+  FS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"), std::nullopt,
+             std::nullopt, std::nullopt,
              sys::fs::perms::owner_read | sys::fs::perms::owner_write);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
@@ -1183,10 +1185,11 @@ TEST_F(InMemoryFileSystemTest, AddFileWithPerms) {
 }
 
 TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
-  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/None,
-             /*Group=*/None, sys::fs::file_type::directory_file);
-  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"), /*User=*/None,
-             /*Group=*/None, sys::fs::file_type::regular_file);
+  FS.addFile("/a", 0, MemoryBuffer::getMemBuffer(""), /*User=*/std::nullopt,
+             /*Group=*/std::nullopt, sys::fs::file_type::directory_file);
+  FS.addFile("/a/b", 0, MemoryBuffer::getMemBuffer("abc"),
+             /*User=*/std::nullopt,
+             /*Group=*/std::nullopt, sys::fs::file_type::regular_file);
   auto Stat = FS.status("/a");
   ASSERT_FALSE(Stat.getError()) << Stat.getError() << "\n" << FS.toString();
   ASSERT_TRUE(Stat->isDirectory());
@@ -1199,8 +1202,9 @@ TEST_F(InMemoryFileSystemTest, AddDirectoryThenAddChild) {
 // was requested (to match the behavior of RealFileSystem).
 TEST_F(InMemoryFileSystemTest, StatusName) {
   NormalizedFS.addFile("/a/b/c", 0, MemoryBuffer::getMemBuffer("abc"),
-                       /*User=*/None,
-                       /*Group=*/None, sys::fs::file_type::regular_file);
+                       /*User=*/std::nullopt,
+                       /*Group=*/std::nullopt,
+                       sys::fs::file_type::regular_file);
   NormalizedFS.setCurrentWorkingDirectory("/a/b");
 
   // Access using InMemoryFileSystem::status.
@@ -1452,18 +1456,20 @@ public:
 
   std::unique_ptr<vfs::FileSystem>
   getFromYAMLRawString(StringRef Content,
-                       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS) {
+                       IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS,
+                       StringRef YAMLFilePath = "") {
     std::unique_ptr<MemoryBuffer> Buffer = MemoryBuffer::getMemBuffer(Content);
-    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, "", this,
-                          ExternalFS);
+    return getVFSFromYAML(std::move(Buffer), CountingDiagHandler, YAMLFilePath,
+                          this, ExternalFS);
   }
 
   std::unique_ptr<vfs::FileSystem> getFromYAMLString(
       StringRef Content,
-      IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem()) {
+      IntrusiveRefCntPtr<vfs::FileSystem> ExternalFS = new DummyFileSystem(),
+      StringRef YAMLFilePath = "") {
     std::string VersionPlusContent("{\n  'version':0,\n");
     VersionPlusContent += Content.slice(Content.find('{') + 1, StringRef::npos);
-    return getFromYAMLRawString(VersionPlusContent, ExternalFS);
+    return getFromYAMLRawString(VersionPlusContent, ExternalFS, YAMLFilePath);
   }
 
   // This is intended as a "XFAIL" for windows hosts.
@@ -1847,6 +1853,69 @@ TEST_F(VFSFromYAMLTest, ReturnsExternalPathVFSHit) {
   EXPECT_TRUE(DirectS->ExposesExternalVFSPath);
 
   EXPECT_EQ(0, NumDiagnostics);
+}
+
+TEST_F(VFSFromYAMLTest, RootRelativeTest) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addDirectory("//root/foo/bar");
+  Lower->addRegularFile("//root/foo/bar/a");
+  IntrusiveRefCntPtr<vfs::FileSystem> FS =
+      getFromYAMLString("{\n"
+                        "  'case-sensitive': false,\n"
+                        "  'root-relative': 'overlay-dir',\n"
+                        "  'roots': [\n"
+                        "    { 'name': 'b', 'type': 'file',\n"
+                        "      'external-contents': '//root/foo/bar/a'\n"
+                        "    }\n"
+                        "  ]\n"
+                        "}",
+                        Lower, "//root/foo/bar/overlay");
+
+  ASSERT_NE(FS.get(), nullptr);
+  ErrorOr<vfs::Status> S = FS->status("//root/foo/bar/b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+
+  // On Windows, with overlay-relative set to true, the relative
+  // path in external-contents field will be prepend by OverlayDir
+  // with native path separator, regardless of the actual path separator
+  // used in YAMLFilePath field.
+#ifndef _WIN32
+  FS = getFromYAMLString("{\n"
+                         "  'case-sensitive': false,\n"
+                         "  'overlay-relative': true,\n"
+                         "  'root-relative': 'overlay-dir',\n"
+                         "  'roots': [\n"
+                         "    { 'name': 'b', 'type': 'file',\n"
+                         "      'external-contents': 'a'\n"
+                         "    }\n"
+                         "  ]\n"
+                         "}",
+                         Lower, "//root/foo/bar/overlay");
+  ASSERT_NE(FS.get(), nullptr);
+  S = FS->status("//root/foo/bar/b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("//root/foo/bar/a", S->getName());
+#else
+  IntrusiveRefCntPtr<DummyFileSystem> LowerWindows(new DummyFileSystem());
+  LowerWindows->addDirectory("\\\\root\\foo\\bar");
+  LowerWindows->addRegularFile("\\\\root\\foo\\bar\\a");
+  FS = getFromYAMLString("{\n"
+                         "  'case-sensitive': false,\n"
+                         "  'overlay-relative': true,\n"
+                         "  'root-relative': 'overlay-dir',\n"
+                         "  'roots': [\n"
+                         "    { 'name': 'b', 'type': 'file',\n"
+                         "      'external-contents': 'a'\n"
+                         "    }\n"
+                         "  ]\n"
+                         "}",
+                         LowerWindows, "\\\\root\\foo\\bar\\overlay");
+  ASSERT_NE(FS.get(), nullptr);
+  S = FS->status("\\\\root\\foo\\bar\\b");
+  ASSERT_FALSE(S.getError());
+  EXPECT_EQ("\\\\root\\foo\\bar\\a", S->getName());
+#endif
 }
 
 TEST_F(VFSFromYAMLTest, ReturnsInternalPathVFSHit) {

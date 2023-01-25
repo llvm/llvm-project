@@ -15,7 +15,7 @@ namespace N {
   
   void test() {
     class 
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:17:11 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-1):11 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
     // FIXME: the redundant Y is really annoying... it needs qualification to 
     // actually be useful. Here, it just looks redundant :(
     // CHECK-CC1: A

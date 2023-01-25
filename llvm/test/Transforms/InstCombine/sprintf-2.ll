@@ -3,7 +3,7 @@
 ; are folded to constants as expected.
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i32 @snprintf(i8*, i64, i8*, ...)
+declare i32 @snprintf(ptr, i64, ptr, ...)
 
 %struct.A = type { [5 x i8], [6 x i8], [7 x i8] }
 
@@ -15,81 +15,78 @@ declare i32 @snprintf(i8*, i64, i8*, ...)
 ; Fold snprintf(0, 0, "%s", a[I].M + C) for constant I in [0, 1],
 ; member M in [a, b, c], and C in a valid range to a constant.
 
-define void @fold_snprintf_member_pC(i32* %pi) {
+define void @fold_snprintf_member_pC(ptr %pi) {
 ; CHECK-LABEL: @fold_snprintf_member_pC(
-; CHECK-NEXT:    store i32 1, i32* [[PI:%.*]], align 4
-; CHECK-NEXT:    [[PIA0AP1:%.*]] = getelementptr i32, i32* [[PI]], i64 1
-; CHECK-NEXT:    store i32 0, i32* [[PIA0AP1]], align 4
-; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, i32* [[PI]], i64 2
-; CHECK-NEXT:    store i32 2, i32* [[PIA0B]], align 4
-; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i32, i32* [[PI]], i64 3
-; CHECK-NEXT:    store i32 1, i32* [[PIA0BP1]], align 4
-; CHECK-NEXT:    [[PIA0BP2:%.*]] = getelementptr i32, i32* [[PI]], i64 4
-; CHECK-NEXT:    store i32 0, i32* [[PIA0BP2]], align 4
-; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i32, i32* [[PI]], i64 5
-; CHECK-NEXT:    store i32 3, i32* [[PIA0C]], align 4
-; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, i32* [[PI]], i64 6
-; CHECK-NEXT:    store i32 4, i32* [[PIA1A]], align 4
-; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, i32* [[PI]], i64 7
-; CHECK-NEXT:    store i32 5, i32* [[PIA1B]], align 4
-; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i32, i32* [[PI]], i64 8
-; CHECK-NEXT:    store i32 6, i32* [[PIA1C]], align 4
+; CHECK-NEXT:    store i32 1, ptr [[PI:%.*]], align 4
+; CHECK-NEXT:    [[PIA0AP1:%.*]] = getelementptr i32, ptr [[PI]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[PIA0AP1]], align 4
+; CHECK-NEXT:    [[PIA0B:%.*]] = getelementptr i32, ptr [[PI]], i64 2
+; CHECK-NEXT:    store i32 2, ptr [[PIA0B]], align 4
+; CHECK-NEXT:    [[PIA0BP1:%.*]] = getelementptr i32, ptr [[PI]], i64 3
+; CHECK-NEXT:    store i32 1, ptr [[PIA0BP1]], align 4
+; CHECK-NEXT:    [[PIA0BP2:%.*]] = getelementptr i32, ptr [[PI]], i64 4
+; CHECK-NEXT:    store i32 0, ptr [[PIA0BP2]], align 4
+; CHECK-NEXT:    [[PIA0C:%.*]] = getelementptr i32, ptr [[PI]], i64 5
+; CHECK-NEXT:    store i32 3, ptr [[PIA0C]], align 4
+; CHECK-NEXT:    [[PIA1A:%.*]] = getelementptr i32, ptr [[PI]], i64 6
+; CHECK-NEXT:    store i32 4, ptr [[PIA1A]], align 4
+; CHECK-NEXT:    [[PIA1B:%.*]] = getelementptr i32, ptr [[PI]], i64 7
+; CHECK-NEXT:    store i32 5, ptr [[PIA1B]], align 4
+; CHECK-NEXT:    [[PIA1C:%.*]] = getelementptr i32, ptr [[PI]], i64 8
+; CHECK-NEXT:    store i32 6, ptr [[PIA1C]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %fmt = getelementptr [3 x i8], [3 x i8]* @pcnt_s, i32 0, i32 0
 ; Fold snprintf(0, 0, "%s", a[0].a) to 1.
-  %pa0a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0
-  %ia0a = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0a)
-  %pia0a = getelementptr i32, i32* %pi, i32 0
-  store i32 %ia0a, i32* %pia0a
+  %ia0a = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr @a)
+  store i32 %ia0a, ptr %pi
 
 ; Fold snprintf(0, 0, "%s", a[0].a) to 0.
-  %pa0ap1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1
-  %ia0ap1 = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0ap1)
-  %pia0ap1 = getelementptr i32, i32* %pi, i32 1
-  store i32 %ia0ap1, i32* %pia0ap1
+  %pa0ap1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1
+  %ia0ap1 = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa0ap1)
+  %pia0ap1 = getelementptr i32, ptr %pi, i32 1
+  store i32 %ia0ap1, ptr %pia0ap1
 
 ; Fold snprintf(0, 0, "%s", a[0].b) to 2.
-  %pa0b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0
-  %ia0b = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0b)
-  %pia0b = getelementptr i32, i32* %pi, i32 2
-  store i32 %ia0b, i32* %pia0b
+  %pa0b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0
+  %ia0b = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa0b)
+  %pia0b = getelementptr i32, ptr %pi, i32 2
+  store i32 %ia0b, ptr %pia0b
 
 ; Fold snprintf(0, 0, "%s", a[0].b + 1) to 1.
-  %pa0bp1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1
-  %ia0bp1 = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0bp1)
-  %pia0bp1 = getelementptr i32, i32* %pi, i32 3
-  store i32 %ia0bp1, i32* %pia0bp1
+  %pa0bp1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1
+  %ia0bp1 = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa0bp1)
+  %pia0bp1 = getelementptr i32, ptr %pi, i32 3
+  store i32 %ia0bp1, ptr %pia0bp1
 
 ; Fold snprintf(0, 0, "%s", a[0].b + 2) to 0.
-  %pa0bp2 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 2
-  %ia0bp2 = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0bp2)
-  %pia0bp2 = getelementptr i32, i32* %pi, i32 4
-  store i32 %ia0bp2, i32* %pia0bp2
+  %pa0bp2 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 2
+  %ia0bp2 = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa0bp2)
+  %pia0bp2 = getelementptr i32, ptr %pi, i32 4
+  store i32 %ia0bp2, ptr %pia0bp2
 
 ; Fold snprintf(0, 0, "%s", a[0].c) to 3.
-  %pa0c = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 2, i64 0
-  %ia0c = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa0c)
-  %pia0c = getelementptr i32, i32* %pi, i32 5
-  store i32 %ia0c, i32* %pia0c
+  %pa0c = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 2, i64 0
+  %ia0c = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa0c)
+  %pia0c = getelementptr i32, ptr %pi, i32 5
+  store i32 %ia0c, ptr %pia0c
 
 ; Fold snprintf(0, 0, "%s", a[1].a) to 4.
-  %pa1a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0
-  %ia1a = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa1a)
-  %pia1a = getelementptr i32, i32* %pi, i32 6
-  store i32 %ia1a, i32* %pia1a
+  %pa1a = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 0
+  %ia1a = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa1a)
+  %pia1a = getelementptr i32, ptr %pi, i32 6
+  store i32 %ia1a, ptr %pia1a
 
 ; Fold snprintf(0, 0, "%s", a[1].b) to 5.
-  %pa1b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0
-  %ia1b = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa1b)
-  %pia1b = getelementptr i32, i32* %pi, i32 7
-  store i32 %ia1b, i32* %pia1b
+  %pa1b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 0
+  %ia1b = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa1b)
+  %pia1b = getelementptr i32, ptr %pi, i32 7
+  store i32 %ia1b, ptr %pia1b
 
 ; Fold snprintf(0, 0, "%s", a[1].c) to 6.
-  %pa1c = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 2, i64 0
-  %ia1c = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* %fmt, i8* %pa1c)
-  %pia1c = getelementptr i32, i32* %pi, i32 8
-  store i32 %ia1c, i32* %pia1c
+  %pa1c = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 2, i64 0
+  %ia1c = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @pcnt_s, ptr %pa1c)
+  %pia1c = getelementptr i32, ptr %pi, i32 8
+  store i32 %ia1c, ptr %pia1c
 
   ret void
 }

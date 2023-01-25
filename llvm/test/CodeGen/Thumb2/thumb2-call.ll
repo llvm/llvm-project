@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-darwin -mattr=+thumb2 | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv7-linux -mattr=+thumb2 | FileCheck %s
 
-@t = weak global i32 ()* null           ; <i32 ()**> [#uses=1]
+@t = weak global ptr null           ; <ptr> [#uses=1]
 
 declare void @g(i32, i32, i32, i32)
 
@@ -15,7 +15,7 @@ define void @f() {
 define void @h() {
 ; CHECK-LABEL: h:
 ; CHECK: blx r0
-        %tmp = load i32 ()*, i32 ()** @t         ; <i32 ()*> [#uses=1]
+        %tmp = load ptr, ptr @t         ; <ptr> [#uses=1]
         %tmp.upgrd.2 = call i32 %tmp( )            ; <i32> [#uses=0]
         ret void
 }

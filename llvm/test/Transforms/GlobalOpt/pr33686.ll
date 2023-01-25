@@ -12,6 +12,6 @@ entry:
   ret void
 
 notreachable:
-  %patatino = select i1 undef, i16* @glob, i16* %patatino
+  %patatino = select i1 undef, ptr @glob, ptr %patatino
   br label %notreachable
 }

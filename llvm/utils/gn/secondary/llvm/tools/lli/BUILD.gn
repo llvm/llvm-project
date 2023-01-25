@@ -18,6 +18,7 @@ executable("lli") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Instrumentation",
     "//llvm/lib/Transforms/Utils",
   ]

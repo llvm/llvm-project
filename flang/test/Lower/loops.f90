@@ -40,7 +40,7 @@ subroutine loop_test
     a(i,j,k) = a(i,j,k) + 1
   enddo
 
-  ! CHECK-COUNT-3: fir.do_loop {{[^un]*}} -> index
+  ! CHECK-COUNT-3: fir.do_loop {{[^un]*}} -> (index, i32)
   asum = 0
   do i=1,5
     do j=1,5

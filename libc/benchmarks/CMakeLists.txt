@@ -1,6 +1,9 @@
 find_package(Threads)
 
-set(LLVM_LINK_COMPONENTS Support)
+set(LLVM_LINK_COMPONENTS
+  Support
+  TargetParser
+  )
 
 #==============================================================================
 # Add Unit Testing Support
@@ -78,6 +81,7 @@ target_link_libraries(libc-benchmark
     PUBLIC
     benchmark::benchmark
     LLVMSupport
+    LLVMTargetParser
     Threads::Threads
 )
 add_dependencies(libc-benchmark google-benchmark-libc)

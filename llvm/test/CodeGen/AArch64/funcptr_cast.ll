@@ -8,7 +8,7 @@ define i8 @test() {
 ; CHECK-NEXT:    ldrb w0, [x8, :lo12:foo]
 ; CHECK-NEXT:    ret
 entry:
-  %0 = load i8, i8* bitcast (void (...)* @foo to i8*), align 1
+  %0 = load i8, ptr @foo, align 1
   ret i8 %0
 }
 

@@ -10,12 +10,12 @@ if(COMPILER_RT_INCLUDE_TESTS AND COMPILER_RT_HAS_SCUDO_STANDALONE)
       ${CMAKE_CURRENT_BINARY_DIR}/unit/gwp_asan/lit.site.cfg.py)
     list(APPEND SCUDO_STANDALONE_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/unit/gwp_asan)
   endif()
+
+  add_lit_testsuite(check-scudo_standalone
+    "Running Scudo Standalone tests"
+    ${SCUDO_STANDALONE_TESTSUITES}
+    DEPENDS ${SCUDO_STANDALONE_TEST_DEPS})
+
+  set_target_properties(check-scudo_standalone
+    PROPERTIES FOLDER "Compiler-RT Tests")
 endif()
-
-add_lit_testsuite(check-scudo_standalone
-  "Running Scudo Standalone tests"
-  ${SCUDO_STANDALONE_TESTSUITES}
-  DEPENDS ${SCUDO_STANDALONE_TEST_DEPS})
-
-set_target_properties(check-scudo_standalone
-  PROPERTIES FOLDER "Compiler-RT Tests")

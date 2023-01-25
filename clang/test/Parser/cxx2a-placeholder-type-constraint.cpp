@@ -9,6 +9,7 @@ namespace ns {
 }
 
 int foo() {
+  int I;
   {ns::D auto a = 1;}
   {C auto a = 1;}
   {C<> auto a = 1;}
@@ -28,8 +29,21 @@ int foo() {
   // expected-error@-1{{cannot form reference to 'decltype(auto)'}}
   {C a = 1;}
   // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
+  {C const a2 = 1;}
+  // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
+  {C &a3 = I;}
+  // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
+  {C &&a4 = 1;}
+  // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
   {C decltype a19 = 1;}
   // expected-error@-1{{expected '('}}
   {C decltype(1) a20 = 1;}
   // expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
 }
+
+void foo1(C auto &a){}
+void foo2(C const &a){}
+// expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}
+void foo3(C auto const &a){}
+void foo4(const C &a){}
+// expected-error@-1{{expected 'auto' or 'decltype(auto)' after concept name}}

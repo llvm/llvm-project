@@ -210,11 +210,11 @@ void MD5::update(ArrayRef<uint8_t> Data) {
     memcpy(&InternalState.buffer[used], Ptr, free);
     Ptr = Ptr + free;
     Size -= free;
-    body(makeArrayRef(InternalState.buffer, 64));
+    body(ArrayRef(InternalState.buffer, 64));
   }
 
   if (Size >= 64) {
-    Ptr = body(makeArrayRef(Ptr, Size & ~(unsigned long) 0x3f));
+    Ptr = body(ArrayRef(Ptr, Size & ~(unsigned long)0x3f));
     Size &= 0x3f;
   }
 
@@ -242,7 +242,7 @@ void MD5::final(MD5Result &Result) {
 
   if (free < 8) {
     memset(&InternalState.buffer[used], 0, free);
-    body(makeArrayRef(InternalState.buffer, 64));
+    body(ArrayRef(InternalState.buffer, 64));
     used = 0;
     free = 64;
   }
@@ -253,7 +253,7 @@ void MD5::final(MD5Result &Result) {
   support::endian::write32le(&InternalState.buffer[56], InternalState.lo);
   support::endian::write32le(&InternalState.buffer[60], InternalState.hi);
 
-  body(makeArrayRef(InternalState.buffer, 64));
+  body(ArrayRef(InternalState.buffer, 64));
 
   support::endian::write32le(&Result[0], InternalState.a);
   support::endian::write32le(&Result[4], InternalState.b);

@@ -65,7 +65,7 @@ body:             |
     liveins: $p0, $z0, $z1
 
     ; CHECK-LABEL: name: cmpeq_nxv8i16
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %2:zpr = COPY $z1
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
@@ -101,7 +101,7 @@ body:             |
     liveins: $p0, $z0, $z1
 
     ; CHECK-LABEL: name: cmpeq_nxv4i32
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %2:zpr = COPY $z1
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
@@ -137,7 +137,7 @@ body:             |
     liveins: $p0, $z0, $z1
 
     ; CHECK-LABEL: name: cmpeq_nxv2i64
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %2:zpr = COPY $z1
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
@@ -170,7 +170,7 @@ body:             |
     liveins: $p0, $z0
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv16i8
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_B %0, %1, 0, implicit-def dead $nzcv
@@ -204,7 +204,7 @@ body:             |
     liveins: $p0, $z0
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv8i16
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_H %0, %1, 0, implicit-def dead $nzcv
@@ -237,7 +237,7 @@ body:             |
     liveins: $p0, $z0
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv4i32
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_S %0, %1, 0, implicit-def dead $nzcv
@@ -270,7 +270,7 @@ body:             |
     liveins: $p0, $z0
 
     ; CHECK-LABEL: name: cmpeq_imm_nxv2i64
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
     %2:ppr = CMPEQ_PPzZI_D %0, %1, 0, implicit-def dead $nzcv
@@ -339,7 +339,7 @@ body:             |
     liveins: $p0, $z0, $z1
 
     ; CHECK-LABEL: name: cmpeq_wide_nxv8i16
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %2:zpr = COPY $z1
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0
@@ -375,7 +375,7 @@ body:             |
     liveins: $p0, $z0, $z1
 
     ; CHECK-LABEL: name: cmpeq_wide_nxv4i32
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %2:zpr = COPY $z1
     %1:zpr = COPY $z0
     %0:ppr_3b = COPY $p0

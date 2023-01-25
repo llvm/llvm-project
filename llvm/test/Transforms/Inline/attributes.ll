@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
@@ -347,7 +347,7 @@ define i32 @test_no-implicit-float3(i32 %i) noimplicitfloat {
 ; CHECK-NEXT: ret i32
 }
 
-; Check that no-jump-tables flag propagates from inlined callee to caller 
+; Check that no-jump-tables flag propagates from inlined callee to caller
 
 define i32 @no-use-jump-tables_callee0(i32 %i) {
   ret i32 %i

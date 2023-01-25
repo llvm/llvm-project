@@ -22,6 +22,8 @@
 // attempts to use 'new_delete_resource()' very late in program termination
 // to detect lifetime issues.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

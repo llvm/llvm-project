@@ -28,7 +28,7 @@
 //
 //
 // [Note: A month_day_last object can be constructed using the expression m/last or last/m,
-//     where m is an expression of type month. — end note]
+//     where m is an expression of type month. - end note]
 // [Example:
 //     constexpr auto mdl = February/last; // mdl is the last day of February of an as yet unspecified year
 //     static_assert(mdl.month() == February);

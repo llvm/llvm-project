@@ -25,7 +25,6 @@
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IR.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 
 namespace py = pybind11;
@@ -34,9 +33,6 @@ namespace py = pybind11;
 // first.
 namespace pybind11 {
 namespace detail {
-
-template <typename T>
-struct type_caster<llvm::Optional<T>> : optional_caster<llvm::Optional<T>> {};
 
 /// Helper to convert a presumed MLIR API object to a capsule, accepting either
 /// an explicit Capsule (which can happen when two C APIs are communicating
@@ -203,6 +199,27 @@ struct type_caster<MlirOperation> {
         py::reinterpret_steal<py::object>(mlirPythonOperationToCapsule(v));
     return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
         .attr("Operation")
+        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+        .release();
+  };
+};
+
+/// Casts object <-> MlirValue.
+template <>
+struct type_caster<MlirValue> {
+  PYBIND11_TYPE_CASTER(MlirValue, _("MlirValue"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToValue(capsule.ptr());
+    return !mlirValueIsNull(value);
+  }
+  static handle cast(MlirValue v, return_value_policy, handle) {
+    if (v.ptr == nullptr)
+      return py::none();
+    py::object capsule =
+        py::reinterpret_steal<py::object>(mlirPythonValueToCapsule(v));
+    return py::module::import(MAKE_MLIR_PYTHON_QUALNAME("ir"))
+        .attr("Value")
         .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
         .release();
   };

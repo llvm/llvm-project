@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -fobjc-runtime=macosx-10.9 -verify -I%t/include %t/test-mismatch-in-extension.m

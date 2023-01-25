@@ -552,3 +552,30 @@ union U2 {
   int A;
   // CHECK-FIXES-NOT: int A{};
 };
+
+struct S1 {
+  S1() {}
+  union {
+    int a = 0;
+    int b;
+  };
+};
+
+struct S2 {
+  S2() : a{} {}
+  union {
+    int a;
+    int b;
+  };
+};
+
+struct S3 {
+  S3() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: constructor does not initialize these fields: A [cppcoreguidelines-pro-type-member-init]
+  int A;
+  // CHECK-FIXES: int A{};
+  union {
+    int B;
+    int C = 0;
+  };
+};

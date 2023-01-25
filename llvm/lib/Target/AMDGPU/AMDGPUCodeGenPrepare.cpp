@@ -468,10 +468,12 @@ static void extractValues(IRBuilder<> &Builder,
 static Value *insertValues(IRBuilder<> &Builder,
                            Type *Ty,
                            SmallVectorImpl<Value *> &Values) {
-  if (Values.size() == 1)
+  if (!Ty->isVectorTy()) {
+    assert(Values.size() == 1);
     return Values[0];
+  }
 
-  Value *NewVal = UndefValue::get(Ty);
+  Value *NewVal = PoisonValue::get(Ty);
   for (int I = 0, E = Values.size(); I != E; ++I)
     NewVal = Builder.CreateInsertElement(NewVal, Values[I], I);
 
@@ -792,7 +794,7 @@ bool AMDGPUCodeGenPrepare::visitFDiv(BinaryOperator &FDiv) {
 
   Value *NewFDiv = nullptr;
   if (auto *VT = dyn_cast<FixedVectorType>(FDiv.getType())) {
-    NewFDiv = UndefValue::get(VT);
+    NewFDiv = PoisonValue::get(VT);
 
     // FIXME: Doesn't do the right thing for cases where the vector is partially
     // constant. This works when the scalarizer pass is run first.
@@ -870,7 +872,7 @@ static std::pair<Value*, Value*> getMul64(IRBuilder<> &Builder,
   Value *Lo = Builder.CreateTrunc(MUL64, I32Ty);
   Value *Hi = Builder.CreateLShr(MUL64, Builder.getInt64(32));
   Hi = Builder.CreateTrunc(Hi, I32Ty);
-  return std::make_pair(Lo, Hi);
+  return std::pair(Lo, Hi);
 }
 
 static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
@@ -1258,7 +1260,7 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
 
     if (auto *VT = dyn_cast<FixedVectorType>(Ty)) {
-      NewDiv = UndefValue::get(VT);
+      NewDiv = PoisonValue::get(VT);
 
       for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
         Value *NumEltN = Builder.CreateExtractElement(Num, N);

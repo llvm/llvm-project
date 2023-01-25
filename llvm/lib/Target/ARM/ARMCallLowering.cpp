@@ -337,7 +337,7 @@ struct ARMIncomingValueHandler : public CallLowering::IncomingValueHandler {
     if (!IsLittle)
       std::swap(NewRegs[0], NewRegs[1]);
 
-    MIRBuilder.buildMerge(Arg.Regs[0], NewRegs);
+    MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
 
     return 1;
   }
@@ -480,7 +480,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &
   MIB.add(Info.Callee);
   if (!IsDirect) {
     auto CalleeReg = Info.Callee.getReg();
-    if (CalleeReg && !Register::isPhysicalRegister(CalleeReg)) {
+    if (CalleeReg && !CalleeReg.isPhysical()) {
       unsigned CalleeIdx = IsThumb ? 2 : 0;
       MIB->getOperand(CalleeIdx).setReg(constrainOperandRegClass(
           MF, *TRI, MRI, *STI.getInstrInfo(), *STI.getRegBankInfo(),

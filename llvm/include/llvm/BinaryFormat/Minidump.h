@@ -43,7 +43,7 @@ struct Header {
   support::ulittle32_t TimeDateStamp;
   support::ulittle64_t Flags;
 };
-static_assert(sizeof(Header) == 32, "");
+static_assert(sizeof(Header) == 32);
 
 /// The type of a minidump stream identifies its contents. Streams numbers after
 /// LastReserved are for application-defined data streams.
@@ -60,7 +60,7 @@ struct LocationDescriptor {
   support::ulittle32_t DataSize;
   support::ulittle32_t RVA;
 };
-static_assert(sizeof(LocationDescriptor) == 8, "");
+static_assert(sizeof(LocationDescriptor) == 8);
 
 /// Describes a single memory range (both its VM address and where to find it in
 /// the file) of the process from which this minidump file was generated.
@@ -68,7 +68,7 @@ struct MemoryDescriptor {
   support::ulittle64_t StartOfMemoryRange;
   LocationDescriptor Memory;
 };
-static_assert(sizeof(MemoryDescriptor) == 16, "");
+static_assert(sizeof(MemoryDescriptor) == 16);
 
 struct MemoryInfoListHeader {
   support::ulittle32_t SizeOfHeader;
@@ -81,7 +81,7 @@ struct MemoryInfoListHeader {
       : SizeOfHeader(SizeOfHeader), SizeOfEntry(SizeOfEntry),
         NumberOfEntries(NumberOfEntries) {}
 };
-static_assert(sizeof(MemoryInfoListHeader) == 16, "");
+static_assert(sizeof(MemoryInfoListHeader) == 16);
 
 enum class MemoryProtection : uint32_t {
 #define HANDLE_MDMP_PROTECT(CODE, NAME, NATIVENAME) NAME = CODE,
@@ -112,7 +112,7 @@ struct MemoryInfo {
   support::little_t<MemoryType> Type;
   support::ulittle32_t Reserved1;
 };
-static_assert(sizeof(MemoryInfo) == 48, "");
+static_assert(sizeof(MemoryInfo) == 48);
 
 /// Specifies the location and type of a single stream in the minidump file. The
 /// minidump stream directory is an array of entries of this type, with its size
@@ -121,7 +121,7 @@ struct Directory {
   support::little_t<StreamType> Type;
   LocationDescriptor Location;
 };
-static_assert(sizeof(Directory) == 12, "");
+static_assert(sizeof(Directory) == 12);
 
 /// The processor architecture of the system that generated this minidump. Used
 /// in the ProcessorArch field of the SystemInfo stream.
@@ -154,7 +154,7 @@ union CPUInfo {
     uint8_t ProcessorFeatures[16];
   } Other;
 };
-static_assert(sizeof(CPUInfo) == 24, "");
+static_assert(sizeof(CPUInfo) == 24);
 
 /// The SystemInfo stream, containing various information about the system where
 /// this minidump was generated.
@@ -177,7 +177,7 @@ struct SystemInfo {
 
   CPUInfo CPU;
 };
-static_assert(sizeof(SystemInfo) == 56, "");
+static_assert(sizeof(SystemInfo) == 56);
 
 struct VSFixedFileInfo {
   support::ulittle32_t Signature;
@@ -194,7 +194,7 @@ struct VSFixedFileInfo {
   support::ulittle32_t FileDateHigh;
   support::ulittle32_t FileDateLow;
 };
-static_assert(sizeof(VSFixedFileInfo) == 52, "");
+static_assert(sizeof(VSFixedFileInfo) == 52);
 
 inline bool operator==(const VSFixedFileInfo &LHS, const VSFixedFileInfo &RHS) {
   return memcmp(&LHS, &RHS, sizeof(VSFixedFileInfo)) == 0;
@@ -212,7 +212,7 @@ struct Module {
   support::ulittle64_t Reserved0;
   support::ulittle64_t Reserved1;
 };
-static_assert(sizeof(Module) == 108, "");
+static_assert(sizeof(Module) == 108);
 
 /// Describes a single thread in the minidump file. Part of the ThreadList
 /// stream.
@@ -225,7 +225,7 @@ struct Thread {
   MemoryDescriptor Stack;
   LocationDescriptor Context;
 };
-static_assert(sizeof(Thread) == 48, "");
+static_assert(sizeof(Thread) == 48);
 
 struct Exception {
   static constexpr size_t MaxParameters = 15;
@@ -238,7 +238,7 @@ struct Exception {
   support::ulittle32_t UnusedAlignment;
   support::ulittle64_t ExceptionInformation[MaxParameters];
 };
-static_assert(sizeof(Exception) == 152, "");
+static_assert(sizeof(Exception) == 152);
 
 struct ExceptionStream {
   support::ulittle32_t ThreadId;
@@ -246,7 +246,7 @@ struct ExceptionStream {
   Exception ExceptionRecord;
   LocationDescriptor ThreadContext;
 };
-static_assert(sizeof(ExceptionStream) == 168, "");
+static_assert(sizeof(ExceptionStream) == 168);
 
 } // namespace minidump
 

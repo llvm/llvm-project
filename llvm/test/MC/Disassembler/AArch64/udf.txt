@@ -1,7 +1,7 @@
 # RUN: llvm-mc -arch aarch64 -disassemble -o - %s | FileCheck %s
 # RUN: llvm-mc -arch aarch64 -disassemble -o - %s | \
 # RUN: llvm-mc -assemble -filetype=obj -arch aarch64 -o - | \
-# RUN: llvm-objdump -r -d --triple=arm64- - | \
+# RUN: llvm-objdump --no-print-imm-hex -r -d --triple=arm64- - | \
 # RUN: FileCheck %s -check-prefix=OBJ
 [0x00,0x00,0x00,0x00]
 [0x01,0x02,0x00,0x00]

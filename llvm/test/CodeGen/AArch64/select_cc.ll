@@ -6,7 +6,7 @@ define i64 @select_ogt_float(float %a, float %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ubfiz x0, x8, #2, #32
 ; CHECK-NEXT:    ret
 entry:
   %cc = fcmp ogt float %a, %b
@@ -19,7 +19,7 @@ define i64 @select_ule_float_inverse(float %a, float %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fcmp s0, s1
 ; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ubfiz x0, x8, #2, #32
 ; CHECK-NEXT:    ret
 entry:
   %cc = fcmp ule float %a, %b
@@ -32,7 +32,7 @@ define i64 @select_eq_i32(i32 %a, i32 %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ubfiz x0, x8, #2, #32
 ; CHECK-NEXT:    ret
 entry:
   %cc = icmp eq i32 %a, %b
@@ -45,7 +45,7 @@ define i64 @select_ne_i32_inverse(i32 %a, i32 %b) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp w0, w1
 ; CHECK-NEXT:    cset w8, eq
-; CHECK-NEXT:    lsl x0, x8, #2
+; CHECK-NEXT:    ubfiz x0, x8, #2, #32
 ; CHECK-NEXT:    ret
 entry:
   %cc = icmp ne i32 %a, %b
@@ -53,7 +53,7 @@ entry:
   ret i64 %sel
 }
 
-define <2 x double> @select_olt_load_cmp(<2 x double> %a, <2 x float>* %src) {
+define <2 x double> @select_olt_load_cmp(<2 x double> %a, ptr %src) {
 ; CHECK-LABEL: select_olt_load_cmp:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi d1, #0000000000000000
@@ -63,7 +63,7 @@ define <2 x double> @select_olt_load_cmp(<2 x double> %a, <2 x float>* %src) {
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
 entry:
-  %l = load <2 x float>, <2 x float>* %src, align 4
+  %l = load <2 x float>, ptr %src, align 4
   %cmp = fcmp olt <2 x float> zeroinitializer, %l
   %sel = select <2 x i1> %cmp, <2 x double> %a, <2 x double> zeroinitializer
   ret <2 x double> %sel

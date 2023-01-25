@@ -1,12 +1,12 @@
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S < %s 2>&1 \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=NO_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks-missed=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=MISSED_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks-analysis=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=ANALYSIS_REMARKS
-; RUN: opt -loop-simplify -loop-distribute -enable-loop-distribute -S \
+; RUN: opt -passes=loop-simplify,loop-distribute -enable-loop-distribute -S \
 ; RUN:     -pass-remarks=loop-distribute < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=ALWAYS --check-prefix=REMARKS
 
@@ -39,7 +39,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 ; ALWAYS:         remark: /tmp/t.c:3:3: loop not distributed: memory operations are safe for vectorization
 ; ALWAYS:         warning: /tmp/t.c:3:3: loop not distributed: failed explicitly specified loop distribution
 
-define void @forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !7 {
+define void @forced(ptr %A, ptr %B, ptr %C, i32 %N) !dbg !7 {
 entry:
   %cmp12 = icmp sgt i32 %N, 0, !dbg !9
   br i1 %cmp12, label %ph, label %for.cond.cleanup, !dbg !10
@@ -49,13 +49,13 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !12
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !12, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !16
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !16, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !12
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !12, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !16
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !16, !tbaa !13
   %mul = mul i8 %1, %0, !dbg !17
-  %arrayidx6 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !18
-  store i8 %mul, i8* %arrayidx6, align 1, !dbg !19, !tbaa !13
+  %arrayidx6 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !18
+  store i8 %mul, ptr %arrayidx6, align 1, !dbg !19, !tbaa !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !10
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !10
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !10
@@ -70,7 +70,7 @@ for.cond.cleanup:
 ; ANALYSIS_REMARKS: remark: /tmp/t.c:9:3: loop not distributed: memory operations are safe for vectorization
 ; ALWAYS-NOT: warning: /tmp/t.c:9:3: loop not distributed: failed explicitly specified loop distribution
 
-define void @not_forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !22 {
+define void @not_forced(ptr %A, ptr %B, ptr %C, i32 %N) !dbg !22 {
 entry:
   %cmp12 = icmp sgt i32 %N, 0, !dbg !23
   br i1 %cmp12, label %ph, label %for.cond.cleanup, !dbg !24
@@ -80,13 +80,13 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !26
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !26, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !27
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !27, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !26
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !26, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !27
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !27, !tbaa !13
   %mul = mul i8 %1, %0, !dbg !28
-  %arrayidx6 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !29
-  store i8 %mul, i8* %arrayidx6, align 1, !dbg !30, !tbaa !13
+  %arrayidx6 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !29
+  store i8 %mul, ptr %arrayidx6, align 1, !dbg !30, !tbaa !13
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !24
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !24
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !24
@@ -98,7 +98,7 @@ for.cond.cleanup:
 
 ; REMARKS: remark: /tmp/t.c:15:3: distributed loop
 
-define void @success(i8* %A, i8* %B, i8* %C, i8* %D, i8* %E, i32 %N) !dbg !31 {
+define void @success(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, i32 %N) !dbg !31 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !32
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !33
@@ -108,21 +108,21 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !35
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !35, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !36
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !36, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !35
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !35, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !36
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !36, !tbaa !13
   %add = add i8 %1, %0, !dbg !37
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !33
-  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !38
-  store i8 %add, i8* %arrayidx7, align 1, !dbg !39, !tbaa !13
-  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !40
-  %2 = load i8, i8* %arrayidx9, align 1, !dbg !40, !tbaa !13
-  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !41
-  %3 = load i8, i8* %arrayidx12, align 1, !dbg !41, !tbaa !13
+  %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !38
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !39, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !40
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !40, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !41
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !41, !tbaa !13
   %mul = mul i8 %3, %2, !dbg !42
-  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !43
-  store i8 %mul, i8* %arrayidx16, align 1, !dbg !44, !tbaa !13
+  %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !43
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !44, !tbaa !13
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !33
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !33
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !dbg !33
@@ -134,7 +134,7 @@ for.cond.cleanup:
 ; MISSED_REMARKS: /tmp/t.c:27:5: loop not distributed: use -Rpass-analysis=loop-distribute for more info
 ; ANALYSIS_REMARKS: /tmp/t.c:27:5: loop not distributed: may not insert runtime check with convergent operation
 ; ALWAYS: warning: /tmp/t.c:27:5: loop not distributed: failed explicitly specified loop distribution
-define void @convergent(i8* %A, i8* %B, i8* %C, i8* %D, i8* %E, i32 %N) #1 !dbg !45 {
+define void @convergent(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, i32 %N) #1 !dbg !45 {
 entry:
   %cmp28 = icmp sgt i32 %N, 0, !dbg !46
   br i1 %cmp28, label %ph, label %for.cond.cleanup, !dbg !47
@@ -144,21 +144,21 @@ ph:
 
 for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %ph ]
-  %arrayidx = getelementptr inbounds i8, i8* %A, i64 %indvars.iv, !dbg !49
-  %0 = load i8, i8* %arrayidx, align 1, !dbg !49, !tbaa !13
-  %arrayidx2 = getelementptr inbounds i8, i8* %B, i64 %indvars.iv, !dbg !50
-  %1 = load i8, i8* %arrayidx2, align 1, !dbg !50, !tbaa !13
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %indvars.iv, !dbg !49
+  %0 = load i8, ptr %arrayidx, align 1, !dbg !49, !tbaa !13
+  %arrayidx2 = getelementptr inbounds i8, ptr %B, i64 %indvars.iv, !dbg !50
+  %1 = load i8, ptr %arrayidx2, align 1, !dbg !50, !tbaa !13
   %add = add i8 %1, %0, !dbg !51
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !57
-  %arrayidx7 = getelementptr inbounds i8, i8* %A, i64 %indvars.iv.next, !dbg !52
-  store i8 %add, i8* %arrayidx7, align 1, !dbg !53, !tbaa !13
-  %arrayidx9 = getelementptr inbounds i8, i8* %D, i64 %indvars.iv, !dbg !54
-  %2 = load i8, i8* %arrayidx9, align 1, !dbg !54, !tbaa !13
-  %arrayidx12 = getelementptr inbounds i8, i8* %E, i64 %indvars.iv, !dbg !55
-  %3 = load i8, i8* %arrayidx12, align 1, !dbg !55, !tbaa !13
+  %arrayidx7 = getelementptr inbounds i8, ptr %A, i64 %indvars.iv.next, !dbg !52
+  store i8 %add, ptr %arrayidx7, align 1, !dbg !53, !tbaa !13
+  %arrayidx9 = getelementptr inbounds i8, ptr %D, i64 %indvars.iv, !dbg !54
+  %2 = load i8, ptr %arrayidx9, align 1, !dbg !54, !tbaa !13
+  %arrayidx12 = getelementptr inbounds i8, ptr %E, i64 %indvars.iv, !dbg !55
+  %3 = load i8, ptr %arrayidx12, align 1, !dbg !55, !tbaa !13
   %mul = mul i8 %3, %2, !dbg !56
-  %arrayidx16 = getelementptr inbounds i8, i8* %C, i64 %indvars.iv, !dbg !57
-  store i8 %mul, i8* %arrayidx16, align 1, !dbg !58, !tbaa !13
+  %arrayidx16 = getelementptr inbounds i8, ptr %C, i64 %indvars.iv, !dbg !57
+  store i8 %mul, ptr %arrayidx16, align 1, !dbg !58, !tbaa !13
   call void @llvm.convergent()
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !57
   %exitcond = icmp eq i32 %lftr.wideiv, %N, !dbg !57

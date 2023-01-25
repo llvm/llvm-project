@@ -21,6 +21,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "format-indenter"
 
@@ -146,13 +147,13 @@ static bool opensProtoMessageField(const FormatToken &LessTok,
            (LessTok.Previous && LessTok.Previous->is(tok::equal))));
 }
 
-// Returns the delimiter of a raw string literal, or None if TokenText is not
-// the text of a raw string literal. The delimiter could be the empty string.
-// For example, the delimiter of R"deli(cont)deli" is deli.
-static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
+// Returns the delimiter of a raw string literal, or std::nullopt if TokenText
+// is not the text of a raw string literal. The delimiter could be the empty
+// string.  For example, the delimiter of R"deli(cont)deli" is deli.
+static std::optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   if (TokenText.size() < 5 // The smallest raw string possible is 'R"()"'.
       || !TokenText.startswith("R\"") || !TokenText.endswith("\"")) {
-    return None;
+    return std::nullopt;
   }
 
   // A raw string starts with 'R"<delimiter>(' and delimiter is ascii and has
@@ -160,15 +161,15 @@ static llvm::Optional<StringRef> getRawStringDelimiter(StringRef TokenText) {
   // 19 bytes.
   size_t LParenPos = TokenText.substr(0, 19).find_first_of('(');
   if (LParenPos == StringRef::npos)
-    return None;
+    return std::nullopt;
   StringRef Delimiter = TokenText.substr(2, LParenPos - 2);
 
   // Check that the string ends in ')Delimiter"'.
   size_t RParenPos = TokenText.size() - Delimiter.size() - 2;
   if (TokenText[RParenPos] != ')')
-    return None;
+    return std::nullopt;
   if (!TokenText.substr(RParenPos + 1).startswith(Delimiter))
-    return None;
+    return std::nullopt;
   return Delimiter;
 }
 
@@ -186,7 +187,7 @@ getCanonicalRawStringDelimiter(const FormatStyle &Style,
 RawStringFormatStyleManager::RawStringFormatStyleManager(
     const FormatStyle &CodeStyle) {
   for (const auto &RawStringFormat : CodeStyle.RawStringFormats) {
-    llvm::Optional<FormatStyle> LanguageStyle =
+    std::optional<FormatStyle> LanguageStyle =
         CodeStyle.GetLanguageStyle(RawStringFormat.Language);
     if (!LanguageStyle) {
       FormatStyle PredefinedStyle;
@@ -205,20 +206,20 @@ RawStringFormatStyleManager::RawStringFormatStyleManager(
   }
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 RawStringFormatStyleManager::getDelimiterStyle(StringRef Delimiter) const {
   auto It = DelimiterStyle.find(Delimiter);
   if (It == DelimiterStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 RawStringFormatStyleManager::getEnclosingFunctionStyle(
     StringRef EnclosingFunction) const {
   auto It = EnclosingFunctionStyle.find(EnclosingFunction);
   if (It == EnclosingFunctionStyle.end())
-    return None;
+    return std::nullopt;
   return It->second;
 }
 
@@ -331,6 +332,15 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
   if (Previous.is(tok::l_square) && Previous.is(TT_ObjCMethodExpr))
     return false;
 
+  if (Current.is(TT_ConditionalExpr) && Previous.is(tok::r_paren) &&
+      Previous.MatchingParen && Previous.MatchingParen->Previous &&
+      Previous.MatchingParen->Previous->MatchingParen &&
+      Previous.MatchingParen->Previous->MatchingParen->is(TT_LambdaLBrace)) {
+    // We have a lambda within a conditional expression, allow breaking here.
+    assert(Previous.MatchingParen->Previous->is(tok::r_brace));
+    return true;
+  }
+
   return !CurrentState.NoLineBreak;
 }
 
@@ -343,8 +353,12 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
     return LambdaBodyLength > getColumnLimit(State);
   }
-  if (Current.MustBreakBefore || Current.is(TT_InlineASMColon))
+  if (Current.MustBreakBefore ||
+      (Current.is(TT_InlineASMColon) &&
+       (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_Always ||
+        Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline))) {
     return true;
+  }
   if (CurrentState.BreakBeforeClosingBrace &&
       Current.closesBlockOrBlockTypeList(Style)) {
     return true;
@@ -444,7 +458,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
 
   // If the template declaration spans multiple lines, force wrap before the
-  // function/class declaration
+  // function/class declaration.
   if (Previous.ClosesTemplateDeclaration && CurrentState.BreakBeforeParameter &&
       Current.CanBreakBefore) {
     return true;
@@ -552,7 +566,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   // If the return type spans multiple lines, wrap before the function name.
   if (((Current.is(TT_FunctionDeclarationName) &&
-        // Don't break before a C# function when no break after return type
+        !State.Line->ReturnTypeWrapped &&
+        // Don't break before a C# function when no break after return type.
         (!Style.isCSharp() ||
          Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
         // Don't always break between a JavaScript `function` and the function
@@ -707,8 +722,9 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
        (Previous.is(tok::l_brace) && Previous.isNot(BK_Block) &&
         Style.Cpp11BracedListStyle)) &&
       State.Column > getNewLineColumn(State) &&
-      (!Previous.Previous || !Previous.Previous->isOneOf(
-                                 tok::kw_for, tok::kw_while, tok::kw_switch)) &&
+      (!Previous.Previous ||
+       !Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                   tok::kw_switch)) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
@@ -1248,6 +1264,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return ContinuationIndent;
   }
 
+  if (State.Line->InPragmaDirective)
+    return CurrentState.Indent + Style.ContinuationIndentWidth;
+
   // This ensure that we correctly format ObjC methods calls without inputs,
   // i.e. where the last element isn't selector like: [callee method];
   if (NextNonComment->is(tok::identifier) && NextNonComment->FakeRParens == 0 &&
@@ -1305,7 +1324,7 @@ static bool hasNestedBlockInlined(const FormatToken *Previous,
   if (Previous->ParameterCount > 1)
     return true;
 
-  // Also a nested block if contains a lambda inside function with 1 parameter
+  // Also a nested block if contains a lambda inside function with 1 parameter.
   return Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLSquare);
 }
 
@@ -1403,8 +1422,10 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     CurrentState.NestedBlockIndent = State.Column + Current.ColumnWidth + 1;
   if (Current.isOneOf(TT_LambdaLSquare, TT_LambdaArrow))
     CurrentState.LastSpace = State.Column;
-  if (Current.is(TT_RequiresExpression))
+  if (Current.is(TT_RequiresExpression) &&
+      Style.RequiresExpressionIndentation == FormatStyle::REI_Keyword) {
     CurrentState.NestedBlockIndent = State.Column;
+  }
 
   // Insert scopes created by fake parenthesis.
   const FormatToken *Previous = Current.getPreviousNonComment();
@@ -1518,6 +1539,12 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
           std::max(State.Column, NewParenState.Indent), CurrentState.LastSpace);
     }
 
+    // Special case for generic selection expressions, its comma-separated
+    // expressions are not aligned to the opening paren like regular calls, but
+    // rather continuation-indented relative to the _Generic keyword.
+    if (Previous && Previous->endsSequence(tok::l_paren, tok::kw__Generic))
+      NewParenState.Indent = CurrentState.LastSpace;
+
     if (Previous &&
         (Previous->getPrecedence() == prec::Assignment ||
          Previous->isOneOf(tok::kw_return, TT_RequiresClause) ||
@@ -1525,7 +1552,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
           Previous->is(TT_ConditionalExpr))) &&
         !Newline) {
       // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
-      // the operator and keep the operands aligned
+      // the operator and keep the operands aligned.
       if (Style.AlignOperands == FormatStyle::OAS_AlignAfterOperator)
         NewParenState.UnindentOperator = true;
       // Mark indentation as alignment if the expression is aligned.
@@ -1664,8 +1691,12 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
         (State.Line->Type != LT_ObjCDecl && Style.BinPackParameters) ||
         (State.Line->Type == LT_ObjCDecl && ObjCBinPackProtocolList);
 
+    bool GenericSelection =
+        Current.getPreviousNonComment() &&
+        Current.getPreviousNonComment()->is(tok::kw__Generic);
+
     AvoidBinPacking =
-        (CurrentState.IsCSharpGenericTypeConstraint) ||
+        (CurrentState.IsCSharpGenericTypeConstraint) || GenericSelection ||
         (Style.isJavaScript() && EndsInComma) ||
         (State.Line->MustBeDeclaration && !BinPackDeclaration) ||
         (!State.Line->MustBeDeclaration && !Style.BinPackArguments) ||
@@ -1717,7 +1748,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
 
   if (Style.BraceWrapping.BeforeLambdaBody && Current.Next != nullptr &&
       Current.is(tok::l_paren)) {
-    // Search for any parameter that is a lambda
+    // Search for any parameter that is a lambda.
     FormatToken const *next = Current.Next;
     while (next != nullptr) {
       if (next->is(TT_LambdaLSquare)) {
@@ -2049,21 +2080,21 @@ static StringRef getEnclosingFunctionName(const FormatToken &Current) {
   return Tok->TokenText;
 }
 
-llvm::Optional<FormatStyle>
+std::optional<FormatStyle>
 ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
                                         const LineState &State) {
   if (!Current.isStringLiteral())
-    return None;
+    return std::nullopt;
   auto Delimiter = getRawStringDelimiter(Current.TokenText);
   if (!Delimiter)
-    return None;
+    return std::nullopt;
   auto RawStringStyle = RawStringFormats.getDelimiterStyle(*Delimiter);
   if (!RawStringStyle && Delimiter->empty()) {
     RawStringStyle = RawStringFormats.getEnclosingFunctionStyle(
         getEnclosingFunctionName(Current));
   }
   if (!RawStringStyle)
-    return None;
+    return std::nullopt;
   RawStringStyle->ColumnLimit = getColumnLimit(State);
   return RawStringStyle;
 }
@@ -2537,7 +2568,7 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
 }
 
 unsigned ContinuationIndenter::getColumnLimit(const LineState &State) const {
-  // In preprocessor directives reserve two chars for trailing " \"
+  // In preprocessor directives reserve two chars for trailing " \".
   return Style.ColumnLimit - (State.Line->InPPDirective ? 2 : 0);
 }
 

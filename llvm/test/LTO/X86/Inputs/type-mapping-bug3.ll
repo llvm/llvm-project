@@ -3,7 +3,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; T2 is the non-opaque struct required to trigger the uniqued T2.0 and T3.0 to
 ; respectively T2 and T3 in the destination module.
-%"T2" = type { %"T3"* }
+%"T2" = type { ptr }
 %"T3" = type opaque
 
 ; Use/refer to T2 so it gets added as an IdentifiedStructType.  The debug

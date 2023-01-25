@@ -2,7 +2,7 @@
 target triple = "arm64-apple-macosx"
 
 ; CHECK: mm2
-define i32 @mm2(i32* nocapture %p, i32 %n) nounwind uwtable readonly ssp {
+define i32 @mm2(ptr nocapture %p, i32 %n) nounwind uwtable readonly ssp {
 entry:
   br label %do.body
 
@@ -13,9 +13,9 @@ do.body:
   %max.0 = phi i32 [ 0, %entry ], [ %max.1, %do.cond ]
   %min.0 = phi i32 [ 0, %entry ], [ %min.1, %do.cond ]
   %n.addr.0 = phi i32 [ %n, %entry ], [ %dec, %do.cond ]
-  %p.addr.0 = phi i32* [ %p, %entry ], [ %incdec.ptr, %do.cond ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %p.addr.0, i64 1
-  %0 = load i32, i32* %p.addr.0, align 4
+  %p.addr.0 = phi ptr [ %p, %entry ], [ %incdec.ptr, %do.cond ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %p.addr.0, i64 1
+  %0 = load i32, ptr %p.addr.0, align 4
   %cmp = icmp sgt i32 %0, %max.0
   br i1 %cmp, label %do.cond, label %if.else
 
@@ -400,7 +400,7 @@ entry:
   br label %for.body
 
 for.body:
-  %x0 = load i32, i32* undef, align 4
+  %x0 = load i32, ptr undef, align 4
   br i1 undef, label %if.then.i146, label %is_sbox.exit155
 
 if.then.i146:
@@ -412,12 +412,12 @@ if.then.i146:
 is_sbox.exit155:                                  ; preds = %if.then.i146, %for.body
   %seg_offset.0.i151 = phi i32 [ %add9.i145, %if.then.i146 ], [ undef, %for.body ]
   %idxprom15.i152 = sext i32 %seg_offset.0.i151 to i64
-  %arrayidx18.i154 = getelementptr inbounds i32, i32* null, i64 %idxprom15.i152
-  %x1 = load i32, i32* %arrayidx18.i154, align 4
+  %arrayidx18.i154 = getelementptr inbounds i32, ptr null, i64 %idxprom15.i152
+  %x1 = load i32, ptr %arrayidx18.i154, align 4
   br i1 undef, label %for.body51, label %for.body
 
 for.body51:                                       ; preds = %is_sbox.exit155
-  call fastcc void @get_switch_type(i32 %x1, i32 undef, i16 signext undef, i16 signext undef, i16* undef)
+  call fastcc void @get_switch_type(i32 %x1, i32 undef, i16 signext undef, i16 signext undef, ptr undef)
   unreachable
 }
-declare fastcc void @get_switch_type(i32, i32, i16 signext, i16 signext, i16* nocapture) nounwind ssp
+declare fastcc void @get_switch_type(i32, i32, i16 signext, i16 signext, ptr nocapture) nounwind ssp

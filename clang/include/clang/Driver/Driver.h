@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_DRIVER_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/HeaderInclude.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -19,6 +20,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Arg.h"
@@ -28,11 +30,15 @@
 #include <list>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class Triple;
 namespace vfs {
 class FileSystem;
+}
+namespace cl {
+class ExpansionContext;
 }
 } // namespace llvm
 
@@ -228,9 +234,16 @@ public:
   /// CCPrintOptionsFilename or to stderr.
   unsigned CCPrintOptions : 1;
 
-  /// Set CC_PRINT_HEADERS mode, which causes the frontend to log header include
-  /// information to CCPrintHeadersFilename or to stderr.
-  unsigned CCPrintHeaders : 1;
+  /// The format of the header information that is emitted. If CC_PRINT_HEADERS
+  /// is set, the format is textual. Otherwise, the format is determined by the
+  /// enviroment variable CC_PRINT_HEADERS_FORMAT.
+  HeaderIncludeFormatKind CCPrintHeadersFormat = HIFMT_None;
+
+  /// This flag determines whether clang should filter the header information
+  /// that is emitted. If enviroment variable CC_PRINT_HEADERS_FILTERING is set
+  /// to "only-direct-system", only system headers that are directly included
+  /// from non-system headers are emitted.
+  HeaderIncludeFilteringKind CCPrintHeadersFiltering = HIFIL_None;
 
   /// Set CC_LOG_DIAGNOSTICS mode, which causes the frontend to log diagnostics
   /// to CCLogDiagnosticsFilename or to stderr, in a stable machine readable
@@ -258,8 +271,8 @@ private:
   /// Name to use when invoking gcc/g++.
   std::string CCCGenericGCCName;
 
-  /// Name of configuration file if used.
-  std::string ConfigFile;
+  /// Paths to configuration files used.
+  std::vector<std::string> ConfigFiles;
 
   /// Allocator for string saver.
   llvm::BumpPtrAllocator Alloc;
@@ -353,7 +366,9 @@ public:
   /// Name to use when invoking gcc/g++.
   const std::string &getCCCGenericGCCName() const { return CCCGenericGCCName; }
 
-  const std::string &getConfigFile() const { return ConfigFile; }
+  llvm::ArrayRef<std::string> getConfigFiles() const {
+    return ConfigFiles;
+  }
 
   const llvm::opt::OptTable &getOpts() const { return getDriverOptTable(); }
 
@@ -466,10 +481,11 @@ public:
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
-  /// empty string.
+  /// empty string. The \p SuppressError option is used to suppress errors.
   llvm::DenseSet<StringRef>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                  Action::OffloadKind Kind, const ToolChain *TC) const;
+                  Action::OffloadKind Kind, const ToolChain *TC,
+                  bool SuppressError = false) const;
 
   /// Check that the file referenced by Value exists. If it doesn't,
   /// issue a diagnostic and return false.
@@ -600,6 +616,11 @@ public:
   /// Returns the default name for linked images (e.g., "a.out").
   const char *getDefaultImageName() const;
 
+  // Creates a temp file with $Prefix-%%%%%%.$Suffix
+  const char *CreateTempFile(Compilation &C, StringRef Prefix, StringRef Suffix,
+                             bool MultipleArchs = false,
+                             StringRef BoundArch = {}) const;
+
   /// GetNamedOutputPath - Return the name to use for the output of
   /// the action \p JA. The result is appended to the compilation's
   /// list of temporary or result files, as appropriate.
@@ -659,16 +680,23 @@ public:
 
 private:
 
-  /// Tries to load options from configuration file.
+  /// Tries to load options from configuration files.
   ///
   /// \returns true if error occurred.
-  bool loadConfigFile();
+  bool loadConfigFiles();
+
+  /// Tries to load options from default configuration files (deduced from
+  /// executable filename).
+  ///
+  /// \returns true if error occurred.
+  bool loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx);
 
   /// Read options from the specified file.
   ///
   /// \param [in] FileName File to read.
+  /// \param [in] Search and expansion options.
   /// \returns true, if error occurred while reading.
-  bool readConfigFile(StringRef FileName);
+  bool readConfigFile(StringRef FileName, llvm::cl::ExpansionContext &ExpCtx);
 
   /// Set the driver mode (cl, gcc, etc) from the value of the `--driver-mode`
   /// option.
@@ -715,6 +743,9 @@ private:
       std::map<std::pair<const Action *, std::string>, InputInfoList>
           &CachedResults,
       Action::OffloadKind TargetDeviceOffloadKind) const;
+
+  /// Return the typical executable name for the specified driver \p Mode.
+  static const char *getExecutableForDriverMode(DriverMode Mode);
 
 public:
   /// GetReleaseVersion - Parse (([0-9]+)(.([0-9]+)(.([0-9]+)?))?)? and

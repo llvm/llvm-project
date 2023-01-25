@@ -45,11 +45,11 @@ subroutine open_8(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (i64) -> i32
-! CHECK:  %[[VAL_13:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_9]], %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
-! CHECK:  %[[VAL_14:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_13]]) : (!fir.ref<i8>) -> i32
+! CHECK:  %[[VAL_13:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_9]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:  %[[VAL_14:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_13]]) {{.*}}: (!fir.ref<i8>) -> i32
   open(n)
 end subroutine
 
@@ -61,7 +61,7 @@ subroutine close_8(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginClose
   close(n)
@@ -75,7 +75,7 @@ subroutine rewind_8(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginRewind
   rewind(n)
@@ -90,7 +90,7 @@ subroutine backspace_8(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginBackspace
 end subroutine
@@ -104,7 +104,7 @@ subroutine inquire_8(n, fm)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginInquire
   inquire(n, formatted=fm)
@@ -118,7 +118,7 @@ subroutine write_8(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginExternalListOutput
   write(n, *) "hello"
@@ -133,7 +133,7 @@ subroutine read_8(n, var)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.if
 ! CHECK: BeginExternalListInput
   read(n, *) var
@@ -147,7 +147,7 @@ subroutine open_16(n)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant false
 ! CHECK:  %[[VAL_3:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange128(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) : (i128, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_8:.*]] = fir.call @_FortranAioCheckUnitNumberInRange128(%[[VAL_1]], %[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %{{.*}}, %{{.*}}) {{.*}}: (i128, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
   open(n)
 end subroutine
 
@@ -166,19 +166,19 @@ subroutine open_8_error_recovery_1(n, ios)
 ! CHECK:  %[[VAL_3:.*]] = arith.constant true
 ! CHECK:  %[[VAL_4:.*]] = fir.zero_bits !fir.ref<i8>
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : i64
-! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_9:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK:  %[[VAL_10:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_11:.*]] = arith.cmpi eq, %[[VAL_9]], %[[VAL_10]] : i32
 ! CHECK:  %[[VAL_12:.*]] = fir.if %[[VAL_11]] -> (i32) {
 ! CHECK:    %[[VAL_13:.*]] = fir.convert %[[VAL_2]] : (i64) -> i32
-! CHECK:    %[[VAL_17:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_13]], %{{.*}}, {{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:    %[[VAL_17:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_13]], %{{.*}}, {{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_18:.*]] = arith.constant true
 ! CHECK:    %[[VAL_19:.*]] = arith.constant false
 ! CHECK:    %[[VAL_20:.*]] = arith.constant false
 ! CHECK:    %[[VAL_21:.*]] = arith.constant false
 ! CHECK:    %[[VAL_22:.*]] = arith.constant false
-! CHECK:    %[[VAL_23:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) : (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
-! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_17]]) : (!fir.ref<i8>) -> i32
+! CHECK:    %[[VAL_23:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_17]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:    fir.result %[[VAL_24]] : i32
 ! CHECK:  } else {
 ! CHECK:    fir.result %[[VAL_9]] : i32
@@ -198,22 +198,22 @@ subroutine open_8_error_recovery_2(n, msg)
 ! CHECK:  %[[VAL_4:.*]] = arith.constant true
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
-! CHECK:  %[[VAL_10:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %[[VAL_6]], %{{.*}}, %{{.*}}) : (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
+! CHECK:  %[[VAL_10:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(%[[VAL_3]], %[[VAL_4]], %[[VAL_5]], %[[VAL_6]], %{{.*}}, %{{.*}}) {{.*}}: (i64, i1, !fir.ref<i8>, i64, !fir.ref<i8>, i32) -> i32
 ! CHECK:  %[[VAL_11:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_12:.*]] = arith.cmpi eq, %[[VAL_10]], %[[VAL_11]] : i32
 ! CHECK:  %[[VAL_13:.*]] = fir.if %[[VAL_12]] -> (i32) {
 ! CHECK:    %[[VAL_14:.*]] = fir.convert %[[VAL_3]] : (i64) -> i32
-! CHECK:    %[[VAL_18:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_14]], %{{.*}}, %{{.*}}) : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:    %[[VAL_18:.*]] = fir.call @_FortranAioBeginOpenUnit(%[[VAL_14]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_19:.*]] = arith.constant false
 ! CHECK:    %[[VAL_20:.*]] = arith.constant true
 ! CHECK:    %[[VAL_21:.*]] = arith.constant false
 ! CHECK:    %[[VAL_22:.*]] = arith.constant false
 ! CHECK:    %[[VAL_23:.*]] = arith.constant true
-! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) : (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
+! CHECK:    %[[VAL_24:.*]] = fir.call @_FortranAioEnableHandlers(%[[VAL_18]], %[[VAL_19]], %[[VAL_20]], %[[VAL_21]], %[[VAL_22]], %[[VAL_23]]) {{.*}}: (!fir.ref<i8>, i1, i1, i1, i1, i1) -> none
 ! CHECK:    %[[VAL_25:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:    %[[VAL_26:.*]] = fir.convert %[[VAL_2]]#1 : (index) -> i64
-! CHECK:    %[[VAL_27:.*]] = fir.call @_FortranAioGetIoMsg(%[[VAL_18]], %[[VAL_25]], %[[VAL_26]]) : (!fir.ref<i8>, !fir.ref<i8>, i64) -> none
-! CHECK:    %[[VAL_28:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_18]]) : (!fir.ref<i8>) -> i32
+! CHECK:    %[[VAL_27:.*]] = fir.call @_FortranAioGetIoMsg(%[[VAL_18]], %[[VAL_25]], %[[VAL_26]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64) -> none
+! CHECK:    %[[VAL_28:.*]] = fir.call @_FortranAioEndIoStatement(%[[VAL_18]]) {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:    fir.result %[[VAL_28]] : i32
 ! CHECK:  } else {
 ! CHECK:    fir.result %[[VAL_10]] : i32
@@ -223,7 +223,7 @@ subroutine open_8_error_recovery_2(n, msg)
 ! CHECK:       ^bb1:
 ! CHECK:  br ^bb3
 ! CHECK:       ^bb2:
-! CHECK:  fir.call @_QPi_failed() : () -> ()
+! CHECK:  fir.call @_QPi_failed() {{.*}}: () -> ()
 ! CHECK:  br ^bb3
 ! CHECK:       ^bb3:
 ! CHECK:  return
@@ -263,9 +263,9 @@ subroutine temp_cleanup(n, msg, ios)
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.array<2xi64>> {fir.bindc_name = "n"},
 ! CHECK-SAME:  %[[VAL_1:.*]]: !fir.boxchar<1> {fir.bindc_name = "msg"},
 ! CHECK-SAME:  %[[VAL_2:.*]]: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "ios"}) {
-! CHECK:  %[[VAL_10:.*]] = fir.call @_QPmake_temp2() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:  %[[VAL_10:.*]] = fir.call @_QPmake_temp2() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:  fir.save_result %[[VAL_10]] to %[[VAL_8:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:  %[[VAL_15:.*]] = fir.call @_QPmake_temp3() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:  %[[VAL_15:.*]] = fir.call @_QPmake_temp3() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:  fir.save_result %[[VAL_15]] to %[[VAL_7:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:  fir.load %[[VAL_7]]
 ! CHECK:  %[[VAL_32:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -274,7 +274,7 @@ subroutine temp_cleanup(n, msg, ios)
 ! CHECK:  %[[VAL_37:.*]] = fir.load %[[VAL_8]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:  %[[VAL_38:.*]] = fir.box_addr %[[VAL_37]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:  fir.freemem %[[VAL_38]] : !fir.heap<i32>
-! CHECK:  %[[VAL_42:.*]] = fir.call @_QPmake_temp0() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:  %[[VAL_42:.*]] = fir.call @_QPmake_temp0() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:  fir.save_result %[[VAL_42]] to %[[VAL_6:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:  %[[VAL_57:.*]] = fir.call @_FortranAioCheckUnitNumberInRange64(
 ! CHECK:  %[[VAL_58:.*]] = arith.constant 0 : i32
@@ -282,14 +282,14 @@ subroutine temp_cleanup(n, msg, ios)
 ! CHECK:  %[[VAL_60:.*]] = fir.if %[[VAL_59]] -> (i32) {
 ! CHECK:    fir.call @_FortranAioBeginUnformattedOutput(
 ! CHECK:    fir.call @_FortranAioEnableHandlers(
-! CHECK:    %[[VAL_72:.*]] = fir.call @_QPmake_temp4() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:    %[[VAL_72:.*]] = fir.call @_QPmake_temp4() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:    fir.save_result %[[VAL_72]] to %[[VAL_5:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:    %[[VAL_77:.*]] = fir.call @_FortranAioOutputDescriptor(
 ! CHECK:    %[[VAL_77_1:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:    %[[VAL_77_2:.*]] = fir.box_addr %[[VAL_77_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CHECK:    fir.freemem %[[VAL_77_2]] : !fir.heap<i32>
 ! CHECK:    fir.if %[[VAL_77]] {
-! CHECK:      %[[VAL_78:.*]] = fir.call @_QPmake_temp5() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:      %[[VAL_78:.*]] = fir.call @_QPmake_temp5() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:      fir.save_result %[[VAL_78]] to %[[VAL_4:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:      fir.call @_FortranAioOutputDescriptor(
 ! CHECK:      %[[VAL_84:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.box<!fir.heap<i32>>>
@@ -303,7 +303,7 @@ subroutine temp_cleanup(n, msg, ios)
 ! CHECK:  } else {
 ! CHECK:    fir.result %[[VAL_57]] : i32
 ! CHECK:  }
-! CHECK:  %[[VAL_98:.*]] = fir.call @_QPmake_temp1() : () -> !fir.box<!fir.heap<i32>>
+! CHECK:  %[[VAL_98:.*]] = fir.call @_QPmake_temp1() {{.*}}: () -> !fir.box<!fir.heap<i32>>
 ! CHECK:  fir.save_result %[[VAL_98]] to %[[VAL_3:.*]] : !fir.box<!fir.heap<i32>>, !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:  fir.load %[[VAL_3]]
 ! CHECK:  %[[VAL_107:.*]] = fir.load %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<i32>>>

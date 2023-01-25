@@ -67,7 +67,7 @@ static void spsSerializationRoundTrip(const T &Value) {
 template <typename T> static void testFixedIntegralTypeSerialization() {
   spsSerializationRoundTrip<T, T>(0);
   spsSerializationRoundTrip<T, T>(static_cast<T>(1));
-  if (std::is_signed<T>::value) {
+  if (std::is_signed_v<T>) {
     spsSerializationRoundTrip<T, T>(static_cast<T>(-1));
     spsSerializationRoundTrip<T, T>(std::numeric_limits<T>::min());
   }
@@ -135,6 +135,16 @@ TEST(SimplePackedSerializationTest, StdTupleSerialization) {
 TEST(SimplePackedSerializationTest, StdPairSerialization) {
   std::pair<int32_t, std::string> P(42, "foo");
   spsSerializationRoundTrip<SPSTuple<int32_t, SPSString>>(P);
+}
+
+TEST(SimplePackedSerializationTest, StdOptionalNoValueSerialization) {
+  std::optional<int64_t> NoValue;
+  spsSerializationRoundTrip<SPSOptional<int64_t>>(NoValue);
+}
+
+TEST(SimplePackedSerializationTest, StdOptionalValueSerialization) {
+  std::optional<int64_t> Value(42);
+  spsSerializationRoundTrip<SPSOptional<int64_t>>(Value);
 }
 
 TEST(SimplePackedSerializationTest, ArgListSerialization) {

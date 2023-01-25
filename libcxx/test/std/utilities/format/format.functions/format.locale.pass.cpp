@@ -10,8 +10,6 @@
 // UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT Evaluate gcc-12 status
 // UNSUPPORTED:gcc-12
-// TODO FMT Investigate AppleClang ICE
-// UNSUPPORTED: apple-clang-13
 
 // <format>
 
@@ -28,18 +26,20 @@
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
+#include "test_format_string.h"
+#include "assert_macros.h"
 
-auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
-                                                               const Args&... args) constexpr {
-  std::basic_string<CharT> out = std::format(std::locale(), fmt.template sv<CharT>(), args...);
-  if constexpr (std::same_as<CharT, char>)
-    if (out != expected)
-      std::cerr << "\nFormat string   " << fmt.template sv<char>() << "\nExpected output " << expected
-                << "\nActual output   " << out << '\n';
-  assert(out == expected);
-};
+auto test =
+    []<class CharT, class... Args>(
+        std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
+      std::basic_string<CharT> out = std::format(std::locale(), fmt, std::forward<Args>(args)...);
+      TEST_REQUIRE(
+          out == expected,
+          test_concat_message(
+              "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
+    };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, const Args&...) {
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
   // After P2216 most exceptions thrown by std::format become ill-formed.
   // Therefore this tests does nothing.
   // A basic ill-formed test is done in format.locale.verify.cpp
@@ -47,11 +47,11 @@ auto test_exception = []<class CharT, class... Args>(std::string_view, std::basi
 };
 
 int main(int, char**) {
-  format_tests<char>(test, test_exception);
+  format_tests<char, execution_modus::full>(test, test_exception);
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   format_tests_char_to_wchar_t(test);
-  format_tests<wchar_t>(test, test_exception);
+  format_tests<wchar_t, execution_modus::full>(test, test_exception);
 #endif
 
   return 0;

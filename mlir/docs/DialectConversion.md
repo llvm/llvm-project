@@ -5,13 +5,13 @@ conversions between, and within dialects. This framework allows for transforming
 illegal operations to those supported by a provided conversion target, via a set
 of pattern-based operation rewriting patterns.
 
-[TOC]
-
 The dialect conversion framework consists of the following components:
 
 *   A [Conversion Target](#conversion-target)
 *   A set of [Rewrite Patterns](#rewrite-pattern-specification)
 *   A [Type Converter](#type-conversion) (Optional)
+
+[TOC]
 
 ## Modes of Conversion
 
@@ -301,15 +301,15 @@ class TypeConverter {
   /// to any of the following forms(where `T` is a class derived from `Type`:
   ///   * Optional<Type>(T)
   ///     - This form represents a 1-1 type conversion. It should return nullptr
-  ///       or `llvm::None` to signify failure. If `llvm::None` is returned, the
+  ///       or `std::nullopt` to signify failure. If `std::nullopt` is returned, the
   ///       converter is allowed to try another conversion function to perform
   ///       the conversion.
   ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &)
   ///     - This form represents a 1-N type conversion. It should return
-  ///       `failure` or `llvm::None` to signify a failed conversion. If the new
+  ///       `failure` or `std::nullopt` to signify a failed conversion. If the new
   ///       set of types is empty, the type is removed and any usages of the
   ///       existing value are expected to be removed during conversion. If
-  ///       `llvm::None` is returned, the converter is allowed to try another
+  ///       `std::nullopt` is returned, the converter is allowed to try another
   ///       conversion function to perform the conversion.
   ///   * Optional<LogicalResult>(T, SmallVectorImpl<Type> &, ArrayRef<Type>)
   ///     - This form represents a 1-N type conversion supporting recursive
@@ -334,7 +334,7 @@ class TypeConverter {
   /// This function is responsible for creating an operation, using the
   /// OpBuilder and Location provided, that "converts" a range of values into a
   /// single value of the given type `T`. It must return a Value of the
-  /// converted type on success, an `llvm::None` if it failed but other
+  /// converted type on success, an `std::nullopt` if it failed but other
   /// materialization can be attempted, and `nullptr` on unrecoverable failure.
   /// It will only be called for (sub)types of `T`.
   ///
@@ -431,12 +431,12 @@ Legalizing operation : 'func.return'(0x608000002e20) {
   } -> FAILURE : unable to fold
 
   * Pattern : 'func.return -> ()' {
-    ** Insert  : 'spv.Return'(0x6070000453e0)
+    ** Insert  : 'spirv.Return'(0x6070000453e0)
     ** Replace : 'func.return'(0x608000002e20)
 
     //===-------------------------------------------===//
-    Legalizing operation : 'spv.Return'(0x6070000453e0) {
-      "spv.Return"() : () -> ()
+    Legalizing operation : 'spirv.Return'(0x6070000453e0) {
+      "spirv.Return"() : () -> ()
 
     } -> SUCCESS : operation marked legal by the target
     //===-------------------------------------------===//
@@ -448,5 +448,5 @@ Legalizing operation : 'func.return'(0x608000002e20) {
 This output is describing the legalization of an `func.return` operation. We
 first try to legalize by folding the operation, but that is unsuccessful for
 `func.return`. From there, a pattern is applied that replaces the `func.return`
-with a `spv.Return`. The newly generated `spv.Return` is then processed for
+with a `spirv.Return`. The newly generated `spirv.Return` is then processed for
 legalization, but is found to already legal as per the target.

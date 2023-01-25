@@ -30,7 +30,7 @@ define void @fn1() local_unnamed_addr #0 {
 ; CHECK:       while.body12:
 ; CHECK-NEXT:    br i1 undef, label [[IF_END18]], label [[L]]
 ; CHECK:       L.loopexit:
-; CHECK-NEXT:    store i8 poison, i8* null
+; CHECK-NEXT:    store i8 poison, ptr null
 ; CHECK-NEXT:    br label [[L]]
 ; CHECK:       L:
 ; CHECK-NEXT:    [[H_125]] = phi i32 [ [[H_127]], [[WHILE_BODY12]] ], [ poison, [[L_LOOPEXIT]] ]
@@ -114,33 +114,33 @@ attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="fals
 define void @a() {
 ; CHECK-LABEL: @a(
 ; CHECK-NEXT:  b:
-; CHECK-NEXT:    store i8* null, i8** null
+; CHECK-NEXT:    store ptr null, ptr null
 ; CHECK-NEXT:    br label [[D:%.*]]
 ; CHECK:       d:
-; CHECK-NEXT:    [[I:%.*]] = phi i8* [ null, [[B:%.*]] ], [ [[E:%.*]], [[F:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi ptr [ null, [[B:%.*]] ], [ [[E:%.*]], [[F:%.*]] ]
 ; CHECK-NEXT:    br i1 undef, label [[F]], label [[G:%.*]]
 ; CHECK:       g:
-; CHECK-NEXT:    store i8* [[I]], i8** null
+; CHECK-NEXT:    store ptr [[I]], ptr null
 ; CHECK-NEXT:    unreachable
 ; CHECK:       f:
-; CHECK-NEXT:    [[E]] = getelementptr i8, i8* [[I]], i64 1
+; CHECK-NEXT:    [[E]] = getelementptr i8, ptr [[I]], i64 1
 ; CHECK-NEXT:    br label [[D]]
 ;
 b:
-  store i8* null, i8** null
+  store ptr null, ptr null
   br label %d
 
 d:                                                ; preds = %f, %b
-  %i = phi i8* [ null, %b ], [ %e, %f ]
+  %i = phi ptr [ null, %b ], [ %e, %f ]
   br i1 undef, label %f, label %g
 
 g:                                                ; preds = %d
-  %h = phi i8* [ %i, %d ]
-  store i8* %h, i8** null
+  %h = phi ptr [ %i, %d ]
+  store ptr %h, ptr null
   unreachable
 
 f:                                                ; preds = %d
-  %e = getelementptr i8, i8* %i, i64 1
+  %e = getelementptr i8, ptr %i, i64 1
   br label %d
 }
 

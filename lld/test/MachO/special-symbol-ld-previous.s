@@ -29,13 +29,9 @@
 
 ## The remaining cases test handling when a symbol name is part of $ld$previous.
 
-## Case 4: special symbol $ld$previous affects the install name / compatibility version
-## when the specified version 11.0.0 is within the affected range [3.0, 14.0) when a symbol
-## is part of $previous$ if and only if that named symbol is referenced.
-## That is, for $ld$previous$/NewName$$3.0$14.0$_symNam$, if _symNam is
-## referenced, it refers to dylib /NewName if the deployment target is
-## in [3.0, 14.0).
-
+## Case 4: special symbol $ld$previous affects the install name / compatibility version if and only if:
+##   * the specified version 11.0.0 is within the affected range [3.0, 14.0), and
+##   * the symbol name after $previous$ points to a referenced symbol
 # RUN: %lld -o %t/libfoo4_yes.dylib %t/libLDPreviousInstallName-Symbol.tbd %t/ref_ySyy.o -dylib -platform_version macos 11.0.0 11.0.0
 # RUN: llvm-otool -L %t/libfoo4_yes.dylib | FileCheck --check-prefix=CASE4-YES --implicit-check-not=/New %s
 # CASE4-YES: /Old (compatibility version 1.2.3, current version 1.2.3)
@@ -63,9 +59,9 @@
 # RUN: %no-fatal-warnings-lld -o %t/libfoo1.dylib %t/libLDPreviousInvalid.tbd %t/ref_xxx.o -dylib \
 # RUN:  -platform_version macos 11.0.0 11.0.0 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
 
-# INVALID-VERSION-DAG: failed to parse start version, symbol '$ld$previous$/New$1.2.3$1$3.a$14.0$$' ignored
-# INVALID-VERSION-DAG: failed to parse end version, symbol '$ld$previous$/New$1.2.3$1$3.0$14.b$$' ignored
-# INVALID-VERSION-DAG: failed to parse compatibility version, symbol '$ld$previous$/New$1.2.c$1$3.0$14.0$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse start version, symbol '$ld$previous$/New$1.2.3$1$3.a$14.0$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse end version, symbol '$ld$previous$/New$1.2.3$1$3.0$14.b$$' ignored
+# INVALID-VERSION-DAG: libLDPreviousInvalid.tbd(/Old): failed to parse compatibility version, symbol '$ld$previous$/New$1.2.c$1$3.0$14.0$$' ignored
 
 #--- ref_xxx.s
 .long	_xxx@GOTPCREL

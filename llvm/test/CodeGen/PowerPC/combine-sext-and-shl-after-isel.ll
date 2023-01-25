@@ -10,7 +10,7 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
 ; RUN:   -ppc-asm-full-reg-names -verify-machineinstrs -O2 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-P9-BE
-define dso_local i32 @poc(i32* %base, i32 %index, i1 %flag, i32 %default) {
+define dso_local i32 @poc(ptr %base, i32 %index, i1 %flag, i32 %default) {
 ; CHECK-LABEL: poc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r5, r5, 1
@@ -65,15 +65,15 @@ entry:
   br i1 %flag, label %true, label %false
 
 true:
-  %ptr = getelementptr inbounds i32, i32* %base, i64 %iconv
-  %value = load i32, i32* %ptr, align 4
+  %ptr = getelementptr inbounds i32, ptr %base, i64 %iconv
+  %value = load i32, ptr %ptr, align 4
   ret i32 %value
 
 false:
   ret i32 %default
 }
 
-define dso_local i64 @poc_i64(i64* %base, i32 %index, i1 %flag, i64 %default) {
+define dso_local i64 @poc_i64(ptr %base, i32 %index, i1 %flag, i64 %default) {
 ; CHECK-LABEL: poc_i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r5, r5, 1
@@ -128,15 +128,15 @@ entry:
   br i1 %flag, label %true, label %false
 
 true:
-  %ptr = getelementptr inbounds i64, i64* %base, i64 %iconv
-  %value = load i64, i64* %ptr, align 8
+  %ptr = getelementptr inbounds i64, ptr %base, i64 %iconv
+  %value = load i64, ptr %ptr, align 8
   ret i64 %value
 
 false:
   ret i64 %default
 }
 
-define dso_local i64 @no_extswsli(i64* %base, i32 %index, i1 %flag) {
+define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ; CHECK-LABEL: no_extswsli:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi. r5, r5, 1
@@ -193,8 +193,8 @@ entry:
   br i1 %flag, label %true, label %false
 
 true:
-  %ptr = getelementptr inbounds i64, i64* %base, i64 %iconv
-  %value = load i64, i64* %ptr, align 8
+  %ptr = getelementptr inbounds i64, ptr %base, i64 %iconv
+  %value = load i64, ptr %ptr, align 8
   ret i64 %value
 
 false:

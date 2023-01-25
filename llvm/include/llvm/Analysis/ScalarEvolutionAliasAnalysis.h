@@ -24,7 +24,7 @@ class SCEV;
 
 /// A simple alias analysis implementation that uses ScalarEvolution to answer
 /// queries.
-class SCEVAAResult : public AAResultBase<SCEVAAResult> {
+class SCEVAAResult : public AAResultBase {
   ScalarEvolution &SE;
 
 public:
@@ -32,7 +32,7 @@ public:
   SCEVAAResult(SCEVAAResult &&Arg) : AAResultBase(std::move(Arg)), SE(Arg.SE) {}
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI);
 
   bool invalidate(Function &F, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);

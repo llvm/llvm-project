@@ -70,13 +70,13 @@ define i32 @_Z3sumii(i32 %x, i32 %y) #0 !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !8
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !8
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !8
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !8
   %add = add nsw i32 %tmp, %tmp1, !dbg !8
-  %tmp2 = load i32, i32* %x.addr, align 4, !dbg !8
-  %tmp3 = load i32, i32* %y.addr, align 4, !dbg !8
+  %tmp2 = load i32, ptr %x.addr, align 4, !dbg !8
+  %tmp3 = load i32, ptr %y.addr, align 4, !dbg !8
   %call = call i32 @_Z3subii(i32 %tmp2, i32 %tmp3), !dbg !8
   ret i32 %add, !dbg !8
 }
@@ -85,10 +85,10 @@ define i32 @_Z3subii(i32 %x, i32 %y) #0 !dbg !9 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %tmp = load i32, i32* %x.addr, align 4, !dbg !10
-  %tmp1 = load i32, i32* %y.addr, align 4, !dbg !10
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %tmp = load i32, ptr %x.addr, align 4, !dbg !10
+  %tmp1 = load i32, ptr %y.addr, align 4, !dbg !10
   %add = sub nsw i32 %tmp, %tmp1, !dbg !10
   ret i32 %add, !dbg !11
 }
@@ -98,43 +98,43 @@ entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 0, i32* %retval
-  store i32 0, i32* %i, align 4, !dbg !13
+  store i32 0, ptr %retval
+  store i32 0, ptr %i, align 4, !dbg !13
   br label %while.cond, !dbg !14
 
 while.cond:                                       ; preds = %if.end, %entry
-  %tmp = load i32, i32* %i, align 4, !dbg !15
+  %tmp = load i32, ptr %i, align 4, !dbg !15
   %inc = add nsw i32 %tmp, 1, !dbg !15
-  store i32 %inc, i32* %i, align 4, !dbg !15
+  store i32 %inc, ptr %i, align 4, !dbg !15
   %cmp = icmp slt i32 %tmp, 400000000, !dbg !15
   br i1 %cmp, label %while.body, label %while.end, !dbg !15
 
 while.body:                                       ; preds = %while.cond
-  %tmp1 = load i32, i32* %i, align 4, !dbg !17
+  %tmp1 = load i32, ptr %i, align 4, !dbg !17
   %cmp1 = icmp ne i32 %tmp1, 100, !dbg !17
   br i1 %cmp1, label %if.then, label %if.else, !dbg !17
 
 if.then:                                          ; preds = %while.body
-  %tmp2 = load i32, i32* %i, align 4, !dbg !19
-  %tmp3 = load i32, i32* %s, align 4, !dbg !19
+  %tmp2 = load i32, ptr %i, align 4, !dbg !19
+  %tmp3 = load i32, ptr %s, align 4, !dbg !19
   %call = call i32 @_Z3sumii(i32 %tmp2, i32 %tmp3), !dbg !19
-  store i32 %call, i32* %s, align 4, !dbg !19
+  store i32 %call, ptr %s, align 4, !dbg !19
   br label %if.end, !dbg !19
 
 if.else:                                          ; preds = %while.body
-  store i32 30, i32* %s, align 4, !dbg !21
+  store i32 30, ptr %s, align 4, !dbg !21
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   br label %while.cond, !dbg !23
 
 while.end:                                        ; preds = %while.cond
-  %tmp4 = load i32, i32* %s, align 4, !dbg !25
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %tmp4), !dbg !25
+  %tmp4 = load i32, ptr %s, align 4, !dbg !25
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str, i32 %tmp4), !dbg !25
   ret i32 0, !dbg !26
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 attributes #0 = { "use-sample-profile" }
 

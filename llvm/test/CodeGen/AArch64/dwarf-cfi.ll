@@ -1,15 +1,15 @@
 ; RUN: llc -mtriple aarch64-windows-gnu -exception-model=dwarf -filetype=asm -o - %s | FileCheck %s
 
-define void @_Z1gv() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @_Z1gv() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z1fv()
           to label %try.cont unwind label %lpad
 
 lpad:
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  %2 = tail call i8* @__cxa_begin_catch(i8* %1) #2
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  %2 = tail call ptr @__cxa_begin_catch(ptr %1) #2
   tail call void @__cxa_end_catch()
   br label %try.cont
 
@@ -21,7 +21,7 @@ declare void @_Z1fv()
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

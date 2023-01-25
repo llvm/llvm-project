@@ -12,29 +12,29 @@ target triple = "arm64-apple-ios8.0.0"
 ; CHECK: strh wzr, [{{.*}}, [[REG1]], lsl #1]
 
 ; Function Attrs: nounwind optsize ssp
-define void @EdgeLoop(i32 %dir, i32 %edge, i32 %width, i16* %tmp89, i32 %tmp136, i16 %tmp144) #0 {
+define void @EdgeLoop(i32 %dir, i32 %edge, i32 %width, ptr %tmp89, i32 %tmp136, i16 %tmp144) #0 {
 bb:
   %tmp2 = icmp eq i32 %dir, 0
   %.mux = select i1 %tmp2, i32 %width, i32 1
   %tmp142 = sext i32 %.mux to i64
   %tmp151 = shl nsw i64 %tmp142, 1
-  %tmp153 = getelementptr inbounds i16, i16* %tmp89, i64 %tmp151
-  %tmp154 = load i16, i16* %tmp153, align 2
+  %tmp153 = getelementptr inbounds i16, ptr %tmp89, i64 %tmp151
+  %tmp154 = load i16, ptr %tmp153, align 2
   %tmp155 = zext i16 %tmp154 to i32
   br i1 %tmp2, label %bb225, label %bb212
 
 bb212:                                            ; preds = %bb
-  store i16 %tmp144, i16* %tmp89, align 2
+  store i16 %tmp144, ptr %tmp89, align 2
   ret void
 
 bb225:                                            ; preds = %bb
   %tmp248 = trunc i32 %tmp155 to i16
-  store i16 %tmp248, i16* %tmp89, align 2
-  %sunkaddr = ptrtoint i16* %tmp89 to i64
+  store i16 %tmp248, ptr %tmp89, align 2
+  %sunkaddr = ptrtoint ptr %tmp89 to i64
   %sunkaddr1 = mul i64 %tmp142, 2
   %sunkaddr2 = add i64 %sunkaddr, %sunkaddr1
-  %sunkaddr3 = inttoptr i64 %sunkaddr2 to i16*
-  store i16 0, i16* %sunkaddr3, align 2
+  %sunkaddr3 = inttoptr i64 %sunkaddr2 to ptr
+  store i16 0, ptr %sunkaddr3, align 2
   ret void
 }
 

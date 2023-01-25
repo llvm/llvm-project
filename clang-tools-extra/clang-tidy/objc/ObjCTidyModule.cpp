@@ -14,14 +14,14 @@
 #include "DeallocInCategoryCheck.h"
 #include "ForbiddenSubclassingCheck.h"
 #include "MissingHashCheck.h"
+#include "NSDateFormatterCheck.h"
 #include "NSInvocationArgumentLifetimeCheck.h"
 #include "PropertyDeclarationCheck.h"
 #include "SuperSelfCheck.h"
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace objc {
 
 class ObjCModule : public ClangTidyModule {
@@ -37,6 +37,7 @@ public:
         "objc-forbidden-subclassing");
     CheckFactories.registerCheck<MissingHashCheck>(
         "objc-missing-hash");
+    CheckFactories.registerCheck<NSDateFormatterCheck>("objc-nsdate-formatter");
     CheckFactories.registerCheck<NSInvocationArgumentLifetimeCheck>(
         "objc-nsinvocation-argument-lifetime");
     CheckFactories.registerCheck<PropertyDeclarationCheck>(
@@ -57,5 +58,4 @@ static ClangTidyModuleRegistry::Add<ObjCModule> X(
 // and thus register the ObjCModule.
 volatile int ObjCModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

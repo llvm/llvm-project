@@ -147,51 +147,45 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vqdmulh_v8i16_c(<8 x i16> %s0, <8 x i16> %s1) {
 ; CHECK-LABEL: vqdmulh_v8i16_c:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q2[3]
-; CHECK-NEXT:    vmov.u16 r1, q2[1]
-; CHECK-NEXT:    vmov q0[3], q0[1], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-NEXT:    vmov.u16 r1, q1[0]
-; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
-; CHECK-NEXT:    vmullb.s16 q0, q3, q0
-; CHECK-NEXT:    vshl.i32 q0, q0, #10
-; CHECK-NEXT:    vshr.s32 q0, q0, #10
-; CHECK-NEXT:    vshr.s32 q3, q0, #15
-; CHECK-NEXT:    vmov r0, r1, d6
-; CHECK-NEXT:    vmov.16 q0[0], r0
-; CHECK-NEXT:    vmov.16 q0[1], r1
-; CHECK-NEXT:    vmov r0, r1, d7
-; CHECK-NEXT:    vmov.16 q0[2], r0
-; CHECK-NEXT:    vmov.u16 r0, q2[6]
-; CHECK-NEXT:    vmov.16 q0[3], r1
-; CHECK-NEXT:    vmov.u16 r1, q2[4]
-; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
-; CHECK-NEXT:    vmov.u16 r0, q2[7]
-; CHECK-NEXT:    vmov.u16 r1, q2[5]
-; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
+; CHECK-NEXT:    .pad #16
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
+; CHECK-NEXT:    vmov.u16 r1, q0[4]
+; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[7]
+; CHECK-NEXT:    vmov.u16 r1, q0[5]
+; CHECK-NEXT:    vmov.u16 r2, q0[0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q1[6]
 ; CHECK-NEXT:    vmov.u16 r1, q1[4]
-; CHECK-NEXT:    vmov q2[2], q2[0], r1, r0
+; CHECK-NEXT:    vmov q3[2], q3[0], r1, r0
 ; CHECK-NEXT:    vmov.u16 r0, q1[7]
 ; CHECK-NEXT:    vmov.u16 r1, q1[5]
-; CHECK-NEXT:    vmov q2[3], q2[1], r1, r0
-; CHECK-NEXT:    vmullb.s16 q1, q2, q3
-; CHECK-NEXT:    vshl.i32 q1, q1, #10
-; CHECK-NEXT:    vshr.s32 q1, q1, #10
-; CHECK-NEXT:    vshr.s32 q1, q1, #15
-; CHECK-NEXT:    vmov r0, r1, d2
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov r0, r1, d3
-; CHECK-NEXT:    vmov.16 q0[6], r0
-; CHECK-NEXT:    vmov.16 q0[7], r1
+; CHECK-NEXT:    vmov q3[3], q3[1], r1, r0
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vmullb.s16 q2, q3, q2
+; CHECK-NEXT:    vmov.u16 r1, q0[2]
+; CHECK-NEXT:    vshl.i32 q2, q2, #10
+; CHECK-NEXT:    vshr.s32 q2, q2, #10
+; CHECK-NEXT:    vshr.s32 q2, q2, #15
+; CHECK-NEXT:    vstrh.32 q2, [r0, #8]
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r1
+; CHECK-NEXT:    vmov.u16 r1, q0[3]
+; CHECK-NEXT:    vmov.u16 r2, q0[1]
+; CHECK-NEXT:    vmov q2[3], q2[1], r2, r1
+; CHECK-NEXT:    vmov.u16 r1, q1[2]
+; CHECK-NEXT:    vmov.u16 r2, q1[0]
+; CHECK-NEXT:    vmov q0[2], q0[0], r2, r1
+; CHECK-NEXT:    vmov.u16 r1, q1[3]
+; CHECK-NEXT:    vmov.u16 r2, q1[1]
+; CHECK-NEXT:    vmov q0[3], q0[1], r2, r1
+; CHECK-NEXT:    vmullb.s16 q0, q0, q2
+; CHECK-NEXT:    vshl.i32 q0, q0, #10
+; CHECK-NEXT:    vshr.s32 q0, q0, #10
+; CHECK-NEXT:    vshr.s32 q0, q0, #15
+; CHECK-NEXT:    vstrh.32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    bx lr
 entry:
   %l2 = sext <8 x i16> %s0 to <8 x i22>
@@ -349,7 +343,7 @@ entry:
 
 
 
-define void @vqdmulh_loop_i8(i8* nocapture readonly %x, i8* nocapture readonly %y, i8* noalias nocapture %z, i32 %n) local_unnamed_addr #0 {
+define void @vqdmulh_loop_i8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) local_unnamed_addr #0 {
 ; CHECK-LABEL: vqdmulh_loop_i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -369,31 +363,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = sext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load26 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = sext <16 x i8> %wide.load26 to <16 x i32>
-  %6 = mul nsw <16 x i32> %5, %2
-  %7 = ashr <16 x i32> %6, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
-  %8 = icmp slt <16 x i32> %7, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
-  %9 = call <16 x i32> @llvm.smin.v16i32(<16 x i32> %7, <16 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>)
-  %10 = trunc <16 x i32> %9 to <16 x i8>
-  %11 = getelementptr inbounds i8, i8* %z, i32 %index
-  %12 = bitcast i8* %11 to <16 x i8>*
-  store <16 x i8> %10, <16 x i8>* %12, align 1
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.load = load <16 x i8>, ptr %0, align 1
+  %1 = sext <16 x i8> %wide.load to <16 x i32>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.load26 = load <16 x i8>, ptr %2, align 1
+  %3 = sext <16 x i8> %wide.load26 to <16 x i32>
+  %4 = mul nsw <16 x i32> %3, %1
+  %5 = ashr <16 x i32> %4, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  %6 = icmp slt <16 x i32> %5, <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>
+  %7 = call <16 x i32> @llvm.smin.v16i32(<16 x i32> %5, <16 x i32> <i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127, i32 127>)
+  %8 = trunc <16 x i32> %7 to <16 x i8>
+  %9 = getelementptr inbounds i8, ptr %z, i32 %index
+  store <16 x i8> %8, ptr %9, align 1
   %index.next = add i32 %index, 16
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vqdmulh_loop_i16(i16* nocapture readonly %x, i16* nocapture readonly %y, i16* noalias nocapture %z, i32 %n) {
+define void @vqdmulh_loop_i16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vqdmulh_loop_i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -413,31 +404,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = sext <8 x i16> %wide.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load30 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = sext <8 x i16> %wide.load30 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = ashr <8 x i32> %6, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
-  %8 = icmp slt <8 x i32> %7, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
-  %9 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %7, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
-  %10 = trunc <8 x i32> %9 to <8 x i16>
-  %11 = getelementptr inbounds i16, i16* %z, i32 %index
-  %12 = bitcast i16* %11 to <8 x i16>*
-  store <8 x i16> %10, <8 x i16>* %12, align 2
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.load = load <8 x i16>, ptr %0, align 2
+  %1 = sext <8 x i16> %wide.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.load30 = load <8 x i16>, ptr %2, align 2
+  %3 = sext <8 x i16> %wide.load30 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = ashr <8 x i32> %4, <i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15, i32 15>
+  %6 = icmp slt <8 x i32> %5, <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>
+  %7 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %5, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  %9 = getelementptr inbounds i16, ptr %z, i32 %index
+  store <8 x i16> %8, ptr %9, align 2
   %index.next = add i32 %index, 8
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vqdmulh_loop_i32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32* noalias nocapture %z, i32 %n) {
+define void @vqdmulh_loop_i32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vqdmulh_loop_i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -457,25 +445,22 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = sext <4 x i32> %wide.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load30 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = sext <4 x i32> %wide.load30 to <4 x i64>
-  %6 = mul nsw <4 x i64> %5, %2
-  %7 = ashr <4 x i64> %6, <i64 31, i64 31, i64 31, i64 31>
-  %8 = icmp slt <4 x i64> %7, <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>
-  %9 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %7, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
-  %10 = trunc <4 x i64> %9 to <4 x i32>
-  %11 = getelementptr inbounds i32, i32* %z, i32 %index
-  %12 = bitcast i32* %11 to <4 x i32>*
-  store <4 x i32> %10, <4 x i32>* %12, align 4
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = sext <4 x i32> %wide.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.load30 = load <4 x i32>, ptr %2, align 4
+  %3 = sext <4 x i32> %wide.load30 to <4 x i64>
+  %4 = mul nsw <4 x i64> %3, %1
+  %5 = ashr <4 x i64> %4, <i64 31, i64 31, i64 31, i64 31>
+  %6 = icmp slt <4 x i64> %5, <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>
+  %7 = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %5, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
+  %8 = trunc <4 x i64> %7 to <4 x i32>
+  %9 = getelementptr inbounds i32, ptr %z, i32 %index
+  store <4 x i32> %8, ptr %9, align 4
   %index.next = add i32 %index, 4
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void

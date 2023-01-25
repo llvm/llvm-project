@@ -250,7 +250,8 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
   const bool CSIsInvoke = BC.MIB->isInvoke(*CallInst);
   const bool CSIsTailCall = BC.MIB->isTailCall(*CallInst);
   const int64_t CSGNUArgsSize = BC.MIB->getGnuArgsSize(*CallInst);
-  const Optional<MCPlus::MCLandingPad> CSEHInfo = BC.MIB->getEHInfo(*CallInst);
+  const std::optional<MCPlus::MCLandingPad> CSEHInfo =
+      BC.MIB->getEHInfo(*CallInst);
 
   // Split basic block at the call site if there will be more incoming edges
   // coming from the callee.
@@ -288,12 +289,12 @@ Inliner::inlineCall(BinaryBasicBlock &CallerBB,
   // Copy basic blocks and maintain a map from their origin.
   std::unordered_map<const BinaryBasicBlock *, BinaryBasicBlock *> InlinedBBMap;
   InlinedBBMap[&Callee.front()] = FirstInlinedBB;
-  for (auto BBI = std::next(Callee.begin()); BBI != Callee.end(); ++BBI) {
+  for (const BinaryBasicBlock &BB : llvm::drop_begin(Callee)) {
     BinaryBasicBlock *InlinedBB = CallerFunction.addBasicBlock();
-    InlinedBBMap[&*BBI] = InlinedBB;
+    InlinedBBMap[&BB] = InlinedBB;
     InlinedBB->setCFIState(FirstInlinedBB->getCFIState());
     if (Callee.hasValidProfile())
-      InlinedBB->setExecutionCount(BBI->getKnownExecutionCount());
+      InlinedBB->setExecutionCount(BB.getKnownExecutionCount());
     else
       InlinedBB->setExecutionCount(FirstInlinedBBCount);
   }

@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AbstractCallSite.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
@@ -91,7 +91,7 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
 
   // If this function is not defined in this translation unit, it could call
   // anything.
-  if (F->isDeclaration() && !F->isIntrinsic())
+  if (F->isDeclaration() && !F->hasFnAttribute(Attribute::NoCallback))
     Node->addCalledFunction(nullptr, CallsExternalNode.get());
 
   // Look for calls by this function.
@@ -99,12 +99,9 @@ void CallGraph::populateCallGraphNode(CallGraphNode *Node) {
     for (Instruction &I : BB) {
       if (auto *Call = dyn_cast<CallBase>(&I)) {
         const Function *Callee = Call->getCalledFunction();
-        if (!Callee || !Intrinsic::isLeaf(Callee->getIntrinsicID()))
-          // Indirect calls of intrinsics are not allowed so no need to check.
-          // We can be more precise here by using TargetArg returned by
-          // Intrinsic::isLeaf.
+        if (!Callee)
           Node->addCalledFunction(Call, CallsExternalNode.get());
-        else if (!Callee->isIntrinsic())
+        else if (!isDbgInfoIntrinsic(Callee->getIntrinsicID()))
           Node->addCalledFunction(Call, getOrInsertFunction(Callee));
 
         // Add reference to callback functions.
@@ -309,6 +306,34 @@ AnalysisKey CallGraphAnalysis::Key;
 PreservedAnalyses CallGraphPrinterPass::run(Module &M,
                                             ModuleAnalysisManager &AM) {
   AM.getResult<CallGraphAnalysis>(M).print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses CallGraphSCCsPrinterPass::run(Module &M,
+                                                ModuleAnalysisManager &AM) {
+  auto &CG = AM.getResult<CallGraphAnalysis>(M);
+  unsigned sccNum = 0;
+  OS << "SCCs for the program in PostOrder:";
+  for (scc_iterator<CallGraph *> SCCI = scc_begin(&CG); !SCCI.isAtEnd();
+       ++SCCI) {
+    const std::vector<CallGraphNode *> &nextSCC = *SCCI;
+    OS << "\nSCC #" << ++sccNum << ": ";
+    bool First = true;
+    for (std::vector<CallGraphNode *>::const_iterator I = nextSCC.begin(),
+                                                      E = nextSCC.end();
+         I != E; ++I) {
+      if (First)
+        First = false;
+      else
+        OS << ", ";
+      OS << ((*I)->getFunction() ? (*I)->getFunction()->getName()
+                                 : "external node");
+    }
+
+    if (nextSCC.size() == 1 && SCCI.hasCycle())
+      OS << " (Has self-loop).";
+  }
+  OS << "\n";
   return PreservedAnalyses::all();
 }
 

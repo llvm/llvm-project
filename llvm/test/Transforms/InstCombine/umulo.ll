@@ -3,6 +3,8 @@
 
 declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
 declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)
+declare { i1, i1 } @llvm.umul.with.overflow.i1(i1, i1)
+declare { <2 x i1>, <2 x i1> } @llvm.umul.with.overflow.v2i1(<2 x i1>, <2 x i1>)
 
 define i1 @test_generic(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_generic(
@@ -94,3 +96,76 @@ define i1 @test_constant255(i8 %a) {
   ret i1 %overflow
 }
 
+define i1 @i1_res(i1 %x, i1 %y) {
+; CHECK-LABEL: @i1_res(
+; CHECK-NEXT:    [[M:%.*]] = and i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[M]]
+;
+  %m = call {i1, i1} @llvm.umul.with.overflow.i1(i1 %x, i1 %y)
+  %r = extractvalue {i1, i1} %m, 0
+  ret i1 %r
+}
+
+define <2 x i1> @v2i1_res(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @v2i1_res(
+; CHECK-NEXT:    [[M:%.*]] = and <2 x i1> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[M]]
+;
+  %m = call {<2 x i1>, <2 x i1>} @llvm.umul.with.overflow.v2i1(<2 x i1> %x, <2 x i1> %y)
+  %r = extractvalue {<2 x i1>, <2 x i1>} %m, 0
+  ret <2 x i1> %r
+}
+
+define i1 @i1_res_by_one(i1 %x) {
+; CHECK-LABEL: @i1_res_by_one(
+; CHECK-NEXT:    ret i1 [[X:%.*]]
+;
+  %m = call {i1, i1} @llvm.umul.with.overflow.i1(i1 %x, i1 1)
+  %r = extractvalue {i1, i1} %m, 0
+  ret i1 %r
+}
+
+define <2 x i1> @v2i1_res_by_one(<2 x i1> %x) {
+; CHECK-LABEL: @v2i1_res_by_one(
+; CHECK-NEXT:    ret <2 x i1> [[X:%.*]]
+;
+  %m = call {<2 x i1>, <2 x i1>} @llvm.umul.with.overflow.v2i1(<2 x i1> %x, <2 x i1> <i1 1, i1 1>)
+  %r = extractvalue {<2 x i1>, <2 x i1>} %m, 0
+  ret <2 x i1> %r
+}
+
+define i1 @i1_ov(i1 %x, i1 %y) {
+; CHECK-LABEL: @i1_ov(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call {i1, i1} @llvm.umul.with.overflow.i1(i1 %x, i1 %y)
+  %ov = extractvalue {i1, i1} %m, 1
+  ret i1 %ov
+}
+
+define <2 x i1> @v2i1_ov(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @v2i1_ov(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %m = call {<2 x i1>, <2 x i1>} @llvm.umul.with.overflow.v2i1(<2 x i1> %x, <2 x i1> %y)
+  %ov = extractvalue {<2 x i1>, <2 x i1>} %m, 1
+  ret <2 x i1> %ov
+}
+
+define i1 @i1_ov_by_one(i1 %x) {
+; CHECK-LABEL: @i1_ov_by_one(
+; CHECK-NEXT:    ret i1 false
+;
+  %m = call {i1, i1} @llvm.umul.with.overflow.i1(i1 %x, i1 1)
+  %ov = extractvalue {i1, i1} %m, 1
+  ret i1 %ov
+}
+
+define <2 x i1> @v2i1_ov_by_one(<2 x i1> %x) {
+; CHECK-LABEL: @v2i1_ov_by_one(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %m = call {<2 x i1>, <2 x i1>} @llvm.umul.with.overflow.v2i1(<2 x i1> %x, <2 x i1> <i1 1, i1 1>)
+  %ov = extractvalue {<2 x i1>, <2 x i1>} %m, 1
+  ret <2 x i1> %ov
+}

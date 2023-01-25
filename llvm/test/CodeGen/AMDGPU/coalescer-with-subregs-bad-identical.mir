@@ -148,7 +148,7 @@ body: |
     %43:sreg_32_xm0_xexec = S_BUFFER_LOAD_DWORD_IMM undef %44:sgpr_128, 12, 0 :: (dereferenceable invariant load (s32))
     %45:vgpr_32 = V_MUL_LO_I32_e64 killed %42, killed %43, implicit $exec
     %46:vgpr_32 = V_LSHLREV_B32_e32 2, killed %45, implicit $exec
-    %47:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN killed %46, undef %48:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from constant-pool, align 1, addrspace 4)
+    %47:vgpr_32 = BUFFER_LOAD_FORMAT_X_IDXEN killed %46, undef %48:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from constant-pool, align 1, addrspace 4)
     %49:sreg_64 = V_CMP_NE_U32_e64 0, killed %47, implicit $exec
     %50:sreg_64 = COPY $exec, implicit-def $exec
     %51:sreg_64 = S_AND_B64 %50, %49, implicit-def dead $scc

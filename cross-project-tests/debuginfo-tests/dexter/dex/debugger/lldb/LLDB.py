@@ -259,7 +259,7 @@ class LLDB(DebuggerBase):
 
     @property
     def frames_below_main(self):
-        return ['__scrt_common_main_seh', '__libc_start_main']
+        return ['__scrt_common_main_seh', '__libc_start_main', '__libc_start_call_main']
 
     def evaluate_expression(self, expression, frame_idx=0) -> ValueIR:
         result = self._thread.GetFrameAtIndex(frame_idx

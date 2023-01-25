@@ -2,26 +2,26 @@
 
 ; CHECK: error: warn_call.c
 ; CHECK: built-in function 'memcpy'
-define i8* @warn(i8* returned, i8*, i64) local_unnamed_addr #0 !dbg !6 {
-  tail call void @llvm.dbg.value(metadata i8* %0, i64 0, metadata !14, metadata !17), !dbg !18
-  tail call void @llvm.dbg.value(metadata i8* %1, i64 0, metadata !15, metadata !17), !dbg !19
+define ptr @warn(ptr returned, ptr, i64) local_unnamed_addr #0 !dbg !6 {
+  tail call void @llvm.dbg.value(metadata ptr %0, i64 0, metadata !14, metadata !17), !dbg !18
+  tail call void @llvm.dbg.value(metadata ptr %1, i64 0, metadata !15, metadata !17), !dbg !19
   tail call void @llvm.dbg.value(metadata i64 %2, i64 0, metadata !16, metadata !17), !dbg !20
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %0, i8* %1, i64 %2, i1 false), !dbg !21
-  %4 = tail call i8* @foo(i8* %0, i8* %1, i64 %2) #5, !dbg !22
-  %5 = tail call fastcc i8* @bar(i8* %0), !dbg !23
-  ret i8* %5, !dbg !24
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %0, ptr %1, i64 %2, i1 false), !dbg !21
+  %4 = tail call ptr @foo(ptr %0, ptr %1, i64 %2) #5, !dbg !22
+  %5 = tail call fastcc ptr @bar(ptr %0), !dbg !23
+  ret ptr %5, !dbg !24
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
-declare i8* @foo(i8*, i8*, i64) local_unnamed_addr #2
+declare ptr @foo(ptr, ptr, i64) local_unnamed_addr #2
 
 ; Function Attrs: noinline nounwind readnone
-define internal fastcc i8* @bar(i8* readnone returned) unnamed_addr #3 !dbg !25 {
-  tail call void @llvm.dbg.value(metadata i8* null, i64 0, metadata !28, metadata !17), !dbg !30
+define internal fastcc ptr @bar(ptr readnone returned) unnamed_addr #3 !dbg !25 {
+  tail call void @llvm.dbg.value(metadata ptr null, i64 0, metadata !28, metadata !17), !dbg !30
   tail call void @llvm.dbg.value(metadata i64 0, i64 0, metadata !29, metadata !17), !dbg !31
-  ret i8* %0, !dbg !32
+  ret ptr %0, !dbg !32
 }
 
 ; Function Attrs: nounwind readnone

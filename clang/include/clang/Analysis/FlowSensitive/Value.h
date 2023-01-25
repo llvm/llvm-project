@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -38,6 +39,7 @@ public:
     Struct,
 
     // Synthetic boolean values are either atomic values or logical connectives.
+    TopBool,
     AtomicBool,
     Conjunction,
     Disjunction,
@@ -76,18 +78,41 @@ private:
   llvm::StringMap<Value *> Properties;
 };
 
+/// An equivalence relation for values. It obeys reflexivity, symmetry and
+/// transitivity. It does *not* include comparison of `Properties`.
+///
+/// Computes equivalence for these subclasses:
+/// * ReferenceValue, PointerValue -- pointee locations are equal. Does not
+///   compute deep equality of `Value` at said location.
+/// * TopBoolValue -- both are `TopBoolValue`s.
+///
+/// Otherwise, falls back to pointer equality.
+bool areEquivalentValues(const Value &Val1, const Value &Val2);
+
 /// Models a boolean.
 class BoolValue : public Value {
 public:
   explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::AtomicBool ||
+    return Val->getKind() == Kind::TopBool ||
+           Val->getKind() == Kind::AtomicBool ||
            Val->getKind() == Kind::Conjunction ||
            Val->getKind() == Kind::Disjunction ||
            Val->getKind() == Kind::Negation ||
            Val->getKind() == Kind::Implication ||
            Val->getKind() == Kind::Biconditional;
+  }
+};
+
+/// Models the trivially true formula, which is Top in the lattice of boolean
+/// formulas.
+class TopBoolValue final : public BoolValue {
+public:
+  TopBoolValue() : BoolValue(Kind::TopBool) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::TopBool;
   }
 };
 
@@ -285,6 +310,8 @@ public:
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const Value &Val);
 
 } // namespace dataflow
 } // namespace clang

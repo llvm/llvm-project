@@ -19,6 +19,7 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 namespace llvm {
 namespace OffloadYAML {
@@ -30,17 +31,17 @@ struct Binary {
   };
 
   struct Member {
-    Optional<object::ImageKind> ImageKind;
-    Optional<object::OffloadKind> OffloadKind;
-    Optional<uint32_t> Flags;
-    Optional<std::vector<StringEntry>> StringEntries;
-    Optional<yaml::BinaryRef> Content;
+    std::optional<object::ImageKind> ImageKind;
+    std::optional<object::OffloadKind> OffloadKind;
+    std::optional<uint32_t> Flags;
+    std::optional<std::vector<StringEntry>> StringEntries;
+    std::optional<yaml::BinaryRef> Content;
   };
 
-  Optional<uint32_t> Version;
-  Optional<uint64_t> Size;
-  Optional<uint64_t> EntryOffset;
-  Optional<uint64_t> EntrySize;
+  std::optional<uint32_t> Version;
+  std::optional<uint64_t> Size;
+  std::optional<uint64_t> EntryOffset;
+  std::optional<uint64_t> EntrySize;
   std::vector<Member> Members;
 };
 

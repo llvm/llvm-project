@@ -46,7 +46,7 @@ struct AttrInfo {
 /// \param DIE die to look up in.
 /// \param AbbrevDecl abbrev declaration for the die.
 /// \param Index an index in Abbrev declaration entry.
-Optional<AttrInfo>
+std::optional<AttrInfo>
 findAttributeInfo(const DWARFDie DIE,
                   const DWARFAbbreviationDeclaration *AbbrevDecl,
                   uint32_t Index);
@@ -56,7 +56,8 @@ findAttributeInfo(const DWARFDie DIE,
 /// \param DIE die to look up in.
 /// \param Attr the attribute to extract.
 /// \return an optional AttrInfo with DWARFFormValue and Offset.
-Optional<AttrInfo> findAttributeInfo(const DWARFDie DIE, dwarf::Attribute Attr);
+std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
+                                          dwarf::Attribute Attr);
 
 // DWARF5 Header in order of encoding.
 // Types represent encodnig sizes.
@@ -169,7 +170,7 @@ public:
             std::map<DebugAddressRangesVector, uint64_t> &CachedRanges);
 
   /// Add ranges and return offset into section.
-  virtual uint64_t addRanges(const DebugAddressRangesVector &Ranges);
+  virtual uint64_t addRanges(DebugAddressRangesVector &Ranges);
 
   /// Returns an offset of an empty address ranges list that is always written
   /// to .debug_ranges
@@ -226,22 +227,22 @@ public:
   static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Add ranges with caching.
-  virtual uint64_t addRanges(
+  uint64_t addRanges(
       DebugAddressRangesVector &&Ranges,
       std::map<DebugAddressRangesVector, uint64_t> &CachedRanges) override;
 
   /// Add ranges and return offset into section.
-  virtual uint64_t addRanges(const DebugAddressRangesVector &Ranges) override;
+  uint64_t addRanges(DebugAddressRangesVector &Ranges) override;
 
-  virtual std::unique_ptr<DebugBufferVector> releaseBuffer() override {
+  std::unique_ptr<DebugBufferVector> releaseBuffer() override {
     return std::move(RangesBuffer);
   }
 
   /// Needs to be invoked before each \p CU is processed.
-  void virtual initSection(DWARFUnit &CU) override;
+  void initSection(DWARFUnit &CU) override;
 
   /// Writes out range lists for a current CU being processed.
-  void virtual finalizeSection() override;
+  void finalizeSection() override;
 
   // Returns true if section is empty.
   bool empty() { return RangesBuffer->empty(); }
@@ -319,14 +320,19 @@ public:
   /// section.
   virtual uint64_t getOffset(DWARFUnit &Unit);
 
+  /// Returns True if CU exists in the DebugAddrWriter.
+  bool doesCUExist(DWARFUnit &Unit) {
+    return DWOIdToOffsetMap.count(getCUID(Unit)) > 0;
+  }
+
   /// Returns False if .debug_addr section was created..
   bool isInitialized() const { return !AddressMaps.empty(); }
 
 protected:
   class AddressForDWOCU {
   public:
-    AddressToIndexMap::iterator find(uint64_t Adddress) {
-      return AddressToIndex.find(Adddress);
+    AddressToIndexMap::iterator find(uint64_t Address) {
+      return AddressToIndex.find(Address);
     }
     AddressToIndexMap::iterator end() { return AddressToIndex.end(); }
     AddressToIndexMap::iterator begin() { return AddressToIndex.begin(); }
@@ -391,15 +397,15 @@ public:
   DebugAddrWriterDwarf5(BinaryContext *BC) : DebugAddrWriter(BC) {}
 
   /// Creates consolidated .debug_addr section, and builds DWOID to offset map.
-  virtual AddressSectionBuffer finalize() override;
+  AddressSectionBuffer finalize() override;
   /// Given DWARFUnit \p Unit returns offset of this CU in to .debug_addr
   /// section.
-  virtual uint64_t getOffset(DWARFUnit &Unit) override;
+  uint64_t getOffset(DWARFUnit &Unit) override;
 
 protected:
   /// Given DWARFUnit \p Unit returns either DWO ID or it's offset within
   /// .debug_info.
-  virtual uint64_t getCUID(DWARFUnit &Unit) override {
+  uint64_t getCUID(DWARFUnit &Unit) override {
     if (Unit.isDWOUnit()) {
       DWARFUnit *SkeletonCU = Unit.getLinkedUnit();
       return SkeletonCU->getOffset();
@@ -419,13 +425,13 @@ public:
 
   /// Initializes Buffer and Stream.
   void initialize(const DWARFSection &StrOffsetsSection,
-                  const Optional<StrOffsetsContributionDescriptor> Contr);
+                  const std::optional<StrOffsetsContributionDescriptor> Contr);
 
   /// Update Str offset in .debug_str in .debug_str_offsets.
   void updateAddressMap(uint32_t Index, uint32_t Address);
 
   /// Writes out current sections entry into .debug_str_offsets.
-  void finalizeSection();
+  void finalizeSection(DWARFUnit &Unit);
 
   /// Returns False if no strings were added to .debug_str.
   bool isFinalized() const { return !StrOffsetsBuffer->empty(); }
@@ -439,8 +445,10 @@ private:
   std::unique_ptr<DebugStrOffsetsBufferVector> StrOffsetsBuffer;
   std::unique_ptr<raw_svector_ostream> StrOffsetsStream;
   std::map<uint32_t, uint32_t> IndexToAddressMap;
+  DenseSet<uint64_t> ProcessedBaseOffsets;
   // Section size not including header.
   uint32_t CurrentSectionSize{0};
+  bool StrOffsetSectionWasModified = false;
 };
 
 using DebugStrBufferVector = SmallVector<char, 16>;
@@ -561,9 +569,9 @@ public:
   static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Stores location lists internally to be written out during finalize phase.
-  virtual void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-                       DebugInfoBinaryPatcher &DebugInfoPatcher,
-                       DebugAbbrevWriter &AbbrevWriter) override;
+  void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
+               DebugInfoBinaryPatcher &DebugInfoPatcher,
+               DebugAbbrevWriter &AbbrevWriter) override;
 
   /// Writes out locations in to a local buffer and applies debug info patches.
   void finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
@@ -685,7 +693,7 @@ public:
 
   /// This function takes in \p BinaryContents, applies patches to it and
   /// returns an updated string.
-  virtual std::string patchBinary(StringRef BinaryContents) override;
+  std::string patchBinary(StringRef BinaryContents) override;
 };
 
 class DebugInfoBinaryPatcher : public SimpleBinaryPatcher {
@@ -843,7 +851,7 @@ public:
     std::string Value;
   };
 
-  virtual PatcherKind getKind() const override {
+  PatcherKind getKind() const override {
     return PatcherKind::DebugInfoBinaryPatcher;
   }
 
@@ -853,23 +861,23 @@ public:
 
   /// This function takes in \p BinaryContents, and re-writes it with new
   /// patches inserted into it. It returns an updated string.
-  virtual std::string patchBinary(StringRef BinaryContents) override;
+  std::string patchBinary(StringRef BinaryContents) override;
 
   /// Adds a patch to put the integer \p NewValue encoded as a 64-bit
   /// little-endian value at offset \p Offset.
-  virtual void addLE64Patch(uint64_t Offset, uint64_t NewValue) override;
+  void addLE64Patch(uint64_t Offset, uint64_t NewValue) override;
 
   /// Adds a patch to put the integer \p NewValue encoded as a 32-bit
   /// little-endian value at offset \p Offset.
   /// The \p OldValueSize is the size of the old value that will be replaced.
-  virtual void addLE32Patch(uint64_t Offset, uint32_t NewValue,
-                            uint32_t OldValueSize = 4) override;
+  void addLE32Patch(uint64_t Offset, uint32_t NewValue,
+                    uint32_t OldValueSize = 4) override;
 
   /// Add a patch at \p Offset with \p Value using unsigned LEB128 encoding with
   /// size \p OldValueSize.
   /// The \p OldValueSize is the size of the old value that will be replaced.
-  virtual void addUDataPatch(uint64_t Offset, uint64_t Value,
-                             uint32_t OldValueSize) override;
+  void addUDataPatch(uint64_t Offset, uint64_t Value,
+                     uint32_t OldValueSize) override;
 
   /// Adds a label \p Offset for DWARF UNit.
   /// Used to recompute relative references.
@@ -995,7 +1003,7 @@ class DebugAbbrevWriter {
   DWARFContext &Context;
 
   /// DWO ID used to identify unit contribution in DWP.
-  Optional<uint64_t> DWOId;
+  std::optional<uint64_t> DWOId;
 
   /// Add abbreviations from compile/type \p Unit to the writer.
   void addUnitAbbreviations(DWARFUnit &Unit);
@@ -1011,7 +1019,8 @@ public:
   ///       Most of the time, using type units with DWO is not a good idea.
   ///       If type units are used, the caller is responsible for verifying
   ///       that abbreviations are shared by CU and TUs.
-  DebugAbbrevWriter(DWARFContext &Context, Optional<uint64_t> DWOId = None)
+  DebugAbbrevWriter(DWARFContext &Context,
+                    std::optional<uint64_t> DWOId = std::nullopt)
       : Context(Context), DWOId(DWOId) {}
 
   DebugAbbrevWriter(const DebugAbbrevWriter &) = delete;
@@ -1044,12 +1053,9 @@ public:
     assert(&Unit.getContext() == &Context &&
            "cannot update attribute from a different DWARF context");
     std::lock_guard<std::mutex> Lock(WriterMutex);
-    bool AlreadyAdded = false;
-    for (AbbrevEntry &E : NewAbbrevEntries[&Unit][Abbrev])
-      if (E.Attr == AttrTag) {
-        AlreadyAdded = true;
-        break;
-      }
+    bool AlreadyAdded =
+        llvm::any_of(NewAbbrevEntries[&Unit][Abbrev],
+                     [&](AbbrevEntry &E) { return E.Attr == AttrTag; });
 
     if (AlreadyAdded)
       return;
@@ -1127,11 +1133,11 @@ public:
 
   /// Emit the Dwarf file and the line tables for a given CU.
   void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-              Optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
+              std::optional<MCDwarfLineStr> &LineStr, BinaryContext &BC) const;
 
   Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                Optional<MD5::MD5Result> Checksum,
-                                Optional<StringRef> Source,
+                                std::optional<MD5::MD5Result> Checksum,
+                                std::optional<StringRef> Source,
                                 uint16_t DwarfVersion,
                                 unsigned FileNumber = 0) {
     assert(RawData.empty() && "cannot use with raw data");
@@ -1147,8 +1153,8 @@ public:
   /// Sets the root file \p Directory, \p FileName, optional \p CheckSum, and
   /// optional \p Source.
   void setRootFile(StringRef Directory, StringRef FileName,
-                   Optional<MD5::MD5Result> Checksum,
-                   Optional<StringRef> Source) {
+                   std::optional<MD5::MD5Result> Checksum,
+                   std::optional<StringRef> Source) {
     Header.setRootFile(Directory, FileName, Checksum, Source);
   }
 

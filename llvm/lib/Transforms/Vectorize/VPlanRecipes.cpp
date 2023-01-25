@@ -49,6 +49,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayWriteToMemory();
   case VPBranchOnMaskSC:
+  case VPScalarIVStepsSC:
     return false;
   case VPWidenIntOrFpInductionSC:
   case VPWidenCanonicalIVSC:
@@ -80,6 +81,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayReadFromMemory();
   case VPBranchOnMaskSC:
+  case VPScalarIVStepsSC:
     return false;
   case VPWidenIntOrFpInductionSC:
   case VPWidenCanonicalIVSC:
@@ -103,6 +105,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
   case VPWidenIntOrFpInductionSC:
@@ -134,7 +137,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (Plan.isUniformAfterVectorization(ExitValue))
+  if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
                    State.Builder.GetInsertBlock());
@@ -434,6 +437,64 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
   FMF = FMFNew;
 }
 
+void VPWidenCallRecipe::execute(VPTransformState &State) {
+  auto &CI = *cast<CallInst>(getUnderlyingInstr());
+  assert(!isa<DbgInfoIntrinsic>(CI) &&
+         "DbgInfoIntrinsic should have been dropped during VPlan construction");
+  State.setDebugLocFromInst(&CI);
+
+  SmallVector<Type *, 4> Tys;
+  for (Value *ArgOperand : CI.args())
+    Tys.push_back(
+        ToVectorTy(ArgOperand->getType(), State.VF.getKnownMinValue()));
+
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    SmallVector<Type *, 2> TysForDecl = {CI.getType()};
+    SmallVector<Value *, 4> Args;
+    for (const auto &I : enumerate(operands())) {
+      // Some intrinsics have a scalar argument - don't replace it with a
+      // vector.
+      Value *Arg;
+      if (VectorIntrinsicID == Intrinsic::not_intrinsic ||
+          !isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+        Arg = State.get(I.value(), Part);
+      else
+        Arg = State.get(I.value(), VPIteration(0, 0));
+      if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+        TysForDecl.push_back(Arg->getType());
+      Args.push_back(Arg);
+    }
+
+    Function *VectorF;
+    if (VectorIntrinsicID != Intrinsic::not_intrinsic) {
+      // Use vector version of the intrinsic.
+      if (State.VF.isVector())
+        TysForDecl[0] =
+            VectorType::get(CI.getType()->getScalarType(), State.VF);
+      Module *M = State.Builder.GetInsertBlock()->getModule();
+      VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
+      assert(VectorF && "Can't retrieve vector intrinsic.");
+    } else {
+      // Use vector version of the function call.
+      const VFShape Shape = VFShape::get(CI, State.VF, false /*HasGlobalPred*/);
+#ifndef NDEBUG
+      assert(VFDatabase(CI).getVectorizedFunction(Shape) != nullptr &&
+             "Can't create vector function.");
+#endif
+      VectorF = VFDatabase(CI).getVectorizedFunction(Shape);
+    }
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CI.getOperandBundlesAsDefs(OpBundles);
+    CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+
+    if (isa<FPMathOperator>(V))
+      V->copyFastMathFlags(&CI);
+
+    State.set(this, V, Part);
+    State.addMetadata(V, &CI);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -450,6 +511,11 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
   O << "call @" << CI->getCalledFunction()->getName() << "(";
   printOperands(O, SlotTracker);
   O << ")";
+
+  if (VectorIntrinsicID)
+    O << " (using vector intrinsic)";
+  else
+    O << " (using library function)";
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -620,7 +686,10 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
   printAsOperand(O, SlotTracker);
-  O << " = " << getUnderlyingInstr()->getOpcodeName() << " ";
+  const Instruction *UI = getUnderlyingInstr();
+  O << " = " << UI->getOpcodeName() << " ";
+  if (auto *Cmp = dyn_cast<CmpInst>(UI))
+    O << CmpInst::getPredicateName(Cmp->getPredicate()) << " ";
   printOperands(O, SlotTracker);
 }
 
@@ -646,22 +715,22 @@ bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   return StartC && StartC->isZero() && StepC && StepC->isOne();
 }
 
-VPCanonicalIVPHIRecipe *VPScalarIVStepsRecipe::getCanonicalIV() const {
-  return cast<VPCanonicalIVPHIRecipe>(getOperand(0));
-}
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void VPDerivedIVRecipe::print(raw_ostream &O, const Twine &Indent,
+                              VPSlotTracker &SlotTracker) const {
+  O << Indent;
+  printAsOperand(O, SlotTracker);
+  O << Indent << "= DERIVED-IV ";
+  getStartValue()->printAsOperand(O, SlotTracker);
+  O << " + ";
+  getCanonicalIV()->printAsOperand(O, SlotTracker);
+  O << " * ";
+  getStepValue()->printAsOperand(O, SlotTracker);
 
-bool VPScalarIVStepsRecipe::isCanonical() const {
-  auto *CanIV = getCanonicalIV();
-  // The start value of the steps-recipe must match the start value of the
-  // canonical induction and it must step by 1.
-  if (CanIV->getStartValue() != getStartValue())
-    return false;
-  auto *StepVPV = getStepValue();
-  if (StepVPV->getDef())
-    return false;
-  auto *StepC = dyn_cast_or_null<ConstantInt>(StepVPV->getLiveInIRValue());
-  return StepC && StepC->isOne();
+  if (IndDesc.getStep()->getType() != ResultTy)
+    O << " (truncated to " << *ResultTy << ")";
 }
+#endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarIVStepsRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -984,11 +1053,25 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+bool VPCanonicalIVPHIRecipe::isCanonical(const InductionDescriptor &ID,
+                                         Type *Ty) const {
+  if (Ty != getScalarType())
+    return false;
+  // The start value of ID must match the start value of this canonical
+  // induction.
+  if (getStartValue()->getLiveInIRValue() != ID.getStartValue())
+    return false;
+
+  ConstantInt *Step = ID.getConstIntStepValue();
+  // ID must also be incremented by one. IK_IntInduction always increment the
+  // induction by Step, but the binary op may not be set.
+  return ID.getKind() == InductionDescriptor::IK_IntInduction && Step &&
+         Step->isOne();
+}
+
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
-  bool IsUniform = vputils::onlyFirstLaneUsed(this);
-  return all_of(users(),
-                [&](const VPUser *U) { return U->usesScalars(this); }) &&
-         (IsUniform || !VF.isScalable());
+  return IsScalarAfterVectorization &&
+         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

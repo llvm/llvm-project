@@ -1,5 +1,5 @@
-; RUN: opt -S -callsite-splitting -o - < %s | FileCheck %s
-; RUN: opt -S -strip-debug -callsite-splitting -o - < %s | FileCheck %s
+; RUN: opt -S -passes=callsite-splitting -o - < %s | FileCheck %s
+; RUN: opt -S -strip-debug -passes=callsite-splitting -o - < %s | FileCheck %s
 
 define internal i16 @bar(i16 %p1, i16 %p2) {
   %_tmp3 = mul i16 %p2, %p1

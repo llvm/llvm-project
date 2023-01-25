@@ -255,9 +255,9 @@ function(llvm_ExternalProject_Add name source_dir)
     set(llvm_config_path ${LLVM_CONFIG_PATH})
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION
+      string(REGEX MATCH "^[0-9]+" CLANG_VERSION_MAJOR
              ${PACKAGE_VERSION})
-      set(resource_dir "${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION}")
+      set(resource_dir "${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION_MAJOR}")
       set(flag_types ASM C CXX MODULE_LINKER SHARED_LINKER EXE_LINKER)
       foreach(type ${flag_types})
         set(${type}_flag -DCMAKE_${type}_FLAGS=-resource-dir=${resource_dir})

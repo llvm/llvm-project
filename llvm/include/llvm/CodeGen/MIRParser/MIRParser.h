@@ -17,13 +17,11 @@
 #ifndef LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 #define LLVM_CODEGEN_MIRPARSER_MIRPARSER_H
 
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -36,7 +34,7 @@ class MachineModuleInfo;
 class SMDiagnostic;
 class StringRef;
 
-typedef llvm::function_ref<Optional<std::string>(StringRef)>
+typedef llvm::function_ref<std::optional<std::string>(StringRef, StringRef)>
     DataLayoutCallbackTy;
 
 /// This class initializes machine functions by applying the state loaded from
@@ -53,8 +51,9 @@ public:
   ///
   /// A new, empty module is created if the LLVM IR isn't present.
   /// \returns nullptr if a parsing error occurred.
-  std::unique_ptr<Module> parseIRModule(
-      DataLayoutCallbackTy DataLayoutCallback = [](StringRef) { return None; });
+  std::unique_ptr<Module>
+  parseIRModule(DataLayoutCallbackTy DataLayoutCallback =
+                    [](StringRef, StringRef) { return std::nullopt; });
 
   /// Parses MachineFunctions in the MIR file and add them to the given
   /// MachineModuleInfo \p MMI.

@@ -3,13 +3,13 @@
 
 --- |
 
-  define amdgpu_ps i96 @split_smrd_load_range(i96 addrspace(4)* %ptr) {
-    %load = load i96, i96 addrspace(4)* %ptr, !range !0
+  define amdgpu_ps i96 @split_smrd_load_range(ptr addrspace(4) %ptr) {
+    %load = load i96, ptr addrspace(4) %ptr, !range !0
     ret i96 %load
   }
 
-  define amdgpu_ps <3 x i32> @split_smrd_load_tbaa(<3 x i32> addrspace(4)* %ptr) {
-    %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, !tbaa !1
+  define amdgpu_ps <3 x i32> @split_smrd_load_tbaa(ptr addrspace(4) %ptr) {
+    %load = load <3 x i32>, ptr addrspace(4) %ptr, !tbaa !1
     ret <3 x i32> %load
   }
 

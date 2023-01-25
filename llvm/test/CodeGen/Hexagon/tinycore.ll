@@ -24,24 +24,24 @@
 ; CHECK-BIG-NEXT: = memw
 ; CHECK-BIG-NEXT: } :endloop0
 
-define i32 @test(i32* noalias nocapture readonly %a, i32* noalias nocapture readonly %b, i32 %n) local_unnamed_addr #0 {
+define i32 @test(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %n) local_unnamed_addr #0 {
 entry:
   %cmp8 = icmp sgt i32 %n, 0
   br i1 %cmp8, label %for.body, label %for.end
 
 for.body:
   %sum.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
-  %arrayidx.phi = phi i32* [ %arrayidx.inc, %for.body ], [ %a, %entry ]
-  %arrayidx1.phi = phi i32* [ %arrayidx1.inc, %for.body ], [ %b, %entry ]
+  %arrayidx.phi = phi ptr [ %arrayidx.inc, %for.body ], [ %a, %entry ]
+  %arrayidx1.phi = phi ptr [ %arrayidx1.inc, %for.body ], [ %b, %entry ]
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %0 = load i32, i32* %arrayidx.phi, align 4
-  %1 = load i32, i32* %arrayidx1.phi, align 4
+  %0 = load i32, ptr %arrayidx.phi, align 4
+  %1 = load i32, ptr %arrayidx1.phi, align 4
   %mul = mul nsw i32 %1, %0
   %add = add nsw i32 %mul, %sum.010
   %inc = add nuw nsw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %n
-  %arrayidx.inc = getelementptr i32, i32* %arrayidx.phi, i32 1
-  %arrayidx1.inc = getelementptr i32, i32* %arrayidx1.phi, i32 1
+  %arrayidx.inc = getelementptr i32, ptr %arrayidx.phi, i32 1
+  %arrayidx1.inc = getelementptr i32, ptr %arrayidx1.phi, i32 1
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:

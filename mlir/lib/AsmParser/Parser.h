@@ -12,6 +12,7 @@
 #include "ParserState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {
@@ -139,7 +140,7 @@ public:
   OptionalParseResult parseOptionalInteger(APInt &result);
 
   /// Parse a floating point value from an integer literal token.
-  ParseResult parseFloatFromIntegerLiteral(Optional<APFloat> &result,
+  ParseResult parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                                            const Token &tok, bool isNegative,
                                            const llvm::fltSemantics &semantics,
                                            size_t typeSizeInBits);
@@ -160,6 +161,7 @@ public:
   /// Parse a handle to a dialect resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(const OpAsmDialectInterface *dialect, StringRef &name);
+  FailureOr<AsmDialectResourceHandle> parseResourceHandle(Dialect *dialect);
 
   //===--------------------------------------------------------------------===//
   // Type Parsing
@@ -216,14 +218,6 @@ public:
   ParseResult parseIntegerInDimensionList(int64_t &value);
   ParseResult parseXInDimensionList();
 
-  /// Parse strided layout specification.
-  ParseResult parseStridedLayout(int64_t &offset,
-                                 SmallVectorImpl<int64_t> &strides);
-
-  // Parse a brace-delimiter list of comma-separated integers with `?` as an
-  // unknown marker.
-  ParseResult parseStrideList(SmallVectorImpl<int64_t> &dimensions);
-
   //===--------------------------------------------------------------------===//
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
@@ -236,6 +230,7 @@ public:
                                              Type type = {});
   OptionalParseResult parseOptionalAttribute(ArrayAttr &attribute, Type type);
   OptionalParseResult parseOptionalAttribute(StringAttr &attribute, Type type);
+  OptionalParseResult parseOptionalAttribute(SymbolRefAttr &result, Type type);
 
   /// Parse an optional attribute that is demarcated by a specific token.
   template <typename AttributeT>
@@ -243,7 +238,7 @@ public:
                                                       AttributeT &attr,
                                                       Type type = {}) {
     if (getToken().isNot(kind))
-      return llvm::None;
+      return std::nullopt;
 
     if (Attribute parsedAttr = parseAttribute(type)) {
       attr = parsedAttr.cast<AttributeT>();
@@ -265,18 +260,21 @@ public:
   /// or a float attribute.
   Attribute parseDecOrHexAttr(Type type, bool isNegative);
 
-  /// Parse an opaque elements attribute.
-  Attribute parseOpaqueElementsAttr(Type attrType);
-
   /// Parse a dense elements attribute.
   Attribute parseDenseElementsAttr(Type attrType);
   ShapedType parseElementsLiteralType(Type type);
 
+  /// Parse a dense resource elements attribute.
+  Attribute parseDenseResourceElementsAttr(Type attrType);
+
   /// Parse a DenseArrayAttr.
-  Attribute parseDenseArrayAttr();
+  Attribute parseDenseArrayAttr(Type type);
 
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);
+
+  /// Parse a strided layout attribute.
+  Attribute parseStridedLayoutAttr();
 
   //===--------------------------------------------------------------------===//
   // Location Parsing

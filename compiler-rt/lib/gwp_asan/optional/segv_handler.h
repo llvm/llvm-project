@@ -23,7 +23,8 @@ namespace segv_handler {
 // before this function.
 void installSignalHandlers(gwp_asan::GuardedPoolAllocator *GPA, Printf_t Printf,
                            gwp_asan::backtrace::PrintBacktrace_t PrintBacktrace,
-                           gwp_asan::backtrace::SegvBacktrace_t SegvBacktrace);
+                           gwp_asan::backtrace::SegvBacktrace_t SegvBacktrace,
+                           bool Recoverable = false);
 
 // Uninistall the signal handlers, test-only.
 void uninstallSignalHandlers();

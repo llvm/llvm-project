@@ -33,7 +33,10 @@ enum {
   ELF_WeakrefUsedInReloc_Shift = 11,
 
   // One bit.
-  ELF_BindingSet_Shift = 12
+  ELF_BindingSet_Shift = 12,
+
+  // One bit.
+  ELF_IsMemoryTagged_Shift = 13,
 };
 }
 
@@ -192,5 +195,17 @@ void MCSymbolELF::setIsBindingSet() const {
 
 bool MCSymbolELF::isBindingSet() const {
   return getFlags() & (0x1 << ELF_BindingSet_Shift);
+}
+
+bool MCSymbolELF::isMemtag() const {
+  return getFlags() & (0x1 << ELF_IsMemoryTagged_Shift);
+}
+
+void MCSymbolELF::setMemtag(bool Tagged) {
+  uint32_t OtherFlags = getFlags() & ~(1 << ELF_IsMemoryTagged_Shift);
+  if (Tagged)
+    setFlags(OtherFlags | (1 << ELF_IsMemoryTagged_Shift));
+  else
+    setFlags(OtherFlags);
 }
 }

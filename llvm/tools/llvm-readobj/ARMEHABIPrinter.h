@@ -91,7 +91,7 @@ inline ArrayRef<OpcodeDecoder::RingEntry> OpcodeDecoder::ring() {
       {0xf8, 0xd0, &OpcodeDecoder::Decode_11010nnn},
       {0xc0, 0xc0, &OpcodeDecoder::Decode_11xxxyyy},
   };
-  return makeArrayRef(Ring);
+  return ArrayRef(Ring);
 }
 
 inline void OpcodeDecoder::Decode_00xxxxxx(const uint8_t *Opcodes,
@@ -341,8 +341,9 @@ class PrinterContext {
     return Location + Place;
   }
 
-  ErrorOr<StringRef> FunctionAtAddress(uint64_t Address,
-                                       Optional<unsigned> SectionIndex) const;
+  ErrorOr<StringRef>
+  FunctionAtAddress(uint64_t Address,
+                    std::optional<unsigned> SectionIndex) const;
   const Elf_Shdr *FindExceptionTable(unsigned IndexTableIndex,
                                      off_t IndexTableOffset) const;
 
@@ -363,9 +364,8 @@ template <typename ET>
 const size_t PrinterContext<ET>::IndexTableEntrySize = 8;
 
 template <typename ET>
-ErrorOr<StringRef>
-PrinterContext<ET>::FunctionAtAddress(uint64_t Address,
-                                      Optional<unsigned> SectionIndex) const {
+ErrorOr<StringRef> PrinterContext<ET>::FunctionAtAddress(
+    uint64_t Address, std::optional<unsigned> SectionIndex) const {
   if (!Symtab)
     return inconvertibleErrorCode();
   auto StrTableOrErr = ELF.getStringTableForSymtab(*Symtab);
@@ -501,8 +501,8 @@ void PrinterContext<ET>::PrintExceptionTable(const Elf_Shdr &EHT,
                            ? PREL31(Word, EHT.sh_addr)
                            : PREL31(Word, EHT.sh_addr + TableEntryOffset);
     SW.printHex("PersonalityRoutineAddress", Address);
-    Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(EHT.sh_link) : None;
+    std::optional<unsigned> SecIndex =
+        IsRelocatable ? std::optional<unsigned>(EHT.sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("PersonalityRoutineName", *Name);
   }
@@ -574,8 +574,8 @@ void PrinterContext<ET>::PrintIndexTable(unsigned SectionIndex,
     // their code sections via the sh_link field. For a non-relocatable ELF file
     // the sh_link field is not reliable, because we have one .ARM.exidx section
     // normally, but might have many code sections.
-    Optional<unsigned> SecIndex =
-        IsRelocatable ? Optional<unsigned>(IT->sh_link) : None;
+    std::optional<unsigned> SecIndex =
+        IsRelocatable ? std::optional<unsigned>(IT->sh_link) : std::nullopt;
     if (ErrorOr<StringRef> Name = FunctionAtAddress(Address, SecIndex))
       SW.printString("FunctionName", *Name);
 

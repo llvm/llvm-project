@@ -1,9 +1,11 @@
 # Test runner infrastructure for Flang. This configures the Flang test trees
 # for use by Lit, and delegates to LLVM's lit test handlers.
+add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
   FLANG_BUILD_EXAMPLES
   FLANG_STANDALONE_BUILD
+  LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
 )
 
@@ -62,6 +64,9 @@ set(FLANG_TEST_DEPENDS
   Fortran_main
   FortranDecimal
 )
+if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+  list(APPEND FLANG_TEST_DEPENDS Bye)
+endif()
 
 if (FLANG_INCLUDE_TESTS)
   if (FLANG_GTEST_AVAIL)
@@ -94,4 +99,12 @@ else()
   add_lit_testsuites(FLANG ${CMAKE_CURRENT_SOURCE_DIR}
     PARAMS ${FLANG_TEST_PARAMS}
     DEPENDS ${FLANG_TEST_DEPENDS})
+endif()
+
+# To modify the default target triple for flang tests.
+if (DEFINED FLANG_TEST_TARGET_TRIPLE)
+  if (NOT DEFINED LLVM_TARGET_TRIPLE_ENV OR LLVM_TARGET_TRIPLE_ENV STREQUAL "")
+    message(FATAL_ERROR "LLVM_TARGET_TRIPLE_ENV must also be defined in order "
+                        "to use FLANG_TEST_TARGET_TRIPLE.")
+  endif()
 endif()

@@ -100,10 +100,10 @@ define arm_apcscc float @f8(i32 %a) nounwind {
 ; scheduler to assert.
 ; CHECK-VFP-LABEL: f9:
 
-declare i8* @objc_msgSend(i8*, i8*, ...)
+declare ptr @objc_msgSend(ptr, ptr, ...)
 define void @f9() optsize {
 entry:
-  %cmp = icmp eq i8* undef, inttoptr (i32 4 to i8*)
+  %cmp = icmp eq ptr undef, inttoptr (i32 4 to ptr)
   %conv191 = select i1 %cmp, float -3.000000e+00, float 0.000000e+00
   %conv195 = select i1 %cmp, double -1.000000e+00, double 0.000000e+00
   %add = fadd double %conv195, 1.100000e+01
@@ -113,7 +113,7 @@ entry:
   %tmp478 = bitcast float %add201 to i32
   %tmp490 = insertvalue [2 x i32] undef, i32 %tmp484, 0
   %tmp493 = insertvalue [2 x i32] %tmp490, i32 %tmp478, 1
-  call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, [2 x i32], i32, float)*)(i8* undef, i8* undef, [2 x i32] %tmp493, i32 0, float 1.000000e+00) optsize
+  call void @objc_msgSend(ptr undef, ptr undef, [2 x i32] %tmp493, i32 0, float 1.000000e+00) optsize
   ret void
 }
 

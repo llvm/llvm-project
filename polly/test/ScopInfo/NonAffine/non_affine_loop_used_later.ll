@@ -97,7 +97,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %N, i32 %M) {
+define void @f(ptr %A, i32 %N, i32 %M) {
 bb:
   %tmp = icmp sgt i32 %M, 0
   %smax = select i1 %tmp, i32 %M, i32 0
@@ -111,8 +111,8 @@ bb2:                                              ; preds = %bb23, %bb
   br i1 %tmp3, label %bb4, label %bb24
 
 bb4:                                              ; preds = %bb2
-  %tmp5 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp6 = load i32, i32* %tmp5, align 4
+  %tmp5 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp6 = load i32, ptr %tmp5, align 4
   %tmp7 = icmp eq i32 %tmp6, 0
   br i1 %tmp7, label %bb18, label %bb8
 
@@ -125,10 +125,10 @@ bb9:                                              ; preds = %bb15, %bb8
   br i1 %tmp10, label %bb11, label %bb17
 
 bb11:                                             ; preds = %bb9
-  %tmp12 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp13 = load i32, i32* %tmp12, align 4
+  %tmp12 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp13 = load i32, ptr %tmp12, align 4
   %tmp14 = add nsw i32 %tmp13, 1
-  store i32 %tmp14, i32* %tmp12, align 4
+  store i32 %tmp14, ptr %tmp12, align 4
   br label %bb15
 
 bb15:                                             ; preds = %bb11
@@ -141,10 +141,10 @@ bb17:                                             ; preds = %bb9
 bb18:                                             ; preds = %bb4, %bb17
   %j.2 = phi i32 [ %smax, %bb17 ], [ %j.0, %bb4 ]
   %tmp19 = sext i32 %j.2 to i64
-  %tmp20 = getelementptr inbounds i32, i32* %A, i64 %tmp19
-  %tmp21 = load i32, i32* %tmp20, align 4
-  %tmp22 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp21, i32* %tmp22, align 4
+  %tmp20 = getelementptr inbounds i32, ptr %A, i64 %tmp19
+  %tmp21 = load i32, ptr %tmp20, align 4
+  %tmp22 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp21, ptr %tmp22, align 4
   br label %bb23
 
 bb23:                                             ; preds = %bb18

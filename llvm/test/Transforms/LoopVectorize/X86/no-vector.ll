@@ -1,6 +1,6 @@
-; RUN: opt -S -mtriple=i386-unknown-freebsd -mcpu=i486 -loop-vectorize < %s
+; RUN: opt -S -mtriple=i386-unknown-freebsd -mcpu=i486 -passes=loop-vectorize < %s
 
-define i32 @PR14639(i8* nocapture %s, i32 %len) nounwind {
+define i32 @PR14639(ptr nocapture %s, i32 %len) nounwind {
 entry:
   %cmp4 = icmp sgt i32 %len, 0
   br i1 %cmp4, label %for.body, label %for.end
@@ -8,8 +8,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.06 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.05 = phi i32 [ %xor, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %s, i32 %i.06
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %s, i32 %i.06
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = sext i8 %0 to i32
   %xor = xor i32 %conv, %r.05
   %inc = add nsw i32 %i.06, 1

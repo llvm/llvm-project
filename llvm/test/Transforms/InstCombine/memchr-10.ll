@@ -5,7 +5,7 @@
 ; in equality expressions don't cause trouble and either are folded when
 ; they might be valid or not when they're provably undefined.
 
-declare i8* @memchr(i8*, i32, i64)
+declare ptr @memchr(ptr, i32, i64)
 
 
 @a5 = constant [5 x i8] c"12345"
@@ -20,10 +20,10 @@ define i1 @call_memchr_ap5_c_1_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memchr_ap5_c_1_eq_a(
 ; CHECK-NEXT:    ret i1
 ;
-  %pap5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %qap5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 1, i32 0
-  %q = call i8* @memchr(i8* %pap5, i32 %c, i64 1)
-  %cmp = icmp eq i8* %q, %qap5
+  %pap5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %qap5 = getelementptr [5 x i8], ptr @a5, i32 1, i32 0
+  %q = call ptr @memchr(ptr %pap5, i32 %c, i64 1)
+  %cmp = icmp eq ptr %q, %qap5
   ret i1 %cmp
 }
 
@@ -34,10 +34,10 @@ define i1 @call_memchr_ap5_c_5_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memchr_ap5_c_5_eq_a(
 ; CHECK-NEXT:    ret i1
 ;
-  %pap5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %qap5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 1, i32 0
-  %q = call i8* @memchr(i8* %pap5, i32 %c, i64 5)
-  %cmp = icmp eq i8* %q, %qap5
+  %pap5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %qap5 = getelementptr [5 x i8], ptr @a5, i32 1, i32 0
+  %q = call ptr @memchr(ptr %pap5, i32 %c, i64 5)
+  %cmp = icmp eq ptr %q, %qap5
   ret i1 %cmp
 }
 
@@ -48,10 +48,9 @@ define i1 @fold_memchr_ap5_c_n_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ap5_c_n_eq_a(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %pa = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %pap5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %q = call i8* @memchr(i8* %pap5, i32 %c, i64 %n)
-  %cmp = icmp eq i8* %q, %pa
+  %pap5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %q = call ptr @memchr(ptr %pap5, i32 %c, i64 %n)
+  %cmp = icmp eq ptr %q, @a5
   ret i1 %cmp
 }
 
@@ -63,9 +62,9 @@ define i1 @fold_memchr_ap5_c_n_eqz(i32 %c, i64 %n) {
 ; CHECK-LABEL: @fold_memchr_ap5_c_n_eqz(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %q = call i8* @memchr(i8* %p, i32 %c, i64 %n)
-  %cmp = icmp eq i8* %q, null
+  %p = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %q = call ptr @memchr(ptr %p, i32 %c, i64 %n)
+  %cmp = icmp eq ptr %q, null
   ret i1 %cmp
 }
 
@@ -77,8 +76,8 @@ define i1 @fold_memchr_a_nul_n_eqz(i64 %n) {
 ; CHECK-LABEL: @fold_memchr_a_nul_n_eqz(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %p = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %q = call i8* @memchr(i8* %p, i32 0, i64 %n)
-  %cmp = icmp eq i8* %q, null
+  %p = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %q = call ptr @memchr(ptr %p, i32 0, i64 %n)
+  %cmp = icmp eq ptr %q, null
   ret i1 %cmp
 }

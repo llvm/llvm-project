@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -75,8 +73,8 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
   }
 }
 
-Optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
-  return None;
+std::optional<MCFixupKind> MCAsmBackend::getFixupKind(StringRef Name) const {
+  return std::nullopt;
 }
 
 const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
@@ -105,7 +103,7 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_SecRel_8", 0, 64, 0},
   };
 
-  assert((size_t)Kind <= array_lengthof(Builtins) && "Unknown fixup kind");
+  assert((size_t)Kind <= std::size(Builtins) && "Unknown fixup kind");
   return Builtins[Kind];
 }
 

@@ -1,6 +1,8 @@
 #ifndef LLDB_BINDINGS_PYTHON_PYTHON_TYPEMAPS_H
 #define LLDB_BINDINGS_PYTHON_PYTHON_TYPEMAPS_H
 
+#include <Python.h>
+
 // Defined here instead of a .swig file because SWIG 2 doesn't support
 // explicit deleted functions.
 struct Py_buffer_RAII {

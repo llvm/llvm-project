@@ -15,6 +15,7 @@
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -92,10 +93,10 @@ public:
     return 0;
   }
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override { return nullptr; }
-  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+  std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
       const lldb_private::ExecutionContext *exe_ctx) override {
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool CompleteType(CompilerType &compiler_type) override { return false; }
@@ -110,9 +111,8 @@ public:
   void GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                 TypeList &type_list) override {}
 
-  void FindFunctions(ConstString name,
+  void FindFunctions(const Module::LookupInfo &lookup_info,
                      const CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines, SymbolContextList &sc_list) override;
 
   void FindFunctions(const RegularExpression &regex, bool include_inlines,
@@ -127,7 +127,7 @@ public:
                  llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                  TypeMap &types) override;
 
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language) override {
     return llvm::make_error<llvm::StringError>(
         "SymbolFileBreakpad does not support GetTypeSystemForLanguage",
@@ -202,7 +202,7 @@ private:
     }
 
     Bookmark bookmark;
-    llvm::Optional<FileSpecList> support_files;
+    std::optional<FileSpecList> support_files;
     std::unique_ptr<LineTable> line_table_up;
 
   };
@@ -227,16 +227,16 @@ private:
 
   using CompUnitMap = RangeDataVector<lldb::addr_t, lldb::addr_t, CompUnitData>;
 
-  llvm::Optional<std::vector<FileSpec>> m_files;
-  llvm::Optional<CompUnitMap> m_cu_data;
-  llvm::Optional<std::vector<llvm::StringRef>> m_inline_origins;
+  std::optional<std::vector<FileSpec>> m_files;
+  std::optional<CompUnitMap> m_cu_data;
+  std::optional<std::vector<llvm::StringRef>> m_inline_origins;
 
   using UnwindMap = RangeDataVector<lldb::addr_t, lldb::addr_t, Bookmark>;
   struct UnwindData {
     UnwindMap cfi;
     UnwindMap win;
   };
-  llvm::Optional<UnwindData> m_unwind_data;
+  std::optional<UnwindData> m_unwind_data;
   llvm::BumpPtrAllocator m_allocator;
 };
 

@@ -234,8 +234,8 @@ define i64 @or_mix_shr(i64 %x0, i64 %x1, i64 %y, i64 %z) {
 ; CHECK-NEXT:    sarq %cl, %rdi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shrq %cl, %rsi
-; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = ashr i64 %x0, %y
   %sh2 = lshr i64 %x1, %y
@@ -255,8 +255,8 @@ define i64 @or_lshr_mix_shift_amount(i64 %x0, i64 %x1, i64 %y, i64 %z, i64 %w) {
 ; CHECK-NEXT:    shrq %cl, %rdi
 ; CHECK-NEXT:    movl %r8d, %ecx
 ; CHECK-NEXT:    shrq %cl, %rsi
-; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x0, %y
   %sh2 = lshr i64 %x1, %w
@@ -518,8 +518,8 @@ define i64 @xor_mix_shr(i64 %x0, i64 %x1, i64 %y, i64 %z) {
 ; CHECK-NEXT:    sarq %cl, %rdi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    shrq %cl, %rsi
-; CHECK-NEXT:    xorq %rsi, %rax
 ; CHECK-NEXT:    xorq %rdi, %rax
+; CHECK-NEXT:    xorq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = ashr i64 %x0, %y
   %sh2 = lshr i64 %x1, %y
@@ -539,8 +539,8 @@ define i64 @xor_lshr_mix_shift_amount(i64 %x0, i64 %x1, i64 %y, i64 %z, i64 %w) 
 ; CHECK-NEXT:    shrq %cl, %rdi
 ; CHECK-NEXT:    movl %r8d, %ecx
 ; CHECK-NEXT:    shrq %cl, %rsi
-; CHECK-NEXT:    xorq %rsi, %rax
 ; CHECK-NEXT:    xorq %rdi, %rax
+; CHECK-NEXT:    xorq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x0, %y
   %sh2 = lshr i64 %x1, %w
@@ -802,8 +802,8 @@ define i64 @and_mix_shr(i64 %x0, i64 %x1, i64 %y, i64 %z) {
 ; CHECK-NEXT:    shrq %cl, %rdi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; CHECK-NEXT:    sarq %cl, %rsi
-; CHECK-NEXT:    andq %rsi, %rax
 ; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    andq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x0, %y
   %sh2 = ashr i64 %x1, %y
@@ -823,8 +823,8 @@ define i64 @and_lshr_mix_shift_amount(i64 %x0, i64 %x1, i64 %y, i64 %z, i64 %w) 
 ; CHECK-NEXT:    shrq %cl, %rdi
 ; CHECK-NEXT:    movl %r8d, %ecx
 ; CHECK-NEXT:    shrq %cl, %rsi
-; CHECK-NEXT:    andq %rsi, %rax
 ; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    andq %rsi, %rax
 ; CHECK-NEXT:    retq
   %sh1 = lshr i64 %x0, %y
   %sh2 = lshr i64 %x1, %w

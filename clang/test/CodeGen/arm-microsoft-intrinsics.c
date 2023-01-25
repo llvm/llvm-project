@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv7-windows -fms-compatibility -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple thumbv7-windows -fms-compatibility -emit-llvm -o - %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-MSVC
 
-// RUN: not %clang_cc1 -no-opaque-pointers -triple armv7-eabi -Werror -S -o /dev/null %s 2>&1 \
+// RUN: not %clang_cc1 -triple armv7-eabi -Werror -S -o /dev/null %s 2>&1 \
 // RUN:    | FileCheck %s -check-prefix CHECK-EABI
 
 void check__dmb(void) {
@@ -30,7 +30,7 @@ __INT64_TYPE__ check__ldrexd(void) {
   return __ldrexd(&i64);
 }
 
-// CHECK-MSVC: @llvm.arm.ldrexd(i8* {{.*}})
+// CHECK-MSVC: @llvm.arm.ldrexd(ptr {{.*}})
 // CHECK-EABI: error: call to undeclared function '__ldrexd'
 
 unsigned int check_MoveFromCoprocessor(void) {

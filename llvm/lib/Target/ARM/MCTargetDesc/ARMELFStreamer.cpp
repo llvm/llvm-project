@@ -202,7 +202,12 @@ void ARMTargetAsmStreamer::emitTextAttribute(unsigned Attribute,
     OS << "\t.cpu\t" << String.lower();
     break;
   default:
-    OS << "\t.eabi_attribute\t" << Attribute << ", \"" << String << "\"";
+    OS << "\t.eabi_attribute\t" << Attribute << ", \"";
+    if (Attribute == ARMBuildAttrs::also_compatible_with)
+      OS.write_escaped(String);
+    else
+      OS << String;
+    OS << "\"";
     if (IsVerboseAsm) {
       StringRef Name = ELFAttrs::attrTypeAsString(
           Attribute, ARMBuildAttrs::getARMAttributeTags());
@@ -831,10 +836,6 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
     S.setAttributeItem(CPU_arch, ARM::getArchAttr(EmittedArch), false);
 
   switch (Arch) {
-  case ARM::ArchKind::ARMV2:
-  case ARM::ArchKind::ARMV2A:
-  case ARM::ArchKind::ARMV3:
-  case ARM::ArchKind::ARMV3M:
   case ARM::ArchKind::ARMV4:
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     break;
@@ -889,10 +890,14 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8_4A:
   case ARM::ArchKind::ARMV8_5A:
   case ARM::ArchKind::ARMV8_6A:
+  case ARM::ArchKind::ARMV8_7A:
+  case ARM::ArchKind::ARMV8_8A:
+  case ARM::ArchKind::ARMV8_9A:
   case ARM::ArchKind::ARMV9A:
   case ARM::ArchKind::ARMV9_1A:
   case ARM::ArchKind::ARMV9_2A:
   case ARM::ArchKind::ARMV9_3A:
+  case ARM::ArchKind::ARMV9_4A:
     S.setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     S.setAttributeItem(ARM_ISA_use, Allowed, false);
     S.setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1164,7 +1169,7 @@ inline void ARMELFStreamer::SwitchToEHSection(StringRef Prefix,
 
   // Switch to .ARM.extab or .ARM.exidx section
   switchSection(EHSection);
-  emitValueToAlignment(4, 0, 1, 0);
+  emitValueToAlignment(Align(4), 0, 1, 0);
 }
 
 inline void ARMELFStreamer::SwitchToExTabSection(const MCSymbol &FnStart) {

@@ -12,6 +12,9 @@
 
 extern "C" {
 
+// Check if pointer ptr is already locked
+hsa_status_t is_locked(void *ptr, void **agentBaseAddress);
+
 hsa_status_t impl_module_register_from_memory_to_place(
     void *module_bytes, size_t module_size, int DeviceId,
     hsa_status_t (*on_deserialized_data)(void *data, size_t size,

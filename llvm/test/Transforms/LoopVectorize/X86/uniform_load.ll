@@ -1,7 +1,7 @@
-; RUN: opt -basic-aa -loop-vectorize -S -mcpu=core-avx2 < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -S -mcpu=core-avx2 < %s | FileCheck %s
 
 ;float inc = 0.5;
-;void foo(float *A, unsigned N) {
+;void foo(ptr A, unsigned N) {
 ;
 ;  for (unsigned i=0; i<N; i++){
 ;    A[i] += inc;
@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @inc = global float 5.000000e-01, align 4
 
-define void @foo(float* nocapture %A, i32 %N) #0 {
+define void @foo(ptr nocapture %A, i32 %N) #0 {
 entry:
   %cmp3 = icmp eq i32 %N, 0
   br i1 %cmp3, label %for.end, label %for.body.preheader
@@ -29,11 +29,11 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %0 = load float, float* @inc, align 4
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %1 = load float, float* %arrayidx, align 4
+  %0 = load float, ptr @inc, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx, align 4
   %add = fadd float %0, %1
-  store float %add, float* %arrayidx, align 4
+  store float %add, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %N

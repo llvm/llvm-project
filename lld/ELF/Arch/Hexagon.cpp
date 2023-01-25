@@ -59,12 +59,12 @@ Hexagon::Hexagon() {
 }
 
 uint32_t Hexagon::calcEFlags() const {
-  assert(!ctx->objectFiles.empty());
+  assert(!ctx.objectFiles.empty());
 
   // The architecture revision must always be equal to or greater than
   // greatest revision in the list of inputs.
   uint32_t ret = 0;
-  for (InputFile *f : ctx->objectFiles) {
+  for (InputFile *f : ctx.objectFiles) {
     uint32_t eflags = cast<ObjFile<ELF32LE>>(f)->getObj().getHeader().e_flags;
     if (eflags > ret)
       ret = eflags;
@@ -145,7 +145,6 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_IE_GOT_32_6_X:
   case R_HEX_IE_GOT_HI16:
   case R_HEX_IE_GOT_LO16:
-    config->hasTlsIe = true;
     return R_GOTPLT;
   case R_HEX_TPREL_11_X:
   case R_HEX_TPREL_16:

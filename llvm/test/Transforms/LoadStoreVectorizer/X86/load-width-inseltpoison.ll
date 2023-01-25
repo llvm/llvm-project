@@ -1,22 +1,21 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu haswell -S -o - %s | FileCheck --check-prefix=CHECK-HSW %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -mcpu knl -S -o - %s | FileCheck --check-prefix=CHECK-KNL %s
 
-define <8 x double> @loadwidth_insert_extract(double* %ptr) {
-    %a = bitcast double* %ptr to <2 x double> *
-    %b = getelementptr <2 x double>, <2 x double>* %a, i32 1
-    %c = getelementptr <2 x double>, <2 x double>* %a, i32 2
-    %d = getelementptr <2 x double>, <2 x double>* %a, i32 3
+define <8 x double> @loadwidth_insert_extract(ptr %ptr) {
+    %b = getelementptr <2 x double>, ptr %ptr, i32 1
+    %c = getelementptr <2 x double>, ptr %ptr, i32 2
+    %d = getelementptr <2 x double>, ptr %ptr, i32 3
 ; CHECK-HSW: load <4 x double>
 ; CHECK-HSW: load <4 x double>
 ; CHECK-HSW-NOT: load
 ; CHECK-KNL: load <8 x double>
 ; CHECK-KNL-NOT: load
-    %la = load <2 x double>, <2 x double> *%a
-    %lb = load <2 x double>, <2 x double> *%b
-    %lc = load <2 x double>, <2 x double> *%c
-    %ld = load <2 x double>, <2 x double> *%d
+    %la = load <2 x double>, ptr %ptr
+    %lb = load <2 x double>, ptr %b
+    %lc = load <2 x double>, ptr %c
+    %ld = load <2 x double>, ptr %d
     ; Scalarize everything - Explicitly not a shufflevector to test this code
     ; path in the LSV
     %v1 = extractelement <2 x double> %la, i32 0

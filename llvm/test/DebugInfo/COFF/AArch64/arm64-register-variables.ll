@@ -48,29 +48,29 @@ entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   %c = alloca i32, align 4
-  store i32 %p, i32* %p.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %p.addr, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* %p.addr, align 4, !dbg !17
+  store i32 %p, ptr %p.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !15, metadata !DIExpression()), !dbg !16
+  %0 = load i32, ptr %p.addr, align 4, !dbg !17
   %tobool = icmp ne i32 %0, 0, !dbg !17
   br i1 %tobool, label %if.then, label %if.else, !dbg !17
 
 if.then:                                          ; preds = %entry
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !18, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !18, metadata !DIExpression()), !dbg !21
   %call = call i32 @getint(), !dbg !21
-  store i32 %call, i32* %a, align 4, !dbg !21
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !22, metadata !DIExpression()), !dbg !23
-  %1 = load i32, i32* %a, align 4, !dbg !23
+  store i32 %call, ptr %a, align 4, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !22, metadata !DIExpression()), !dbg !23
+  %1 = load i32, ptr %a, align 4, !dbg !23
   %call1 = call i32 @inlineinc(i32 %1), !dbg !23
-  store i32 %call1, i32* %b, align 4, !dbg !23
-  %2 = load i32, i32* %b, align 4, !dbg !24
+  store i32 %call1, ptr %b, align 4, !dbg !23
+  %2 = load i32, ptr %b, align 4, !dbg !24
   call void @putint(i32 %2), !dbg !24
   br label %if.end, !dbg !25
 
 if.else:                                          ; preds = %entry
-  call void @llvm.dbg.declare(metadata i32* %c, metadata !26, metadata !DIExpression()), !dbg !28
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !26, metadata !DIExpression()), !dbg !28
   %call2 = call i32 @getint(), !dbg !28
-  store i32 %call2, i32* %c, align 4, !dbg !28
-  %3 = load i32, i32* %c, align 4, !dbg !29
+  store i32 %call2, ptr %c, align 4, !dbg !28
+  %3 = load i32, ptr %c, align 4, !dbg !29
   call void @putint(i32 %3), !dbg !29
   br label %if.end, !dbg !30
 
@@ -88,16 +88,16 @@ define internal i32 @inlineinc(i32 %a) #0 !dbg !32 {
 entry:
   %a.addr = alloca i32, align 4
   %b = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !35, metadata !DIExpression()), !dbg !36
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !37, metadata !DIExpression()), !dbg !38
-  %0 = load i32, i32* %a.addr, align 4, !dbg !38
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !35, metadata !DIExpression()), !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !37, metadata !DIExpression()), !dbg !38
+  %0 = load i32, ptr %a.addr, align 4, !dbg !38
   %add = add nsw i32 %0, 1, !dbg !38
-  store i32 %add, i32* %b, align 4, !dbg !38
-  %1 = load volatile i32, i32* @x, align 4, !dbg !39
+  store i32 %add, ptr %b, align 4, !dbg !38
+  %1 = load volatile i32, ptr @x, align 4, !dbg !39
   %inc = add nsw i32 %1, 1, !dbg !39
-  store volatile i32 %inc, i32* @x, align 4, !dbg !39
-  %2 = load i32, i32* %b, align 4, !dbg !40
+  store volatile i32 %inc, ptr @x, align 4, !dbg !39
+  %2 = load i32, ptr %b, align 4, !dbg !40
   ret i32 %2, !dbg !40
 }
 

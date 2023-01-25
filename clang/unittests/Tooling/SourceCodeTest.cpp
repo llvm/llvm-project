@@ -11,7 +11,7 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include <gmock/gmock.h>
@@ -25,7 +25,7 @@ using llvm::ValueIs;
 using tooling::getAssociatedRange;
 using tooling::getExtendedRange;
 using tooling::getExtendedText;
-using tooling::getRangeForEdit;
+using tooling::getFileRangeForEdit;
 using tooling::getText;
 using tooling::maybeExtendRange;
 using tooling::validateEditRange;
@@ -247,15 +247,26 @@ TEST(SourceCodeTest, getAssociatedRange) {
 
   // Includes attributes.
   Visitor.runOverAnnotated(R"cpp(
-      #define ATTR __attribute__((deprecated("message")))
-      $r[[ATTR
+      $r[[__attribute__((deprecated("message")))
       int x;]])cpp");
 
   // Includes attributes and comments together.
   Visitor.runOverAnnotated(R"cpp(
-      #define ATTR __attribute__((deprecated("message")))
-      $r[[ATTR
-      // Commment.
+      $r[[__attribute__((deprecated("message")))
+      // Comment.
+      int x;]])cpp");
+
+  // Includes attributes through macro expansion.
+  Visitor.runOverAnnotated(R"cpp(
+      #define MACRO_EXPANSION __attribute__((deprecated("message")))
+      $r[[MACRO_EXPANSION
+      int x;]])cpp");
+
+  // Includes attributes through macro expansion with comments.
+  Visitor.runOverAnnotated(R"cpp(
+      #define MACRO_EXPANSION __attribute__((deprecated("message")))
+      $r[[MACRO_EXPANSION
+      // Comment.
       int x;]])cpp");
 }
 
@@ -402,15 +413,26 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
 
   // Includes attributes.
   Visit(R"cpp(
-      #define ATTR __attribute__((deprecated("message")))
-      $r[[ATTR
+      $r[[__attribute__((deprecated("message")))
       int x;]])cpp");
 
   // Includes attributes and comments together.
   Visit(R"cpp(
-      #define ATTR __attribute__((deprecated("message")))
-      $r[[ATTR
-      // Commment.
+      $r[[__attribute__((deprecated("message")))
+      // Comment.
+      int x;]])cpp");
+
+  // Includes attributes through macro expansion.
+  Visitor.runOverAnnotated(R"cpp(
+      #define MACRO_EXPANSION __attribute__((deprecated("message")))
+      $r[[MACRO_EXPANSION
+      int x;]])cpp");
+
+  // Includes attributes through macro expansion with comments.
+  Visitor.runOverAnnotated(R"cpp(
+      #define MACRO_EXPANSION __attribute__((deprecated("message")))
+      $r[[MACRO_EXPANSION
+      // Comment.
       int x;]])cpp");
 }
 
@@ -431,7 +453,11 @@ TEST(SourceCodeTest, getAssociatedRangeInvalidForPartialExpansions) {
   Visitor.runOver(Code);
 }
 
-TEST(SourceCodeTest, EditRangeWithMacroExpansionsShouldSucceed) {
+class GetFileRangeForEditTest : public testing::TestWithParam<bool> {};
+INSTANTIATE_TEST_SUITE_P(WithAndWithoutExpansions, GetFileRangeForEditTest,
+                         testing::Bool());
+
+TEST_P(GetFileRangeForEditTest, EditRangeWithMacroExpansionsShouldSucceed) {
   // The call expression, whose range we are extracting, includes two macro
   // expansions.
   llvm::Annotations Code(R"cpp(
@@ -441,10 +467,9 @@ int a = $r[[foo(M(1), M(2))]];
 )cpp");
 
   CallsVisitor Visitor;
-
   Visitor.OnCall = [&Code](CallExpr *CE, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
@@ -459,13 +484,35 @@ int a = $r[[FOO]];
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
 }
 
-TEST(SourceCodeTest, EditPartialMacroExpansionShouldFail) {
+TEST(SourceCodeTest, EditInvolvingExpansionIgnoringExpansionShouldFail) {
+  // If we specify to ignore macro expansions, none of these call expressions
+  // should have an editable range.
+  llvm::Annotations Code(R"cpp(
+#define M1(x) x(1)
+#define M2(x, y) x ## y
+#define M3(x) foobar(x)
+int foobar(int);
+int a = M1(foobar);
+int b = M2(foo, bar(2));
+int c = M3(3);
+)cpp");
+
+  CallsVisitor Visitor;
+  Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
+    auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
+    EXPECT_FALSE(
+        getFileRangeForEdit(Range, *Context, /*IncludeMacroExpansion=*/false));
+  };
+  Visitor.runOver(Code.code());
+}
+
+TEST_P(GetFileRangeForEditTest, EditPartialMacroExpansionShouldFail) {
   std::string Code = R"cpp(
 #define BAR 10+
 int c = BAR 3.0;
@@ -474,12 +521,12 @@ int c = BAR 3.0;
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_FALSE(getRangeForEdit(Range, *Context));
+    EXPECT_FALSE(getFileRangeForEdit(Range, *Context, GetParam()));
   };
   Visitor.runOver(Code);
 }
 
-TEST(SourceCodeTest, EditWholeMacroArgShouldSucceed) {
+TEST_P(GetFileRangeForEditTest, EditWholeMacroArgShouldSucceed) {
   llvm::Annotations Code(R"cpp(
 #define FOO(a) a + 7.0;
 int a = FOO($r[[10]]);
@@ -488,13 +535,13 @@ int a = FOO($r[[10]]);
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
 }
 
-TEST(SourceCodeTest, EditPartialMacroArgShouldSucceed) {
+TEST_P(GetFileRangeForEditTest, EditPartialMacroArgShouldSucceed) {
   llvm::Annotations Code(R"cpp(
 #define FOO(a) a + 7.0;
 int a = FOO($r[[10]] + 10.0);
@@ -503,7 +550,7 @@ int a = FOO($r[[10]] + 10.0);
   IntLitVisitor Visitor;
   Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getRangeForEdit(Range, *Context),
+    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
                 ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
   };
   Visitor.runOver(Code.code());
@@ -519,7 +566,6 @@ int a = foo(M(1), M(2));
 )cpp";
 
   CallsVisitor Visitor;
-
   Visitor.OnCall = [](CallExpr *CE, ASTContext *Context) {
     auto Range = CharSourceRange::getTokenRange(CE->getSourceRange());
     EXPECT_THAT_ERROR(validateEditRange(Range, Context->getSourceManager()),

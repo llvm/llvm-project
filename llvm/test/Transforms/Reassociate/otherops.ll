@@ -1,6 +1,6 @@
 ; Reassociation should apply to Add, Mul, And, Or, & Xor
 ;
-; RUN: opt < %s -reassociate -instcombine -dce -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,instcombine,dce -S | FileCheck %s
 
 define i32 @test_mul(i32 %arg) {
 ; CHECK-LABEL: test_mul

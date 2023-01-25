@@ -31,12 +31,12 @@ define dso_local void @"?f@@YAXXZ"() #0 !dbg !8 {
 entry:
   %l1 = alloca i32, align 4
   %l2 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %l1, metadata !13, metadata !DIExpression()), !dbg !15
-  store i32 0, i32* %l1, align 4, !dbg !15
-  call void @llvm.dbg.declare(metadata i32* %l2, metadata !16, metadata !DIExpression()), !dbg !18
-  store i32 0, i32* %l2, align 4, !dbg !18
-  %0 = load i32, i32* %l2, align 4, !dbg !19
-  %1 = load i32, i32* %l1, align 4, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %l1, metadata !13, metadata !DIExpression()), !dbg !15
+  store i32 0, ptr %l1, align 4, !dbg !15
+  call void @llvm.dbg.declare(metadata ptr %l2, metadata !16, metadata !DIExpression()), !dbg !18
+  store i32 0, ptr %l2, align 4, !dbg !18
+  %0 = load i32, ptr %l2, align 4, !dbg !19
+  %1 = load i32, ptr %l1, align 4, !dbg !19
   call void (i32, ...) @"?usevars@@YAXJZZ"(i32 %1, i32 %0), !dbg !19
   ret void, !dbg !20
 }

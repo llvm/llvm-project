@@ -298,8 +298,8 @@ body:             |
     $rcx = CMOV64rr killed $rcx, killed $rdx, 5, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
     $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load (s32), align 8)
-    DBG_INSTR_REF 1, 0, !46, !17, debug-location !48
-    DBG_INSTR_REF 2, 0, !39, !17, debug-location !44
+    DBG_INSTR_REF !46, !17, dbg-instr-ref(1, 0), debug-location !48
+    DBG_INSTR_REF !39, !17, dbg-instr-ref(2, 0), debug-location !44
     TEST32mr killed $rcx, 4, killed $rdx, 0, $noreg, killed $eax, implicit-def $eflags :: (load (s32))
     JCC_1 %bb.2, 5, implicit $eflags
     JMP_1 %bb.3

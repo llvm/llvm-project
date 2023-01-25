@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+f,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV64D %s
 
-define float @f32_positive_zero(float *%pf) nounwind {
+define float @f32_positive_zero(ptr %pf) nounwind {
 ; RV32F-LABEL: f32_positive_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    fmv.w.x fa0, zero
@@ -31,7 +31,7 @@ define float @f32_positive_zero(float *%pf) nounwind {
   ret float 0.0
 }
 
-define float @f32_negative_zero(float *%pf) nounwind {
+define float @f32_negative_zero(ptr %pf) nounwind {
 ; RV32F-LABEL: f32_negative_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    fmv.w.x ft0, zero
@@ -58,7 +58,7 @@ define float @f32_negative_zero(float *%pf) nounwind {
   ret float -0.0
 }
 
-define double @f64_positive_zero(double *%pd) nounwind {
+define double @f64_positive_zero(ptr %pd) nounwind {
 ; RV32F-LABEL: f64_positive_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    li a0, 0
@@ -82,7 +82,7 @@ define double @f64_positive_zero(double *%pd) nounwind {
   ret double 0.0
 }
 
-define double @f64_negative_zero(double *%pd) nounwind {
+define double @f64_negative_zero(ptr %pd) nounwind {
 ; RV32F-LABEL: f64_negative_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, 524288

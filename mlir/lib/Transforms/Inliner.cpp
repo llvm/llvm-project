@@ -13,7 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -21,9 +22,13 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_INLINER
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "inlining"
 
@@ -196,7 +201,7 @@ bool CGUseList::isDead(CallGraphNode *node) const {
   // If the parent operation isn't a symbol, simply check normal SSA deadness.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
   if (!isa<SymbolOpInterface>(nodeOp))
-    return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->use_empty();
+    return isMemoryEffectFree(nodeOp) && nodeOp->use_empty();
 
   // Otherwise, check the number of symbol uses.
   auto symbolIt = discardableSymNodeUses.find(node);
@@ -207,7 +212,7 @@ bool CGUseList::hasOneUseAndDiscardable(CallGraphNode *node) const {
   // If this isn't a symbol node, check for side-effects and SSA use count.
   Operation *nodeOp = node->getCallableRegion()->getParentOp();
   if (!isa<SymbolOpInterface>(nodeOp))
-    return MemoryEffectOpInterface::hasNoEffect(nodeOp) && nodeOp->hasOneUse();
+    return isMemoryEffectFree(nodeOp) && nodeOp->hasOneUse();
 
   // Otherwise, check the number of symbol uses.
   auto symbolIt = discardableSymNodeUses.find(node);
@@ -339,7 +344,7 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
       if (auto call = dyn_cast<CallOpInterface>(op)) {
         // TODO: Support inlining nested call references.
         CallInterfaceCallable callable = call.getCallableForCallee();
-        if (SymbolRefAttr symRef = callable.dyn_cast<SymbolRefAttr>()) {
+        if (SymbolRefAttr symRef = dyn_cast<SymbolRefAttr>(callable)) {
           if (!symRef.isa<FlatSymbolRefAttr>())
             continue;
         }
@@ -377,15 +382,15 @@ static std::string getNodeName(CallOpInterface op) {
 /// Return true if the specified `inlineHistoryID`  indicates an inline history
 /// that already includes `node`.
 static bool inlineHistoryIncludes(
-    CallGraphNode *node, Optional<size_t> inlineHistoryID,
-    MutableArrayRef<std::pair<CallGraphNode *, Optional<size_t>>>
+    CallGraphNode *node, std::optional<size_t> inlineHistoryID,
+    MutableArrayRef<std::pair<CallGraphNode *, std::optional<size_t>>>
         inlineHistory) {
   while (inlineHistoryID.has_value()) {
-    assert(inlineHistoryID.value() < inlineHistory.size() &&
+    assert(*inlineHistoryID < inlineHistory.size() &&
            "Invalid inline history ID");
-    if (inlineHistory[inlineHistoryID.value()].first == node)
+    if (inlineHistory[*inlineHistoryID].first == node)
       return true;
-    inlineHistoryID = inlineHistory[inlineHistoryID.value()].second;
+    inlineHistoryID = inlineHistory[*inlineHistoryID].second;
   }
   return false;
 }
@@ -483,7 +488,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
   // When inlining a callee produces new call sites, we want to keep track of
   // the fact that they were inlined from the callee. This allows us to avoid
   // infinite inlining.
-  using InlineHistoryT = Optional<size_t>;
+  using InlineHistoryT = std::optional<size_t>;
   SmallVector<std::pair<CallGraphNode *, InlineHistoryT>, 8> inlineHistory;
   std::vector<InlineHistoryT> callHistory(calls.size(), InlineHistoryT{});
 
@@ -538,7 +543,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
     inlineHistory.push_back(std::make_pair(it.targetNode, inlineHistoryID));
 
     auto historyToString = [](InlineHistoryT h) {
-      return h.has_value() ? std::to_string(h.value()) : "root";
+      return h.has_value() ? std::to_string(*h) : "root";
     };
     (void)historyToString;
     LLVM_DEBUG(llvm::dbgs()
@@ -582,7 +587,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class InlinerPass : public InlinerBase<InlinerPass> {
+class InlinerPass : public impl::InlinerBase<InlinerPass> {
 public:
   InlinerPass();
   InlinerPass(const InlinerPass &) = default;
@@ -634,17 +639,10 @@ private:
 } // namespace
 
 InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
-InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline)
-    : defaultPipeline(std::move(defaultPipeline)) {
+InlinerPass::InlinerPass(
+    std::function<void(OpPassManager &)> defaultPipelineArg)
+    : defaultPipeline(std::move(defaultPipelineArg)) {
   opPipelines.push_back({});
-
-  // Initialize the pass options with the provided arguments.
-  if (defaultPipeline) {
-    OpPassManager fakePM("__mlir_fake_pm_op");
-    defaultPipeline(fakePM);
-    llvm::raw_string_ostream strStream(defaultPipelineStr);
-    fakePM.printAsTextualPipeline(strStream);
-  }
 }
 
 InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,

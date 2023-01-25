@@ -185,18 +185,6 @@ without modifying it then the third argument is set to ``true``; if a pass is
 an analysis pass, for example dominator tree pass, then ``true`` is supplied as
 the fourth argument.
 
-If we want to register the pass as a step of an existing pipeline, some extension
-points are provided, e.g. ``PassManagerBuilder::EP_EarlyAsPossible`` to apply our
-pass before any optimization, or ``PassManagerBuilder::EP_FullLinkTimeOptimizationLast``
-to apply it after Link Time Optimizations.
-
-.. code-block:: c++
-
-    static llvm::RegisterStandardPasses Y(
-        llvm::PassManagerBuilder::EP_EarlyAsPossible,
-        [](const llvm::PassManagerBuilder &Builder,
-           llvm::legacy::PassManagerBase &PM) { PM.add(new Hello()); });
-
 As a whole, the ``.cpp`` file looks like:
 
 .. code-block:: c++
@@ -227,11 +215,6 @@ As a whole, the ``.cpp`` file looks like:
   static RegisterPass<Hello> X("hello", "Hello World Pass",
                                false /* Only looks at CFG */,
                                false /* Analysis Pass */);
-
-  static RegisterStandardPasses Y(
-      PassManagerBuilder::EP_EarlyAsPossible,
-      [](const PassManagerBuilder &Builder,
-         legacy::PassManagerBase &PM) { PM.add(new Hello()); });
 
 Now that it's all together, compile the file with a simple "``gmake``" command
 from the top level of your build directory and you should get a new file
@@ -1182,51 +1165,6 @@ the :ref:`getAnalysis <writing-an-llvm-pass-getAnalysis>` method) you should
 implement ``releaseMemory`` to, well, release the memory allocated to maintain
 this internal state.  This method is called after the ``run*`` method for the
 class, before the next call of ``run*`` in your pass.
-
-Building pass plugins
-=====================
-
-As an alternative to using ``PLUGIN_TOOL``, LLVM provides a mechanism to
-automatically register pass plugins within ``clang``, ``opt`` and ``bugpoint``.
-One first needs to create an independent project and add it to either ``tools/``
-or, using the MonoRepo layout, at the root of the repo alongside other projects.
-This project must contain the following minimal ``CMakeLists.txt``:
-
-.. code-block:: cmake
-
-    add_llvm_pass_plugin(Name source0.cpp)
-
-The pass must provide two entry points for the new pass manager, one for static
-registration and one for dynamically loaded plugins:
-
-- ``llvm::PassPluginLibraryInfo get##Name##PluginInfo();``
-- ``extern "C" ::llvm::PassPluginLibraryInfo llvmGetPassPluginInfo() LLVM_ATTRIBUTE_WEAK;``
-
-Pass plugins are compiled and link dynamically by default, but it's
-possible to set the following variables to change this behavior:
-
-- ``LLVM_${NAME}_LINK_INTO_TOOLS``, when set to ``ON``, turns the project into
-  a statically linked extension
-
-
-When building a tool that uses the new pass manager, one can use the following snippet to
-include statically linked pass plugins:
-
-.. code-block:: c++
-
-    // fetch the declaration
-    #define HANDLE_EXTENSION(Ext) llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-    #include "llvm/Support/Extension.def"
-
-    [...]
-
-    // use them, PB is an llvm::PassBuilder instance
-    #define HANDLE_EXTENSION(Ext) get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-    #include "llvm/Support/Extension.def"
-
-
-
-
 
 Registering dynamically loaded passes
 =====================================

@@ -63,8 +63,6 @@ tools = [
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj', 'clang-linker-wrapper',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
-    ToolSubst('%clang_dxc', command=config.clang,
-        extra_args=['--driver-mode=dxc']),
 ]
 
 if config.clang_examples:
@@ -74,7 +72,6 @@ def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
     if not clang_repl_exe:
-        print('clang-repl not found')
         return False
 
     try:
@@ -91,9 +88,6 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support('jit'):
     config.available_features.add('host-supports-jit')
-
-if have_host_jit_feature_support('exception'):
-    config.available_features.add('host-supports-exception')
 
 if config.clang_staticanalyzer:
     config.available_features.add('staticanalyzer')
@@ -132,13 +126,10 @@ if config.has_plugins and config.llvm_plugin_ext:
 if config.clang_default_pie_on_linux:
     config.available_features.add('default-pie-on-linux')
 
-if config.clang_enable_opaque_pointers:
-    config.available_features.add('enable-opaque-pointers')
-
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':
-    config.available_features.add('default-cxx-stdlib-set')
+    config.available_features.add('default-cxx-stdlib={}'.format(config.clang_default_cxx_stdlib))
 
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ['FreeBSD']:
@@ -186,7 +177,7 @@ if re.match(r'.*-(windows-msvc)$', config.target_triple):
     config.available_features.add('ms-sdk')
 
 # [PR8833] LLP64-incompatible tests
-if not re.match(r'^x86_64.*-(windows-msvc|windows-gnu)$', config.target_triple):
+if not re.match(r'^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$', config.target_triple):
     config.available_features.add('LP64')
 
 # Tests that are specific to the Apple Silicon macOS.
@@ -247,6 +238,9 @@ if config.enable_shared:
 if config.clang_vendor_uti:
     config.available_features.add('clang-vendor=' + config.clang_vendor_uti)
 
+if config.have_llvm_driver:
+  config.available_features.add('llvm-driver')
+
 def exclude_unsupported_files_for_aix(dirname):
     for filename in os.listdir(dirname):
         source_path = os.path.join( dirname, filename)
@@ -277,3 +271,18 @@ if 'AIXTHREAD_STK' in os.environ:
     config.environment['AIXTHREAD_STK'] = os.environ['AIXTHREAD_STK']
 elif platform.system() == 'AIX':
     config.environment['AIXTHREAD_STK'] = '4194304'
+
+# The llvm-nm tool supports an environment variable "OBJECT_MODE" on AIX OS, which
+# controls the kind of objects they will support. If there is no "OBJECT_MODE"
+# environment variable specified, the default behaviour is to support 32-bit
+# objects only. In order to not affect most test cases, which expect to support
+# 32-bit and 64-bit objects by default, set the environment variable
+# "OBJECT_MODE" to 'any' for llvm-nm on AIX OS.
+
+if 'system-aix' in config.available_features:
+        config.substitutions.append(('llvm-nm', 'env OBJECT_MODE=any llvm-nm'))
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

@@ -4,171 +4,171 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 
-define void @and_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
+define void @and_v8i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: and_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmand.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <8 x i1>, <8 x i1>* %x
-  %b = load <8 x i1>, <8 x i1>* %y
+  %a = load <8 x i1>, ptr %x
+  %b = load <8 x i1>, ptr %y
   %c = and <8 x i1> %a, %b
-  store <8 x i1> %c, <8 x i1>* %x
+  store <8 x i1> %c, ptr %x
   ret void
 }
 
-define void @or_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
+define void @or_v16i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: or_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmor.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <16 x i1>, <16 x i1>* %x
-  %b = load <16 x i1>, <16 x i1>* %y
+  %a = load <16 x i1>, ptr %x
+  %b = load <16 x i1>, ptr %y
   %c = or <16 x i1> %a, %b
-  store <16 x i1> %c, <16 x i1>* %x
+  store <16 x i1> %c, ptr %x
   ret void
 }
 
-define void @xor_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
+define void @xor_v32i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: xor_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmxor.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <32 x i1>, <32 x i1>* %x
-  %b = load <32 x i1>, <32 x i1>* %y
+  %a = load <32 x i1>, ptr %x
+  %b = load <32 x i1>, ptr %y
   %c = xor <32 x i1> %a, %b
-  store <32 x i1> %c, <32 x i1>* %x
+  store <32 x i1> %c, ptr %x
   ret void
 }
 
-define void @not_v64i1(<64 x i1>* %x, <64 x i1>* %y) {
+define void @not_v64i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: not_v64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 64
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vmnot.m v8, v8
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <64 x i1>, <64 x i1>* %x
-  %b = load <64 x i1>, <64 x i1>* %y
+  %a = load <64 x i1>, ptr %x
+  %b = load <64 x i1>, ptr %y
   %c = xor <64 x i1> %a, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <64 x i1> %c, <64 x i1>* %x
+  store <64 x i1> %c, ptr %x
   ret void
 }
 
-define void @andnot_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
+define void @andnot_v8i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: andnot_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmandn.mm v8, v9, v8
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <8 x i1>, <8 x i1>* %x
-  %b = load <8 x i1>, <8 x i1>* %y
+  %a = load <8 x i1>, ptr %x
+  %b = load <8 x i1>, ptr %y
   %c = xor <8 x i1> %a, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
   %d = and <8 x i1> %b, %c
-  store <8 x i1> %d, <8 x i1>* %x
+  store <8 x i1> %d, ptr %x
   ret void
 }
 
-define void @ornot_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
+define void @ornot_v16i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: ornot_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmorn.mm v8, v9, v8
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <16 x i1>, <16 x i1>* %x
-  %b = load <16 x i1>, <16 x i1>* %y
+  %a = load <16 x i1>, ptr %x
+  %b = load <16 x i1>, ptr %y
   %c = xor <16 x i1> %a, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
   %d = or <16 x i1> %b, %c
-  store <16 x i1> %d, <16 x i1>* %x
+  store <16 x i1> %d, ptr %x
   ret void
 }
 
-define void @xornot_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
+define void @xornot_v32i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: xornot_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmxnor.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <32 x i1>, <32 x i1>* %x
-  %b = load <32 x i1>, <32 x i1>* %y
+  %a = load <32 x i1>, ptr %x
+  %b = load <32 x i1>, ptr %y
   %c = xor <32 x i1> %a, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
   %d = xor <32 x i1> %b, %c
-  store <32 x i1> %d, <32 x i1>* %x
+  store <32 x i1> %d, ptr %x
   ret void
 }
 
-define void @nand_v8i1(<8 x i1>* %x, <8 x i1>* %y) {
+define void @nand_v8i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: nand_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmnand.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <8 x i1>, <8 x i1>* %x
-  %b = load <8 x i1>, <8 x i1>* %y
+  %a = load <8 x i1>, ptr %x
+  %b = load <8 x i1>, ptr %y
   %c = and <8 x i1> %a, %b
   %d = xor <8 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <8 x i1> %d, <8 x i1>* %x
+  store <8 x i1> %d, ptr %x
   ret void
 }
 
-define void @nor_v16i1(<16 x i1>* %x, <16 x i1>* %y) {
+define void @nor_v16i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: nor_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmnor.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <16 x i1>, <16 x i1>* %x
-  %b = load <16 x i1>, <16 x i1>* %y
+  %a = load <16 x i1>, ptr %x
+  %b = load <16 x i1>, ptr %y
   %c = or <16 x i1> %a, %b
   %d = xor <16 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <16 x i1> %d, <16 x i1>* %x
+  store <16 x i1> %d, ptr %x
   ret void
 }
 
-define void @xnor_v32i1(<32 x i1>* %x, <32 x i1>* %y) {
+define void @xnor_v32i1(ptr %x, ptr %y) {
 ; CHECK-LABEL: xnor_v32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v8, (a0)
 ; CHECK-NEXT:    vlm.v v9, (a1)
 ; CHECK-NEXT:    vmxnor.mm v8, v8, v9
 ; CHECK-NEXT:    vsm.v v8, (a0)
 ; CHECK-NEXT:    ret
-  %a = load <32 x i1>, <32 x i1>* %x
-  %b = load <32 x i1>, <32 x i1>* %y
+  %a = load <32 x i1>, ptr %x
+  %b = load <32 x i1>, ptr %y
   %c = xor <32 x i1> %a, %b
   %d = xor <32 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <32 x i1> %d, <32 x i1>* %x
+  store <32 x i1> %d, ptr %x
   ret void
 }

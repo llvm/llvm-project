@@ -8,12 +8,12 @@
 ;        A[i] += A[0];
 ;    }
 ;
-; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds { float, float* }, { float, float* }* %polly.par.userContext, i32 0
-; CHECK:  store float %polly.access.A.load, float* %polly.subfn.storeaddr.polly.access.A.load
+; CHECK:  %polly.subfn.storeaddr.polly.access.A.load = getelementptr inbounds { float, ptr }, ptr %polly.par.userContext, i32 0
+; CHECK:  store float %polly.access.A.load, ptr %polly.subfn.storeaddr.polly.access.A.load
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(float* nocapture %A) {
+define void @f(ptr nocapture %A) {
 entry:
   br label %for.body
 
@@ -22,11 +22,11 @@ for.cond.cleanup:                                 ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 1, %entry ], [ %indvars.iv.next, %for.body ]
-  %tmp = load float, float* %A, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %tmp1 = load float, float* %arrayidx1, align 4
+  %tmp = load float, ptr %A, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %tmp1 = load float, ptr %arrayidx1, align 4
   %add = fadd float %tmp, %tmp1
-  store float %add, float* %arrayidx1, align 4
+  store float %add, ptr %arrayidx1, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 1000
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

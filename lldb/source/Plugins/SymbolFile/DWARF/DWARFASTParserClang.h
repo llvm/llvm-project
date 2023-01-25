@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,6 +25,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -44,6 +46,9 @@ public:
   lldb::TypeSP ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
                                   const DWARFDIE &die,
                                   bool *type_is_new_ptr) override;
+
+  lldb_private::ConstString
+  ConstructDemangledNameFromDWARF(const DWARFDIE &die) override;
 
   lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
@@ -84,6 +89,24 @@ public:
   ExtractIntFromFormValue(const lldb_private::CompilerType &int_type,
                           const DWARFFormValue &form_value) const;
 
+  /// Returns the template parameters of a class DWARFDIE as a string.
+  ///
+  /// This is mostly useful for -gsimple-template-names which omits template
+  /// parameters from the DIE name and instead always adds template parameter
+  /// children DIEs.
+  ///
+  /// Currently this is only called in two places, when uniquing C++ classes and
+  /// when looking up the definition for a declaration (which is then cached).
+  /// If this is ever called more than twice per DIE, we need to start caching
+  /// the results to prevent unbounded growth of the created clang AST nodes.
+  ///
+  /// \param die The struct/class DWARFDIE containing template parameters.
+  /// \return A string, including surrounding '<>', of the template parameters.
+  /// If the DIE's name already has '<>', returns an empty ConstString because
+  /// it's assumed that the caller is using the DIE name anyway.
+  lldb_private::ConstString
+  GetDIEClassTemplateParams(const DWARFDIE &die) override;
+
 protected:
   /// Protected typedefs and members.
   /// @{
@@ -117,10 +140,17 @@ protected:
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
+
   bool ParseTemplateParameterInfos(
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
+
+  /// Get the template parameters of a die as a string if the die name does not
+  /// already contain them. This happens with -gsimple-template-names.
+  std::string GetTemplateParametersString(const DWARFDIE &die);
+
+  std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
   bool ParseChildMembers(
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
@@ -295,11 +325,15 @@ struct ParsedDWARFTypeAttributes {
   DWARFFormValue specification;
   DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
-  llvm::Optional<uint64_t> byte_size;
+  std::optional<uint64_t> byte_size;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;
   uint32_t byte_stride = 0;
   uint32_t encoding = 0;
+  clang::RefQualifierKind ref_qual =
+      clang::RQ_None; ///< Indicates ref-qualifier of
+                      ///< C++ member function if present.
+                      ///< Is RQ_None otherwise.
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFASTPARSERCLANG_H

@@ -21,15 +21,17 @@ add_mlir_dialect_library(MLIRSCFTransforms
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineAnalysis
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect
   MLIRSCFUtils
+  MLIRSideEffectInterfaces
   MLIRSupport
   MLIRTensorDialect
   MLIRTensorTransforms

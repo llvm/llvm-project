@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s
 // RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck -check-prefixes=CHECK-NO-VIH %s
-// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility hidden -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-VIS-HIDDEN
-// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility protected -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-VIS-PROTECTED
+// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility=hidden -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-VIS-HIDDEN
+// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++11 -fvisibility=protected -fvisibility-inlines-hidden -emit-llvm -o - %s -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-VIS-PROTECTED
 
 // When a function is hidden due to -fvisibility-inlines-hidden option, static local variables of the function should not be hidden by the option.
 

@@ -24,7 +24,7 @@
     __cpp_lib_invoke_r                 202106L [C++2b]
     __cpp_lib_move_only_function       202110L [C++2b]
     __cpp_lib_not_fn                   201603L [C++17]
-    __cpp_lib_ranges                   201811L [C++20]
+    __cpp_lib_ranges                   202106L [C++20]
     __cpp_lib_result_of_sfinae         201210L [C++14]
     __cpp_lib_transparent_operators    201210L [C++14]
                                        201510L [C++17]
@@ -254,17 +254,11 @@
 #   error "__cpp_lib_not_fn should have the value 201603L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++20"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++20"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++20"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
@@ -364,17 +358,11 @@
 #   error "__cpp_lib_not_fn should have the value 201603L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++2b"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++2b"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++2b"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae

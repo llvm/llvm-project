@@ -127,6 +127,10 @@ relative ordering of values is important. For example:
 ``Obj2`` will be initialized *before* ``Obj1`` despite the usual order of
 initialization being the opposite.
 
+On Windows, ``init_seg(compiler)`` is represented with a priority of 200 and
+``init_seg(library)`` is represented with a priority of 400. ``init_seg(user)``
+uses the default 65535 priority.
+
 This attribute is only supported for C++ and Objective-C++ and is ignored in
 other language modes. Currently, this attribute is not implemented on z/OS.
   }];
@@ -2341,9 +2345,12 @@ for the function.
 For X86, the attribute also allows ``tune="CPU"`` to optimize the generated
 code for the given CPU without changing the available instructions.
 
-For AArch64, the attribute also allows the "branch-protection=<args>" option,
-where the permissible arguments and their effect on code generation are the same
-as for the command-line option ``-mbranch-protection``.
+For AArch64, ``arch="Arch"`` will set the architecture, similar to the -march
+command line options. ``cpu="CPU"`` can be used to select a specific cpu,
+as per the ``-mcpu`` option, similarly for ``tune=``. The attribute also allows the
+"branch-protection=<args>" option, where the permissible arguments and their
+effect on code generation are the same as for the command-line option
+``-mbranch-protection``.
 
 Example "subtarget features" from the x86 backend include: "mmx", "sse", "sse4.2",
 "avx", "xop" and largely correspond to the machine specific options handled by
@@ -2370,6 +2377,19 @@ Additionally, a function may not become multiversioned after its first use.
 }];
 }
 
+def TargetVersionDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+For AArch64 target clang supports function multiversioning by
+``__attribute__((target_version("OPTIONS")))`` attribute. When applied to a
+function it instructs compiler to emit multiple function versions based on
+``target_version`` attribute strings, which resolved at runtime depend on their
+priority and target features availability. One of the versions is always
+( implicitly or explicitly ) the ``default`` (fallback). Attribute strings can
+contain dependent features names joined by the "+" sign.
+}];
+}
+
 def TargetClonesDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -2380,6 +2400,19 @@ generation options.  Additionally, these versions will be resolved at runtime
 based on the priority of their attribute options. All ``target_clone`` functions
 are considered multiversioned functions.
 
+For AArch64 target:
+The attribute contains comma-separated strings of target features joined by "+"
+sign. For example:
+
+  .. code-block:: c++
+
+    __attribute__((target_clones("sha2+memtag2", "fcma+sve2-pmull128")))
+    void foo() {}
+
+For every multiversioned function a ``default`` (fallback) implementation
+always generated if not specified directly.
+
+For x86/x86-64 targets:
 All multiversioned functions must contain a ``default`` (fallback)
 implementation, otherwise usages of the function are considered invalid.
 Additionally, a function may not become multiversioned after its first use.
@@ -3184,6 +3217,18 @@ the function signature. For example:
     fmt(fmt, "hello", 123); // warning: format string is not a string literal
   }
 
+When using the format attribute on a variadic function, the first data parameter
+_must_ be the index of the ellipsis in the parameter list. Clang will generate
+a diagnostic otherwise, as it wouldn't be possible to forward that argument list
+to `printf`-family functions. For instance, this is an error:
+
+.. code-block:: c
+
+  __attribute__((__format__(__printf__, 1, 2)))
+  void fmt(const char *s, int b, ...);
+  // ^ error: format attribute parameter 3 is out of bounds
+  // (must be __printf__, 1, 3)
+
 Using the ``format`` attribute on a non-variadic function emits a GCC
 compatibility diagnostic.
   }];
@@ -3562,7 +3607,7 @@ Specifying ``#pragma nounroll`` indicates that the loop should not be unrolled:
   }
 
 ``#pragma unroll`` and ``#pragma unroll _value_`` have identical semantics to
-``#pragma clang loop unroll(full)`` and
+``#pragma clang loop unroll(enable)`` and
 ``#pragma clang loop unroll_count(_value_)`` respectively. ``#pragma nounroll``
 is equivalent to ``#pragma clang loop unroll(disable)``. See
 `language extensions
@@ -4389,7 +4434,7 @@ The allow extensions change when the ``begin declare variant`` effect is
 applied to a definition. If ``allow_templates`` is given, template function
 definitions are considered as specializations of existing or assumed template
 declarations with the same name. The template parameters for the base functions
-are used to instantiate the specialization. If ``bind_to_declartion`` is given,
+are used to instantiate the specialization. If ``bind_to_declaration`` is given,
 apply the same variant rules to function declarations. This allows the user to
 override declarations with only a function declaration.
   }];
@@ -4448,8 +4493,10 @@ spelled "XYZ" in the `OpenMP 5.1 Standard`_).
 
 def NoStackProtectorDocs : Documentation {
   let Category = DocCatFunction;
+  let Heading = "no_stack_protector, safebuffers";
   let Content = [{
-Clang supports the ``__attribute__((no_stack_protector))`` attribute which disables
+Clang supports the GNU style ``__attribute__((no_stack_protector))`` and Microsoft
+style ``__declspec(safebuffers)`` attribute which disables
 the stack protector on the specified function. This attribute is useful for
 selectively disabling the stack protector on some functions when building with
 ``-fstack-protector`` compiler option.
@@ -4464,6 +4511,27 @@ option.
     foo (int x); // stack protection will be disabled for foo.
 
     int bar(int y); // bar can be built with the stack protector.
+
+    }];
+}
+
+def StrictGuardStackCheckDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the Microsoft style ``__declspec((strict_gs_check))`` attribute
+which upgrades the stack protector check from ``-fstack-protector`` to
+``-fstack-protector-strong``.
+
+For example, it upgrades the stack protector for the function ``foo`` to
+``-fstack-protector-strong`` but function ``bar`` will still be built with the
+stack protector with the ``-fstack-protector`` option.
+
+.. code-block:: c
+
+    __declspec((strict_gs_check))
+    int foo(int x); // stack protection will be upgraded for foo.
+
+    int bar(int y); // bar can be built with the standard stack protector checks.
 
     }];
 }
@@ -4530,6 +4598,16 @@ declarations. This attribute informs the compiler that the annotated function
 does not throw an exception. This prevents exception-unwinding. This attribute
 is particularly useful on functions in the C Standard Library that are
 guaranteed to not throw an exception.
+    }];
+}
+
+def NoUwtableDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Clang supports the ``nouwtable`` attribute which skips emitting
+the unwind table entry for the specified function. This attribute is useful for
+selectively emitting the unwind table entry on some functions when building with
+``-funwind-tables`` compiler option.
     }];
 }
 
@@ -5241,6 +5319,21 @@ aarch64/aarch64-be/riscv32/riscv64/i386/x86-64 targets.
 }];
 }
 
+def HotFunctionEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((hot))`` marks a function as hot, as a manual alternative to PGO hotness data.
+If PGO data is available, the annotation ``__attribute__((hot))`` overrides the profile count based hotness (unlike ``__attribute__((cold))``).
+}];
+}
+
+def ColdFunctionEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((cold))`` marks a function as cold, as a manual alternative to PGO hotness data.
+If PGO data is available, the profile count based hotness overrides the ``__attribute__((cold))`` annotation (unlike ``__attribute__((hot))``).
+}];
+}
 def TransparentUnionDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -5713,7 +5806,7 @@ by showing the control-flow statement where the path diverges.
     if (somePredicate()) {
       ...
       callback();
-    } esle {
+    } else {
       callback(); // OK: callback is called on every path
     }
   }
@@ -6106,7 +6199,7 @@ deferring any errors to the point of use. For instance:
 
   does_not_exist x; // error: use of unresolved 'using_if_exists'
 
-The C++ spelling of the attribte (`[[clang::using_if_exists]]`) is also
+The C++ spelling of the attribute (`[[clang::using_if_exists]]`) is also
 supported as a clang extension, since ISO C++ doesn't support attributes in this
 position. If the entity referred to by the using-declaration is found by name
 lookup, the attribute has no effect. This attribute is useful for libraries
@@ -6444,7 +6537,7 @@ of the call-used registers to be zeroed:
   command-line arguments.
 - ``used`` only zeros call-used registers used in the function. By ``used``, we
   mean a register whose contents have been set or referenced in the function.
-- ``used-gpr`` only zeros call-used GPR registers used in the funciton.
+- ``used-gpr`` only zeros call-used GPR registers used in the function.
 - ``used-arg`` only zeros call-used registers used to pass arguments to the
   function.
 - ``used-gpr-arg`` only zeros call-used GPR registers used to pass arguments to
@@ -6456,7 +6549,7 @@ of the call-used registers to be zeroed:
 - ``all-gpr-arg`` zeros all call-used GPR registers used to pass arguments to
   the function.
 
-The default for the attribute is contolled by the ``-fzero-call-used-regs``
+The default for the attribute is controlled by the ``-fzero-call-used-regs``
 flag.
 
 .. _Return-Oriented Programming: https://en.wikipedia.org/wiki/Return-oriented_programming
@@ -6538,6 +6631,62 @@ The full documentation is available here: https://docs.microsoft.com/en-us/windo
   }];
 }
 
+def HLSLResourceBindingDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The resource binding attribute sets the virtual register and logical register space for a resource.
+Attribute spelling in HLSL is: ``register(slot [, space])``.
+``slot`` takes the format ``[type][number]``,
+where ``type`` is a single character specifying the resource type and ``number`` is the virtual register number.
+
+Register types are:
+t for shader resource views (SRV),
+s for samplers,
+u for unordered access views (UAV),
+b for constant buffer views (CBV).
+
+Register space is specified in the format ``space[number]`` and defaults to ``space0`` if omitted.
+Here're resource binding examples with and without space:
+.. code-block:: c++
+
+  RWBuffer<float> Uav : register(u3, space1);
+  Buffer<float> Buf : register(t1);
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3d12/resource-binding-in-hlsl
+  }];
+}
+
+def HLSLSV_DispatchThreadIDDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``SV_DispatchThreadID`` semantic, when applied to an input parameter,
+specifies a data binding to map the global thread offset within the Dispatch
+call (per dimension of the group) to the specified parameter.
+When applied to a field of a struct, the data binding is specified to the field
+when the struct is used as a parameter type.
+The semantic on the field is ignored when not used as a parameter.
+This attribute is only supported in compute shaders.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sv-dispatchthreadid
+  }];
+}
+
+def HLSLGroupSharedAddressSpaceDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+HLSL enables threads of a compute shader to exchange values via shared memory.
+HLSL provides barrier primitives such as GroupMemoryBarrierWithGroupSync,
+and so on to ensure the correct ordering of reads and writes to shared memory
+in the shader and to avoid data races.
+Here's an example to declare a groupshared variable.
+.. code-block:: c++
+
+  groupshared GSData data[5*5*1];
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax#group-shared
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -6556,7 +6705,7 @@ For example:
 
 .. code-block:: c++
 
-  int* [[clang::annotate("category1", "foo", 1)]] f(int[[clang::annotate("category2")]] *);
+  int* [[clang::annotate_type("category1", "foo", 1)]] f(int[[clang::annotate_type("category2")]] *);
 
 The attribute does not have any effect on the semantics of the type system,
 neither type checking rules, nor runtime semantics. In particular:
@@ -6674,5 +6823,44 @@ def YkUnrollSafeDocs : Documentation {
   The ``yk_unroll_safe`` attribute tells the Yk JIT that during tracing, calls
   to the annotated function can be inlined, even if it contains loops. By
   default only calls to functions that contain no loops are inlined.
+  }];
+}
+
+def ReadOnlyPlacementDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{This attribute is attached to a structure, class or union declaration.
+  When attached to a record declaration/definition, it checks if all instances
+  of this type can be placed in the read-only data segment of the program. If it
+  finds an instance that can not be placed in a read-only segment, the compiler
+  emits a warning at the source location where the type was used.
+
+  Examples:
+  * ``struct __attribute__((enforce_read_only_placement)) Foo;``
+  * ``struct __attribute__((enforce_read_only_placement)) Bar { ... };``
+
+  Both ``Foo`` and ``Bar`` types have the ``enforce_read_only_placement`` attribute.
+
+  The goal of introducing this attribute is to assist developers with writing secure
+  code. A ``const``-qualified global is generally placed in the read-only section
+  of the memory that has additional run time protection from malicious writes. By
+  attaching this attribute to a declaration, the developer can express the intent
+  to place all instances of the annotated type in the read-only program memory.
+
+  Note 1: The attribute doesn't guarantee that the object will be placed in the
+  read-only data segment as it does not instruct the compiler to ensure such
+  a placement. It emits a warning if something in the code can be proven to prevent
+  an instance from being placed in the read-only data segment.
+
+  Note 2: Currently, clang only checks if all global declarations of a given type 'T'
+  are ``const``-qualified. The following conditions would also prevent the data to be
+  put into read only segment, but the corresponding warnings are not yet implemented.
+
+  1. An instance of type ``T`` is allocated on the heap/stack.
+  2. Type ``T`` defines/inherits a mutable field.
+  3. Type ``T`` defines/inherits non-constexpr constructor(s) for initialization.
+  4. A field of type ``T`` is defined by type ``Q``, which does not bear the
+     ``enforce_read_only_placement`` attribute.
+  5. A type ``Q`` inherits from type ``T`` and it does not have the
+     ``enforce_read_only_placement`` attribute.
   }];
 }

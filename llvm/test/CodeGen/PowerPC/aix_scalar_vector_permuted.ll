@@ -19,7 +19,7 @@
 %f8 = type <8 x float>
 %i4 = type <4 x i32>
 
-define void @test_f2(%f2* %P, %f2* %Q, %f2* %S) {
+define void @test_f2(ptr %P, ptr %Q, ptr %S) {
 ; AIX-P8-64-LABEL: test_f2:
 ; AIX-P8-64:       # %bb.0:
 ; AIX-P8-64-NEXT:    lfdx f0, 0, r3
@@ -69,10 +69,10 @@ define void @test_f2(%f2* %P, %f2* %Q, %f2* %S) {
 ; AIX-P9-32-NEXT:    stfs f1, 0(r5)
 ; AIX-P9-32-NEXT:    stfs f0, 4(r5)
 ; AIX-P9-32-NEXT:    blr
-  %p = load %f2, %f2* %P
-  %q = load %f2, %f2* %Q
+  %p = load %f2, ptr %P
+  %q = load %f2, ptr %Q
   %R = fadd %f2 %p, %q
-  store %f2 %R, %f2* %S
+  store %f2 %R, ptr %S
   ret void
 }
 

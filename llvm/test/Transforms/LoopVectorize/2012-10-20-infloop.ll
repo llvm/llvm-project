@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce
+; RUN: opt < %s -passes=loop-vectorize,dce -force-vector-interleave=1 -force-vector-width=4
 
 ; Check that we don't fall into an infinite loop.
 define void @test() nounwind {

@@ -72,26 +72,26 @@ public:
                                                    SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
-      {{"clear", 0}, &ContainerModeling::handleClear},
-      {{"assign", 2}, &ContainerModeling::handleAssign},
-      {{"push_back", 1}, &ContainerModeling::handlePushBack},
-      {{"emplace_back", 1}, &ContainerModeling::handlePushBack},
-      {{"pop_back", 0}, &ContainerModeling::handlePopBack},
-      {{"push_front", 1}, &ContainerModeling::handlePushFront},
-      {{"emplace_front", 1}, &ContainerModeling::handlePushFront},
-      {{"pop_front", 0}, &ContainerModeling::handlePopFront},
+      {{{"clear"}, 0}, &ContainerModeling::handleClear},
+      {{{"assign"}, 2}, &ContainerModeling::handleAssign},
+      {{{"push_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{{"emplace_back"}, 1}, &ContainerModeling::handlePushBack},
+      {{{"pop_back"}, 0}, &ContainerModeling::handlePopBack},
+      {{{"push_front"}, 1}, &ContainerModeling::handlePushFront},
+      {{{"emplace_front"}, 1}, &ContainerModeling::handlePushFront},
+      {{{"pop_front"}, 0}, &ContainerModeling::handlePopFront},
   };
 
   CallDescriptionMap<OneItParamFn> OneIterParamFunctions = {
-      {{"insert", 2}, &ContainerModeling::handleInsert},
-      {{"emplace", 2}, &ContainerModeling::handleInsert},
-      {{"erase", 1}, &ContainerModeling::handleErase},
-      {{"erase_after", 1}, &ContainerModeling::handleEraseAfter},
+      {{{"insert"}, 2}, &ContainerModeling::handleInsert},
+      {{{"emplace"}, 2}, &ContainerModeling::handleInsert},
+      {{{"erase"}, 1}, &ContainerModeling::handleErase},
+      {{{"erase_after"}, 1}, &ContainerModeling::handleEraseAfter},
   };
 
   CallDescriptionMap<TwoItParamFn> TwoIterParamFunctions = {
-      {{"erase", 2}, &ContainerModeling::handleErase},
-      {{"erase_after", 2}, &ContainerModeling::handleEraseAfter},
+      {{{"erase"}, 2}, &ContainerModeling::handleErase},
+      {{{"erase_after"}, 2}, &ContainerModeling::handleEraseAfter},
   };
 };
 

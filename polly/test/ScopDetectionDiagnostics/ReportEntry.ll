@@ -2,7 +2,7 @@
 
 ; CHECK: remark: <unknown>:0:0: Scop contains function entry (not yet supported).
 
-define void @hoge(i8* %arg)  {
+define void @hoge(ptr %arg)  {
 bb1:
   br i1 false, label %bb2, label %bb3
 

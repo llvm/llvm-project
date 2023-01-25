@@ -8,18 +8,18 @@ entry:
   ret i32 0
 }
 
-define i8* @foo() {
+define ptr @foo() {
 entry:
-  ret i8* bitcast (i32 ()* @baz to i8*)
+  ret ptr @baz
 }
 
-declare i8* @bar()
+declare ptr @bar()
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
-  %call = tail call i8* @foo()
-  %call1 = tail call i8* @bar()
-  %cmp = icmp ne i8* %call, %call1
+  %call = tail call ptr @foo()
+  %call1 = tail call ptr @bar()
+  %cmp = icmp ne ptr %call, %call1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }

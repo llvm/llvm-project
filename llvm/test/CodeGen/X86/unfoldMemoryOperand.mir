@@ -3,22 +3,21 @@
 --- |
   @x = dso_local global i32 0, align 4
   @z = dso_local local_unnamed_addr global [1024 x i32] zeroinitializer, align 16
-  @y = dso_local local_unnamed_addr constant i32* null, align 8
+  @y = dso_local local_unnamed_addr constant ptr null, align 8
 
   ; Function Attrs: nofree norecurse nosync nounwind uwtable writeonly mustprogress
   define dso_local void @_Z3foov() local_unnamed_addr #0 {
-    %1 = load i32*, i32** @y, align 8, !tbaa !3
-    %2 = icmp eq i32* %1, @x
+    %1 = load ptr, ptr @y, align 8, !tbaa !3
+    %2 = icmp eq ptr %1, @x
     %3 = zext i1 %2 to i32
     br label %5
   4:                                                ; preds = %5
     ret void
   5:                                                ; preds = %5, %0
     %lsr.iv = phi i64 [ %lsr.iv.next, %5 ], [ -4096, %0 ]
-    %uglygep = getelementptr i8, i8* bitcast ([1024 x i32]* @z to i8*), i64 %lsr.iv
-    %uglygep2 = bitcast i8* %uglygep to i32*
-    %scevgep = getelementptr i32, i32* %uglygep2, i64 1024
-    store i32 %3, i32* %scevgep, align 4, !tbaa !7
+    %uglygep = getelementptr i8, ptr @z, i64 %lsr.iv
+    %scevgep = getelementptr i32, ptr %uglygep, i64 1024
+    store i32 %3, ptr %scevgep, align 4, !tbaa !7
     %lsr.iv.next = add nsw i64 %lsr.iv, 4
     %6 = icmp eq i64 %lsr.iv.next, 0
     br i1 %6, label %4, label %5, !llvm.loop !9

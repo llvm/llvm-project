@@ -16,7 +16,7 @@ entry:
 define i32 @Func_3b(i32) nounwind readonly {
 entry:
 ; CHECK-NOT: mux
-  %1 = load i8, i8* @Enum_global, align 1
+  %1 = load i8, ptr @Enum_global, align 1
   %2 = trunc i32 %0 to i8
   %cmp = icmp ne i8 %1, %2
   %selv = zext i1 %cmp to i32
@@ -35,7 +35,7 @@ entry:
 define i32 @Func_3d(i32) nounwind readonly {
 entry:
 ; CHECK-NOT: mux
-  %1 = load i8, i8* @Enum_global, align 1
+  %1 = load i8, ptr @Enum_global, align 1
   %2 = trunc i32 %0 to i8
   %cmp = icmp eq i8 %1, %2
   %selv = zext i1 %cmp to i32
@@ -45,7 +45,7 @@ entry:
 define i32 @Func_3e(i32) nounwind readonly {
 entry:
 ; CHECK-NOT: mux
-  %1 = load i8, i8* @Enum_global, align 1
+  %1 = load i8, ptr @Enum_global, align 1
   %2 = trunc i32 %0 to i8
   %cmp = icmp eq i8 %1, %2
   %selv = zext i1 %cmp to i32

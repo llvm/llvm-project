@@ -9,8 +9,8 @@ define void @foo() nounwind uwtable safestack {
 entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   %b = alloca i32, align 4
-  call void @funcall(i32* %b) nounwind
+  call void @funcall(ptr %b) nounwind
   ret void
 }
 
-declare void @funcall(i32*)
+declare void @funcall(ptr)

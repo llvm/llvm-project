@@ -3,7 +3,7 @@
 
 ; Small (16 bytes here) unaligned memcpy() should be a function call if
 ; strict-alignment is turned on.
-define void @t0(i8* %out, i8* %in) {
+define void @t0(ptr %out, ptr %in) {
 ; CHECK-LABEL: t0:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
@@ -15,26 +15,26 @@ define void @t0(i8* %out, i8* %in) {
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %out, i8* %in, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 16, i1 false)
   ret void
 }
 
 ; Small (16 bytes here) aligned memcpy() should be inlined even if
 ; strict-alignment is turned on.
-define void @t1(i8* align 8 %out, i8* align 8 %in) {
+define void @t1(ptr align 8 %out, ptr align 8 %in) {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldp x9, x8, [x1]
 ; CHECK-NEXT:    stp x9, x8, [x0]
 ; CHECK-NEXT:    ret
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %out, i8* align 8 %in, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %out, ptr align 8 %in, i64 16, i1 false)
   ret void
 }
 
 ; Tiny (4 bytes here) unaligned memcpy() should be inlined with byte sized
 ; loads and stores if strict-alignment is turned on.
-define void @t2(i8* %out, i8* %in) {
+define void @t2(ptr %out, ptr %in) {
 ; CHECK-LABEL: t2:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldrb w8, [x1, #3]
@@ -47,8 +47,8 @@ define void @t2(i8* %out, i8* %in) {
 ; CHECK-NEXT:    strb w11, [x0]
 ; CHECK-NEXT:    ret
 entry:
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %out, i8* %in, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)

@@ -102,14 +102,8 @@ def get_output_spec_path(path):
 def build_mock_model(path, signature):
   """Build and save the mock model with the given signature"""
   module = tf.Module()
-
-  # We have to set this useless variable in order for the TF C API to correctly
-  # intake it
-  module.var = tf.Variable(0.)
-
   def action(*inputs):
-    s = tf.reduce_sum([tf.cast(x, tf.float32) for x in tf.nest.flatten(inputs)])
-    return {signature['output']: float('inf') + s + module.var}
+    return {signature['output']: tf.constant(value=1, dtype=tf.int64)}
 
   module.action = tf.function()(action)
   action = {'action': module.action.get_concrete_function(signature['inputs'])}

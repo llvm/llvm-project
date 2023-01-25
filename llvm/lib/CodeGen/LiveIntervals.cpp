@@ -180,7 +180,7 @@ LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
 #endif
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
-  float Weight = Register::isPhysicalRegister(reg) ? huge_valf : 0.0F;
+  float Weight = reg.isPhysical() ? huge_valf : 0.0F;
   return new LiveInterval(reg, Weight);
 }
 
@@ -449,8 +449,7 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
 bool LiveIntervals::shrinkToUses(LiveInterval *li,
                                  SmallVectorImpl<MachineInstr*> *dead) {
   LLVM_DEBUG(dbgs() << "Shrink: " << *li << '\n');
-  assert(Register::isVirtualRegister(li->reg()) &&
-         "Can only shrink virtual registers");
+  assert(li->reg().isVirtual() && "Can only shrink virtual registers");
 
   // Shrink subregister live ranges.
   bool NeedsCleanup = false;
@@ -508,7 +507,6 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
 bool LiveIntervals::computeDeadValues(LiveInterval &LI,
                                       SmallVectorImpl<MachineInstr*> *dead) {
   bool MayHaveSplitComponents = false;
-  bool HaveDeadDef = false;
 
   for (VNInfo *VNI : LI.valnos) {
     if (VNI->isUnused())
@@ -534,29 +532,25 @@ bool LiveIntervals::computeDeadValues(LiveInterval &LI,
       VNI->markUnused();
       LI.removeSegment(I);
       LLVM_DEBUG(dbgs() << "Dead PHI at " << Def << " may separate interval\n");
-      MayHaveSplitComponents = true;
     } else {
       // This is a dead def. Make sure the instruction knows.
       MachineInstr *MI = getInstructionFromIndex(Def);
       assert(MI && "No instruction defining live value");
       MI->addRegisterDead(LI.reg(), TRI);
-      if (HaveDeadDef)
-        MayHaveSplitComponents = true;
-      HaveDeadDef = true;
 
       if (dead && MI->allDefsAreDead()) {
         LLVM_DEBUG(dbgs() << "All defs dead: " << Def << '\t' << *MI);
         dead->push_back(MI);
       }
     }
+    MayHaveSplitComponents = true;
   }
   return MayHaveSplitComponents;
 }
 
 void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, Register Reg) {
   LLVM_DEBUG(dbgs() << "Shrink: " << SR << '\n');
-  assert(Register::isVirtualRegister(Reg) &&
-         "Can only shrink virtual registers");
+  assert(Reg.isVirtual() && "Can only shrink virtual registers");
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
@@ -1025,7 +1019,7 @@ public:
       Register Reg = MO.getReg();
       if (!Reg)
         continue;
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         LiveInterval &LI = LIS.getInterval(Reg);
         if (LI.hasSubRanges()) {
           unsigned SubReg = MO.getSubReg();
@@ -1079,7 +1073,7 @@ private:
       return;
     LLVM_DEBUG({
       dbgs() << "     ";
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         dbgs() << printReg(Reg);
         if (LaneMask.any())
           dbgs() << " L" << PrintLaneMask(LaneMask);
@@ -1455,7 +1449,7 @@ private:
   // Return the last use of reg between NewIdx and OldIdx.
   SlotIndex findLastUseBefore(SlotIndex Before, Register Reg,
                               LaneBitmask LaneMask) {
-    if (Register::isVirtualRegister(Reg)) {
+    if (Reg.isVirtual()) {
       SlotIndex LastUse = Before;
       for (MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
         if (MO.isUndef())
@@ -1499,8 +1493,7 @@ private:
 
       // Check if MII uses Reg.
       for (MIBundleOperands MO(*MII); MO.isValid(); ++MO)
-        if (MO->isReg() && !MO->isUndef() &&
-            Register::isPhysicalRegister(MO->getReg()) &&
+        if (MO->isReg() && !MO->isUndef() && MO->getReg().isPhysical() &&
             TRI.hasRegUnit(MO->getReg(), Reg))
           return Idx.getRegSlot();
     }
@@ -1747,9 +1740,8 @@ void LiveIntervals::splitSeparateComponents(LiveInterval &LI,
     return;
   LLVM_DEBUG(dbgs() << "  Split " << NumComp << " components: " << LI << '\n');
   Register Reg = LI.reg();
-  const TargetRegisterClass *RegClass = MRI->getRegClass(Reg);
   for (unsigned I = 1; I < NumComp; ++I) {
-    Register NewVReg = MRI->createVirtualRegister(RegClass);
+    Register NewVReg = MRI->cloneVirtualRegister(Reg);
     LiveInterval &NewLI = createEmptyInterval(NewVReg);
     SplitLIs.push_back(&NewLI);
   }

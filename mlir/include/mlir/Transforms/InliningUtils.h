@@ -16,11 +16,12 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
+#include <optional>
 
 namespace mlir {
 
 class Block;
-class BlockAndValueMapping;
+class IRMapping;
 class CallableOpInterface;
 class CallOpInterface;
 class OpBuilder;
@@ -67,7 +68,7 @@ public:
   /// used to examine what values will replace entry arguments into the 'src'
   /// region for example.
   virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const {
+                               IRMapping &valueMapping) const {
     return false;
   }
 
@@ -79,7 +80,7 @@ public:
   /// remapped values from within the 'src' region. This can be used to examine
   /// what values may potentially replace the operands to 'op'.
   virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const {
+                               IRMapping &valueMapping) const {
     return false;
   }
 
@@ -170,9 +171,9 @@ public:
   virtual bool isLegalToInline(Operation *call, Operation *callable,
                                bool wouldBeCloned) const;
   virtual bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const;
+                               IRMapping &valueMapping) const;
   virtual bool isLegalToInline(Operation *op, Region *dest, bool wouldBeCloned,
-                               BlockAndValueMapping &valueMapping) const;
+                               IRMapping &valueMapping) const;
   virtual bool shouldAnalyzeRecursively(Operation *op) const;
 
   //===--------------------------------------------------------------------===//
@@ -205,17 +206,16 @@ public:
 /// information. 'shouldCloneInlinedRegion' corresponds to whether the source
 /// region should be cloned into the 'inlinePoint' or spliced directly.
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
-                           Operation *inlinePoint, BlockAndValueMapping &mapper,
+                           Operation *inlinePoint, IRMapping &mapper,
                            ValueRange resultsToReplace,
                            TypeRange regionResultTypes,
-                           Optional<Location> inlineLoc = llvm::None,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Block *inlineBlock, Block::iterator inlinePoint,
-                           BlockAndValueMapping &mapper,
-                           ValueRange resultsToReplace,
+                           IRMapping &mapper, ValueRange resultsToReplace,
                            TypeRange regionResultTypes,
-                           Optional<Location> inlineLoc = llvm::None,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 
 /// This function is an overload of the above 'inlineRegion' that allows for
@@ -224,13 +224,13 @@ LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Operation *inlinePoint, ValueRange inlinedOperands,
                            ValueRange resultsToReplace,
-                           Optional<Location> inlineLoc = llvm::None,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 LogicalResult inlineRegion(InlinerInterface &interface, Region *src,
                            Block *inlineBlock, Block::iterator inlinePoint,
                            ValueRange inlinedOperands,
                            ValueRange resultsToReplace,
-                           Optional<Location> inlineLoc = llvm::None,
+                           std::optional<Location> inlineLoc = std::nullopt,
                            bool shouldCloneInlinedRegion = true);
 
 /// This function inlines a given region, 'src', of a callable operation,

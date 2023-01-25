@@ -69,11 +69,11 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; SSE2-LABEL: test_v8i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -81,9 +81,9 @@ define i1 @test_v8i64(<8 x i64> %a0) {
 ; SSE41-LABEL: test_v8i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -120,15 +120,15 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; SSE2-LABEL: test_v16i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
@@ -136,20 +136,20 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; SSE41-LABEL: test_v16i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm7, %xmm3
-; SSE41-NEXT:    por %xmm5, %xmm3
-; SSE41-NEXT:    por %xmm1, %xmm3
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm6, %xmm2
-; SSE41-NEXT:    por %xmm4, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm2
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v16i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    setne %al
@@ -159,7 +159,7 @@ define i1 @test_v16i64(<16 x i64> %a0) {
 ; AVX2-LABEL: test_v16i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    setne %al
@@ -262,11 +262,11 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; SSE2-LABEL: test_v16i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
@@ -274,9 +274,9 @@ define i1 @test_v16i32(<16 x i32> %a0) {
 ; SSE41-LABEL: test_v16i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -313,15 +313,15 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; SSE2-LABEL: test_v32i32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -329,20 +329,20 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; SSE41-LABEL: test_v32i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm7, %xmm3
-; SSE41-NEXT:    por %xmm5, %xmm3
-; SSE41-NEXT:    por %xmm1, %xmm3
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm6, %xmm2
-; SSE41-NEXT:    por %xmm4, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm2
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v32i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    sete %al
@@ -352,7 +352,7 @@ define i1 @test_v32i32(<32 x i32> %a0) {
 ; AVX2-LABEL: test_v32i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    sete %al
@@ -474,11 +474,11 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; SSE2-LABEL: test_v32i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -486,9 +486,9 @@ define i1 @test_v32i16(<32 x i16> %a0) {
 ; SSE41-LABEL: test_v32i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -525,15 +525,15 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; SSE2-LABEL: test_v64i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
@@ -541,20 +541,20 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; SSE41-LABEL: test_v64i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm7, %xmm3
-; SSE41-NEXT:    por %xmm5, %xmm3
-; SSE41-NEXT:    por %xmm1, %xmm3
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm6, %xmm2
-; SSE41-NEXT:    por %xmm4, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm2
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v64i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    setne %al
@@ -564,7 +564,7 @@ define i1 @test_v64i16(<64 x i16> %a0) {
 ; AVX2-LABEL: test_v64i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    setne %al
@@ -705,11 +705,11 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; SSE2-LABEL: test_v64i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm3, %xmm1
-; SSE2-NEXT:    por %xmm2, %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
@@ -717,9 +717,9 @@ define i1 @test_v64i8(<64 x i8> %a0) {
 ; SSE41-LABEL: test_v64i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm3, %xmm1
-; SSE41-NEXT:    por %xmm2, %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -756,15 +756,15 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; SSE2-LABEL: test_v128i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqb %xmm2, %xmm0
-; SSE2-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %eax
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
@@ -772,20 +772,20 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; SSE41-LABEL: test_v128i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm7, %xmm3
-; SSE41-NEXT:    por %xmm5, %xmm3
-; SSE41-NEXT:    por %xmm1, %xmm3
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm6, %xmm2
-; SSE41-NEXT:    por %xmm4, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest %xmm2, %xmm2
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: test_v128i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest %ymm0, %ymm0
 ; AVX1-NEXT:    sete %al
@@ -795,7 +795,7 @@ define i1 @test_v128i8(<128 x i8> %a0) {
 ; AVX2-LABEL: test_v128i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vptest %ymm0, %ymm0
 ; AVX2-NEXT:    sete %al
@@ -964,14 +964,14 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE2-LABEL: mask_v128i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    por %xmm7, %xmm3
-; SSE2-NEXT:    por %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    por %xmm6, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    psllw $7, %xmm2
-; SSE2-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-NEXT:    por %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    psllw $7, %xmm0
+; SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-NEXT:    xorl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE2-NEXT:    sete %al
@@ -980,20 +980,20 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; SSE41-LABEL: mask_v128i8:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    por %xmm7, %xmm3
-; SSE41-NEXT:    por %xmm5, %xmm3
-; SSE41-NEXT:    por %xmm1, %xmm3
+; SSE41-NEXT:    por %xmm5, %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
 ; SSE41-NEXT:    por %xmm6, %xmm2
-; SSE41-NEXT:    por %xmm4, %xmm2
-; SSE41-NEXT:    por %xmm3, %xmm2
-; SSE41-NEXT:    por %xmm0, %xmm2
-; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: mask_v128i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vorps %ymm3, %ymm1, %ymm1
-; AVX1-NEXT:    vorps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vptest {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0
 ; AVX1-NEXT:    sete %al
@@ -1003,7 +1003,7 @@ define i1 @mask_v128i8(<128 x i8> %a0) {
 ; AVX2-LABEL: mask_v128i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpor %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    vpor %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [72340172838076673,72340172838076673,72340172838076673,72340172838076673]
 ; AVX2-NEXT:    vptest %ymm1, %ymm0
@@ -1091,11 +1091,11 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
 ; SSE2-NEXT:    movd %xmm0, %ecx
+; SSE2-NEXT:    orl %eax, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE2-NEXT:    movd %xmm0, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    orl %eax, %edx
-; SSE2-NEXT:    testb $1, %dl
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je .LBB27_2
 ; SSE2-NEXT:  # %bb.1:
 ; SSE2-NEXT:    xorl %eax, %eax
@@ -1111,10 +1111,10 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; SSE41-NEXT:    pxor %xmm0, %xmm1
 ; SSE41-NEXT:    pextrd $1, %xmm1, %eax
 ; SSE41-NEXT:    movd %xmm1, %ecx
-; SSE41-NEXT:    pextrd $2, %xmm1, %edx
-; SSE41-NEXT:    orl %eax, %edx
-; SSE41-NEXT:    orl %ecx, %edx
-; SSE41-NEXT:    testb $1, %dl
+; SSE41-NEXT:    orl %eax, %ecx
+; SSE41-NEXT:    pextrd $2, %xmm1, %eax
+; SSE41-NEXT:    orl %ecx, %eax
+; SSE41-NEXT:    testb $1, %al
 ; SSE41-NEXT:    je .LBB27_2
 ; SSE41-NEXT:  # %bb.1:
 ; SSE41-NEXT:    xorl %eax, %eax
@@ -1130,10 +1130,10 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX1-NEXT:    vmovd %xmm0, %ecx
-; AVX1-NEXT:    vpextrd $2, %xmm0, %edx
-; AVX1-NEXT:    orl %eax, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    testb $1, %dl
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX1-NEXT:    orl %ecx, %eax
+; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je .LBB27_2
 ; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    xorl %eax, %eax
@@ -1149,10 +1149,10 @@ define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpextrd $1, %xmm0, %eax
 ; AVX2-NEXT:    vmovd %xmm0, %ecx
-; AVX2-NEXT:    vpextrd $2, %xmm0, %edx
-; AVX2-NEXT:    orl %eax, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    testb $1, %dl
+; AVX2-NEXT:    orl %eax, %ecx
+; AVX2-NEXT:    vpextrd $2, %xmm0, %eax
+; AVX2-NEXT:    orl %ecx, %eax
+; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je .LBB27_2
 ; AVX2-NEXT:  # %bb.1:
 ; AVX2-NEXT:    xorl %eax, %eax

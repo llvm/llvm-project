@@ -1,7 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Core
+  Option
   Support
+  TargetParser
   )
 
 add_clang_library(clangDependencyScanning

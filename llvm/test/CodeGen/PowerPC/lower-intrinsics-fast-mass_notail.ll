@@ -2,12 +2,12 @@
 ; RUN: llc -enable-ppc-gen-scalar-mass -O3 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck --check-prefix=CHECK-LNX %s
 ; RUN: llc -enable-ppc-gen-scalar-mass -O3 -mtriple=powerpc-ibm-aix-xcoff < %s | FileCheck --check-prefix=CHECK-AIX %s
 
-define void @cos_f64(double* %arg) {
+define void @cos_f64(ptr %arg) {
 ; CHECK-LNX-LABEL: cos_f64:
 ; CHECK-LNX:       # %bb.0: # %bb
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
@@ -25,8 +25,8 @@ define void @cos_f64(double* %arg) {
 ; CHECK-AIX-LABEL: cos_f64:
 ; CHECK-AIX:       # %bb.0: # %bb
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
 ; CHECK-AIX-NEXT:    bl .sqrt[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -42,30 +42,26 @@ define void @cos_f64(double* %arg) {
 ; CHECK-AIX-NEXT:    stfd 0, 0(3)
 ; CHECK-AIX-NEXT:    b L..BB0_1
 bb:
-  %i = bitcast double* %arg to i8*
-  %i1 = getelementptr i8, i8* %i, i64 undef
+  %i1 = getelementptr i8, ptr %arg, i64 undef
   br label %bb2
 
 bb2:
-  %i3 = getelementptr inbounds i8, i8* %i1, i64 undef
-  %i4 = bitcast i8* %i3 to double*
-  store double undef, double* %i4, align 8
-  %i5 = getelementptr inbounds i8, i8* %i1, i64 0
-  %i6 = bitcast i8* %i5 to double*
+  %i3 = getelementptr inbounds i8, ptr %i1, i64 undef
+  store double undef, ptr %i3, align 8
   %i7 = tail call fast double @llvm.sqrt.f64(double undef)
   %i8 = fmul fast double undef, 0x401921FB54442D28
   %i9 = tail call fast double @llvm.cos.f64(double %i8) #2
   %i10 = fmul fast double %i7, %i9
-  store double %i10, double* %i6, align 8
+  store double %i10, ptr %i1, align 8
   br label %bb2
 }
 
-define void @log_f64(double* %arg) {
+define void @log_f64(ptr %arg) {
 ; CHECK-LNX-LABEL: log_f64:
 ; CHECK-LNX:       # %bb.0: # %bb
 ; CHECK-LNX-NEXT:    mflr 0
-; CHECK-LNX-NEXT:    std 0, 16(1)
 ; CHECK-LNX-NEXT:    stdu 1, -32(1)
+; CHECK-LNX-NEXT:    std 0, 48(1)
 ; CHECK-LNX-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-LNX-NEXT:    .cfi_offset lr, 16
 ; CHECK-LNX-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
@@ -83,8 +79,8 @@ define void @log_f64(double* %arg) {
 ; CHECK-AIX-LABEL: log_f64:
 ; CHECK-AIX:       # %bb.0: # %bb
 ; CHECK-AIX-NEXT:    mflr 0
-; CHECK-AIX-NEXT:    stw 0, 8(1)
 ; CHECK-AIX-NEXT:    stwu 1, -64(1)
+; CHECK-AIX-NEXT:    stw 0, 72(1)
 ; CHECK-AIX-NEXT:    stfd 31, 56(1) # 8-byte Folded Spill
 ; CHECK-AIX-NEXT:    bl .sqrt[PR]
 ; CHECK-AIX-NEXT:    nop
@@ -100,21 +96,17 @@ define void @log_f64(double* %arg) {
 ; CHECK-AIX-NEXT:    stfd 0, 0(3)
 ; CHECK-AIX-NEXT:    b L..BB1_1
 bb:
-  %i = bitcast double* %arg to i8*
-  %i1 = getelementptr i8, i8* %i, i64 undef
+  %i1 = getelementptr i8, ptr %arg, i64 undef
   br label %bb2
 
 bb2:
-  %i3 = getelementptr inbounds i8, i8* %i1, i64 undef
-  %i4 = bitcast i8* %i3 to double*
-  store double undef, double* %i4, align 8
-  %i5 = getelementptr inbounds i8, i8* %i1, i64 0
-  %i6 = bitcast i8* %i5 to double*
+  %i3 = getelementptr inbounds i8, ptr %i1, i64 undef
+  store double undef, ptr %i3, align 8
   %i7 = tail call fast double @llvm.sqrt.f64(double undef)
   %i8 = fmul fast double undef, 0x401921FB54442D28
   %i9 = tail call fast double @llvm.log.f64(double %i8) #2
   %i10 = fmul fast double %i7, %i9
-  store double %i10, double* %i6, align 8
+  store double %i10, ptr %i1, align 8
   br label %bb2
 }
 

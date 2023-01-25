@@ -283,6 +283,22 @@ uint32_t strLen(const char *Str) {
   return Size;
 }
 
+void *strStr(const char *const Haystack, const char *const Needle) {
+  int j = 0;
+
+  for (int i = 0; i < strLen(Haystack); i++) {
+    if (Haystack[i] == Needle[0]) {
+      for (j = 1; j < strLen(Needle); j++) {
+        if (Haystack[i + j] != Needle[j])
+          break;
+      }
+      if (j == strLen(Needle))
+        return (void *)&Haystack[i];
+    }
+  }
+  return nullptr;
+}
+
 void reportNumber(const char *Msg, uint64_t Num, uint32_t Base) {
   char Buf[BufSize];
   char *Ptr = Buf;
@@ -308,6 +324,25 @@ unsigned long hexToLong(const char *Str, char Terminator = '\0') {
       return 0;
   }
   return Res;
+}
+
+/// Starting from character at \p buf, find the longest consecutive sequence
+/// of digits (0-9) and convert it to uint32_t. The converted value
+/// is put into \p ret. \p end marks the end of the buffer to avoid buffer
+/// overflow. The function \returns whether a valid uint32_t value is found.
+/// \p buf will be updated to the next character right after the digits.
+static bool scanUInt32(const char *&Buf, const char *End, uint32_t &Ret) {
+  uint64_t Result = 0;
+  const char *OldBuf = Buf;
+  while (Buf < End && ((*Buf) >= '0' && (*Buf) <= '9')) {
+    Result = Result * 10 + (*Buf) - '0';
+    ++Buf;
+  }
+  if (OldBuf != Buf && Result <= 0xFFFFFFFFu) {
+    Ret = static_cast<uint32_t>(Result);
+    return true;
+  }
+  return false;
 }
 
 #if !defined(__APPLE__)
@@ -385,6 +420,28 @@ int __madvise(void *addr, size_t length, int advice) {
                        : "D"(addr), "S"(length), "d"(advice)
                        : "cc", "rcx", "r11", "memory");
   return ret;
+}
+
+#define _UTSNAME_LENGTH 65
+
+struct UtsNameTy {
+  char sysname[_UTSNAME_LENGTH];  /* Operating system name (e.g., "Linux") */
+  char nodename[_UTSNAME_LENGTH]; /* Name within "some implementation-defined
+                      network" */
+  char release[_UTSNAME_LENGTH]; /* Operating system release (e.g., "2.6.28") */
+  char version[_UTSNAME_LENGTH]; /* Operating system version */
+  char machine[_UTSNAME_LENGTH]; /* Hardware identifier */
+  char domainname[_UTSNAME_LENGTH]; /* NIS or YP domain name */
+};
+
+int __uname(struct UtsNameTy *Buf) {
+  int Ret;
+  __asm__ __volatile__("movq $63, %%rax\n"
+                       "syscall\n"
+                       : "=a"(Ret)
+                       : "D"(Buf)
+                       : "cc", "rcx", "r11", "memory");
+  return Ret;
 }
 
 struct timespec {
@@ -480,6 +537,23 @@ int __fsync(int fd) {
                        : "D"(fd)
                        : "cc", "rcx", "r11", "memory");
   return ret;
+}
+
+//              %rdi      %rsi         %rdx        %r10         %r8
+// sys_prctl  int option  unsigned    unsigned    unsigned    unsigned
+//                        long arg2   long arg3   long arg4   long arg5
+int __prctl(int Option, unsigned long Arg2, unsigned long Arg3,
+            unsigned long Arg4, unsigned long Arg5) {
+  int Ret;
+  register long rdx asm("rdx") = Arg3;
+  register long r8 asm("r8") = Arg5;
+  register long r10 asm("r10") = Arg4;
+  __asm__ __volatile__("movq $157, %%rax\n"
+                       "syscall\n"
+                       : "=a"(Ret)
+                       : "D"(Option), "S"(Arg2), "d"(rdx), "r"(r10), "r"(r8)
+                       :);
+  return Ret;
 }
 
 #endif

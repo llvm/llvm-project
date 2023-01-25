@@ -2,8 +2,8 @@
 
 ; CHECK: define i32 @main() {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %tmp = load i32, i32* @d, align 4
-; CHECK-NEXT:   %tmp1 = load i32, i32* @c, align 4
+; CHECK-NEXT:   %tmp = load i32, ptr @d, align 4
+; CHECK-NEXT:   %tmp1 = load i32, ptr @c, align 4
 ; CHECK-NEXT:   %tobool = icmp eq i32 %tmp1, -1
 ; CHECK-NEXT:   br i1 %tobool, label %if.end, label %if.then
 ; CHECK: if.then:
@@ -13,14 +13,14 @@
 ; CHECK-NEXT:   br label %if.end
 ; CHECK: if.end:
 ; CHECK-NEXT:   %e.1 = phi i32 [ %e.0, %L ], [ %tmp, %entry ]
-; CHECK-NEXT:   store i32 %e.1, i32* @a, align 4
-; CHECK-NEXT:   %tmp2 = load i32, i32* @b, align 4
-; CHECK-NEXT:   store i32 0, i32* @b, align 4
+; CHECK-NEXT:   store i32 %e.1, ptr @a, align 4
+; CHECK-NEXT:   %tmp2 = load i32, ptr @b, align 4
+; CHECK-NEXT:   store i32 0, ptr @b, align 4
 ; CHECK-NEXT:   %sext = shl i32 %tmp2, 16
 ; CHECK-NEXT:   %conv1 = ashr exact i32 %sext, 16
 ; CHECK-NEXT:   %add = add nsw i32 %conv1, %tmp1
 ; CHECK-NEXT:   %add2 = add nsw i32 %add, %e.1
-; CHECK-NEXT:   store i32 %add2, i32* @a, align 4
+; CHECK-NEXT:   store i32 %add2, ptr @a, align 4
 ; CHECK-NEXT:   %tobool3 = icmp eq i32 %add2, 0
 ; CHECK-NEXT:   br i1 %tobool3, label %if.end5, label %if.then4
 ; CHECK: if.then4:
@@ -36,8 +36,8 @@
 
 define i32 @main() {
 entry:
-  %tmp = load i32, i32* @d, align 4
-  %tmp1 = load i32, i32* @c, align 4
+  %tmp = load i32, ptr @d, align 4
+  %tmp1 = load i32, ptr @c, align 4
   %tobool = icmp eq i32 %tmp1, -1
   br i1 %tobool, label %if.end, label %if.then
 
@@ -50,17 +50,17 @@ L:                                                ; preds = %if.then4, %if.then
 
 if.end:                                           ; preds = %L, %entry
   %e.1 = phi i32 [ %e.0, %L ], [ %tmp, %entry ]
-  store i32 %e.1, i32* @a, align 4
-  %tmp2 = load i32, i32* @b, align 4
-  store i32 0, i32* @b, align 4
+  store i32 %e.1, ptr @a, align 4
+  %tmp2 = load i32, ptr @b, align 4
+  store i32 0, ptr @b, align 4
   %sext = shl i32 %tmp2, 16
   %conv1 = ashr exact i32 %sext, 16
-  %tmp3 = load i32, i32* @c, align 4
+  %tmp3 = load i32, ptr @c, align 4
   %add = add nsw i32 %conv1, %tmp3
-  %tmp4 = load i32, i32* @a, align 4
+  %tmp4 = load i32, ptr @a, align 4
   %and = and i32 %tmp4, %e.1
   %add2 = add nsw i32 %add, %and
-  store i32 %add2, i32* @a, align 4
+  store i32 %add2, ptr @a, align 4
   %tobool3 = icmp eq i32 %add2, 0
   br i1 %tobool3, label %if.end5, label %if.then4
 

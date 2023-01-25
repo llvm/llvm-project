@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions %s
+// RUN: %clang_cc1 -std=c++14 -fsyntax-only -verify -pedantic -fcxx-exceptions %s
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -pedantic -fcxx-exceptions -std=c++11 %s
 

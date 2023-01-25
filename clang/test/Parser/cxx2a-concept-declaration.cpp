@@ -50,7 +50,7 @@ template <bool word> concept C6 = integral_constant<bool, wor>::value;
 // expected-note@-2{{'word' declared here}}
 
 template<typename T> concept bool C7 = true;
-// expected-warning@-1{{ISO C++20 does not permit the 'bool' keyword after 'concept'}}
+// expected-error@-1{{ISO C++ does not permit the 'bool' keyword after 'concept'}}
 
 template<> concept C8 = false;
 // expected-error@-1{{concept template parameter list must have at least one parameter; explicit specialization of concepts is not allowed}}

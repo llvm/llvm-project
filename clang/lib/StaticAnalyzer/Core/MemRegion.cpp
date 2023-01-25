@@ -35,7 +35,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -51,6 +50,7 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -790,18 +790,30 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
         return true;
 
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        const llvm::APInt &Size = CAT->getSize();
-        if (Size.isZero())
-          return true;
-
-        if (getContext().getLangOpts().StrictFlexArrays >= 2)
-          return false;
-
+        using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+        const FAMKind StrictFlexArraysLevel =
+          Ctx.getLangOpts().getStrictFlexArraysLevel();
         const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
-        // FIXME: this option is probably redundant with -fstrict-flex-arrays=1.
-        if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
-            Size.isOne())
+        const llvm::APInt &Size = CAT->getSize();
+
+        if (StrictFlexArraysLevel <= FAMKind::ZeroOrIncomplete && Size.isZero())
           return true;
+
+        // The "-fstrict-flex-arrays" should have precedence over
+        // consider-single-element-arrays-as-flexible-array-members
+        // analyzer-config when checking single element arrays.
+        if (StrictFlexArraysLevel == FAMKind::Default) {
+          // FIXME: After clang-17 released, we should remove this branch.
+          if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
+              Size.isOne())
+            return true;
+        } else {
+          // -fstrict-flex-arrays was specified, since it's not the default, so
+          // ignore analyzer-config.
+          if (StrictFlexArraysLevel <= FAMKind::OneZeroOrIncomplete &&
+              Size.isOne())
+            return true;
+        }
       }
       return false;
     };
@@ -1029,7 +1041,7 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
             T = getContext().VoidTy;
           if (!T->getAs<FunctionType>()) {
             FunctionProtoType::ExtProtoInfo Ext;
-            T = getContext().getFunctionType(T, None, Ext);
+            T = getContext().getFunctionType(T, std::nullopt, Ext);
           }
           T = getContext().getBlockPointerType(T);
 
@@ -1076,14 +1088,18 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
     sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
   }
   else {
-    if (LC) {
+    bool IsArcManagedBlock = Ctx.getLangOpts().ObjCAutoRefCount;
+
+    // ARC managed blocks can be initialized on stack or directly in heap
+    // depending on the implementations.  So we initialize them with
+    // UnknownRegion.
+    if (!IsArcManagedBlock && LC) {
       // FIXME: Once we implement scope handling, we want the parent region
       // to be the scope.
       const StackFrameContext *STC = LC->getStackFrame();
       assert(STC);
       sReg = getStackLocalsRegion(STC);
-    }
-    else {
+    } else {
       // We allow 'LC' to be NULL for cases where want BlockDataRegions
       // without context-sensitivity.
       sReg = getUnknownRegion();
@@ -1286,8 +1302,8 @@ bool MemRegion::hasGlobalsOrParametersStorage() const {
   return isa<StackArgumentsSpaceRegion, GlobalsSpaceRegion>(getMemorySpace());
 }
 
-// getBaseRegion strips away all elements and fields, and get the base region
-// of them.
+// Strips away all elements and fields.
+// Returns the base region of them.
 const MemRegion *MemRegion::getBaseRegion() const {
   const MemRegion *R = this;
   while (true) {
@@ -1307,8 +1323,7 @@ const MemRegion *MemRegion::getBaseRegion() const {
   return R;
 }
 
-// getgetMostDerivedObjectRegion gets the region of the root class of a C++
-// class hierarchy.
+// Returns the region of the root class of a C++ class hierarchy.
 const MemRegion *MemRegion::getMostDerivedObjectRegion() const {
   const MemRegion *R = this;
   while (const auto *BR = dyn_cast<CXXBaseObjectRegion>(R))
@@ -1482,7 +1497,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
         // If our base region is symbolic, we don't know what type it really is.
         // Pretend the type of the symbol is the true dynamic type.
         // (This will at least be self-consistent for the life of the symbol.)
-        Ty = SR->getSymbol()->getType()->getPointeeType();
+        Ty = SR->getPointeeStaticType();
         RootIsSymbolic = true;
       }
 
@@ -1539,7 +1554,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       }
 
       SVal Index = ER->getIndex();
-      if (Optional<nonloc::ConcreteInt> CI =
+      if (std::optional<nonloc::ConcreteInt> CI =
               Index.getAs<nonloc::ConcreteInt>()) {
         // Don't bother calculating precise offsets if we already have a
         // symbolic offset somewhere in the chain.

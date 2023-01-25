@@ -14,9 +14,20 @@
 #  error Define the CODEGENOPT macro to handle language options
 #endif
 
+#ifndef ENUM_CODEGENOPT
+#  define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
+CODEGENOPT(Name, Bits, Default)
+#endif
+
 CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option specified.
 
 CODEGENOPT(DebugPassManager, 1, 0) ///< Prints debug information for the new
                                    ///< pass manager.
 
+CODEGENOPT(PICLevel, 2, 0) ///< PIC level of the LLVM module.
+CODEGENOPT(IsPIE, 1, 0) ///< PIE level is the same as PIC Level.
+
+ENUM_CODEGENOPT(RelocationModel, llvm::Reloc::Model, 3, llvm::Reloc::PIC_) ///< Name of the relocation model to use.
+
 #undef CODEGENOPT
+#undef ENUM_CODEGENOPT

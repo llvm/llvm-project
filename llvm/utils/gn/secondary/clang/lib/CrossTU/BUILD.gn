@@ -7,6 +7,7 @@ static_library("CrossTU") {
     "//clang/lib/Frontend",
     "//clang/lib/Index",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "CrossTranslationUnit.cpp" ]
 }

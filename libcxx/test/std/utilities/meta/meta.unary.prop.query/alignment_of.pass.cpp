@@ -47,15 +47,8 @@ int main(int, char**)
     test_alignment_of<const int*, sizeof(intptr_t)>();
     test_alignment_of<char[3], 1>();
     test_alignment_of<int, 4>();
-    // The test case below is a hack. It's hard to detect what golden value
-    // we should expect. In most cases it should be 8. But in i386 builds
-    // with Clang >= 8 or GCC >= 8 the value is '4'.
     test_alignment_of<double, TEST_ALIGNOF(double)>();
-#if (defined(__ppc__) && !defined(__ppc64__) && !defined(_AIX))
-    test_alignment_of<bool, 4>();   // 32-bit PPC has four byte bool, except on AIX.
-#else
     test_alignment_of<bool, 1>();
-#endif
     test_alignment_of<unsigned, 4>();
 
   return 0;

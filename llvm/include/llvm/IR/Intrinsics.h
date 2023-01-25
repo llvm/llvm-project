@@ -16,9 +16,8 @@
 #define LLVM_IR_INTRINSICS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/TypeSize.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -75,15 +74,10 @@ namespace Intrinsic {
 
   /// Return the function type for an intrinsic.
   FunctionType *getType(LLVMContext &Context, ID id,
-                        ArrayRef<Type*> Tys = None);
+                        ArrayRef<Type *> Tys = std::nullopt);
 
   /// Returns true if the intrinsic can be overloaded.
   bool isOverloaded(ID id);
-
-  /// Returns true if the intrinsic is a leaf, i.e. it does not make any calls
-  /// itself.  Most intrinsics are leafs, the exceptions being the patchpoint
-  /// and statepoint intrinsics. These call (or invoke) their "target" argument.
-  bool isLeaf(ID id);
 
   /// Return the attributes for an intrinsic.
   AttributeList getAttributes(LLVMContext &C, ID id);
@@ -95,7 +89,8 @@ namespace Intrinsic {
   /// using iAny, fAny, vAny, or iPTRAny).  For a declaration of an overloaded
   /// intrinsic, Tys must provide exactly one type for each overloaded type in
   /// the intrinsic.
-  Function *getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys = None);
+  Function *getDeclaration(Module *M, ID id,
+                           ArrayRef<Type *> Tys = std::nullopt);
 
   /// Looks up Name in NameTable via binary search. NameTable must be sorted
   /// and all entries must start with "llvm.".  If NameTable contains an exact
@@ -249,7 +244,7 @@ namespace Intrinsic {
   // returns the declaration with the same signature and remangled name.
   // An existing GlobalValue with the wanted name but with a wrong prototype
   // or of the wrong kind will be renamed by adding ".renamed" to the name.
-  llvm::Optional<Function*> remangleIntrinsicFunction(Function *F);
+  std::optional<Function *> remangleIntrinsicFunction(Function *F);
 
 } // End Intrinsic namespace
 

@@ -339,3 +339,10 @@
 // S-POWERPC64: "{{.*}}/usr/lib{{/|\\\\}}crti.o"
 // S-POWERPC64: "{{.*}}/usr/lib{{/|\\\\}}crtbegin.o" "{{.*}}.o" "-lc++"
 // S-POWERPC64: "-lm" "-lc" "{{.*}}/usr/lib{{/|\\\\}}crtend.o" "{{.*}}/usr/lib{{/|\\\\}}crtn.o"
+
+// Check that the driver passes include paths to cc1 on NetBSD.
+// RUN: %clang -### %s --target=x86_64-unknown-netbsd -r 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DRIVER-PASS-INCLUDES
+// DRIVER-PASS-INCLUDES:      "-cc1" {{.*}}"-resource-dir" "[[RESOURCE:[^"]+]]"
+// DRIVER-PASS-INCLUDES:      "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
+// DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "{{.*}}/usr/include"

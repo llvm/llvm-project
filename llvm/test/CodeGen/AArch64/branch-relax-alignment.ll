@@ -18,11 +18,11 @@ define i32 @invert_bcc_block_align_higher_func(i32 %x, i32 %y) align 4 #0 {
   br i1 %1, label %bb1, label %bb2
 
 bb2:
-  store volatile i32 9, i32* undef
+  store volatile i32 9, ptr undef
   ret i32 1
 
 bb1:
-  store volatile i32 42, i32* undef
+  store volatile i32 42, ptr undef
   ret i32 0
 }
 

@@ -38,6 +38,7 @@ def PDLInterp_Dialect : Dialect {
   let name = "pdl_interp";
   let cppNamespace = "::mlir::pdl_interp";
   let dependentDialects = ["pdl::PDLDialect"];
+  let useFoldAPI = kEmitFoldAdaptorFolder;
   let extraClassDeclaration = [{
     /// Returns the name of the function containing the matcher code. This
     /// function is called by the interpreter when matching an operation.
@@ -48,7 +49,6 @@ def PDLInterp_Dialect : Dialect {
     /// to rewrite the IR after a successful match.
     static StringRef getRewriterModuleName() { return "rewriters"; }
   }];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -145,7 +145,7 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_AreEqualOp
-    : PDLInterp_PredicateOp<"are_equal", [NoSideEffect, SameTypeOperands]> {
+    : PDLInterp_PredicateOp<"are_equal", [Pure, SameTypeOperands]> {
   let summary = "Check if two positional values or ranges are equivalent";
   let description = [{
     `pdl_interp.are_equal` operations compare two positional values for
@@ -167,7 +167,7 @@ def PDLInterp_AreEqualOp
 // pdl_interp::BranchOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_BranchOp : PDLInterp_Op<"branch", [NoSideEffect, Terminator]> {
+def PDLInterp_BranchOp : PDLInterp_Op<"branch", [Pure, Terminator]> {
   let summary = "General branch operation";
   let description = [{
     `pdl_interp.branch` operations expose general branch functionality to the
@@ -190,7 +190,7 @@ def PDLInterp_BranchOp : PDLInterp_Op<"branch", [NoSideEffect, Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckAttributeOp
-    : PDLInterp_PredicateOp<"check_attribute", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_attribute", [Pure]> {
   let summary = "Check the value of an `Attribute`";
   let description = [{
     `pdl_interp.check_attribute` operations compare the value of a given
@@ -215,7 +215,7 @@ def PDLInterp_CheckAttributeOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckOperandCountOp
-    : PDLInterp_PredicateOp<"check_operand_count", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_operand_count", [Pure]> {
   let summary = "Check the number of operands of an `Operation`";
   let description = [{
     `pdl_interp.check_operand_count` operations compare the number of operands
@@ -236,7 +236,7 @@ def PDLInterp_CheckOperandCountOp
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
                        UnitAttr:$compareAtLeast);
   let assemblyFormat = [{
     `of` $inputOp `is` (`at_least` $compareAtLeast^)? $count attr-dict
@@ -249,7 +249,7 @@ def PDLInterp_CheckOperandCountOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckOperationNameOp
-    : PDLInterp_PredicateOp<"check_operation_name", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_operation_name", [Pure]> {
   let summary = "Check the OperationName of an `Operation`";
   let description = [{
     `pdl_interp.check_operation_name` operations compare the name of a given
@@ -272,7 +272,7 @@ def PDLInterp_CheckOperationNameOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckResultCountOp
-    : PDLInterp_PredicateOp<"check_result_count", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_result_count", [Pure]> {
   let summary = "Check the number of results of an `Operation`";
   let description = [{
     `pdl_interp.check_result_count` operations compare the number of results
@@ -293,7 +293,7 @@ def PDLInterp_CheckResultCountOp
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
                        UnitAttr:$compareAtLeast);
   let assemblyFormat = [{
     `of` $inputOp `is` (`at_least` $compareAtLeast^)? $count attr-dict
@@ -306,7 +306,7 @@ def PDLInterp_CheckResultCountOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckTypeOp
-    : PDLInterp_PredicateOp<"check_type", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_type", [Pure]> {
   let summary = "Compare a type to a known value";
   let description = [{
     `pdl_interp.check_type` operations compare a type with a statically known
@@ -329,7 +329,7 @@ def PDLInterp_CheckTypeOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CheckTypesOp
-    : PDLInterp_PredicateOp<"check_types", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"check_types", [Pure]> {
   let summary = "Compare a range of types to a range of known values";
   let description = [{
     `pdl_interp.check_types` operations compare a range of types with a
@@ -353,7 +353,7 @@ def PDLInterp_CheckTypesOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_ContinueOp
-    : PDLInterp_Op<"continue", [NoSideEffect, HasParent<"ForEachOp">,
+    : PDLInterp_Op<"continue", [Pure, HasParent<"ForEachOp">,
                                Terminator]> {
   let summary = "Breaks the current iteration";
   let description = [{
@@ -376,7 +376,7 @@ def PDLInterp_ContinueOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_CreateAttributeOp
-    : PDLInterp_Op<"create_attribute", [NoSideEffect]> {
+    : PDLInterp_Op<"create_attribute", [Pure]> {
   let summary = "Create an interpreter handle to a constant `Attribute`";
   let description = [{
     `pdl_interp.create_attribute` operations generate a handle within the
@@ -417,7 +417,7 @@ def PDLInterp_CreateOperationOp
     ```mlir
     // Create an instance of a `foo.op` operation.
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> (%type : !pdl.type)
-    
+
     // Create an instance of a `foo.op` operation that has inferred result types
     // (using the InferTypeOpInterface).
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> <inferred>
@@ -454,7 +454,7 @@ def PDLInterp_CreateOperationOp
 // pdl_interp::CreateTypeOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [NoSideEffect]> {
+def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [Pure]> {
   let summary = "Create an interpreter handle to a constant `Type`";
   let description = [{
     `pdl_interp.create_type` operations generate a handle within the interpreter
@@ -482,7 +482,7 @@ def PDLInterp_CreateTypeOp : PDLInterp_Op<"create_type", [NoSideEffect]> {
 // pdl_interp::CreateTypesOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_CreateTypesOp : PDLInterp_Op<"create_types", [NoSideEffect]> {
+def PDLInterp_CreateTypesOp : PDLInterp_Op<"create_types", [Pure]> {
   let summary = "Create an interpreter handle to a range of constant `Type`s";
   let description = [{
     `pdl_interp.create_types` operations generate a handle within the
@@ -534,7 +534,7 @@ def PDLInterp_EraseOp : PDLInterp_Op<"erase"> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_ExtractOp
-    : PDLInterp_Op<"extract", [NoSideEffect,
+    : PDLInterp_Op<"extract", [Pure,
      TypesMatchWith<
         "`range` is a PDL range whose element type matches type of `result`",
         "result", "range", "pdl::RangeType::get($_self)">]> {
@@ -552,7 +552,7 @@ def PDLInterp_ExtractOp
   }];
 
   let arguments = (ins PDL_RangeOf<PDL_AnyType>:$range,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_AnyType:$result);
   let assemblyFormat = "$index `of` $range `:` type($result) attr-dict";
 
@@ -570,7 +570,7 @@ def PDLInterp_ExtractOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_FinalizeOp
-    : PDLInterp_Op<"finalize", [NoSideEffect, Terminator]> {
+    : PDLInterp_Op<"finalize", [Pure, Terminator]> {
   let summary = "Finalize a pattern match or rewrite sequence";
   let description = [{
     `pdl_interp.finalize` is used to denote the termination of a match or
@@ -631,7 +631,7 @@ def PDLInterp_ForEachOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_FuncOp : PDLInterp_Op<"func", [
-    FunctionOpInterface, IsolatedFromAbove, Symbol
+    FunctionOpInterface, IsolatedFromAbove
   ]> {
   let summary = "PDL Interpreter Function Operation";
   let description = [{
@@ -653,7 +653,9 @@ def PDLInterp_FuncOp : PDLInterp_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttrOf<FunctionType>:$function_type
+    TypeAttrOf<FunctionType>:$function_type,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
   );
   let regions = (region MinSizedRegion<1>:$body);
 
@@ -682,7 +684,7 @@ def PDLInterp_FuncOp : PDLInterp_Op<"func", [
 // pdl_interp::GetAttributeOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetAttributeOp : PDLInterp_Op<"get_attribute", [NoSideEffect]> {
+def PDLInterp_GetAttributeOp : PDLInterp_Op<"get_attribute", [Pure]> {
   let summary = "Get a specified attribute value from an `Operation`";
   let description = [{
     `pdl_interp.get_attribute` operations try to get a specific attribute from
@@ -706,7 +708,7 @@ def PDLInterp_GetAttributeOp : PDLInterp_Op<"get_attribute", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_GetAttributeTypeOp
-    : PDLInterp_Op<"get_attribute_type", [NoSideEffect]> {
+    : PDLInterp_Op<"get_attribute_type", [Pure]> {
   let summary = "Get the result type of a specified `Attribute`";
   let description = [{
     `pdl_interp.get_attribute_type` operations get the resulting type of a
@@ -735,7 +737,7 @@ def PDLInterp_GetAttributeTypeOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_GetDefiningOpOp
-    : PDLInterp_Op<"get_defining_op", [NoSideEffect]> {
+    : PDLInterp_Op<"get_defining_op", [Pure]> {
   let summary = "Get the defining operation of a `Value`";
   let description = [{
     `pdl_interp.get_defining_op` operations try to get the defining operation
@@ -759,7 +761,7 @@ def PDLInterp_GetDefiningOpOp
 // pdl_interp::GetOperandOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [NoSideEffect]> {
+def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [Pure]> {
   let summary = "Get a specified operand from an `Operation`";
   let description = [{
     `pdl_interp.get_operand` operations try to get a specific operand from an
@@ -774,7 +776,7 @@ def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [NoSideEffect]> {
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_Value:$value);
   let assemblyFormat = "$index `of` $inputOp attr-dict";
 }
@@ -783,7 +785,7 @@ def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [NoSideEffect]> {
 // pdl_interp::GetOperandsOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [NoSideEffect]> {
+def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [Pure]> {
   let summary = "Get a specified operand group from an `Operation`";
   let description = [{
     `pdl_interp.get_operands` operations try to get a specific operand
@@ -809,13 +811,13 @@ def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [NoSideEffect]> {
 
   let arguments = (ins
     PDL_Operation:$inputOp,
-    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+    OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative]>>:$index
   );
   let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,
@@ -826,7 +828,7 @@ def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [NoSideEffect]> {
 // pdl_interp::GetResultOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [NoSideEffect]> {
+def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [Pure]> {
   let summary = "Get a specified result from an `Operation`";
   let description = [{
     `pdl_interp.get_result` operations try to get a specific result from an
@@ -841,7 +843,7 @@ def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [NoSideEffect]> {
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_Value:$value);
   let assemblyFormat = "$index `of` $inputOp attr-dict";
 }
@@ -850,7 +852,7 @@ def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [NoSideEffect]> {
 // pdl_interp::GetResultsOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [NoSideEffect]> {
+def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [Pure]> {
   let summary = "Get a specified result group from an `Operation`";
   let description = [{
     `pdl_interp.get_results` operations try to get a specific result group
@@ -876,13 +878,13 @@ def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [NoSideEffect]> {
 
   let arguments = (ins
     PDL_Operation:$inputOp,
-    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+    OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative]>>:$index
   );
   let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$inputOp,
-                   "Optional<unsigned>":$index), [{
+                   "std::optional<unsigned>":$index), [{
       build($_builder, $_state, resultType, inputOp,
             index ? $_builder.getI32IntegerAttr(*index) : IntegerAttr());
     }]>,
@@ -899,7 +901,7 @@ def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_GetUsersOp
-    : PDLInterp_Op<"get_users", [NoSideEffect]> {
+    : PDLInterp_Op<"get_users", [Pure]> {
   let summary = "Get the users of a `Value`";
   let description = [{
     `pdl_interp.get_users` extracts the users that accept this value. In the
@@ -934,7 +936,7 @@ def PDLInterp_GetUsersOp
 // pdl_interp::GetValueTypeOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect,
+def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [Pure,
      TypesMatchWith<"`value` type matches arity of `result`",
                     "result", "value", "getGetValueTypeOpValueType($_self)">]> {
   let summary = "Get the result type of a specified `Value`";
@@ -974,7 +976,7 @@ def PDLInterp_GetValueTypeOp : PDLInterp_Op<"get_value_type", [NoSideEffect,
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_IsNotNullOp
-    : PDLInterp_PredicateOp<"is_not_null", [NoSideEffect]> {
+    : PDLInterp_PredicateOp<"is_not_null", [Pure]> {
   let summary = "Check if a positional value is non-null";
   let description = [{
     `pdl_interp.is_not_null` operations check that a positional value or range
@@ -991,6 +993,43 @@ def PDLInterp_IsNotNullOp
 
   let arguments = (ins PDL_AnyType:$value);
   let assemblyFormat = "$value `:` type($value) attr-dict `->` successors";
+}
+
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CreateRangeOp : PDLInterp_Op<"create_range", [Pure]> {
+  let summary = "Construct a range of PDL entities";
+  let description = [{
+    `pdl_interp.create_range` operations construct a range from a given set of PDL
+    entities, which all share the same underlying element type. For example, a
+    `!pdl.range<value>` may be constructed from a list of `!pdl.value`
+    or `!pdl.range<value>` entities.
+
+    Example:
+
+    ```mlir
+    // Construct a range of values.
+    %valueRange = pdl_interp.create_range %inputValue, %inputRange : !pdl.value, !pdl.range<value>
+
+    // Construct a range of types.
+    %typeRange = pdl_interp.create_range %inputType, %inputRange : !pdl.type, !pdl.range<type>
+
+    // Construct an empty range of types.
+    %valueRange = pdl_interp.create_range : !pdl.range<type>
+    ```
+  }];
+
+  let arguments = (ins Variadic<PDL_AnyType>:$arguments);
+  let results = (outs PDL_RangeOf<AnyTypeOf<[PDL_Type, PDL_Value]>>:$result);
+  let assemblyFormat = [{
+    ($arguments^ `:` type($arguments))?
+    custom<RangeType>(ref(type($arguments)), type($result))
+    attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1019,7 +1058,7 @@ def PDLInterp_RecordMatchOp
                        SymbolRefAttr:$rewriter,
                        OptionalAttr<StrAttr>:$rootKind,
                        OptionalAttr<StrArrayAttr>:$generatedOps,
-                       Confined<I16Attr, [IntNonNegative]>:$benefit);
+                       ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $rewriter (`(` $inputs^ `:` type($inputs) `)`)? `:`
@@ -1062,7 +1101,7 @@ def PDLInterp_ReplaceOp : PDLInterp_Op<"replace"> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_SwitchAttributeOp
-    : PDLInterp_SwitchOp<"switch_attribute", [NoSideEffect]> {
+    : PDLInterp_SwitchOp<"switch_attribute", [Pure]> {
   let summary = "Switch on the value of an `Attribute`";
   let description = [{
     `pdl_interp.switch_attribute` operations compare the value of a given
@@ -1095,7 +1134,7 @@ def PDLInterp_SwitchAttributeOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_SwitchOperandCountOp
-    : PDLInterp_SwitchOp<"switch_operand_count", [NoSideEffect]> {
+    : PDLInterp_SwitchOp<"switch_operand_count", [Pure]> {
   let summary = "Switch on the operand count of an `Operation`";
   let description = [{
     `pdl_interp.switch_operand_count` operations compare the operand count of a
@@ -1129,7 +1168,7 @@ def PDLInterp_SwitchOperandCountOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_SwitchOperationNameOp
-    : PDLInterp_SwitchOp<"switch_operation_name", [NoSideEffect]> {
+    : PDLInterp_SwitchOp<"switch_operation_name", [Pure]> {
   let summary = "Switch on the OperationName of an `Operation`";
   let description = [{
     `pdl_interp.switch_operation_name` operations compare the name of a given
@@ -1167,7 +1206,7 @@ def PDLInterp_SwitchOperationNameOp
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_SwitchResultCountOp
-    : PDLInterp_SwitchOp<"switch_result_count", [NoSideEffect]> {
+    : PDLInterp_SwitchOp<"switch_result_count", [Pure]> {
   let summary = "Switch on the result count of an `Operation`";
   let description = [{
     `pdl_interp.switch_result_count` operations compare the result count of a
@@ -1200,7 +1239,7 @@ def PDLInterp_SwitchResultCountOp
 // pdl_interp::SwitchTypeOp
 //===----------------------------------------------------------------------===//
 
-def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
+def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [Pure]> {
   let summary = "Switch on a `Type` value";
   let description = [{
     `pdl_interp.switch_type` operations compare a type with a set of statically
@@ -1239,7 +1278,7 @@ def PDLInterp_SwitchTypeOp : PDLInterp_SwitchOp<"switch_type", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 
 def PDLInterp_SwitchTypesOp : PDLInterp_SwitchOp<"switch_types",
-                                                 [NoSideEffect]> {
+                                                 [Pure]> {
   let summary = "Switch on a range of `Type` values";
   let description = [{
     `pdl_interp.switch_types` operations compare a range of types with a set of

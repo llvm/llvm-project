@@ -23,5 +23,5 @@ void *ps[] = { f0, f1, f2, f3, f4, f5 };
 // CHECK: declare void @f4({{.*}} byval({{.*}}) align 4)
 // CHECK: declare void @f5({{.*}} byval({{.*}}) align 4)
 
-// CHECK: attributes [[RN]] = { nounwind readnone{{.*}} }
-// CHECK: attributes [[RO]] = { nounwind readonly{{.*}} }
+// CHECK: attributes [[RN]] = { nounwind willreturn memory(none){{.*}} }
+// CHECK: attributes [[RO]] = { nounwind willreturn memory(read){{.*}} }

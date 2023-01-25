@@ -1,4 +1,4 @@
-; RUN: not opt -verify -opaque-pointers < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify -opaque-pointers < %s 2>&1 | FileCheck %s
 
 ; CHECK: Attribute 'inalloca' does not support unsized types!
 ; CHECK-NEXT: ptr @f

@@ -39,6 +39,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "m68k-isel"
+#define PASS_NAME "M68k DAG->DAG Pattern Instruction Selection"
 
 namespace {
 
@@ -173,12 +174,12 @@ namespace {
 
 class M68kDAGToDAGISel : public SelectionDAGISel {
 public:
-  explicit M68kDAGToDAGISel(M68kTargetMachine &TM)
-      : SelectionDAGISel(TM), Subtarget(nullptr) {}
+  static char ID;
 
-  StringRef getPassName() const override {
-    return "M68k DAG->DAG Pattern Instruction Selection";
-  }
+  M68kDAGToDAGISel() = delete;
+
+  explicit M68kDAGToDAGISel(M68kTargetMachine &TM)
+      : SelectionDAGISel(ID, TM), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const override;
@@ -310,7 +311,12 @@ private:
   /// if necessary.
   SDNode *getGlobalBaseReg();
 };
+
+char M68kDAGToDAGISel::ID;
+
 } // namespace
+
+INITIALIZE_PASS(M68kDAGToDAGISel, DEBUG_TYPE, PASS_NAME, false, false)
 
 bool M68kDAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U,
                                           SDNode *Root) const {

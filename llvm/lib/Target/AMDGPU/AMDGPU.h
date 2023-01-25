@@ -91,9 +91,9 @@ ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 
-ModulePass *createAMDGPUCtorDtorLoweringPass();
-void initializeAMDGPUCtorDtorLoweringPass(PassRegistry &);
-extern char &AMDGPUCtorDtorLoweringID;
+ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
+void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUCtorDtorLoweringLegacyPassID;
 
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
@@ -240,9 +240,8 @@ private:
 };
 
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(
-  TargetMachine *TM = nullptr,
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default);
+FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
+                                  CodeGenOpt::Level OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
 struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
@@ -289,6 +288,10 @@ extern char &AMDGPUCodeGenPrepareID;
 
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
+
+FunctionPass *createAMDGPURewriteUndefForPHIPass();
+void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHIPassID;
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;

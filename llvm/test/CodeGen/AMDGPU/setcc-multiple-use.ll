@@ -21,7 +21,7 @@ define i32 @f() {
 ; CHECK-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %i = load i32, i32 addrspace(3)* null, align 16
+  %i = load i32, ptr addrspace(3) null, align 16
   %i6 = icmp ult i32 0, %i
   %i7 = sext i1 %i6 to i32
   %i8 = add i32 %i7, 1

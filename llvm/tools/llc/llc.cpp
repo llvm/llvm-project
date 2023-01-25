@@ -28,7 +28,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
-#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -57,6 +56,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
+#include <optional>
 using namespace llvm;
 
 static codegen::RegisterCodeGenFlags CGF;
@@ -166,7 +166,7 @@ static cl::opt<bool> RemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
-static cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+static cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold(
         "pass-remarks-hotness-threshold",
         cl::desc("Minimum profile count required for "
@@ -374,6 +374,8 @@ int main(int argc, char **argv) {
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
 
+  // Register the Target and CPU printer for --version.
+  cl::AddExtraVersionPrinter(sys::printDefaultTargetAndDetectedCPU);
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
@@ -467,8 +469,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   };
 
   auto MAttrs = codegen::getMAttrs();
-  bool SkipModule = codegen::getMCPU() == "help" ||
-                    (!MAttrs.empty() && MAttrs.front() == "help");
+  bool SkipModule =
+      CPUStr == "help" || (!MAttrs.empty() && MAttrs.front() == "help");
 
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   switch (OptLevel) {
@@ -520,16 +522,16 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
   };
 
-  Optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
-  Optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
+  std::optional<Reloc::Model> RM = codegen::getExplicitRelocModel();
+  std::optional<CodeModel::Model> CM = codegen::getExplicitCodeModel();
 
   const Target *TheTarget = nullptr;
   std::unique_ptr<TargetMachine> Target;
 
   // If user just wants to list available options, skip module loading
   if (!SkipModule) {
-    auto SetDataLayout =
-        [&](StringRef DataLayoutTargetTriple) -> Optional<std::string> {
+    auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
+                             StringRef OldDLStr) -> std::optional<std::string> {
       // If we are supposed to override the target triple, do so now.
       std::string IRTargetTriple = DataLayoutTargetTriple.str();
       if (!TargetTriple.empty())
@@ -566,7 +568,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
       if (MIR)
         M = MIR->parseIRModule(SetDataLayout);
     } else {
-      M = parseIRFile(InputFilename, Err, Context, SetDataLayout);
+      M = parseIRFile(InputFilename, Err, Context,
+                      ParserCallbacks(SetDataLayout));
     }
     if (!M) {
       Err.print(argv[0], WithColor::error(errs(), argv[0]));
@@ -575,9 +578,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
     if (!TargetTriple.empty())
       M->setTargetTriple(Triple::normalize(TargetTriple));
 
-    Optional<CodeModel::Model> CM_IR = M->getCodeModel();
+    std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
-      Target->setCodeModel(CM_IR.value());
+      Target->setCodeModel(*CM_IR);
   } else {
     TheTriple = Triple(Triple::normalize(TargetTriple));
     if (TheTriple.getTriple().empty())

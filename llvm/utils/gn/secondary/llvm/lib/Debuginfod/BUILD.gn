@@ -6,7 +6,7 @@ static_library("Debuginfod") {
     "//llvm/utils/gn/build/libs/curl",
   ]
   sources = [
-    "DIFetcher.cpp",
+    "BuildIDFetcher.cpp",
     "Debuginfod.cpp",
     "HTTPClient.cpp",
     "HTTPServer.cpp",

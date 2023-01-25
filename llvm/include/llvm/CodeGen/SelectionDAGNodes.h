@@ -118,9 +118,16 @@ bool isBuildVectorOfConstantSDNodes(const SDNode *N);
 /// ConstantFPSDNode or undef.
 bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
 
+/// Returns true if the specified node is a vector where all elements can
+/// be truncated to the specified element size without a loss in meaning.
+bool isVectorShrinkable(const SDNode *N, unsigned NewEltSize, bool Signed);
+
 /// Return true if the node has at least one operand and all operands of the
 /// specified node are ISD::UNDEF.
 bool allOperandsUndef(const SDNode *N);
+
+/// Return true if the specified node is FREEZE(UNDEF).
+bool isFreezeUndef(const SDNode *N);
 
 } // end namespace ISD
 
@@ -298,6 +305,7 @@ public:
 
   /// This returns the SDNode that contains this Use.
   SDNode *getUser() { return User; }
+  const SDNode *getUser() const { return User; }
 
   /// Get the next SDUse in the use list.
   SDUse *getNext() const { return Next; }
@@ -455,12 +463,19 @@ public:
 class SDNode : public FoldingSetNode, public ilist_node<SDNode> {
 private:
   /// The operation that this node performs.
-  int16_t NodeType;
+  int32_t NodeType;
+
+public:
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714).
+  uint16_t PersistentId;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
   // SubclassData.  These are designed to fit within a uint16_t so they pack
-  // with NodeType.
+  // with PersistentId.
 
 #if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
 // Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
@@ -615,13 +630,9 @@ private:
 
   SDNodeFlags Flags;
 
-public:
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId;
+  uint32_t CFIType = 0;
 
+public:
   //===--------------------------------------------------------------------===//
   //  Accessors
   //
@@ -630,7 +641,7 @@ public:
   /// pre-isel nodes (those for which isMachineOpcode returns false), these
   /// are the opcode values in the ISD and <target>ISD namespaces. For
   /// post-isel opcodes, see getMachineOpcode.
-  unsigned getOpcode()  const { return (unsigned short)NodeType; }
+  unsigned getOpcode()  const { return (unsigned)NodeType; }
 
   /// Test if this node has a target-specific opcode (in the
   /// \<target\>ISD namespace).
@@ -747,6 +758,7 @@ public:
 
     use_iterator() = default;
     use_iterator(const use_iterator &I) = default;
+    use_iterator &operator=(const use_iterator &) = default;
 
     bool operator==(const use_iterator &x) const { return Op == x.Op; }
     bool operator!=(const use_iterator &x) const {
@@ -915,7 +927,7 @@ public:
 
   op_iterator op_begin() const { return OperandList; }
   op_iterator op_end() const { return OperandList+NumOperands; }
-  ArrayRef<SDUse> ops() const { return makeArrayRef(op_begin(), op_end()); }
+  ArrayRef<SDUse> ops() const { return ArrayRef(op_begin(), op_end()); }
 
   /// Iterator for directly iterating over the operand SDValue's.
   struct value_op_iterator
@@ -963,6 +975,9 @@ public:
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
+
+  void setCFIType(uint32_t Type) { CFIType = Type; }
+  uint32_t getCFIType() const { return CFIType; }
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }
@@ -1276,8 +1291,6 @@ public:
   /// Returns alignment and volatility of the memory access
   Align getOriginalAlign() const { return MMO->getBaseAlign(); }
   Align getAlign() const { return MMO->getAlign(); }
-  // FIXME: Remove once transition to getAlign is over.
-  unsigned getAlignment() const { return MMO->getAlign().value(); }
 
   /// Return the SubclassData value, without HasDebugValue. This contains an
   /// encoding of the volatile flag, as well as bits used by subclasses. This
@@ -1522,7 +1535,7 @@ protected:
 public:
   ArrayRef<int> getMask() const {
     EVT VT = getValueType(0);
-    return makeArrayRef(Mask, VT.getVectorNumElements());
+    return ArrayRef(Mask, VT.getVectorNumElements());
   }
 
   int getMaskElt(unsigned Idx) const {
@@ -1677,6 +1690,12 @@ bool isOneConstant(SDValue V);
 /// Returns true if \p V is a constant min signed integer value.
 bool isMinSignedConstant(SDValue V);
 
+/// Returns true if \p V is a neutral element of Opc with Flags.
+/// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+/// checks that V is a right identity.
+bool isNeutralConstant(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                       unsigned OperandNo);
+
 /// Return the non-bitcasted source operand of \p V if it exists.
 /// If \p V is not a bitcasted value, it is returned as-is.
 SDValue peekThroughBitcasts(SDValue V);
@@ -1723,7 +1742,8 @@ bool isNullOrNullSplat(SDValue V, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 1 integer or a splatted vector of a
 /// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
+/// Build vector implicit truncation is allowed, but the truncated bits need to
+/// be zero.
 bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 
 /// Return true if the value is a constant -1 integer or a splatted vector of a
@@ -2081,9 +2101,9 @@ public:
   bool isConstant() const;
 
   /// If this BuildVector is constant and represents the numerical series
-  /// <a, a+n, a+2n, a+3n, ...> where a is integer and n is a non-zero integer,
-  /// the value <a,n> is returned.
-  Optional<std::pair<APInt, APInt>> isConstantSequence() const;
+  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero integer,
+  /// the value "<a,n>" is returned.
+  std::optional<std::pair<APInt, APInt>> isConstantSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
   /// Undef elements are treated as zero, and entirely undefined elements are
@@ -2911,10 +2931,10 @@ public:
     if (NumMemRefs == 0)
       return {};
     if (NumMemRefs == 1)
-      return makeArrayRef(MemRefs.getAddrOfPtr1(), 1);
+      return ArrayRef(MemRefs.getAddrOfPtr1(), 1);
 
     // Otherwise we have an actual array.
-    return makeArrayRef(MemRefs.get<MachineMemOperand **>(), NumMemRefs);
+    return ArrayRef(MemRefs.get<MachineMemOperand **>(), NumMemRefs);
   }
   mmo_iterator memoperands_begin() const { return memoperands().begin(); }
   mmo_iterator memoperands_end() const { return memoperands().end(); }

@@ -65,6 +65,11 @@ def FeatureMOVW : SubtargetFeature<"movw", "m_hasMOVW", "true",
                                    "The device supports the 16-bit MOVW "
                                    "instruction">;
 
+// The device has a separate flash namespace that must be accessed using special
+// instructions like lpm.
+def FeaturePROGMEM : SubtargetFeature<"progmem", "m_hasPROGMEM", "true",
+                                      "The device has a separate flash namespace">;
+
 // The device supports the `LPM` instruction, with implied destination being r0.
 def FeatureLPM : SubtargetFeature<"lpm", "m_hasLPM", "true",
                                   "The device supports the `LPM` instruction">;
@@ -156,7 +161,7 @@ def ELFArchXMEGA7 : ELFArch<"EF_AVR_ARCH_XMEGA7">;
 // device should have.
 def FamilyAVR0 : Family<"avr0", []>;
 
-def FamilyAVR1 : Family<"avr1", [FamilyAVR0, FeatureLPM, FeatureMMR]>;
+def FamilyAVR1 : Family<"avr1", [FamilyAVR0, FeatureLPM, FeaturePROGMEM, FeatureMMR]>;
 
 def FamilyAVR2
     : Family<"avr2",
@@ -184,7 +189,7 @@ def FamilyAVR5 : Family<"avr5",
 
 def FamilyAVR51 : Family<"avr51", [FamilyAVR5, FeatureELPM, FeatureELPMX]>;
 
-def FamilyAVR6 : Family<"avr6", [FamilyAVR51]>;
+def FamilyAVR6 : Family<"avr6", [FamilyAVR51, FeatureEIJMPCALL]>;
 
 def FamilyTiny
     : Family<"avrtiny",
@@ -192,13 +197,13 @@ def FamilyTiny
               FeatureSmallStack]>;
 
 def FamilyXMEGA3 : Family<"xmega3",
-                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                          [FamilyAVR0, FeatureLPM, FeaturePROGMEM, FeatureIJMPCALL,
                            FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                            FeatureMultiplication, FeatureMOVW, FeatureLPMX,
                            FeatureBREAK]>;
 
 def FamilyXMEGA : Family<"xmega",
-                         [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                         [FamilyAVR0, FeatureLPM, FeaturePROGMEM, FeatureIJMPCALL,
                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
                           FeatureMultiplication, FeatureMOVW, FeatureLPMX,
                           FeatureSPM, FeatureBREAK, FeatureEIJMPCALL,

@@ -15,7 +15,6 @@
 #ifndef LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
 #define LLVM_CODEGEN_BASICBLOCKSECTIONSPROFILEREADER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -32,8 +31,8 @@ namespace llvm {
 
 // The cluster information for a machine basic block.
 struct BBClusterInfo {
-  // MachineBasicBlock ID.
-  unsigned MBBNumber;
+  // Unique ID for this basic block.
+  unsigned BBID;
   // Cluster ID this basic block belongs to.
   unsigned ClusterID;
   // Position of basic block within the cluster.

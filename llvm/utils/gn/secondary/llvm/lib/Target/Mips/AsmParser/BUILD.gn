@@ -15,6 +15,7 @@ static_library("AsmParser") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/Mips/MCTargetDesc",
     "//llvm/lib/Target/Mips/TargetInfo",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [ "MipsAsmParser.cpp" ]

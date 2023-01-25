@@ -9,7 +9,7 @@
 #ifndef LLVM_CLANG_BASIC_CLWARNINGS_H
 #define LLVM_CLANG_BASIC_CLWARNINGS_H
 
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace clang {
 
@@ -19,7 +19,7 @@ enum class Group;
 
 /// For cl.exe warning IDs that cleany map to clang diagnostic groups,
 /// returns the corresponding group. Else, returns an empty Optional.
-llvm::Optional<diag::Group> diagGroupFromCLWarningID(unsigned);
+std::optional<diag::Group> diagGroupFromCLWarningID(unsigned);
 
 } // end namespace clang
 

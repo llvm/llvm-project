@@ -58,7 +58,7 @@
 # RUN: rm -f %t/libgoodbye.dylib
 # RUN: not %lld -o %t/sub-library -L%t -lsuper %t/sub-library.o 2>&1 \
 # RUN:  | FileCheck %s --check-prefix=MISSING-REEXPORT -DDIR=%t
-# MISSING-REEXPORT: error: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
+# MISSING-REEXPORT: error: {{.*}}libsuper.dylib: unable to locate re-export with install name [[DIR]]/libgoodbye.dylib
 
 
 ## We can match dylibs without extensions too.

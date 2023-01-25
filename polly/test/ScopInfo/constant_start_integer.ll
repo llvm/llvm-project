@@ -19,7 +19,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: MustWriteAccess
 ; CHECK:   [p_0] -> { Stmt_for_body3[i0] -> MemRef_input[64p_0 + i0] };
 
-define void @foo(float* nocapture %input) {
+define void @foo(ptr nocapture %input) {
 entry:
   br label %for.cond1.preheader
 
@@ -32,11 +32,11 @@ for.body3:                                        ; preds = %for.body3, %for.con
   %i.020 = phi i64 [ 0, %for.cond1.preheader ], [ %inc, %for.body3 ]
   %add = add nsw i64 %i.020, %mul
   %add4 = add nsw i64 %add, 1
-  %arrayidx = getelementptr inbounds float, float* %input, i64 %add4
-  %0 = load float, float* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds float, ptr %input, i64 %add4
+  %0 = load float, ptr %arrayidx, align 8
   %mul5 = fmul float %0, %0
-  %arrayidx9 = getelementptr inbounds float, float* %input, i64 %add
-  store float %mul5, float* %arrayidx9, align 8
+  %arrayidx9 = getelementptr inbounds float, ptr %input, i64 %add
+  store float %mul5, ptr %arrayidx9, align 8
   %inc = add nsw i64 %i.020, 1
   %exitcond = icmp eq i64 %inc, 63
   br i1 %exitcond, label %for.inc10, label %for.body3

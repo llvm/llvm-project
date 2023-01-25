@@ -203,7 +203,7 @@ public:
   uint8_t getBytesInAddress() const override;
   StringRef getFileFormatName() const override;
   Triple::ArchType getArch() const override;
-  SubtargetFeatures getFeatures() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
   bool isRelocatableObject() const override;
   bool isSharedObject() const;
 
@@ -280,7 +280,7 @@ private:
   std::vector<wasm::WasmExport> Exports;
   std::vector<wasm::WasmElemSegment> ElemSegments;
   std::vector<WasmSegment> DataSegments;
-  llvm::Optional<size_t> DataCount;
+  std::optional<size_t> DataCount;
   std::vector<wasm::WasmFunction> Functions;
   std::vector<WasmSymbol> Symbols;
   std::vector<wasm::WasmDebugName> DebugNames;

@@ -22,6 +22,7 @@
 
 #include <iterator>
 #include <mutex>
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -30,26 +31,30 @@ using namespace lldb_private;
 
 bool CompilerType::IsAggregateType() const {
   if (IsValid())
-    return m_type_system->IsAggregateType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsAggregateType(m_type);
   return false;
 }
 
 bool CompilerType::IsAnonymousType() const {
   if (IsValid())
-    return m_type_system->IsAnonymousType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsAnonymousType(m_type);
   return false;
 }
 
 bool CompilerType::IsScopedEnumerationType() const {
   if (IsValid())
-    return m_type_system->IsScopedEnumerationType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsScopedEnumerationType(m_type);
   return false;
 }
 
 bool CompilerType::IsArrayType(CompilerType *element_type_ptr, uint64_t *size,
                                bool *is_incomplete) const {
   if (IsValid())
-    return m_type_system->IsArrayType(m_type, element_type_ptr, size,
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsArrayType(m_type, element_type_ptr, size,
                                       is_incomplete);
 
   if (element_type_ptr)
@@ -64,43 +69,57 @@ bool CompilerType::IsArrayType(CompilerType *element_type_ptr, uint64_t *size,
 bool CompilerType::IsVectorType(CompilerType *element_type,
                                 uint64_t *size) const {
   if (IsValid())
-    return m_type_system->IsVectorType(m_type, element_type, size);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsVectorType(m_type, element_type, size);
   return false;
 }
 
 bool CompilerType::IsRuntimeGeneratedType() const {
   if (IsValid())
-    return m_type_system->IsRuntimeGeneratedType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsRuntimeGeneratedType(m_type);
   return false;
 }
 
 bool CompilerType::IsCharType() const {
   if (IsValid())
-    return m_type_system->IsCharType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCharType(m_type);
   return false;
 }
 
 bool CompilerType::IsCompleteType() const {
   if (IsValid())
-    return m_type_system->IsCompleteType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCompleteType(m_type);
+  return false;
+}
+
+bool CompilerType::IsForcefullyCompleted() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsForcefullyCompleted(m_type);
   return false;
 }
 
 bool CompilerType::IsConst() const {
   if (IsValid())
-    return m_type_system->IsConst(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsConst(m_type);
   return false;
 }
 
 bool CompilerType::IsCStringType(uint32_t &length) const {
   if (IsValid())
-    return m_type_system->IsCStringType(m_type, length);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsCStringType(m_type, length);
   return false;
 }
 
 bool CompilerType::IsFunctionType() const {
   if (IsValid())
-    return m_type_system->IsFunctionType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsFunctionType(m_type);
   return false;
 }
 
@@ -108,45 +127,52 @@ bool CompilerType::IsFunctionType() const {
 uint32_t
 CompilerType::IsHomogeneousAggregate(CompilerType *base_type_ptr) const {
   if (IsValid())
-    return m_type_system->IsHomogeneousAggregate(m_type, base_type_ptr);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsHomogeneousAggregate(m_type, base_type_ptr);
   return 0;
 }
 
 size_t CompilerType::GetNumberOfFunctionArguments() const {
   if (IsValid())
-    return m_type_system->GetNumberOfFunctionArguments(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumberOfFunctionArguments(m_type);
   return 0;
 }
 
 CompilerType
 CompilerType::GetFunctionArgumentAtIndex(const size_t index) const {
   if (IsValid())
-    return m_type_system->GetFunctionArgumentAtIndex(m_type, index);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFunctionArgumentAtIndex(m_type, index);
   return CompilerType();
 }
 
 bool CompilerType::IsFunctionPointerType() const {
   if (IsValid())
-    return m_type_system->IsFunctionPointerType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsFunctionPointerType(m_type);
   return false;
 }
 
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
-    return m_type_system->IsBlockPointerType(m_type, function_pointer_type_ptr);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsBlockPointerType(m_type, function_pointer_type_ptr);
   return false;
 }
 
 bool CompilerType::IsIntegerType(bool &is_signed) const {
   if (IsValid())
-    return m_type_system->IsIntegerType(m_type, is_signed);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsIntegerType(m_type, is_signed);
   return false;
 }
 
 bool CompilerType::IsEnumerationType(bool &is_signed) const {
   if (IsValid())
-    return m_type_system->IsEnumerationType(m_type, is_signed);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsEnumerationType(m_type, is_signed);
   return false;
 }
 
@@ -156,7 +182,8 @@ bool CompilerType::IsIntegerOrEnumerationType(bool &is_signed) const {
 
 bool CompilerType::IsPointerType(CompilerType *pointee_type) const {
   if (IsValid()) {
-    return m_type_system->IsPointerType(m_type, pointee_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPointerType(m_type, pointee_type);
   }
   if (pointee_type)
     pointee_type->Clear();
@@ -165,7 +192,8 @@ bool CompilerType::IsPointerType(CompilerType *pointee_type) const {
 
 bool CompilerType::IsPointerOrReferenceType(CompilerType *pointee_type) const {
   if (IsValid()) {
-    return m_type_system->IsPointerOrReferenceType(m_type, pointee_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPointerOrReferenceType(m_type, pointee_type);
   }
   if (pointee_type)
     pointee_type->Clear();
@@ -175,7 +203,8 @@ bool CompilerType::IsPointerOrReferenceType(CompilerType *pointee_type) const {
 bool CompilerType::IsReferenceType(CompilerType *pointee_type,
                                    bool *is_rvalue) const {
   if (IsValid()) {
-    return m_type_system->IsReferenceType(m_type, pointee_type, is_rvalue);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsReferenceType(m_type, pointee_type, is_rvalue);
   }
   if (pointee_type)
     pointee_type->Clear();
@@ -184,14 +213,16 @@ bool CompilerType::IsReferenceType(CompilerType *pointee_type,
 
 bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   if (IsValid())
-    return m_type_system->ShouldTreatScalarValueAsAddress(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->ShouldTreatScalarValueAsAddress(m_type);
   return false;
 }
 
 bool CompilerType::IsFloatingPointType(uint32_t &count,
                                        bool &is_complex) const {
   if (IsValid()) {
-    return m_type_system->IsFloatingPointType(m_type, count, is_complex);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
   }
   count = 0;
   is_complex = false;
@@ -200,13 +231,15 @@ bool CompilerType::IsFloatingPointType(uint32_t &count,
 
 bool CompilerType::IsDefined() const {
   if (IsValid())
-    return m_type_system->IsDefined(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsDefined(m_type);
   return true;
 }
 
 bool CompilerType::IsPolymorphicClass() const {
   if (IsValid()) {
-    return m_type_system->IsPolymorphicClass(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPolymorphicClass(m_type);
   }
   return false;
 }
@@ -215,28 +248,38 @@ bool CompilerType::IsPossibleDynamicType(CompilerType *dynamic_pointee_type,
                                          bool check_cplusplus,
                                          bool check_objc) const {
   if (IsValid())
-    return m_type_system->IsPossibleDynamicType(m_type, dynamic_pointee_type,
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPossibleDynamicType(m_type, dynamic_pointee_type,
                                                 check_cplusplus, check_objc);
   return false;
 }
 
 bool CompilerType::IsScalarType() const {
-  if (!IsValid())
-    return false;
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsScalarType(m_type);
+  return false;
+}
 
-  return m_type_system->IsScalarType(m_type);
+bool CompilerType::IsTemplateType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsTemplateType(m_type);
+  return false;
 }
 
 bool CompilerType::IsTypedefType() const {
-  if (!IsValid())
-    return false;
-  return m_type_system->IsTypedefType(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsTypedefType(m_type);
+  return false;
 }
 
 bool CompilerType::IsVoidType() const {
-  if (!IsValid())
-    return false;
-  return m_type_system->IsVoidType(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsVoidType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToScalarType() const {
@@ -254,70 +297,82 @@ bool CompilerType::IsArrayOfScalarType() const {
 }
 
 bool CompilerType::IsBeingDefined() const {
-  if (!IsValid())
-    return false;
-  return m_type_system->IsBeingDefined(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsBeingDefined(m_type);
+  return false;
 }
 
 // Type Completion
 
 bool CompilerType::GetCompleteType() const {
-  if (!IsValid())
-    return false;
-  return m_type_system->GetCompleteType(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetCompleteType(m_type);
+  return false;
 }
 
 // AST related queries
 size_t CompilerType::GetPointerByteSize() const {
-  if (m_type_system)
-    return m_type_system->GetPointerByteSize();
+  if (auto type_system_sp = GetTypeSystem())
+    return type_system_sp->GetPointerByteSize();
   return 0;
 }
 
-ConstString CompilerType::GetTypeName() const {
+ConstString CompilerType::GetTypeName(bool BaseOnly) const {
   if (IsValid()) {
-    return m_type_system->GetTypeName(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeName(m_type, BaseOnly);
   }
   return ConstString("<invalid>");
 }
 
 ConstString CompilerType::GetDisplayTypeName() const {
   if (IsValid())
-    return m_type_system->GetDisplayTypeName(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDisplayTypeName(m_type);
   return ConstString("<invalid>");
 }
 
 uint32_t CompilerType::GetTypeInfo(
     CompilerType *pointee_or_element_compiler_type) const {
-  if (!IsValid())
-    return 0;
-
-  return m_type_system->GetTypeInfo(m_type, pointee_or_element_compiler_type);
+  if (IsValid())
+  if (auto type_system_sp = GetTypeSystem())
+    return type_system_sp->GetTypeInfo(m_type,
+                                       pointee_or_element_compiler_type);
+  return 0;
 }
 
 lldb::LanguageType CompilerType::GetMinimumLanguage() {
-  if (!IsValid())
-    return lldb::eLanguageTypeC;
-
-  return m_type_system->GetMinimumLanguage(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetMinimumLanguage(m_type);
+  return lldb::eLanguageTypeC;
 }
 
 lldb::TypeClass CompilerType::GetTypeClass() const {
-  if (!IsValid())
-    return lldb::eTypeClassInvalid;
-
-  return m_type_system->GetTypeClass(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeClass(m_type);
+  return lldb::eTypeClassInvalid;
 }
 
-void CompilerType::SetCompilerType(TypeSystem *type_system,
+void CompilerType::SetCompilerType(lldb::TypeSystemWP type_system,
                                    lldb::opaque_compiler_type_t type) {
   m_type_system = type_system;
   m_type = type;
 }
 
+void CompilerType::SetCompilerType(CompilerType::TypeSystemSPWrapper type_system,
+                                   lldb::opaque_compiler_type_t type) {
+  m_type_system = type_system.GetSharedPointer();
+  m_type = type;
+}
+
 unsigned CompilerType::GetTypeQualifiers() const {
   if (IsValid())
-    return m_type_system->GetTypeQualifiers(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeQualifiers(m_type);
   return 0;
 }
 
@@ -326,146 +381,160 @@ unsigned CompilerType::GetTypeQualifiers() const {
 CompilerType
 CompilerType::GetArrayElementType(ExecutionContextScope *exe_scope) const {
   if (IsValid()) {
-    return m_type_system->GetArrayElementType(m_type, exe_scope);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetArrayElementType(m_type, exe_scope);
   }
   return CompilerType();
 }
 
 CompilerType CompilerType::GetArrayType(uint64_t size) const {
   if (IsValid()) {
-    return m_type_system->GetArrayType(m_type, size);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetArrayType(m_type, size);
   }
   return CompilerType();
 }
 
 CompilerType CompilerType::GetCanonicalType() const {
   if (IsValid())
-    return m_type_system->GetCanonicalType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetCanonicalType(m_type);
   return CompilerType();
 }
 
 CompilerType CompilerType::GetFullyUnqualifiedType() const {
   if (IsValid())
-    return m_type_system->GetFullyUnqualifiedType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFullyUnqualifiedType(m_type);
   return CompilerType();
 }
 
 CompilerType CompilerType::GetEnumerationIntegerType() const {
   if (IsValid())
-    return m_type_system->GetEnumerationIntegerType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetEnumerationIntegerType(m_type);
   return CompilerType();
 }
 
 int CompilerType::GetFunctionArgumentCount() const {
   if (IsValid()) {
-    return m_type_system->GetFunctionArgumentCount(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFunctionArgumentCount(m_type);
   }
   return -1;
 }
 
 CompilerType CompilerType::GetFunctionArgumentTypeAtIndex(size_t idx) const {
   if (IsValid()) {
-    return m_type_system->GetFunctionArgumentTypeAtIndex(m_type, idx);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFunctionArgumentTypeAtIndex(m_type, idx);
   }
   return CompilerType();
 }
 
 CompilerType CompilerType::GetFunctionReturnType() const {
   if (IsValid()) {
-    return m_type_system->GetFunctionReturnType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFunctionReturnType(m_type);
   }
   return CompilerType();
 }
 
 size_t CompilerType::GetNumMemberFunctions() const {
   if (IsValid()) {
-    return m_type_system->GetNumMemberFunctions(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumMemberFunctions(m_type);
   }
   return 0;
 }
 
 TypeMemberFunctionImpl CompilerType::GetMemberFunctionAtIndex(size_t idx) {
   if (IsValid()) {
-    return m_type_system->GetMemberFunctionAtIndex(m_type, idx);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetMemberFunctionAtIndex(m_type, idx);
   }
   return TypeMemberFunctionImpl();
 }
 
 CompilerType CompilerType::GetNonReferenceType() const {
   if (IsValid())
-    return m_type_system->GetNonReferenceType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNonReferenceType(m_type);
   return CompilerType();
 }
 
 CompilerType CompilerType::GetPointeeType() const {
   if (IsValid()) {
-    return m_type_system->GetPointeeType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPointeeType(m_type);
   }
   return CompilerType();
 }
 
 CompilerType CompilerType::GetPointerType() const {
   if (IsValid()) {
-    return m_type_system->GetPointerType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPointerType(m_type);
   }
   return CompilerType();
 }
 
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
-    return m_type_system->GetLValueReferenceType(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetLValueReferenceType(m_type);
+  return CompilerType();
 }
 
 CompilerType CompilerType::GetRValueReferenceType() const {
   if (IsValid())
-    return m_type_system->GetRValueReferenceType(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetRValueReferenceType(m_type);
+  return CompilerType();
 }
 
 CompilerType CompilerType::GetAtomicType() const {
   if (IsValid())
-    return m_type_system->GetAtomicType(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetAtomicType(m_type);
   return CompilerType();
 }
 
 CompilerType CompilerType::AddConstModifier() const {
   if (IsValid())
-    return m_type_system->AddConstModifier(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddConstModifier(m_type);
+  return CompilerType();
 }
 
 CompilerType CompilerType::AddVolatileModifier() const {
   if (IsValid())
-    return m_type_system->AddVolatileModifier(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddVolatileModifier(m_type);
+  return CompilerType();
 }
 
 CompilerType CompilerType::AddRestrictModifier() const {
   if (IsValid())
-    return m_type_system->AddRestrictModifier(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddRestrictModifier(m_type);
+  return CompilerType();
 }
 
 CompilerType CompilerType::CreateTypedef(const char *name,
                                          const CompilerDeclContext &decl_ctx,
                                          uint32_t payload) const {
   if (IsValid())
-    return m_type_system->CreateTypedef(m_type, name, decl_ctx, payload);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->CreateTypedef(m_type, name, decl_ctx, payload);
+  return CompilerType();
 }
 
 CompilerType CompilerType::GetTypedefedType() const {
   if (IsValid())
-    return m_type_system->GetTypedefedType(m_type);
-  else
-    return CompilerType();
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypedefedType(m_type);
+  return CompilerType();
 }
 
 // Create related types using the current type's AST
@@ -473,56 +542,62 @@ CompilerType CompilerType::GetTypedefedType() const {
 CompilerType
 CompilerType::GetBasicTypeFromAST(lldb::BasicType basic_type) const {
   if (IsValid())
-    return m_type_system->GetBasicTypeFromAST(basic_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetBasicTypeFromAST(basic_type);
   return CompilerType();
 }
 // Exploring the type
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    return m_type_system->GetBitSize(m_type, exe_scope);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetBitSize(m_type, exe_scope);
   return {};
 }
 
-llvm::Optional<uint64_t>
+std::optional<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  if (llvm::Optional<uint64_t> bit_size = GetBitSize(exe_scope))
+  if (std::optional<uint64_t> bit_size = GetBitSize(exe_scope))
     return (*bit_size + 7) / 8;
   return {};
 }
 
-llvm::Optional<size_t> CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
+std::optional<size_t>
+CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   if (IsValid())
-    return m_type_system->GetTypeBitAlign(m_type, exe_scope);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeBitAlign(m_type, exe_scope);
   return {};
 }
 
 lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
-  if (!IsValid())
-    return lldb::eEncodingInvalid;
-
-  return m_type_system->GetEncoding(m_type, count);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetEncoding(m_type, count);
+  return lldb::eEncodingInvalid;
 }
 
 lldb::Format CompilerType::GetFormat() const {
-  if (!IsValid())
-    return lldb::eFormatDefault;
-
-  return m_type_system->GetFormat(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFormat(m_type);
+  return lldb::eFormatDefault;
 }
 
 uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes,
                                       const ExecutionContext *exe_ctx) const {
-  if (!IsValid())
-    return 0;
-  return m_type_system->GetNumChildren(m_type, omit_empty_base_classes,
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumChildren(m_type, omit_empty_base_classes,
                                        exe_ctx);
+  return 0;
 }
 
 lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
   if (IsValid())
-    return m_type_system->GetBasicTypeEnumeration(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetBasicTypeEnumeration(m_type);
   return eBasicTypeInvalid;
 }
 
@@ -531,34 +606,39 @@ void CompilerType::ForEachEnumerator(
                        ConstString name,
                        const llvm::APSInt &value)> const &callback) const {
   if (IsValid())
-    return m_type_system->ForEachEnumerator(m_type, callback);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->ForEachEnumerator(m_type, callback);
 }
 
 uint32_t CompilerType::GetNumFields() const {
-  if (!IsValid())
-    return 0;
-  return m_type_system->GetNumFields(m_type);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumFields(m_type);
+  return 0;
 }
 
 CompilerType CompilerType::GetFieldAtIndex(size_t idx, std::string &name,
                                            uint64_t *bit_offset_ptr,
                                            uint32_t *bitfield_bit_size_ptr,
                                            bool *is_bitfield_ptr) const {
-  if (!IsValid())
-    return CompilerType();
-  return m_type_system->GetFieldAtIndex(m_type, idx, name, bit_offset_ptr,
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetFieldAtIndex(m_type, idx, name, bit_offset_ptr,
                                         bitfield_bit_size_ptr, is_bitfield_ptr);
+  return CompilerType();
 }
 
 uint32_t CompilerType::GetNumDirectBaseClasses() const {
   if (IsValid())
-    return m_type_system->GetNumDirectBaseClasses(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumDirectBaseClasses(m_type);
   return 0;
 }
 
 uint32_t CompilerType::GetNumVirtualBaseClasses() const {
   if (IsValid())
-    return m_type_system->GetNumVirtualBaseClasses(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumVirtualBaseClasses(m_type);
   return 0;
 }
 
@@ -566,7 +646,8 @@ CompilerType
 CompilerType::GetDirectBaseClassAtIndex(size_t idx,
                                         uint32_t *bit_offset_ptr) const {
   if (IsValid())
-    return m_type_system->GetDirectBaseClassAtIndex(m_type, idx,
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetDirectBaseClassAtIndex(m_type, idx,
                                                     bit_offset_ptr);
   return CompilerType();
 }
@@ -575,7 +656,8 @@ CompilerType
 CompilerType::GetVirtualBaseClassAtIndex(size_t idx,
                                          uint32_t *bit_offset_ptr) const {
   if (IsValid())
-    return m_type_system->GetVirtualBaseClassAtIndex(m_type, idx,
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetVirtualBaseClassAtIndex(m_type, idx,
                                                      bit_offset_ptr);
   return CompilerType();
 }
@@ -607,13 +689,15 @@ CompilerType CompilerType::GetChildCompilerTypeAtIndex(
     uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
     bool &child_is_deref_of_parent, ValueObject *valobj,
     uint64_t &language_flags) const {
-  if (!IsValid())
-    return CompilerType();
-  return m_type_system->GetChildCompilerTypeAtIndex(
-      m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-      ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-      child_bitfield_bit_size, child_bitfield_bit_offset, child_is_base_class,
-      child_is_deref_of_parent, valobj, language_flags);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetChildCompilerTypeAtIndex(
+          m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
+          child_bitfield_bit_size, child_bitfield_bit_offset,
+          child_is_base_class, child_is_deref_of_parent, valobj,
+          language_flags);
+  return CompilerType();
 }
 
 // Look for a child member (doesn't include base classes, but it does include
@@ -653,54 +737,64 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
     const char *name, bool omit_empty_base_classes,
     std::vector<uint32_t> &child_indexes) const {
   if (IsValid() && name && name[0]) {
-    return m_type_system->GetIndexOfChildMemberWithName(
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetIndexOfChildMemberWithName(
         m_type, name, omit_empty_base_classes, child_indexes);
   }
   return 0;
 }
 
-size_t CompilerType::GetNumTemplateArguments() const {
+size_t CompilerType::GetNumTemplateArguments(bool expand_pack) const {
   if (IsValid()) {
-    return m_type_system->GetNumTemplateArguments(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetNumTemplateArguments(m_type, expand_pack);
   }
   return 0;
 }
 
-TemplateArgumentKind CompilerType::GetTemplateArgumentKind(size_t idx) const {
+TemplateArgumentKind
+CompilerType::GetTemplateArgumentKind(size_t idx, bool expand_pack) const {
   if (IsValid())
-    return m_type_system->GetTemplateArgumentKind(m_type, idx);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTemplateArgumentKind(m_type, idx, expand_pack);
   return eTemplateArgumentKindNull;
 }
 
-CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
+CompilerType CompilerType::GetTypeTemplateArgument(size_t idx,
+                                                   bool expand_pack) const {
   if (IsValid()) {
-    return m_type_system->GetTypeTemplateArgument(m_type, idx);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeTemplateArgument(m_type, idx, expand_pack);
   }
   return CompilerType();
 }
 
-llvm::Optional<CompilerType::IntegralTemplateArgument>
-CompilerType::GetIntegralTemplateArgument(size_t idx) const {
+std::optional<CompilerType::IntegralTemplateArgument>
+CompilerType::GetIntegralTemplateArgument(size_t idx, bool expand_pack) const {
   if (IsValid())
-    return m_type_system->GetIntegralTemplateArgument(m_type, idx);
-  return llvm::None;
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetIntegralTemplateArgument(m_type, idx, expand_pack);
+  return std::nullopt;
 }
 
 CompilerType CompilerType::GetTypeForFormatters() const {
   if (IsValid())
-    return m_type_system->GetTypeForFormatters(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTypeForFormatters(m_type);
   return CompilerType();
 }
 
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
-    return m_type_system->ShouldPrintAsOneLiner(m_type, valobj);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->ShouldPrintAsOneLiner(m_type, valobj);
   return eLazyBoolCalculate;
 }
 
 bool CompilerType::IsMeaninglessWithoutDynamicResolution() const {
   if (IsValid())
-    return m_type_system->IsMeaninglessWithoutDynamicResolution(m_type);
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMeaninglessWithoutDynamicResolution(m_type);
   return false;
 }
 
@@ -712,7 +806,8 @@ uint32_t
 CompilerType::GetIndexOfChildWithName(const char *name,
                                       bool omit_empty_base_classes) const {
   if (IsValid() && name && name[0]) {
-    return m_type_system->GetIndexOfChildWithName(m_type, name,
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                   omit_empty_base_classes);
   }
   return UINT32_MAX;
@@ -727,11 +822,11 @@ void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                              uint32_t bitfield_bit_offset, bool show_types,
                              bool show_summary, bool verbose, uint32_t depth) {
   if (!IsValid())
-    return;
-  m_type_system->DumpValue(m_type, exe_ctx, s, format, data, data_byte_offset,
-                           data_byte_size, bitfield_bit_size,
-                           bitfield_bit_offset, show_types, show_summary,
-                           verbose, depth);
+    if (auto type_system_sp = GetTypeSystem())
+      type_system_sp->DumpValue(m_type, exe_ctx, s, format, data,
+                                data_byte_offset, data_byte_size,
+                                bitfield_bit_size, bitfield_bit_offset,
+                                show_types, show_summary, verbose, depth);
 }
 
 bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
@@ -740,11 +835,12 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
                                  uint32_t bitfield_bit_size,
                                  uint32_t bitfield_bit_offset,
                                  ExecutionContextScope *exe_scope) {
-  if (!IsValid())
-    return false;
-  return m_type_system->DumpTypeValue(m_type, s, format, data, byte_offset,
-                                      byte_size, bitfield_bit_size,
-                                      bitfield_bit_offset, exe_scope);
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->DumpTypeValue(m_type, s, format, data, byte_offset,
+                                           byte_size, bitfield_bit_size,
+                                           bitfield_bit_offset, exe_scope);
+  return false;
 }
 
 void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
@@ -752,28 +848,30 @@ void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
                                lldb::offset_t data_byte_offset,
                                size_t data_byte_size) {
   if (IsValid())
-    m_type_system->DumpSummary(m_type, exe_ctx, s, data, data_byte_offset,
-                               data_byte_size);
+    if (auto type_system_sp = GetTypeSystem())
+      type_system_sp->DumpSummary(m_type, exe_ctx, s, data, data_byte_offset,
+                                  data_byte_size);
 }
 
 void CompilerType::DumpTypeDescription(lldb::DescriptionLevel level) const {
   if (IsValid())
-    m_type_system->DumpTypeDescription(m_type, level);
+    if (auto type_system_sp = GetTypeSystem())
+      type_system_sp->DumpTypeDescription(m_type, level);
 }
 
 void CompilerType::DumpTypeDescription(Stream *s,
                                        lldb::DescriptionLevel level) const {
-  if (IsValid()) {
-    m_type_system->DumpTypeDescription(m_type, s, level);
-  }
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      type_system_sp->DumpTypeDescription(m_type, s, level);
 }
 
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void CompilerType::dump() const {
   if (IsValid())
-    m_type_system->dump(m_type);
-  else
-    llvm::errs() << "<invalid>\n";
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->dump(m_type);
+  llvm::errs() << "<invalid>\n";
 }
 #endif
 
@@ -793,7 +891,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    llvm::Optional<uint64_t> byte_size = GetByteSize(exe_scope);
+    std::optional<uint64_t> byte_size = GetByteSize(exe_scope);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;
@@ -880,9 +978,31 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
 
 #ifndef NDEBUG
 bool CompilerType::Verify() const {
-  return !IsValid() || m_type_system->Verify(m_type);
+  if (!IsValid())
+    return true;
+  if (auto type_system_sp = GetTypeSystem())
+    return type_system_sp->Verify(m_type);
+  return true;
 }
 #endif
+
+CompilerType::TypeSystemSPWrapper CompilerType::GetTypeSystem() const {
+  return {m_type_system.lock()};
+}
+
+bool CompilerType::TypeSystemSPWrapper::operator==(
+    const CompilerType::TypeSystemSPWrapper &other) const {
+  if (!m_typesystem_sp && !other.m_typesystem_sp)
+    return true;
+  if (m_typesystem_sp && other.m_typesystem_sp)
+    return m_typesystem_sp.get() == other.m_typesystem_sp.get();
+  return false;
+}
+
+TypeSystem *CompilerType::TypeSystemSPWrapper::operator->() const {
+  assert(m_typesystem_sp);
+  return m_typesystem_sp.get();
+}
 
 bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {

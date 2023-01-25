@@ -56,24 +56,24 @@ entry:
   %a.addr = alloca i32, align 4
   %d = alloca i32, align 4
   %e = alloca i32, align 4
-  store i32 %c, i32* %c.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %c.addr, metadata !11, metadata !12), !dbg !13
-  store i32 %b, i32* %b.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %b.addr, metadata !14, metadata !12), !dbg !15
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !16, metadata !12), !dbg !17
-  call void @llvm.dbg.declare(metadata i32* %d, metadata !18, metadata !12), !dbg !19
-  store i32 4, i32* %d, align 4, !dbg !19
-  call void @llvm.dbg.declare(metadata i32* %e, metadata !20, metadata !12), !dbg !21
-  store i32 5, i32* %e, align 4, !dbg !21
-  %0 = load i32, i32* %a.addr, align 4, !dbg !22
-  %1 = load i32, i32* %b.addr, align 4, !dbg !23
+  store i32 %c, ptr %c.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %c.addr, metadata !11, metadata !12), !dbg !13
+  store i32 %b, ptr %b.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !14, metadata !12), !dbg !15
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !16, metadata !12), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %d, metadata !18, metadata !12), !dbg !19
+  store i32 4, ptr %d, align 4, !dbg !19
+  call void @llvm.dbg.declare(metadata ptr %e, metadata !20, metadata !12), !dbg !21
+  store i32 5, ptr %e, align 4, !dbg !21
+  %0 = load i32, ptr %a.addr, align 4, !dbg !22
+  %1 = load i32, ptr %b.addr, align 4, !dbg !23
   %add = add nsw i32 %0, %1, !dbg !24
-  %2 = load i32, i32* %c.addr, align 4, !dbg !25
+  %2 = load i32, ptr %c.addr, align 4, !dbg !25
   %add1 = add nsw i32 %add, %2, !dbg !26
-  %3 = load i32, i32* %d, align 4, !dbg !27
+  %3 = load i32, ptr %d, align 4, !dbg !27
   %add2 = add nsw i32 %add1, %3, !dbg !28
-  %4 = load i32, i32* %e, align 4, !dbg !29
+  %4 = load i32, ptr %e, align 4, !dbg !29
   %add3 = add nsw i32 %add2, %4, !dbg !30
   ret i32 %add3, !dbg !31
 }

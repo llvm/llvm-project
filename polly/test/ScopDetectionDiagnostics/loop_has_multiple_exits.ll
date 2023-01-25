@@ -9,21 +9,21 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @encode_line(i8* nocapture readonly %input, i32 %offset, i32 %octets, i8* nocapture %line) !dbg !9 {
+define void @encode_line(ptr nocapture readonly %input, i32 %offset, i32 %octets, ptr nocapture %line) !dbg !9 {
 entry:
   br label %entry.split, !dbg !26
 
 entry.split:                                      ; preds = %entry
-  call void @llvm.dbg.value(metadata i8* %input, metadata !17, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %input, metadata !17, metadata !DIExpression()), !dbg !26
   call void @llvm.dbg.value(metadata i32 %offset, metadata !18, metadata !DIExpression()), !dbg !27
   call void @llvm.dbg.value(metadata i32 %octets, metadata !19, metadata !DIExpression()), !dbg !28
-  call void @llvm.dbg.value(metadata i8* %line, metadata !20, metadata !DIExpression()), !dbg !29
+  call void @llvm.dbg.value(metadata ptr %line, metadata !20, metadata !DIExpression()), !dbg !29
   call void @llvm.dbg.value(metadata i32 0, metadata !21, metadata !DIExpression()), !dbg !30
   %conv = trunc i32 %octets to i8, !dbg !31
   call void @llvm.dbg.value(metadata i8 %conv, metadata !32, metadata !DIExpression()), !dbg !37
   %tmp = and i8 %conv, 63, !dbg !39
   %addconv.i = add nuw nsw i8 %tmp, 32, !dbg !40
-  store i8 %addconv.i, i8* %line, align 1, !dbg !41, !tbaa !42
+  store i8 %addconv.i, ptr %line, align 1, !dbg !41, !tbaa !42
   call void @llvm.dbg.value(metadata i32 1, metadata !21, metadata !DIExpression()), !dbg !30
   call void @llvm.dbg.value(metadata i32 %offset, metadata !18, metadata !DIExpression()), !dbg !27
   call void @llvm.dbg.value(metadata i32 %octets, metadata !19, metadata !DIExpression()), !dbg !28
@@ -51,8 +51,8 @@ if.else:                                          ; preds = %for.body
   br label %for.end
 
 if.then54:                                        ; No predecessors!
-  %arrayidx56 = getelementptr inbounds i8, i8* %input, i64 %indvars.iv, !dbg !50
-  %tmp2 = load i8, i8* %arrayidx56, align 1, !dbg !50, !tbaa !42
+  %arrayidx56 = getelementptr inbounds i8, ptr %input, i64 %indvars.iv, !dbg !50
+  %tmp2 = load i8, ptr %arrayidx56, align 1, !dbg !50, !tbaa !42
   %tmp3 = lshr i8 %tmp2, 2, !dbg !54
   call void @llvm.dbg.value(metadata i8 %tmp2, metadata !32, metadata !DIExpression(DW_OP_constu, 2, DW_OP_shra, DW_OP_stack_value)), !dbg !55
   %addconv.i210 = add nuw nsw i8 %tmp3, 32, !dbg !57
@@ -60,9 +60,9 @@ if.then54:                                        ; No predecessors!
   %inc62 = add nuw nsw i32 %loffs.0223, 1, !dbg !59
   call void @llvm.dbg.value(metadata i32 %inc62, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp4 = zext i32 %loffs.0223 to i64, !dbg !60
-  %arrayidx64 = getelementptr inbounds i8, i8* %line, i64 %tmp4, !dbg !60
-  store i8 %addconv.i210, i8* %arrayidx64, align 1, !dbg !61, !tbaa !42
-  %tmp5 = load i8, i8* %arrayidx56, align 1, !dbg !62, !tbaa !42
+  %arrayidx64 = getelementptr inbounds i8, ptr %line, i64 %tmp4, !dbg !60
+  store i8 %addconv.i210, ptr %arrayidx64, align 1, !dbg !61, !tbaa !42
+  %tmp5 = load i8, ptr %arrayidx56, align 1, !dbg !62, !tbaa !42
   %shl68 = shl i8 %tmp5, 4, !dbg !63
   call void @llvm.dbg.value(metadata i8 %shl68, metadata !32, metadata !DIExpression()), !dbg !64
   %tmp6 = and i8 %shl68, 48, !dbg !66
@@ -71,23 +71,23 @@ if.then54:                                        ; No predecessors!
   %inc72 = add nuw nsw i32 %loffs.0223, 2, !dbg !68
   call void @llvm.dbg.value(metadata i32 %inc72, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp7 = zext i32 %inc62 to i64, !dbg !69
-  %arrayidx74 = getelementptr inbounds i8, i8* %line, i64 %tmp7, !dbg !69
-  store i8 %addconv.i208, i8* %arrayidx74, align 1, !dbg !70, !tbaa !42
+  %arrayidx74 = getelementptr inbounds i8, ptr %line, i64 %tmp7, !dbg !69
+  store i8 %addconv.i208, ptr %arrayidx74, align 1, !dbg !70, !tbaa !42
   %inc75 = add nuw nsw i32 %loffs.0223, 3, !dbg !71
   call void @llvm.dbg.value(metadata i32 %inc75, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp8 = zext i32 %inc72 to i64, !dbg !72
-  %arrayidx77 = getelementptr inbounds i8, i8* %line, i64 %tmp8, !dbg !72
-  store i8 61, i8* %arrayidx77, align 1, !dbg !73, !tbaa !42
+  %arrayidx77 = getelementptr inbounds i8, ptr %line, i64 %tmp8, !dbg !72
+  store i8 61, ptr %arrayidx77, align 1, !dbg !73, !tbaa !42
   %inc78 = add nuw nsw i32 %loffs.0223, 4, !dbg !74
   call void @llvm.dbg.value(metadata i32 %inc78, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp9 = zext i32 %inc75 to i64, !dbg !75
-  %arrayidx80 = getelementptr inbounds i8, i8* %line, i64 %tmp9, !dbg !75
-  store i8 61, i8* %arrayidx80, align 1, !dbg !76, !tbaa !42
+  %arrayidx80 = getelementptr inbounds i8, ptr %line, i64 %tmp9, !dbg !75
+  store i8 61, ptr %arrayidx80, align 1, !dbg !76, !tbaa !42
   br label %for.end, !dbg !77
 
 if.then84:                                        ; No predecessors!
-  %arrayidx86 = getelementptr inbounds i8, i8* %input, i64 %indvars.iv, !dbg !78
-  %tmp10 = load i8, i8* %arrayidx86, align 1, !dbg !78, !tbaa !42
+  %arrayidx86 = getelementptr inbounds i8, ptr %input, i64 %indvars.iv, !dbg !78
+  %tmp10 = load i8, ptr %arrayidx86, align 1, !dbg !78, !tbaa !42
   %tmp11 = lshr i8 %tmp10, 2, !dbg !82
   call void @llvm.dbg.value(metadata i8 %tmp10, metadata !32, metadata !DIExpression(DW_OP_constu, 2, DW_OP_shra, DW_OP_stack_value)), !dbg !83
   %addconv.i206 = add nuw nsw i8 %tmp11, 32, !dbg !85
@@ -95,13 +95,13 @@ if.then84:                                        ; No predecessors!
   %inc92 = add nuw nsw i32 %loffs.0223, 1, !dbg !86
   call void @llvm.dbg.value(metadata i32 %inc92, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp12 = zext i32 %loffs.0223 to i64, !dbg !87
-  %arrayidx94 = getelementptr inbounds i8, i8* %line, i64 %tmp12, !dbg !87
-  store i8 %addconv.i206, i8* %arrayidx94, align 1, !dbg !88, !tbaa !42
-  %tmp13 = load i8, i8* %arrayidx86, align 1, !dbg !89, !tbaa !42
+  %arrayidx94 = getelementptr inbounds i8, ptr %line, i64 %tmp12, !dbg !87
+  store i8 %addconv.i206, ptr %arrayidx94, align 1, !dbg !88, !tbaa !42
+  %tmp13 = load i8, ptr %arrayidx86, align 1, !dbg !89, !tbaa !42
   %shl98 = shl i8 %tmp13, 4, !dbg !90
   %tmp14 = add nsw i64 %indvars.iv, 1, !dbg !91
-  %arrayidx101 = getelementptr inbounds i8, i8* %input, i64 %tmp14, !dbg !92
-  %tmp15 = load i8, i8* %arrayidx101, align 1, !dbg !92, !tbaa !42
+  %arrayidx101 = getelementptr inbounds i8, ptr %input, i64 %tmp14, !dbg !92
+  %tmp15 = load i8, ptr %arrayidx101, align 1, !dbg !92, !tbaa !42
   %tmp16 = ashr i8 %tmp15, 4, !dbg !93
   %or104 = or i8 %tmp16, %shl98, !dbg !94
   call void @llvm.dbg.value(metadata i8 %or104, metadata !32, metadata !DIExpression()), !dbg !95
@@ -111,9 +111,9 @@ if.then84:                                        ; No predecessors!
   %inc108 = add nuw nsw i32 %loffs.0223, 2, !dbg !99
   call void @llvm.dbg.value(metadata i32 %inc108, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp18 = zext i32 %inc92 to i64, !dbg !100
-  %arrayidx110 = getelementptr inbounds i8, i8* %line, i64 %tmp18, !dbg !100
-  store i8 %addconv.i204, i8* %arrayidx110, align 1, !dbg !101, !tbaa !42
-  %tmp19 = load i8, i8* %arrayidx101, align 1, !dbg !102, !tbaa !42
+  %arrayidx110 = getelementptr inbounds i8, ptr %line, i64 %tmp18, !dbg !100
+  store i8 %addconv.i204, ptr %arrayidx110, align 1, !dbg !101, !tbaa !42
+  %tmp19 = load i8, ptr %arrayidx101, align 1, !dbg !102, !tbaa !42
   %shl115 = shl i8 %tmp19, 2, !dbg !103
   call void @llvm.dbg.value(metadata i8 %shl115, metadata !32, metadata !DIExpression()), !dbg !104
   %tmp20 = and i8 %shl115, 60, !dbg !106
@@ -122,18 +122,18 @@ if.then84:                                        ; No predecessors!
   %inc119 = add nuw nsw i32 %loffs.0223, 3, !dbg !108
   call void @llvm.dbg.value(metadata i32 %inc119, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp21 = zext i32 %inc108 to i64, !dbg !109
-  %arrayidx121 = getelementptr inbounds i8, i8* %line, i64 %tmp21, !dbg !109
-  store i8 %addconv.i202, i8* %arrayidx121, align 1, !dbg !110, !tbaa !42
+  %arrayidx121 = getelementptr inbounds i8, ptr %line, i64 %tmp21, !dbg !109
+  store i8 %addconv.i202, ptr %arrayidx121, align 1, !dbg !110, !tbaa !42
   %inc122 = add nuw nsw i32 %loffs.0223, 4, !dbg !111
   call void @llvm.dbg.value(metadata i32 %inc122, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp22 = zext i32 %inc119 to i64, !dbg !112
-  %arrayidx124 = getelementptr inbounds i8, i8* %line, i64 %tmp22, !dbg !112
-  store i8 61, i8* %arrayidx124, align 1, !dbg !113, !tbaa !42
+  %arrayidx124 = getelementptr inbounds i8, ptr %line, i64 %tmp22, !dbg !112
+  store i8 61, ptr %arrayidx124, align 1, !dbg !113, !tbaa !42
   br label %for.end, !dbg !114
 
 if.end126:                                        ; preds = %for.body
-  %arrayidx6 = getelementptr inbounds i8, i8* %input, i64 %indvars.iv, !dbg !115
-  %tmp23 = load i8, i8* %arrayidx6, align 1, !dbg !115, !tbaa !42
+  %arrayidx6 = getelementptr inbounds i8, ptr %input, i64 %indvars.iv, !dbg !115
+  %tmp23 = load i8, ptr %arrayidx6, align 1, !dbg !115, !tbaa !42
   %tmp24 = lshr i8 %tmp23, 2, !dbg !117
   call void @llvm.dbg.value(metadata i8 %tmp23, metadata !32, metadata !DIExpression(DW_OP_constu, 2, DW_OP_shra, DW_OP_stack_value)), !dbg !118
   %addconv.i218 = add nuw nsw i8 %tmp24, 32, !dbg !120
@@ -141,13 +141,13 @@ if.end126:                                        ; preds = %for.body
   %inc11 = add nuw nsw i32 %loffs.0223, 1, !dbg !121
   call void @llvm.dbg.value(metadata i32 %inc11, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp25 = zext i32 %loffs.0223 to i64, !dbg !122
-  %arrayidx13 = getelementptr inbounds i8, i8* %line, i64 %tmp25, !dbg !122
-  store i8 %addconv.i218, i8* %arrayidx13, align 1, !dbg !123, !tbaa !42
-  %tmp26 = load i8, i8* %arrayidx6, align 1, !dbg !124, !tbaa !42
+  %arrayidx13 = getelementptr inbounds i8, ptr %line, i64 %tmp25, !dbg !122
+  store i8 %addconv.i218, ptr %arrayidx13, align 1, !dbg !123, !tbaa !42
+  %tmp26 = load i8, ptr %arrayidx6, align 1, !dbg !124, !tbaa !42
   %shl = shl i8 %tmp26, 4, !dbg !125
   %tmp27 = add nsw i64 %indvars.iv, 1, !dbg !126
-  %arrayidx18 = getelementptr inbounds i8, i8* %input, i64 %tmp27, !dbg !127
-  %tmp28 = load i8, i8* %arrayidx18, align 1, !dbg !127, !tbaa !42
+  %arrayidx18 = getelementptr inbounds i8, ptr %input, i64 %tmp27, !dbg !127
+  %tmp28 = load i8, ptr %arrayidx18, align 1, !dbg !127, !tbaa !42
   %tmp29 = ashr i8 %tmp28, 4, !dbg !128
   %or = or i8 %tmp29, %shl, !dbg !129
   call void @llvm.dbg.value(metadata i8 %or, metadata !32, metadata !DIExpression()), !dbg !130
@@ -157,13 +157,13 @@ if.end126:                                        ; preds = %for.body
   %inc24 = add nuw nsw i32 %loffs.0223, 2, !dbg !134
   call void @llvm.dbg.value(metadata i32 %inc24, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp31 = zext i32 %inc11 to i64, !dbg !135
-  %arrayidx26 = getelementptr inbounds i8, i8* %line, i64 %tmp31, !dbg !135
-  store i8 %addconv.i216, i8* %arrayidx26, align 1, !dbg !136, !tbaa !42
-  %tmp32 = load i8, i8* %arrayidx18, align 1, !dbg !137, !tbaa !42
+  %arrayidx26 = getelementptr inbounds i8, ptr %line, i64 %tmp31, !dbg !135
+  store i8 %addconv.i216, ptr %arrayidx26, align 1, !dbg !136, !tbaa !42
+  %tmp32 = load i8, ptr %arrayidx18, align 1, !dbg !137, !tbaa !42
   %shl31 = shl i8 %tmp32, 2, !dbg !138
   %tmp33 = add nsw i64 %indvars.iv, 2, !dbg !139
-  %arrayidx34 = getelementptr inbounds i8, i8* %input, i64 %tmp33, !dbg !140
-  %tmp34 = load i8, i8* %arrayidx34, align 1, !dbg !140, !tbaa !42
+  %arrayidx34 = getelementptr inbounds i8, ptr %input, i64 %tmp33, !dbg !140
+  %tmp34 = load i8, ptr %arrayidx34, align 1, !dbg !140, !tbaa !42
   %tmp35 = ashr i8 %tmp34, 6, !dbg !141
   %or37 = or i8 %tmp35, %shl31, !dbg !142
   call void @llvm.dbg.value(metadata i8 %or37, metadata !32, metadata !DIExpression()), !dbg !143
@@ -173,9 +173,9 @@ if.end126:                                        ; preds = %for.body
   %inc41 = add nuw nsw i32 %loffs.0223, 3, !dbg !147
   call void @llvm.dbg.value(metadata i32 %inc41, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp37 = zext i32 %inc24 to i64, !dbg !148
-  %arrayidx43 = getelementptr inbounds i8, i8* %line, i64 %tmp37, !dbg !148
-  store i8 %addconv.i214, i8* %arrayidx43, align 1, !dbg !149, !tbaa !42
-  %tmp38 = load i8, i8* %arrayidx34, align 1, !dbg !150, !tbaa !42
+  %arrayidx43 = getelementptr inbounds i8, ptr %line, i64 %tmp37, !dbg !148
+  store i8 %addconv.i214, ptr %arrayidx43, align 1, !dbg !149, !tbaa !42
+  %tmp38 = load i8, ptr %arrayidx34, align 1, !dbg !150, !tbaa !42
   call void @llvm.dbg.value(metadata i8 %tmp38, metadata !32, metadata !DIExpression()), !dbg !151
   %tmp39 = and i8 %tmp38, 63, !dbg !153
   %addconv.i212 = add nuw nsw i8 %tmp39, 32, !dbg !154
@@ -183,8 +183,8 @@ if.end126:                                        ; preds = %for.body
   %inc49 = add nuw nsw i32 %loffs.0223, 4, !dbg !155
   call void @llvm.dbg.value(metadata i32 %inc49, metadata !21, metadata !DIExpression()), !dbg !30
   %tmp40 = zext i32 %inc41 to i64, !dbg !156
-  %arrayidx51 = getelementptr inbounds i8, i8* %line, i64 %tmp40, !dbg !156
-  store i8 %addconv.i212, i8* %arrayidx51, align 1, !dbg !157, !tbaa !42
+  %arrayidx51 = getelementptr inbounds i8, ptr %line, i64 %tmp40, !dbg !156
+  store i8 %addconv.i212, ptr %arrayidx51, align 1, !dbg !157, !tbaa !42
   %indvars.iv.next = add nsw i64 %indvars.iv, 3, !dbg !158
   %sub = add nsw i32 %octets.addr.0221, -3, !dbg !159
   call void @llvm.dbg.value(metadata i32 %inc49, metadata !21, metadata !DIExpression()), !dbg !30
@@ -199,11 +199,11 @@ for.end:                                          ; preds = %if.end126, %if.then
   %inc128 = add nsw i32 %loffs.0.lcssa, 1, !dbg !162
   call void @llvm.dbg.value(metadata i32 %inc128, metadata !21, metadata !DIExpression()), !dbg !30
   %idxprom129 = sext i32 %loffs.0.lcssa to i64, !dbg !163
-  %arrayidx130 = getelementptr inbounds i8, i8* %line, i64 %idxprom129, !dbg !163
-  store i8 10, i8* %arrayidx130, align 1, !dbg !164, !tbaa !42
+  %arrayidx130 = getelementptr inbounds i8, ptr %line, i64 %idxprom129, !dbg !163
+  store i8 10, ptr %arrayidx130, align 1, !dbg !164, !tbaa !42
   %idxprom131 = sext i32 %inc128 to i64, !dbg !165
-  %arrayidx132 = getelementptr inbounds i8, i8* %line, i64 %idxprom131, !dbg !165
-  store i8 0, i8* %arrayidx132, align 1, !dbg !166, !tbaa !42
+  %arrayidx132 = getelementptr inbounds i8, ptr %line, i64 %idxprom131, !dbg !165
+  store i8 0, ptr %arrayidx132, align 1, !dbg !166, !tbaa !42
   ret void, !dbg !167
 }
 

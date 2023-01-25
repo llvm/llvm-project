@@ -19,6 +19,7 @@
 
 #include <cstdint>
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -64,7 +65,8 @@ public:
   static const ArchSpec &
   GetArchitecture(ArchitectureKind arch_kind = eArchKindDefault);
 
-  static llvm::Optional<ArchitectureKind> ParseArchitectureKind(llvm::StringRef kind);
+  static std::optional<ArchitectureKind>
+  ParseArchitectureKind(llvm::StringRef kind);
 
   /// Returns the directory containing the lldb shared library. Only the
   /// directory member of the FileSpec is filled in.
@@ -108,7 +110,9 @@ public:
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
   
   /// Return the directory containing a specific Xcode SDK.
-  static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }
+  static llvm::Expected<llvm::StringRef> GetXcodeSDKPath(XcodeSDK sdk) {
+    return "";
+  }
 
   /// Return information about module \p image_name if it is loaded in
   /// the current process's address space.

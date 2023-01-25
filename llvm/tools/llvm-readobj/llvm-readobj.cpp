@@ -21,7 +21,6 @@
 #include "llvm-readobj.h"
 #include "ObjDumper.h"
 #include "WindowsResourceDumper.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -62,11 +61,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -78,9 +80,11 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class ReadobjOptTable : public opt::OptTable {
+class ReadobjOptTable : public opt::GenericOptTable {
 public:
-  ReadobjOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  ReadobjOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 enum OutputFormatTy { bsd, sysv, posix, darwin, just_symbols };
@@ -162,6 +166,10 @@ static bool COFFTLSDirectory;
 
 // XCOFF specific options.
 static bool XCOFFAuxiliaryHeader;
+static bool XCOFFLoaderSectionHeader;
+static bool XCOFFLoaderSectionSymbol;
+static bool XCOFFLoaderSectionRelocation;
+static bool XCOFFExceptionSection;
 
 OutputStyleTy Output = OutputStyleTy::LLVM;
 static std::vector<std::string> InputFilenames;
@@ -302,6 +310,11 @@ static void parseOptions(const opt::InputArgList &Args) {
 
   // XCOFF specific options.
   opts::XCOFFAuxiliaryHeader = Args.hasArg(OPT_auxiliary_header);
+  opts::XCOFFLoaderSectionHeader = Args.hasArg(OPT_loader_section_header);
+  opts::XCOFFLoaderSectionSymbol = Args.hasArg(OPT_loader_section_symbols);
+  opts::XCOFFLoaderSectionRelocation =
+      Args.hasArg(OPT_loader_section_relocations);
+  opts::XCOFFExceptionSection = Args.hasArg(OPT_exception_section);
 
   opts::InputFilenames = Args.getAllArgValues(OPT_INPUT);
 }
@@ -357,7 +370,7 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
                        toString(std::move(ContentErr));
 
   ObjDumper *Dumper;
-  Optional<SymbolComparator> SymComp;
+  std::optional<SymbolComparator> SymComp;
   Expected<std::unique_ptr<ObjDumper>> DumperOrErr = createDumper(Obj, Writer);
   if (!DumperOrErr)
     reportError(DumperOrErr.takeError(), FileStr);
@@ -395,6 +408,8 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
   if (opts::FileHeaders)
     Dumper->printFileHeaders();
 
+  // Auxiliary header in XOCFF is right after the file header, so print the data
+  // here.
   if (Obj.isXCOFF() && opts::XCOFFAuxiliaryHeader)
     Dumper->printAuxiliaryHeader();
 
@@ -502,6 +517,18 @@ static void dumpObject(ObjectFile &Obj, ScopedPrinter &Writer,
     if (opts::CGProfile)
       Dumper->printCGProfile();
   }
+
+  if (Obj.isXCOFF()) {
+    if (opts::XCOFFLoaderSectionHeader || opts::XCOFFLoaderSectionSymbol ||
+        opts::XCOFFLoaderSectionRelocation)
+      Dumper->printLoaderSection(opts::XCOFFLoaderSectionHeader,
+                                 opts::XCOFFLoaderSectionSymbol,
+                                 opts::XCOFFLoaderSectionRelocation);
+
+    if (opts::XCOFFExceptionSection)
+      Dumper->printExceptionSection();
+  }
+
   if (opts::PrintStackMap)
     Dumper->printStackMap();
   if (opts::PrintStackSizes)
@@ -605,7 +632,7 @@ std::unique_ptr<ScopedPrinter> createWriter() {
   return std::make_unique<ScopedPrinter>(fouts());
 }
 
-int main(int argc, char *argv[]) {
+int llvm_readobj_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);

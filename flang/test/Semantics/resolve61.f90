@@ -40,12 +40,12 @@ subroutine p6
 end
 
 subroutine p7
-  !ERROR: Cray pointee 'b' must have must have explicit shape or assumed size
+  !ERROR: Cray pointee 'b' must have explicit shape or assumed size
   pointer(a, b(:))
 contains
   subroutine s(x, y)
     real :: x(*)  ! assumed size
-    !ERROR: Cray pointee 'y' must have must have explicit shape or assumed size
+    !ERROR: Cray pointee 'y' must have explicit shape or assumed size
     real :: y(:)  ! assumed shape
     pointer(w, y)
   end

@@ -24,7 +24,8 @@ public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI)
       : TargetFrameLowering(StackGrowsDown,
                             /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0),
+                            /*LocalAreaOffset=*/0,
+                            /*TransientStackAlignment=*/Align(16)),
         STI(STI) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -72,14 +73,17 @@ public:
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
 
+  bool isStackIdSafeForLocalArea(unsigned StackId) const override {
+    // We don't support putting RISCV Vector objects into the pre-allocated
+    // local frame block at the moment.
+    return StackId != TargetStackID::ScalableVector;
+  }
+
 protected:
   const RISCVSubtarget &STI;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                 const DebugLoc &DL, Register DestReg, Register SrcReg,
-                 int64_t Val, MachineInstr::MIFlag Flag) const;
   void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          int64_t Amount, MachineInstr::MIFlag Flag) const;

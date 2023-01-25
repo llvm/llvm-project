@@ -193,6 +193,10 @@ def testIndexType():
 @run
 def testFloatType():
   with Context():
+    # CHECK: float: f8E4M3FN
+    print("float:", Float8E4M3FNType.get())
+    # CHECK: float: f8E5M2
+    print("float:", Float8E5M2Type.get())
     # CHECK: float: bf16
     print("float:", BF16Type.get())
     # CHECK: float: f16
@@ -487,3 +491,13 @@ def testOpaqueType():
     print("dialect namespace:", opaque.dialect_namespace)
     # CHECK: data: type
     print("data:", opaque.data)
+
+
+# CHECK-LABEL: TEST: testShapedTypeConstants
+# Tests that ShapedType exposes magic value constants.
+@run
+def testShapedTypeConstants():
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_size()))
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_stride_or_offset()))

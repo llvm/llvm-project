@@ -11,23 +11,22 @@ target triple = "thumbv7s-apple-ios8.0.0"
 ; CHECK: vadd.f64
 ; CHECK: vadd.f64
 
-define i32 @main(i32 %argc, i8** nocapture readnone %Argv, <2 x double> %tmp31) {
+define i32 @main(i32 %argc, ptr nocapture readnone %Argv, <2 x double> %tmp31) {
 bb:
   %Ad = alloca %union.DV, align 16
-  %tmp32 = getelementptr inbounds %union.DV, %union.DV* %Ad, i32 0, i32 0
   %tmp33 = fadd <2 x double> %tmp31, %tmp31
   br label %bb37
 
 bb37:                                             ; preds = %bb37, %bb
   %i.02 = phi i32 [ 0, %bb ], [ %tmp38, %bb37 ]
-  store <2 x double> %tmp33, <2 x double>* %tmp32, align 16
+  store <2 x double> %tmp33, ptr %Ad, align 16
   %tmp38 = add nuw nsw i32 %i.02, 1
   %exitcond = icmp eq i32 %tmp38, 500000
   br i1 %exitcond, label %bb39, label %bb37
 
 bb39:                                             ; preds = %bb37
-  call fastcc void @printDV(%union.DV* %Ad)
+  call fastcc void @printDV(ptr %Ad)
   ret i32 0
 }
 
-declare hidden fastcc void @printDV(%union.DV* nocapture readonly)
+declare hidden fastcc void @printDV(ptr nocapture readonly)

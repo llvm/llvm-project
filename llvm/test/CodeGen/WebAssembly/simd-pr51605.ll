@@ -13,11 +13,9 @@ define <4 x i8> @test_i8(<4 x i8> %b) {
 ; CHECK-LABEL: test_i8:
 ; CHECK:         .functype test_i8 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const -1, -1, -1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    v128.xor
-; CHECK-NEXT:    v128.const 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    v128.andnot
 ; CHECK-NEXT:    # fallthrough-return
   %c = and <4 x i8> %b, <i8 1, i8 1, i8 1, i8 1>
   %d = xor <4 x i8> %c, <i8 1, i8 1, i8 1, i8 1>
@@ -28,11 +26,9 @@ define <4 x i16> @test_i16(<4 x i16> %b) {
 ; CHECK-LABEL: test_i16:
 ; CHECK:         .functype test_i16 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    v128.const 1, 1, 1, 1, 1, 1, 1, 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.const -1, -1, -1, -1, 0, 0, 0, 0
-; CHECK-NEXT:    v128.xor
-; CHECK-NEXT:    v128.const 1, 1, 1, 1, 0, 0, 0, 0
-; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    v128.andnot
 ; CHECK-NEXT:    # fallthrough-return
   %c = and <4 x i16> %b, <i16 1, i16 1, i16 1, i16 1>
   %d = xor <4 x i16> %c, <i16 1, i16 1, i16 1, i16 1>

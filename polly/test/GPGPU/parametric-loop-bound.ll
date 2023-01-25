@@ -31,14 +31,13 @@
 ; CODE-NEXT:   if (n >= 32 * b0 + t0 + 1048576 * c0 + 1)
 ; CODE-NEXT:     Stmt_bb2(32 * b0 + t0 + 1048576 * c0);
 
-; IR: store i64 %n, i64* %polly_launch_0_param_1
-; IR-NEXT: [[REGA:%.+]] = getelementptr [2 x i8*], [2 x i8*]* %polly_launch_0_params, i64 0, i64 1
-; IR-NEXT: [[REGB:%.+]] = bitcast i64* %polly_launch_0_param_1 to i8*
-; IR-NEXT: store i8* [[REGB]], i8** [[REGA]]
+; IR: store i64 %n, ptr %polly_launch_0_param_1
+; IR-NEXT: [[REGA:%.+]] = getelementptr [2 x ptr], ptr %polly_launch_0_params, i64 0, i64 1
+; IR-NEXT: store ptr %polly_launch_0_param_1, ptr [[REGA]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64* %A, i64 %n) {
+define void @foo(ptr %A, i64 %n) {
 bb:
   br label %bb1
 
@@ -48,10 +47,10 @@ bb1:                                              ; preds = %bb6, %bb
   br i1 %tmp, label %bb2, label %bb8
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = getelementptr inbounds i64, i64* %A, i64 %i.0
-  %tmp4 = load i64, i64* %tmp3, align 8
+  %tmp3 = getelementptr inbounds i64, ptr %A, i64 %i.0
+  %tmp4 = load i64, ptr %tmp3, align 8
   %tmp5 = add nsw i64 %tmp4, 100
-  store i64 %tmp5, i64* %tmp3, align 8
+  store i64 %tmp5, ptr %tmp3, align 8
   br label %bb6
 
 bb6:                                              ; preds = %bb2

@@ -663,7 +663,6 @@ define i64 @setb27(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpd r3, r4
 ; CHECK-NEXT:    setb r3, cr0
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: setb27:
@@ -690,7 +689,6 @@ define i64 @setb28(i64 %a, i64 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpd r3, r4
 ; CHECK-NEXT:    setb r3, cr0
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-PWR8-LABEL: setb28:
@@ -882,8 +880,6 @@ define i64 @setbsc1(i8 %a, i8 %b) {
 ; CHECK-PWR8-NEXT:    extsb r4, r4
 ; CHECK-PWR8-NEXT:    extsb r3, r3
 ; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    extsw r4, r4
-; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    sub r6, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
 ; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
@@ -911,8 +907,6 @@ define i64 @setbsc2(i8 %a, i8 %b) {
 ; CHECK-PWR8-NEXT:    extsb r4, r4
 ; CHECK-PWR8-NEXT:    extsb r3, r3
 ; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    extsw r4, r4
-; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    sub r6, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r4, r3
 ; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
@@ -944,8 +938,6 @@ define i64 @setbsc3(i4 %a, i4 %b) {
 ; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    srawi r4, r4, 28
 ; CHECK-PWR8-NEXT:    srawi r3, r3, 28
-; CHECK-PWR8-NEXT:    extsw r4, r4
-; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    sub r6, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
 ; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
@@ -1251,8 +1243,8 @@ define i64 @setbf128(fp128 %a, fp128 %b) {
 ; CHECK-PWR8-LABEL: setbf128:
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
 ; CHECK-PWR8-NEXT:    stdu r1, -96(r1)
+; CHECK-PWR8-NEXT:    std r0, 112(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r30, -16
@@ -1377,7 +1369,7 @@ define i64 @setbn3(float %a, float %b) {
 }
 
 ; Verify this case doesn't crash
-define void @setbn4(i128 %0, i32* %sel.out) {
+define void @setbn4(i128 %0, ptr %sel.out) {
 ; CHECK-LABEL: setbn4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r6, 1
@@ -1416,6 +1408,6 @@ entry:
   %c2 = icmp ugt i128 %0, 5192296858534827628530496329220096
   %ext = zext i1 %c2 to i32
   %sel = select i1 %c1, i32 -1, i32 %ext
-  store i32 %sel, i32* %sel.out, align 4
+  store i32 %sel, ptr %sel.out, align 4
   ret void
 }

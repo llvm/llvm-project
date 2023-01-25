@@ -10,7 +10,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -38,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -114,7 +114,7 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
 }
 
 //
-// This helper routine returns an expression of End - Start + IntVal .
+// This helper routine returns an expression of End - Start - IntVal .
 //
 static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
@@ -264,9 +264,9 @@ void MCDwarfLineTable::emit(MCStreamer *MCOS, MCDwarfLineTableParams Params) {
     return;
 
   // In a v5 non-split line table, put the strings in a separate section.
-  Optional<MCDwarfLineStr> LineStr;
+  std::optional<MCDwarfLineStr> LineStr;
   if (context.getDwarfVersion() >= 5)
-    LineStr = MCDwarfLineStr(context);
+    LineStr.emplace(context);
 
   // Switch to the section where the table will be emitted into.
   MCOS->switchSection(context.getObjectFileInfo()->getDwarfLineSection());
@@ -284,14 +284,14 @@ void MCDwarfDwoLineTable::Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
                                MCSection *Section) const {
   if (!HasSplitLineTable)
     return;
-  Optional<MCDwarfLineStr> NoLineStr(None);
+  std::optional<MCDwarfLineStr> NoLineStr(std::nullopt);
   MCOS.switchSection(Section);
-  MCOS.emitLabel(Header.Emit(&MCOS, Params, None, NoLineStr).second);
+  MCOS.emitLabel(Header.Emit(&MCOS, Params, std::nullopt, NoLineStr).second);
 }
 
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                             Optional<MCDwarfLineStr> &LineStr) const {
+                             std::optional<MCDwarfLineStr> &LineStr) const {
   static const char StandardOpcodeLengths[] = {
       0, // length of DW_LNS_copy
       1, // length of DW_LNS_advance_pc
@@ -306,12 +306,11 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
       0, // length of DW_LNS_set_epilogue_begin
       1  // DW_LNS_set_isa
   };
-  assert(array_lengthof(StandardOpcodeLengths) >=
+  assert(std::size(StandardOpcodeLengths) >=
          (Params.DWARF2LineOpcodeBase - 1U));
-  return Emit(
-      MCOS, Params,
-      makeArrayRef(StandardOpcodeLengths, Params.DWARF2LineOpcodeBase - 1),
-      LineStr);
+  return Emit(MCOS, Params,
+              ArrayRef(StandardOpcodeLengths, Params.DWARF2LineOpcodeBase - 1),
+              LineStr);
 }
 
 static const MCExpr *forceExpAbs(MCStreamer &OS, const MCExpr* Expr) {
@@ -381,7 +380,7 @@ void MCDwarfLineTableHeader::emitV2FileDirTables(MCStreamer *MCOS) const {
 
 static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
                                bool EmitMD5, bool HasSource,
-                               Optional<MCDwarfLineStr> &LineStr) {
+                               std::optional<MCDwarfLineStr> &LineStr) {
   assert(!DwarfFile.Name.empty());
   if (LineStr)
     LineStr->emitRef(MCOS, DwarfFile.Name);
@@ -406,7 +405,7 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
 }
 
 void MCDwarfLineTableHeader::emitV5FileDirTables(
-    MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const {
+    MCStreamer *MCOS, std::optional<MCDwarfLineStr> &LineStr) const {
   // The directory format, which is just a list of the directory paths.  In a
   // non-split object, these are references to .debug_line_str; in a split
   // object, they are inline strings.
@@ -416,9 +415,15 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->emitULEB128IntValue(MCDwarfDirs.size() + 1);
   // Try not to emit an empty compilation directory.
-  const StringRef CompDir = CompilationDir.empty()
-                                ? MCOS->getContext().getCompilationDir()
-                                : StringRef(CompilationDir);
+  SmallString<256> Dir;
+  StringRef CompDir = MCOS->getContext().getCompilationDir();
+  if (!CompilationDir.empty()) {
+    Dir = CompilationDir;
+    MCOS->getContext().remapDebugPath(Dir);
+    CompDir = Dir.str();
+    if (LineStr)
+      CompDir = LineStr->getSaver().save(CompDir);
+  }
   if (LineStr) {
     // Record path strings, emit references here.
     LineStr->emitRef(MCOS, CompDir);
@@ -475,7 +480,7 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
 std::pair<MCSymbol *, MCSymbol *>
 MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                              ArrayRef<char> StandardOpcodeLengths,
-                             Optional<MCDwarfLineStr> &LineStr) const {
+                             std::optional<MCDwarfLineStr> &LineStr) const {
   MCContext &context = MCOS->getContext();
 
   // Create a symbol at the beginning of the line table.
@@ -541,7 +546,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 }
 
 void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                              Optional<MCDwarfLineStr> &LineStr) const {
+                              std::optional<MCDwarfLineStr> &LineStr) const {
   MCSymbol *LineEndSym = Header.Emit(MCOS, Params, LineStr).second;
 
   // Put out the line tables.
@@ -553,30 +558,28 @@ void MCDwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
   MCOS->emitLabel(LineEndSym);
 }
 
-Expected<unsigned> MCDwarfLineTable::tryGetFile(StringRef &Directory,
-                                                StringRef &FileName,
-                                                Optional<MD5::MD5Result> Checksum,
-                                                Optional<StringRef> Source,
-                                                uint16_t DwarfVersion,
-                                                unsigned FileNumber) {
+Expected<unsigned>
+MCDwarfLineTable::tryGetFile(StringRef &Directory, StringRef &FileName,
+                             std::optional<MD5::MD5Result> Checksum,
+                             std::optional<StringRef> Source,
+                             uint16_t DwarfVersion, unsigned FileNumber) {
   return Header.tryGetFile(Directory, FileName, Checksum, Source, DwarfVersion,
                            FileNumber);
 }
 
 static bool isRootFile(const MCDwarfFile &RootFile, StringRef &Directory,
-                       StringRef &FileName, Optional<MD5::MD5Result> Checksum) {
+                       StringRef &FileName,
+                       std::optional<MD5::MD5Result> Checksum) {
   if (RootFile.Name.empty() || StringRef(RootFile.Name) != FileName)
     return false;
   return RootFile.Checksum == Checksum;
 }
 
 Expected<unsigned>
-MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
-                                   StringRef &FileName,
-                                   Optional<MD5::MD5Result> Checksum,
-                                   Optional<StringRef> Source,
-                                   uint16_t DwarfVersion,
-                                   unsigned FileNumber) {
+MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
+                                   std::optional<MD5::MD5Result> Checksum,
+                                   std::optional<StringRef> Source,
+                                   uint16_t DwarfVersion, unsigned FileNumber) {
   if (Directory == CompilationDir)
     Directory = "";
   if (FileName.empty()) {
@@ -588,7 +591,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   // If any files have embedded source, they all must.
   if (MCDwarfFiles.empty()) {
     trackMD5Usage(Checksum.has_value());
-    HasSource = (Source != None);
+    HasSource = (Source != std::nullopt);
   }
   if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
     return 0;
@@ -616,7 +619,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
                                    inconvertibleErrorCode());
 
   // If any files have embedded source, they all must.
-  if (HasSource != (Source != None))
+  if (HasSource != (Source != std::nullopt))
     return make_error<StringError>("inconsistent use of embedded source",
                                    inconvertibleErrorCode());
 
@@ -1680,7 +1683,7 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   InitialCFAOffset = CFAOffset;
 
   // Padding
-  Streamer.emitValueToAlignment(IsEH ? 4 : MAI->getCodePointerSize());
+  Streamer.emitValueToAlignment(Align(IsEH ? 4 : MAI->getCodePointerSize()));
 
   Streamer.emitLabel(sectionEnd);
   return *sectionStart;
@@ -1757,8 +1760,8 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
   // The size of a .eh_frame section has to be a multiple of the alignment
   // since a null CIE is interpreted as the end. Old systems overaligned
   // .eh_frame, so we do too and account for it in the last FDE.
-  unsigned Align = LastInSection ? asmInfo->getCodePointerSize() : PCSize;
-  Streamer.emitValueToAlignment(Align);
+  unsigned Alignment = LastInSection ? asmInfo->getCodePointerSize() : PCSize;
+  Streamer.emitValueToAlignment(Align(Alignment));
 
   Streamer.emitLabel(fdeEnd);
 }
@@ -1768,27 +1771,29 @@ namespace {
 struct CIEKey {
   static const CIEKey getEmptyKey() {
     return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
-                  false);
+                  false, false);
   }
 
   static const CIEKey getTombstoneKey() {
     return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
-                  false);
+                  false, false);
   }
 
   CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
          unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg, bool IsBKeyFrame)
+         unsigned RAReg, bool IsBKeyFrame, bool IsMTETaggedFrame)
       : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
         LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame) {}
+        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame),
+        IsMTETaggedFrame(IsMTETaggedFrame) {}
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
-        IsBKeyFrame(Frame.IsBKeyFrame) {}
+        IsBKeyFrame(Frame.IsBKeyFrame),
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -1798,10 +1803,12 @@ struct CIEKey {
 
   bool operator<(const CIEKey &Other) const {
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
-                           IsSignalFrame, IsSimple, RAReg) <
+                           IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
+                           IsMTETaggedFrame) <
            std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
                            Other.LsdaEncoding, Other.IsSignalFrame,
-                           Other.IsSimple, Other.RAReg);
+                           Other.IsSimple, Other.RAReg, Other.IsBKeyFrame,
+                           Other.IsMTETaggedFrame);
   }
 
   const MCSymbol *Personality;
@@ -1811,6 +1818,7 @@ struct CIEKey {
   bool IsSimple;
   unsigned RAReg;
   bool IsBKeyFrame;
+  bool IsMTETaggedFrame;
 };
 
 } // end anonymous namespace
@@ -1822,9 +1830,10 @@ template <> struct DenseMapInfo<CIEKey> {
   static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
 
   static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(hash_combine(
-        Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-        Key.IsSignalFrame, Key.IsSimple, Key.RAReg, Key.IsBKeyFrame));
+    return static_cast<unsigned>(
+        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
+                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg,
+                     Key.IsBKeyFrame, Key.IsMTETaggedFrame));
   }
 
   static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
@@ -1833,7 +1842,8 @@ template <> struct DenseMapInfo<CIEKey> {
            LHS.LsdaEncoding == RHS.LsdaEncoding &&
            LHS.IsSignalFrame == RHS.IsSignalFrame &&
            LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
-           LHS.IsBKeyFrame == RHS.IsBKeyFrame;
+           LHS.IsBKeyFrame == RHS.IsBKeyFrame &&
+           LHS.IsMTETaggedFrame == RHS.IsMTETaggedFrame;
   }
 };
 
@@ -1856,7 +1866,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
       if (Frame.CompactUnwindEncoding == 0) continue;
       if (!SectionEmitted) {
         Streamer.switchSection(MOFI->getCompactUnwindSection());
-        Streamer.emitValueToAlignment(AsmInfo->getCodePointerSize());
+        Streamer.emitValueToAlignment(Align(AsmInfo->getCodePointerSize()));
         SectionEmitted = true;
       }
       NeedsEHFrameSection |=

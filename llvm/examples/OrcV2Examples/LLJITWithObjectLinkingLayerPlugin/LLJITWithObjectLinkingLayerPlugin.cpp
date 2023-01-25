@@ -83,11 +83,11 @@ public:
     return Error::success();
   }
 
-  Error notifyRemovingResources(ResourceKey K) override {
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
     return Error::success();
   }
 
-  void notifyTransferringResources(ResourceKey DstKey,
+  void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
 
 private:
@@ -157,7 +157,7 @@ private:
         printBlockContent(B);
         BlocksAlreadyVisited.insert(&B);
 
-        if (!llvm::empty(B.edges())) {
+        if (!B.edges().empty()) {
           outs() << "        Edges:\n";
           for (auto &E : B.edges()) {
             outs() << "          "

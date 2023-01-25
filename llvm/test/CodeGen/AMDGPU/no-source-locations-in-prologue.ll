@@ -13,16 +13,18 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
-; CHECK-NEXT:    v_writelane_b32 v40, s33, 2
+; CHECK-NEXT:    s_mov_b32 s16, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
+; CHECK-NEXT:    v_writelane_b32 v41, s16, 0
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
-; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _ZL13sleep_foreverv@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _ZL13sleep_foreverv@gotpcrel32@hi+12
@@ -37,11 +39,14 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    .loc 0 32 1 ; lane-info.cpp:32:1
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
+; CHECK-NEXT:    v_readlane_b32 s4, v41, 0
+; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
+; CHECK-NEXT:    .loc    0 32 1 epilogue_begin is_stmt 0 ; lane-info.cpp:32:1
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0xfffffc00
-; CHECK-NEXT:    v_readlane_b32 s33, v40, 2
-; CHECK-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; CHECK-NEXT:    s_mov_b64 exec, s[4:5]
+; CHECK-NEXT:    s_mov_b32 s33, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ; CHECK-NEXT:  .Ltmp2:

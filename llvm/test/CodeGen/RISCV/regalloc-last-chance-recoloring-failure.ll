@@ -23,8 +23,9 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 24 * vlenb
 ; CHECK-NEXT:    li a0, 55
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vloxseg2ei32.v v8, (a0), v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
@@ -35,10 +36,10 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    add a0, a0, a1
 ; CHECK-NEXT:    vs4r.v v12, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    li s0, 36
-; CHECK-NEXT:    vsetvli zero, s0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwadd.vv v8, v8, v8, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -47,9 +48,9 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    call func@plt
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vrgather.vv v4, v8, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    add a1, sp, a1
@@ -63,7 +64,7 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a1, sp, a1
 ; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfwsub.wv v16, v8, v24
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
@@ -74,9 +75,9 @@ define void @last_chance_recoloring_failure() {
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfdiv.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -99,8 +100,9 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 4
 ; SUBREGLIVENESS-NEXT:    sub sp, sp, a0
+; SUBREGLIVENESS-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 16 * vlenb
 ; SUBREGLIVENESS-NEXT:    li a0, 55
-; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vloxseg2ei32.v v8, (a0), v8
 ; SUBREGLIVENESS-NEXT:    csrr a0, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a0, a0, 3
@@ -111,18 +113,18 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    vs4r.v v8, (a0) # Unknown-size Folded Spill
 ; SUBREGLIVENESS-NEXT:    add a0, a0, a1
 ; SUBREGLIVENESS-NEXT:    vs4r.v v12, (a0) # Unknown-size Folded Spill
-; SUBREGLIVENESS-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; SUBREGLIVENESS-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; SUBREGLIVENESS-NEXT:    vmclr.m v0
 ; SUBREGLIVENESS-NEXT:    li s0, 36
-; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, tu, mu
+; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vfwadd.vv v8, v8, v8, v0.t
 ; SUBREGLIVENESS-NEXT:    addi a0, sp, 16
 ; SUBREGLIVENESS-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
 ; SUBREGLIVENESS-NEXT:    call func@plt
 ; SUBREGLIVENESS-NEXT:    li a0, 32
-; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    vrgather.vv v16, v8, v8, v0.t
-; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, mu
+; SUBREGLIVENESS-NEXT:    vsetvli zero, s0, e16, m4, ta, ma
 ; SUBREGLIVENESS-NEXT:    csrr a1, vlenb
 ; SUBREGLIVENESS-NEXT:    slli a1, a1, 3
 ; SUBREGLIVENESS-NEXT:    add a1, sp, a1
@@ -133,7 +135,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    add a1, a1, a2
 ; SUBREGLIVENESS-NEXT:    vl4r.v v24, (a1) # Unknown-size Folded Reload
 ; SUBREGLIVENESS-NEXT:    addi a1, sp, 16
-; SUBREGLIVENESS-NEXT:    vl8re8.v v24, (a1) # Unknown-size Folded Reload
+; SUBREGLIVENESS-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
 ; SUBREGLIVENESS-NEXT:    vfwsub.wv v8, v24, v20
 ; SUBREGLIVENESS-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
 ; SUBREGLIVENESS-NEXT:    vssubu.vv v16, v16, v8, v0.t
@@ -148,7 +150,7 @@ define void @last_chance_recoloring_failure() {
 ; SUBREGLIVENESS-NEXT:    addi sp, sp, 32
 ; SUBREGLIVENESS-NEXT:    ret
 entry:
-  %i = call { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half> undef,  <vscale x 16 x half> undef, half* nonnull poison, <vscale x 16 x i32> poison, i64 55)
+  %i = call { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half> undef,  <vscale x 16 x half> undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55)
   %i1 = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %i, 0
   %i2 = call <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x half> poison, <vscale x 16 x half> poison, <vscale x 16 x i1> zeroinitializer, i64 36, i64 0)
   call void @func()
@@ -161,7 +163,7 @@ entry:
 }
 
 declare void @func()
-declare { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half>, <vscale x 16 x half>, half* nocapture, <vscale x 16 x i32>, i64)
+declare { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half>, <vscale x 16 x half>, ptr nocapture, <vscale x 16 x i32>, i64)
 declare <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x i1>, i64, i64 immarg)
 declare <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
 declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x half>, i64)

@@ -6,7 +6,7 @@
 ; it may be penetrated by tokens. As result, it may end up breaking dominance between def and
 ; use by introducing fake temporary edges.
 
-define i8 addrspace(1)* @test_gc_relocate() gc "statepoint-example" {
+define ptr addrspace(1) @test_gc_relocate() gc "statepoint-example" {
 ; CHECK-LABEL: @test_gc_relocate(
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
@@ -18,7 +18,7 @@ define i8 addrspace(1)* @test_gc_relocate() gc "statepoint-example" {
 ; CHECK-NEXT:    i32 0, label [[BB28:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb28:
-; CHECK-NEXT:    [[TMP34:%.*]] = call token (i64, i32, i8 addrspace(1)* (i64, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 2882400000, i32 0, i8 addrspace(1)* (i64, i32, i32, i32)* nonnull elementtype(i8 addrspace(1)* (i64, i32, i32, i32)) @barney.4, i32 4, i32 0, i64 undef, i32 5, i32 5, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* undef) ]
+; CHECK-NEXT:    [[TMP34:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr nonnull elementtype(ptr addrspace(1) (i64, i32, i32, i32)) @barney.4, i32 4, i32 0, i64 undef, i32 5, i32 5, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) undef) ]
 ; CHECK-NEXT:    br i1 false, label [[BB57:%.*]], label [[BB36:%.*]]
 ; CHECK:       bb36:
 ; CHECK-NEXT:    switch i32 undef, label [[BB43]] [
@@ -33,8 +33,8 @@ define i8 addrspace(1)* @test_gc_relocate() gc "statepoint-example" {
 ; CHECK:       bb45:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb57:
-; CHECK-NEXT:    [[TMP35_LE:%.*]] = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token [[TMP34]], i32 0, i32 0)
-; CHECK-NEXT:    ret i8 addrspace(1)* [[TMP35_LE]]
+; CHECK-NEXT:    [[TMP35_LE:%.*]] = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token [[TMP34]], i32 0, i32 0)
+; CHECK-NEXT:    ret ptr addrspace(1) [[TMP35_LE]]
 ;
   br label %bb1
 
@@ -49,8 +49,8 @@ bb18:                                             ; preds = %bb1
   ]
 
 bb28:                                             ; preds = %bb18
-  %tmp34 = call token (i64, i32, i8 addrspace(1)* (i64, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 2882400000, i32 0, i8 addrspace(1)* (i64, i32, i32, i32)* nonnull elementtype(i8 addrspace(1)* (i64, i32, i32, i32)) @barney.4, i32 4, i32 0, i64 undef, i32 5, i32 5, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(i8 addrspace(1)* undef) ]
-  %tmp35 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %tmp34, i32 0, i32 0) ; (undef, undef)
+  %tmp34 = call token (i64, i32, ptr addrspace(1) (i64, i32, i32, i32)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr addrspace(1) (i64, i32, i32, i32)* nonnull elementtype(ptr addrspace(1) (i64, i32, i32, i32)) @barney.4, i32 4, i32 0, i64 undef, i32 5, i32 5, i32 undef, i32 0, i32 0) [ "deopt"(), "gc-live"(ptr addrspace(1) undef) ]
+  %tmp35 = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %tmp34, i32 0, i32 0) ; (undef, undef)
   br i1 false, label %bb57, label %bb36
 
 bb36:                                             ; preds = %bb28
@@ -70,13 +70,13 @@ bb45:                                             ; preds = %bb39
   br label %bb1
 
 bb57:                                             ; preds = %bb28
-  ret i8 addrspace(1)* %tmp35
+  ret ptr addrspace(1) %tmp35
 }
 
-declare i8 addrspace(1)* @barney.4(i64, i32, i32, i32)
+declare ptr addrspace(1) @barney.4(i64, i32, i32, i32)
 
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32 immarg, i32 immarg) #0
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
-declare token @llvm.experimental.gc.statepoint.p0f_p1i8i64i32i32i32f(i64 immarg, i32 immarg, i8 addrspace(1)* (i64, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr addrspace(1) (i64, i32, i32, i32)*, i32 immarg, i32 immarg, ...)
 
 attributes #0 = { nounwind readnone }

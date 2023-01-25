@@ -26,13 +26,11 @@ define void @test() {
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %a = alloca %struct.af, align 8
-  %0 = bitcast %struct.af* %a to i8*
-  %1 = bitcast %struct.af* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 8 %1, i8 -1, i64 24, i1 false)
-  call void @llvm.memset.p0i8.i64(i8* align 8 %0, i8 0, i64 19, i1 false)
-  call void @callee(%struct.af* %a)
+  call void @llvm.memset.p0.i64(ptr align 8 %a, i8 -1, i64 24, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 19, i1 false)
+  call void @callee(ptr %a)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
-declare void @callee(%struct.af*) local_unnamed_addr #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+declare void @callee(ptr) local_unnamed_addr #1

@@ -9,9 +9,9 @@
 
 define void @llvm_mips_ffql_w_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_ffql_w_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_ffql_w_ARG1
   %1 = tail call <4 x float> @llvm.mips.ffql.w(<8 x i16> %0)
-  store <4 x float> %1, <4 x float>* @llvm_mips_ffql_w_RES
+  store <4 x float> %1, ptr @llvm_mips_ffql_w_RES
   ret void
 }
 
@@ -28,9 +28,9 @@ declare <4 x float> @llvm.mips.ffql.w(<8 x i16>) nounwind
 
 define void @llvm_mips_ffql_d_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_ffql_d_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_ffql_d_ARG1
   %1 = tail call <2 x double> @llvm.mips.ffql.d(<4 x i32> %0)
-  store <2 x double> %1, <2 x double>* @llvm_mips_ffql_d_RES
+  store <2 x double> %1, ptr @llvm_mips_ffql_d_RES
   ret void
 }
 
@@ -47,9 +47,9 @@ declare <2 x double> @llvm.mips.ffql.d(<4 x i32>) nounwind
 
 define void @llvm_mips_ffqr_w_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_ffqr_w_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_ffqr_w_ARG1
   %1 = tail call <4 x float> @llvm.mips.ffqr.w(<8 x i16> %0)
-  store <4 x float> %1, <4 x float>* @llvm_mips_ffqr_w_RES
+  store <4 x float> %1, ptr @llvm_mips_ffqr_w_RES
   ret void
 }
 
@@ -66,9 +66,9 @@ declare <4 x float> @llvm.mips.ffqr.w(<8 x i16>) nounwind
 
 define void @llvm_mips_ffqr_d_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_ffqr_d_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_ffqr_d_ARG1
   %1 = tail call <2 x double> @llvm.mips.ffqr.d(<4 x i32> %0)
-  store <2 x double> %1, <2 x double>* @llvm_mips_ffqr_d_RES
+  store <2 x double> %1, ptr @llvm_mips_ffqr_d_RES
   ret void
 }
 

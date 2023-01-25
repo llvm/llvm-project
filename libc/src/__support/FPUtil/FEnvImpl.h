@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
 
 #include "src/__support/architectures.h"
+#include "src/__support/common.h"
 
 #if defined(LLVM_LIBC_ARCH_AARCH64)
 #if defined(__APPLE__)
@@ -27,21 +28,21 @@ namespace fputil {
 
 // All dummy functions silently succeed.
 
-static inline int clear_except(int) { return 0; }
+LIBC_INLINE int clear_except(int) { return 0; }
 
-static inline int test_except(int) { return 0; }
+LIBC_INLINE int test_except(int) { return 0; }
 
-static inline int set_except(int) { return 0; }
+LIBC_INLINE int set_except(int) { return 0; }
 
-static inline int raise_except(int) { return 0; }
+LIBC_INLINE int raise_except(int) { return 0; }
 
-static inline int get_round() { return FE_TONEAREST; }
+LIBC_INLINE int get_round() { return FE_TONEAREST; }
 
-static inline int set_round(int) { return 0; }
+LIBC_INLINE int set_round(int) { return 0; }
 
-static inline int get_env(fenv_t *) { return 0; }
+LIBC_INLINE int get_env(fenv_t *) { return 0; }
 
-static inline int set_env(const fenv_t *) { return 0; }
+LIBC_INLINE int set_env(const fenv_t *) { return 0; }
 
 } // namespace fputil
 } // namespace __llvm_libc

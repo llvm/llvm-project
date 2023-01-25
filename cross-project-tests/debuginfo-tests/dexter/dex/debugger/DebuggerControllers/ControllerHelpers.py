@@ -19,8 +19,8 @@ def in_source_file(source_files, step_info):
                for f in source_files)
 
 def have_hit_line(watch, loc):
-  if hasattr(watch, '_on_line'):
-    return watch._on_line == loc.lineno
+  if hasattr(watch, 'on_line'):
+    return watch.on_line == loc.lineno
   elif hasattr(watch, '_from_line'):
     return watch._from_line <= loc.lineno and watch._to_line >= loc.lineno
   elif watch.lineno == loc.lineno:

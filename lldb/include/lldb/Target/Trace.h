@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_TRACE_H
 #define LLDB_TARGET_TRACE_H
 
+#include <optional>
 #include <unordered_map>
 
 #include "llvm/Support/JSON.h"
@@ -169,9 +170,9 @@ public:
   /// Get a \a TraceCursor for the given thread's trace.
   ///
   /// \return
-  ///     A \a TraceCursorUP. If the thread is not traced or its trace
+  ///     A \a TraceCursorSP. If the thread is not traced or its trace
   ///     information failed to load, an \a llvm::Error is returned.
-  virtual llvm::Expected<lldb::TraceCursorUP>
+  virtual llvm::Expected<lldb::TraceCursorSP>
   CreateNewCursor(Thread &thread) = 0;
 
   /// Dump general info about a given thread's trace. Each Trace plug-in
@@ -464,19 +465,19 @@ protected:
   GetLiveProcessBinaryData(llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveThreadBinaryData
-  llvm::Optional<uint64_t> GetLiveThreadBinaryDataSize(lldb::tid_t tid,
-                                                       llvm::StringRef kind);
+  std::optional<uint64_t> GetLiveThreadBinaryDataSize(lldb::tid_t tid,
+                                                      llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveCpuBinaryData
-  llvm::Optional<uint64_t> GetLiveCpuBinaryDataSize(lldb::cpu_id_t cpu_id,
-                                                    llvm::StringRef kind);
+  std::optional<uint64_t> GetLiveCpuBinaryDataSize(lldb::cpu_id_t cpu_id,
+                                                   llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveProcessBinaryData
-  llvm::Optional<uint64_t> GetLiveProcessBinaryDataSize(llvm::StringRef kind);
+  std::optional<uint64_t> GetLiveProcessBinaryDataSize(llvm::StringRef kind);
 
   /// Constructor for post mortem processes
   Trace(llvm::ArrayRef<lldb::ProcessSP> postmortem_processes,
-        llvm::Optional<std::vector<lldb::cpu_id_t>> postmortem_cpus);
+        std::optional<std::vector<lldb::cpu_id_t>> postmortem_cpus);
 
   /// Constructor for a live process
   Trace(Process &live_process) : m_live_process(&live_process) {}
@@ -571,7 +572,7 @@ private:
 
     /// The list of cpus being traced. Might be \b None depending on the
     /// plug-in.
-    llvm::Optional<std::vector<lldb::cpu_id_t>> cpus;
+    std::optional<std::vector<lldb::cpu_id_t>> cpus;
 
     /// Postmortem traces can specific additional data files, which are
     /// represented in this variable using a data kind identifier for each file.
@@ -587,7 +588,7 @@ private:
 
     /// \}
 
-    llvm::Optional<std::string> live_refresh_error;
+    std::optional<std::string> live_refresh_error;
   } m_storage;
 
   /// Get the storage after refreshing the data in the case of a live process.

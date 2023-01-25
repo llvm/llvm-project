@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains basic functions for compression/uncompression.
+// This file contains basic functions for compression/decompression.
 //
 //===----------------------------------------------------------------------===//
 
@@ -19,6 +19,16 @@
 namespace llvm {
 template <typename T> class SmallVectorImpl;
 class Error;
+
+// None indicates no compression. The other members are a subset of
+// compression::Format, which is used for compressed debug sections in some
+// object file formats (e.g. ELF). This is a separate class as we may add new
+// compression::Format members for non-debugging purposes.
+enum class DebugCompressionType {
+  None, ///< No compression
+  Zlib, ///< zlib
+  Zstd, ///< Zstandard
+};
 
 namespace compression {
 namespace zlib {
@@ -34,11 +44,10 @@ void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error uncompress(ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zlib
@@ -56,14 +65,61 @@ void compress(ArrayRef<uint8_t> Input,
               SmallVectorImpl<uint8_t> &CompressedBuffer,
               int Level = DefaultCompression);
 
-Error uncompress(ArrayRef<uint8_t> Input, uint8_t *UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, uint8_t *Output,
                  size_t &UncompressedSize);
 
-Error uncompress(ArrayRef<uint8_t> Input,
-                 SmallVectorImpl<uint8_t> &UncompressedBuffer,
+Error decompress(ArrayRef<uint8_t> Input, SmallVectorImpl<uint8_t> &Output,
                  size_t UncompressedSize);
 
 } // End of namespace zstd
+
+enum class Format {
+  Zlib,
+  Zstd,
+};
+
+inline Format formatFor(DebugCompressionType Type) {
+  switch (Type) {
+  case DebugCompressionType::None:
+    llvm_unreachable("not a compression type");
+  case DebugCompressionType::Zlib:
+    return Format::Zlib;
+  case DebugCompressionType::Zstd:
+    return Format::Zstd;
+  }
+  llvm_unreachable("");
+}
+
+struct Params {
+  constexpr Params(Format F)
+      : format(F), level(F == Format::Zlib ? zlib::DefaultCompression
+                                           : zstd::DefaultCompression) {}
+  Params(DebugCompressionType Type) : Params(formatFor(Type)) {}
+
+  Format format;
+  int level;
+  // This may support multi-threading for zstd in the future. Note that
+  // different threads may produce different output, so be careful if certain
+  // output determinism is desired.
+};
+
+// Return nullptr if LLVM was built with support (LLVM_ENABLE_ZLIB,
+// LLVM_ENABLE_ZSTD) for the specified compression format; otherwise
+// return a string literal describing the reason.
+const char *getReasonIfUnsupported(Format F);
+
+// Compress Input with the specified format P.Format. If Level is -1, use
+// *::DefaultCompression for the format.
+void compress(Params P, ArrayRef<uint8_t> Input,
+              SmallVectorImpl<uint8_t> &Output);
+
+// Decompress Input. The uncompressed size must be available.
+Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                 uint8_t *Output, size_t UncompressedSize);
+Error decompress(Format F, ArrayRef<uint8_t> Input,
+                 SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
+Error decompress(DebugCompressionType T, ArrayRef<uint8_t> Input,
+                 SmallVectorImpl<uint8_t> &Output, size_t UncompressedSize);
 
 } // End of namespace compression
 

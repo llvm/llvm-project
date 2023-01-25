@@ -34,7 +34,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToAllocation",
-        /*args=*/(ins "OpResult":$opResult),
+        /*args=*/(ins "::mlir::OpResult":$opResult),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return false;"
       >,
@@ -52,8 +52,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryRead",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -81,8 +81,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryWrite",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -104,8 +104,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           }],
           /*retType=*/"bool",
           /*methodName=*/"isMemoryWrite",
-          /*args=*/(ins "OpResult":$opResult,
-                        "const AnalysisState &":$state),
+          /*args=*/(ins "::mlir::OpResult":$opResult,
+                        "const ::mlir::bufferization::AnalysisState &":$state),
           /*methodBody=*/"",
           /*defaultImplementation=*/[{
             auto bufferizableOp =
@@ -131,8 +131,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"mustBufferizeInPlace",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return false;
@@ -143,11 +143,15 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
+
+          Note: This method can return multiple OpResults, indicating that a
+          given OpOperand may at runtime alias with any (or multiple) of the
+          returned OpResults.
         }],
-        /*retType=*/"SmallVector<OpResult>",
+        /*retType=*/"::mlir::SmallVector<::mlir::OpResult>",
         /*methodName=*/"getAliasingOpResult",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -165,13 +169,14 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return the OpOperands that are yielded by the terminator.
 
           Note: This method can return multiple OpOperands, indicating that the
-          given OpResult may at runtime alias with any of the OpOperands. This
-          is useful for branches and for ops such as `arith.select`.
+          given OpResult may at runtime alias with any (or multiple) of the
+          returned OpOperands. This can be useful for branches and for ops such
+          as `arith.select`.
         }],
-        /*retType=*/"SmallVector<OpOperand *>",
+        /*retType=*/"::mlir::SmallVector<::mlir::OpOperand *>",
         /*methodName=*/"getAliasingOpOperand",
-        /*args=*/(ins "OpResult":$opResult,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpResult":$opResult,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(opResult.getType().isa<TensorType>() &&
@@ -201,10 +206,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           TODO: Support other relations such as "OpOperand is included in
           OpResult".
         }],
-        /*retType=*/"BufferRelation",
+        /*retType=*/"::mlir::bufferization::BufferRelation",
         /*methodName=*/"bufferRelation",
-        /*args=*/(ins "OpResult":$opResult,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpResult":$opResult,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpResults
@@ -226,10 +231,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           This method can query analysis information from the given analysis
           state.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"resolveConflicts",
-        /*args=*/(ins "RewriterBase &":$rewriter,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           auto bufferizableOp =
@@ -263,10 +268,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"bufferize",
-        /*args=*/(ins "RewriterBase &":$rewriter,
-                      "const BufferizationOptions &":$options),
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                      "const ::mlir::bufferization::BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
@@ -291,8 +296,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "Value":$value,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::Value":$value,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
@@ -313,9 +318,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isNotConflicting",
-        /*args=*/(ins "OpOperand *":$uRead,
-                      "OpOperand *":$uWrite,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand *":$uRead,
+                      "::mlir::OpOperand *":$uWrite,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return false;
@@ -330,9 +335,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           This method can be used to check expected invariants and limitations
           of the current bufferization implementation.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"verifyAnalysis",
-        /*args=*/(ins "const AnalysisState &":$state),
+        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return success();
@@ -340,41 +345,49 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the bufferized type of the given tensor block argument. The
-          block argument is guaranteed to belong to a block of this op.
+          Return the bufferized type of the given tensor value (without
+          bufferizing the IR). The value is either a BlockArgument of a block
+          that belongs to this op or an OpResult of the given op.
+
+          This method is useful when the bufferized type of value must be
+          predicted before modifying any IR.
         }],
-        /*retType=*/"FailureOr<BaseMemRefType>",
+        /*retType=*/"::mlir::FailureOr<::mlir::BaseMemRefType>",
         /*methodName=*/"getBufferType",
-        /*args=*/(ins "BlockArgument":$bbArg,
-                      "const BufferizationOptions &":$options),
+        /*args=*/(ins "::mlir::Value":$value,
+                      "const ::mlir::bufferization::BufferizationOptions &":$options,
+                      "const ::mlir::DenseMap<::mlir::Value, ::mlir::BaseMemRefType>":$fixedTypes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(bbArg.getOwner()->getParentOp() == $_op &&
-                 "bbArg must belong to this op");
-          assert(bbArg.getType().isa<TensorType>() &&
-                 "expected tensor type");
-          return bufferization::getMemRefType(bbArg, options);
+          assert(getOwnerOfValue(value) == $_op.getOperation() &&
+                 "expected that value belongs to this op");
+          return bufferization::detail::defaultGetBufferType(
+              value, options, fixedTypes);
         }]
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the memory space of the given tensor OpResult if specified on
-          this op. If not specified, return `failure`.
+          Return `true` if the given region of this op is repetitive. By default
+          this information is queried from the `RegionBranchOpInterface`. Ops
+          that do not implement this inferface can override this method to
+          declare regions as repetitive.
 
-          This method will never be called with OpResults that do not bufferize
-          to a memory allocation.
+          The RaW conflict detection of One-Shot Analysis is more strict inside
+          repetitive regions: Op dominance cannot always be used to rule out
+          certain potential conflicts (e.g., a conflicting write happening after
+          a read), because there may not be a meaningful ordering of certain ops
+          that are executed multiple times. This is described in more detail in
+          documentation of One-Shot Analysis.
         }],
-        /*retType=*/"FailureOr<unsigned>",
-        /*methodName=*/"getMemorySpace",
-        /*args=*/(ins "OpResult":$opResult),
+        /*retType=*/"bool",
+        /*methodName=*/"isRepetitiveRegion",
+        /*args=*/(ins "unsigned":$index),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(cast<BufferizableOpInterface>($_op.getOperation())
-                     .bufferizesToAllocation(opResult)
-                 && "expected allocation");
-          return failure();
+          return mlir::bufferization::detail::defaultIsRepetitiveRegion(
+              cast<BufferizableOpInterface>($_op.getOperation()), index);
         }]
-      >,
+      >
   ];
 
   let extraClassDeclaration = [{

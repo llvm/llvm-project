@@ -10,6 +10,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -31,7 +32,7 @@ bool OpTrait::util::staticallyKnownBroadcastable(
   // We look backwards through every column of `shapes`.
   for (size_t i = 0; i != maxRank; ++i) {
     bool seenDynamic = false;
-    Optional<int64_t> nonOneDim;
+    std::optional<int64_t> nonOneDim;
     for (ArrayRef<int64_t> extent : shapes) {
       int64_t dim = i >= extent.size() ? 1 : extent[extent.size() - i - 1];
 
@@ -80,7 +81,7 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
 
   // Check each dimension is consistent.
   for (; i1 != e1 && i2 != e2; ++i1, ++i2, ++iR) {
-    if (*i1 == -1 || *i2 == -1) {
+    if (ShapedType::isDynamic(*i1) || ShapedType::isDynamic(*i2)) {
       // One or both dimensions is unknown. Follow TensorFlow behavior:
       // - If either dimension is greater than 1, we assume that the program is
       //   correct, and the other dimension will be broadcast to match it.
@@ -94,7 +95,7 @@ bool OpTrait::util::getBroadcastedShape(ArrayRef<int64_t> shape1,
       } else if (*i2 == 1) {
         *iR = *i1;
       } else {
-        *iR = -1;
+        *iR = ShapedType::kDynamic;
       }
     } else {
       if (*i1 == *i2 || *i2 == 1) {
@@ -148,17 +149,17 @@ Type OpTrait::util::getBroadcastedType(Type type1, Type type2,
   }
 
   // Returns the type kind if the given type is a vector or ranked tensor type.
-  // Returns llvm::None otherwise.
-  auto getCompositeTypeKind = [](Type type) -> Optional<TypeID> {
+  // Returns std::nullopt otherwise.
+  auto getCompositeTypeKind = [](Type type) -> std::optional<TypeID> {
     if (type.isa<VectorType, RankedTensorType>())
       return type.getTypeID();
-    return llvm::None;
+    return std::nullopt;
   };
 
   // Make sure the composite type, if has, is consistent.
-  Optional<TypeID> compositeKind1 = getCompositeTypeKind(type1);
-  Optional<TypeID> compositeKind2 = getCompositeTypeKind(type2);
-  Optional<TypeID> resultCompositeKind;
+  std::optional<TypeID> compositeKind1 = getCompositeTypeKind(type1);
+  std::optional<TypeID> compositeKind2 = getCompositeTypeKind(type2);
+  std::optional<TypeID> resultCompositeKind;
 
   if (compositeKind1 && compositeKind2) {
     // Disallow mixing vector and tensor.
@@ -199,7 +200,8 @@ static bool isCompatibleInferredReturnShape(ArrayRef<int64_t> inferred,
     // then it is compatible, else if the inferred dim is 1 then it is also
     // compatible. But if the existing dim is 1 and the inferred is greater than
     // 1 then flag.
-    return dim1 == dim2 || dim1 == -1 || dim2 == -1 || dim1 == 1;
+    return dim1 == dim2 || ShapedType::isDynamic(dim1) ||
+           ShapedType::isDynamic(dim2) || dim1 == 1;
   };
   if (inferred.size() != existing.size())
     return false;

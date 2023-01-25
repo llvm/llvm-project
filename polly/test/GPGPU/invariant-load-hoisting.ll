@@ -15,10 +15,10 @@
 ; SCOP-NEXT:              [n, tmp12] -> { Stmt_for_body6[i0, i1, i2] -> MemRef_invariant[0] };
 ; SCOP-NEXT:          Execution Context: [n, tmp12] -> {  : n > 0 }
 ; SCOP-NEXT:  }
-; HOST-IR:      call void @polly_launchKernel(i8* %[[REGC:[0-9]+]], i32 %{{[0-9]+}}, i32 1, i32 32, i32 1, i32 1, i8* %polly_launch_0_params_i8ptr)
-; HOST-IR-NEXT: call void @polly_freeKernel(i8* %[[REGC]])
+; HOST-IR:      call void @polly_launchKernel(ptr %[[REGC:[0-9]+]], i32 %{{[0-9]+}}, i32 1, i32 32, i32 1, i32 1, ptr %polly_launch_0_params_i8ptr)
+; HOST-IR-NEXT: call void @polly_freeKernel(ptr %[[REGC]])
 
-; KERNEL-IR: define ptx_kernel void @FUNC_f_SCOP_0_KERNEL_0(i8 addrspace(1)* %MemRef_B, i8 addrspace(1)* %MemRef_A, i32 %n, i32 %tmp12, i32 %polly.preload.tmp21.merge)
+; KERNEL-IR: define ptx_kernel void @FUNC_f_SCOP_0_KERNEL_0(ptr addrspace(1) %MemRef_B, ptr addrspace(1) %MemRef_A, i32 %n, i32 %tmp12, i32 %polly.preload.tmp21.merge)
 
 
 ; Check that we generate correct GPU code in case of invariant load hoisting.
@@ -39,7 +39,7 @@
 ;    }
 ;
 
-define void @f([3000 x i32]* %A, i32* %invariant, [3000 x i32]* %B, i32 %n) {
+define void @f(ptr %A, ptr %invariant, ptr %B, i32 %n) {
 entry:
   br label %entry.split
 
@@ -70,24 +70,24 @@ for.body6:                                        ; preds = %for.body6.lr.ph, %f
   %k.02 = phi i32 [ 0, %for.body6.lr.ph ], [ %inc, %for.body6 ]
   %idxprom = sext i32 %k.02 to i64
   %idxprom7 = sext i32 %k.02 to i64
-  %arrayidx8 = getelementptr inbounds [3000 x i32], [3000 x i32]* %B, i64 %idxprom, i64 %idxprom7
-  %tmp9 = load i32, i32* %arrayidx8, align 4
-  %tmp12 = load i32, i32* %invariant, align 4
+  %arrayidx8 = getelementptr inbounds [3000 x i32], ptr %B, i64 %idxprom, i64 %idxprom7
+  %tmp9 = load i32, ptr %arrayidx8, align 4
+  %tmp12 = load i32, ptr %invariant, align 4
   %idxprom9 = sext i32 %tmp12 to i64
   %idxprom11 = sext i32 %k.02 to i64
-  %arrayidx12 = getelementptr inbounds [3000 x i32], [3000 x i32]* %A, i64 %idxprom9, i64 %idxprom11
-  store i32 %tmp9, i32* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds [3000 x i32], ptr %A, i64 %idxprom9, i64 %idxprom11
+  store i32 %tmp9, ptr %arrayidx12, align 4
   %idxprom13 = sext i32 %k.02 to i64
   %idxprom15 = sext i32 %k.02 to i64
-  %arrayidx16 = getelementptr inbounds [3000 x i32], [3000 x i32]* %B, i64 %idxprom13, i64 %idxprom15
-  %tmp17 = load i32, i32* %arrayidx16, align 4
+  %arrayidx16 = getelementptr inbounds [3000 x i32], ptr %B, i64 %idxprom13, i64 %idxprom15
+  %tmp17 = load i32, ptr %arrayidx16, align 4
   %idxprom17 = sext i32 %k.02 to i64
-  %tmp21 = load i32, i32* %invariant, align 4
+  %tmp21 = load i32, ptr %invariant, align 4
   %idxprom19 = sext i32 %tmp21 to i64
-  %arrayidx20 = getelementptr inbounds [3000 x i32], [3000 x i32]* %A, i64 %idxprom17, i64 %idxprom19
-  %tmp22 = load i32, i32* %arrayidx20, align 4
+  %arrayidx20 = getelementptr inbounds [3000 x i32], ptr %A, i64 %idxprom17, i64 %idxprom19
+  %tmp22 = load i32, ptr %arrayidx20, align 4
   %add = add nsw i32 %tmp22, %tmp17
-  store i32 %add, i32* %arrayidx20, align 4
+  store i32 %add, ptr %arrayidx20, align 4
   %inc = add nuw nsw i32 %k.02, 1
   %cmp5 = icmp slt i32 %inc, %n
   br i1 %cmp5, label %for.body6, label %for.cond4.for.inc21_crit_edge

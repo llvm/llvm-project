@@ -8,9 +8,9 @@
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "thumbv7-apple-ios4.0.0"
 
-declare i8* @__memset_chk(i8*, i32, i32, i32) nounwind
+declare ptr @__memset_chk(ptr, i32, i32, i32) nounwind
 
-define hidden fastcc i32 @sqlite3VdbeExec(i32* %p) nounwind {
+define hidden fastcc i32 @sqlite3VdbeExec(ptr %p) nounwind {
 entry:
   br label %sqlite3VarintLen.exit7424
 
@@ -40,7 +40,7 @@ for.body2377:                                     ; preds = %for.body2355
   %conv2385 = trunc i64 %sub2384 to i32
   %len.0.i = select i1 undef, i32 %conv2385, i32 undef
   %sub.i7384 = sub nsw i32 %len.0.i, 0
-  %call.i.i7385 = call i8* @__memset_chk(i8* undef, i32 0, i32 %sub.i7384, i32 undef) nounwind
+  %call.i.i7385 = call ptr @__memset_chk(ptr undef, i32 0, i32 %sub.i7384, i32 undef) nounwind
   unreachable
 
 too_big:                                          ; preds = %sqlite3VarintLen.exit

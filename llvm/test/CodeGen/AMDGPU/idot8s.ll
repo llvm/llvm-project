@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL-NOXNACK %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1031 -verify-machineinstrs < %s | FileCheck -check-prefixes=GFX10-DL-NOXNACK %s
 
-define amdgpu_kernel void @idot8_acc32(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc32(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc32:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -249,14 +249,14 @@ define amdgpu_kernel void @idot8_acc32(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_dot8_i32_i4 v0, s0, s1, v0
 ; GFX10-DL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i32 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i32
@@ -306,7 +306,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i32
   %mul7 = mul nuw nsw i32 %cv1e7, %cv2e7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add1 = add i32 %mul0, %acc
   %add2 = add i32 %add1, %mul1
   %add3 = add i32 %add2, %mul2
@@ -316,13 +316,13 @@ entry:
   %add7 = add i32 %add6, %mul6
   %add8 = add i32 %add7, %mul7
 
-  store i32 %add8, i32 addrspace(1)* %dst, align 4
+  store i32 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Once the unnecessary zero extentions of the elements are removed;
 ; pattern recognizer will kick in.
-define amdgpu_kernel void @idot8_acc16(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc16(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc16:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -822,14 +822,14 @@ define amdgpu_kernel void @idot8_acc16(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v1, s0, s1, v1
 ; GFX10-DL-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i16 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i16
@@ -879,7 +879,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i16
   %mul7 = mul nuw nsw i16 %cv1e7, %cv2e7
 
-  %acc = load i16, i16 addrspace(1)* %dst, align 4
+  %acc = load i16, ptr addrspace(1) %dst, align 4
   %add1 = add i16 %mul0, %acc
   %add2 = add i16 %add1, %mul1
   %add3 = add i16 %add2, %mul2
@@ -889,12 +889,12 @@ entry:
   %add7 = add i16 %add6, %mul6
   %add8 = add i16 %add7, %mul7
 
-  store i16 %add8, i16 addrspace(1)* %dst, align 4
+  store i16 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc8(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc8(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc8:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -1394,14 +1394,14 @@ define amdgpu_kernel void @idot8_acc8(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mad_i32_i24 v1, s0, s1, v1
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                       <8 x i4> addrspace(1)* %src2,
-                                       i8 addrspace(1)* nocapture %dst) {
+                                       ptr addrspace(1) %src2,
+                                       ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i8
@@ -1451,7 +1451,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i8
   %mul7 = mul nuw nsw i8 %cv1e7, %cv2e7
 
-  %acc = load i8, i8 addrspace(1)* %dst, align 4
+  %acc = load i8, ptr addrspace(1) %dst, align 4
   %add1 = add i8 %mul0, %acc
   %add2 = add i8 %add1, %mul1
   %add3 = add i8 %add2, %mul2
@@ -1461,13 +1461,13 @@ entry:
   %add7 = add i8 %add6, %mul6
   %add8 = add i8 %add7, %mul7
 
-  store i8 %add8, i8 addrspace(1)* %dst, align 4
+  store i8 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; Make sure the pattern is not recognized if there are multiple uses of the
 ; intermediate multiplications.
-define amdgpu_kernel void @idot8_multiuses_mul1(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_multiuses_mul1(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_multiuses_mul1:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -1828,14 +1828,14 @@ define amdgpu_kernel void @idot8_multiuses_mul1(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX10-DL-NEXT:    global_store_dword v2, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                                <8 x i4> addrspace(1)* %src2,
-                                                i32 addrspace(1)* nocapture %dst) {
+                                                ptr addrspace(1) %src2,
+                                                ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %v1e0 = extractelement <8 x i4> %vec1, i64 0
   %cv1e0 = sext i4 %v1e0 to i32
@@ -1885,7 +1885,7 @@ entry:
   %cv2e7 = sext i4 %v2e7 to i32
   %mul7 = mul nuw nsw i32 %cv1e7, %cv2e7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add =  add i32  %mul0, %acc
   %add1 = add i32 %mul0, %add
   %add2 = add i32 %add1, %mul1
@@ -1897,12 +1897,12 @@ entry:
   %add8 = add i32 %add7, %mul7
 
   %res = add i32 %add, %add8
-  store i32 %res, i32 addrspace(1)* %dst, align 4
+  store i32 %res, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc32_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc32_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc32_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2143,14 +2143,14 @@ define amdgpu_kernel void @idot8_acc32_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_dot8_i32_i4 v0, s0, s1, v0
 ; GFX10-DL-NEXT:    global_store_dword v1, v0, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                              <8 x i4> addrspace(1)* %src2,
-                                              i32 addrspace(1)* nocapture %dst) {
+                                              ptr addrspace(1) %src2,
+                                              ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i32>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i32>
@@ -2165,7 +2165,7 @@ entry:
   %mul6 = extractelement <8 x i32> %mul, i64 6
   %mul7 = extractelement <8 x i32> %mul, i64 7
 
-  %acc = load i32, i32 addrspace(1)* %dst, align 4
+  %acc = load i32, ptr addrspace(1) %dst, align 4
   %add1 = add i32 %mul0, %acc
   %add2 = add i32 %add1, %mul1
   %add3 = add i32 %add2, %mul2
@@ -2175,12 +2175,12 @@ entry:
   %add7 = add i32 %add6, %mul6
   %add8 = add i32 %add7, %mul7
 
-  store i32 %add8, i32 addrspace(1)* %dst, align 4
+  store i32 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc16_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc16_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2345,68 +2345,69 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX9-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    global_load_ushort v3, v0, s[2:3]
+; GFX9-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX9-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v5, 4, v1
-; GFX9-NEXT:    v_lshlrev_b16_e32 v6, 12, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
-; GFX9-NEXT:    v_lshlrev_b16_sdwa v10, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v11, 28, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v6, 4, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v12, 4, v2
-; GFX9-NEXT:    v_lshlrev_b16_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
-; GFX9-NEXT:    v_lshlrev_b16_e32 v13, 12, v2
-; GFX9-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
-; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
-; GFX9-NEXT:    v_lshrrev_b32_e32 v16, 20, v2
-; GFX9-NEXT:    v_lshlrev_b16_sdwa v17, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v18, 28, v2
-; GFX9-NEXT:    v_lshlrev_b16_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
-; GFX9-NEXT:    v_lshlrev_b16_e32 v4, 12, v5
-; GFX9-NEXT:    v_ashrrev_i16_e32 v5, 12, v6
-; GFX9-NEXT:    v_lshlrev_b16_e32 v6, 12, v7
-; GFX9-NEXT:    v_lshlrev_b16_e32 v7, 12, v8
-; GFX9-NEXT:    v_lshlrev_b16_e32 v8, 12, v9
-; GFX9-NEXT:    v_ashrrev_i16_e32 v9, 12, v10
-; GFX9-NEXT:    v_lshlrev_b16_e32 v10, 12, v11
-; GFX9-NEXT:    v_lshlrev_b16_e32 v11, 12, v12
-; GFX9-NEXT:    v_ashrrev_i16_e32 v12, 12, v13
-; GFX9-NEXT:    v_ashrrev_i16_e32 v4, 12, v4
+; GFX9-NEXT:    v_lshrrev_b32_e32 v13, 4, v2
+; GFX9-NEXT:    v_lshlrev_b16_e32 v5, 12, v1
+; GFX9-NEXT:    v_lshlrev_b16_e32 v12, 12, v2
+; GFX9-NEXT:    v_lshlrev_b16_e32 v6, 12, v6
+; GFX9-NEXT:    v_lshlrev_b16_e32 v7, 12, v7
+; GFX9-NEXT:    v_lshlrev_b16_e32 v8, 12, v8
+; GFX9-NEXT:    v_lshlrev_b16_e32 v13, 12, v13
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v9, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v10, 20, v1
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v11, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v14, 8, v2
+; GFX9-NEXT:    v_lshrrev_b32_e32 v15, 12, v2
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v16, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_lshrrev_b32_e32 v17, 20, v2
+; GFX9-NEXT:    v_lshlrev_b16_sdwa v4, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
+; GFX9-NEXT:    v_ashrrev_i16_e32 v5, 12, v5
+; GFX9-NEXT:    v_ashrrev_i16_e32 v12, 12, v12
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v6, 12, v6
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v7, 12, v7
-; GFX9-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
-; GFX9-NEXT:    v_lshlrev_b16_e32 v13, 12, v14
-; GFX9-NEXT:    v_lshlrev_b16_e32 v14, 12, v15
-; GFX9-NEXT:    v_lshl_or_b32 v6, v6, 16, v7
-; GFX9-NEXT:    v_lshl_or_b32 v7, v11, 16, v12
-; GFX9-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v8, 12, v8
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v13, 12, v13
-; GFX9-NEXT:    v_ashrrev_i16_e32 v14, 12, v14
-; GFX9-NEXT:    v_pk_mul_lo_u16 v4, v4, v7
-; GFX9-NEXT:    v_lshlrev_b16_e32 v15, 12, v16
-; GFX9-NEXT:    v_ashrrev_i16_e32 v16, 12, v17
-; GFX9-NEXT:    v_lshlrev_b16_e32 v17, 12, v18
-; GFX9-NEXT:    v_lshl_or_b32 v8, v8, 16, v9
-; GFX9-NEXT:    v_lshl_or_b32 v9, v13, 16, v14
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_add_u16_e32 v3, v4, v3
-; GFX9-NEXT:    v_ashrrev_i16_e32 v1, 12, v1
-; GFX9-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
+; GFX9-NEXT:    v_lshlrev_b16_e32 v10, 12, v10
+; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 12, v1
+; GFX9-NEXT:    v_lshlrev_b16_e32 v14, 12, v14
+; GFX9-NEXT:    v_lshlrev_b16_e32 v15, 12, v15
+; GFX9-NEXT:    v_lshlrev_b16_e32 v17, 12, v17
+; GFX9-NEXT:    v_lshlrev_b16_e32 v2, 12, v2
+; GFX9-NEXT:    v_perm_b32 v7, v8, v7, s0
+; GFX9-NEXT:    v_perm_b32 v8, v13, v12, s0
+; GFX9-NEXT:    v_perm_b32 v5, v6, v5, s0
+; GFX9-NEXT:    v_ashrrev_i16_e32 v9, 12, v9
+; GFX9-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
+; GFX9-NEXT:    v_ashrrev_i16_e32 v16, 12, v16
+; GFX9-NEXT:    v_ashrrev_i16_e32 v4, 12, v4
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v10, 12, v10
+; GFX9-NEXT:    v_ashrrev_i16_e32 v1, 12, v1
+; GFX9-NEXT:    v_ashrrev_i16_e32 v14, 12, v14
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v15, 12, v15
 ; GFX9-NEXT:    v_ashrrev_i16_e32 v17, 12, v17
-; GFX9-NEXT:    v_pk_mul_lo_u16 v5, v6, v9
-; GFX9-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v2, v17, 16, v2
-; GFX9-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v10, v15, 16, v16
-; GFX9-NEXT:    v_add_u16_e32 v3, v3, v5
+; GFX9-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
+; GFX9-NEXT:    v_pk_mul_lo_u16 v5, v5, v8
+; GFX9-NEXT:    v_perm_b32 v2, v2, v4, s0
+; GFX9-NEXT:    v_perm_b32 v1, v1, v11, s0
+; GFX9-NEXT:    v_perm_b32 v4, v17, v16, s0
+; GFX9-NEXT:    v_perm_b32 v9, v10, v9, s0
+; GFX9-NEXT:    v_perm_b32 v10, v15, v14, s0
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_add_u16_e32 v3, v5, v3
 ; GFX9-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
-; GFX9-NEXT:    v_pk_mul_lo_u16 v2, v8, v10
+; GFX9-NEXT:    v_pk_mul_lo_u16 v2, v9, v4
+; GFX9-NEXT:    v_pk_mul_lo_u16 v4, v7, v10
 ; GFX9-NEXT:    v_add_u16_sdwa v3, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_add_u16_e32 v3, v3, v4
+; GFX9-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_add_u16_e32 v3, v3, v2
 ; GFX9-NEXT:    v_add_u16_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-NEXT:    v_add_u16_e32 v2, v2, v1
@@ -2430,68 +2431,69 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX9-DL-NEXT:    global_load_dword v2, v0, s[6:7]
 ; GFX9-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-DL-NEXT:    global_load_ushort v3, v0, s[2:3]
+; GFX9-DL-NEXT:    s_mov_b32 s0, 0x5040100
 ; GFX9-DL-NEXT:    s_addc_u32 s9, s9, 0
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v5, 4, v1
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v6, 12, v1
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v8, 8, v1
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
-; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v10, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v11, 28, v1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v6, 4, v1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v8, 12, v1
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v12, 4, v2
-; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v13, 12, v2
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v15, 8, v2
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v16, 20, v2
-; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v17, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v18, 28, v2
-; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v4, 12, v5
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v5, 12, v6
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v6, 12, v7
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v7, 12, v8
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v8, 12, v9
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v9, 12, v10
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v10, 12, v11
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v11, 12, v12
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v12, 12, v13
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v4, 12, v4
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v13, 4, v2
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v5, 12, v1
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v12, 12, v2
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v6, 12, v6
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v7, 12, v7
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v8, 12, v8
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v13, 12, v13
+; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v9, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v10, 20, v1
+; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v11, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v14, 8, v2
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v15, 12, v2
+; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v16, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v17, 20, v2
+; GFX9-DL-NEXT:    v_lshlrev_b16_sdwa v4, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
+; GFX9-DL-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v5, 12, v5
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v12, 12, v12
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v6, 12, v6
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v7, 12, v7
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v13, 12, v14
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v14, 12, v15
-; GFX9-DL-NEXT:    v_lshl_or_b32 v6, v6, 16, v7
-; GFX9-DL-NEXT:    v_lshl_or_b32 v7, v11, 16, v12
-; GFX9-DL-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v8, 12, v8
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v13, 12, v13
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v14, 12, v14
-; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v4, v4, v7
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v15, 12, v16
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v16, 12, v17
-; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v17, 12, v18
-; GFX9-DL-NEXT:    v_lshl_or_b32 v8, v8, 16, v9
-; GFX9-DL-NEXT:    v_lshl_or_b32 v9, v13, 16, v14
-; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DL-NEXT:    v_add_u16_e32 v3, v4, v3
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v1, 12, v1
-; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v10, 12, v10
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v1, 12, v1
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v14, 12, v14
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v15, 12, v15
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v17, 12, v17
+; GFX9-DL-NEXT:    v_lshlrev_b16_e32 v2, 12, v2
+; GFX9-DL-NEXT:    v_perm_b32 v7, v8, v7, s0
+; GFX9-DL-NEXT:    v_perm_b32 v8, v13, v12, s0
+; GFX9-DL-NEXT:    v_perm_b32 v5, v6, v5, s0
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v9, 12, v9
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v11, 12, v11
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v16, 12, v16
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v4, 12, v4
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v10, 12, v10
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v1, 12, v1
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v14, 12, v14
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v15, 12, v15
 ; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v17, 12, v17
-; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v5, v6, v9
-; GFX9-DL-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-DL-NEXT:    v_lshl_or_b32 v2, v17, 16, v2
-; GFX9-DL-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
-; GFX9-DL-NEXT:    v_lshl_or_b32 v10, v15, 16, v16
-; GFX9-DL-NEXT:    v_add_u16_e32 v3, v3, v5
+; GFX9-DL-NEXT:    v_ashrrev_i16_e32 v2, 12, v2
+; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v5, v5, v8
+; GFX9-DL-NEXT:    v_perm_b32 v2, v2, v4, s0
+; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v11, s0
+; GFX9-DL-NEXT:    v_perm_b32 v4, v17, v16, s0
+; GFX9-DL-NEXT:    v_perm_b32 v9, v10, v9, s0
+; GFX9-DL-NEXT:    v_perm_b32 v10, v15, v14, s0
+; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DL-NEXT:    v_add_u16_e32 v3, v5, v3
 ; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
-; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v2, v8, v10
+; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v2, v9, v4
+; GFX9-DL-NEXT:    v_pk_mul_lo_u16 v4, v7, v10
 ; GFX9-DL-NEXT:    v_add_u16_sdwa v3, v3, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-DL-NEXT:    v_add_u16_e32 v3, v3, v4
+; GFX9-DL-NEXT:    v_add_u16_sdwa v3, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-DL-NEXT:    v_add_u16_e32 v3, v3, v2
 ; GFX9-DL-NEXT:    v_add_u16_sdwa v2, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX9-DL-NEXT:    v_add_u16_e32 v2, v2, v1
@@ -2517,79 +2519,71 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-XNACK-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-XNACK-NEXT:    global_load_ushort v3, v0, s[0:1]
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v4, 4, v1
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 4, v1
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v11, 4, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 8, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v11, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v12, 4, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v4, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v11, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v6, 8, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v13, 8, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v2
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 16, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v11, v11, 16, v12
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v8, 20, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 20, v2
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v13
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v12, 0xffff, v14
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 28, v2
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v13
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v12, 12, v14
+; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v13, 12, v16
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v5, v5, 16, v12
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v6, v6, 16, v7
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-XNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v4, v3
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v17, 24, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v11, 12, v15
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v4, 0xffff, v13
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v5, v6, v5
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v2, 28, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v4, 12, v16
+; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v8
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v7
 ; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v4, v11, 16, v4
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v6, v8, 16, v9
-; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v5
-; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v5
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
+; GFX10-DL-XNACK-NEXT:    v_lshlrev_b16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v5, 12, v17
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX10-DL-XNACK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v6, v4
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v6, 12, v12
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v2, 12, v2
+; GFX10-DL-XNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v2, v5, 16, v2
-; GFX10-DL-XNACK-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v2, v2, v6, 0x5040100
+; GFX10-DL-XNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
 ; GFX10-DL-XNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-XNACK-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-XNACK-NEXT:    v_pk_mul_lo_u16 v1, v1, v2
@@ -2618,79 +2612,71 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NOXNACK-NEXT:    global_load_dword v0, v0, s[6:7]
 ; GFX10-DL-NOXNACK-NEXT:    global_load_ushort v3, v2, s[0:1]
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v4, 4, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 4, v1
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v11, 4, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 8, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 8, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v4, 12, v4
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v11, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v12, 4, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v4, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v11, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v6, 8, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v5, 12, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v13, 8, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v14, 12, v0
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v11
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v12, 0xffff, v12
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v5, 0xffff, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 16, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v5
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v14, 12, v14
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v11, v11, 16, v12
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v4, v4, 16, v5
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v8, 20, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 20, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v13
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v12, 0xffff, v14
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 28, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 24, v1
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 28, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v0, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v7, 12, v7
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v13, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v14, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v11, v12, v11, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v5, v4, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v9, 20, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v15, 16, v0
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v16, 20, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v6
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v7, 12, v7
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v13
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v12, 12, v14
+; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v4, v11
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v9, 12, v9
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v15, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v13, 12, v16
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v5, v5, 16, v12
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v6, v6, 16, v7
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v16, 12, v16
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v8, v12, v8, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v6, v7, v6, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v4, v3
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v8, 12, v8
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v10, 24, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v1, 28, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v17, 24, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v9, 12, v9
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v11, 12, v15
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v4, 0xffff, v13
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v5, v6, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v0, 28, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v4, 12, v16
+; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v6, v6, v8
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v7
 ; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v17, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v4, v11, 16, v4
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v6, v8, 16, v9
-; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v5
-; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v5
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v1, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v12, 12, v17
+; GFX10-DL-NOXNACK-NEXT:    v_lshlrev_b16 v0, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v4, v4, v11, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v5, v9, v5, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v6
 ; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v10, 12, v10
-; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v5, 12, v17
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-DL-NOXNACK-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v6, v4
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v6, 12, v12
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v0, 12, v0
+; GFX10-DL-NOXNACK-NEXT:    v_ashrrev_i16 v1, 12, v1
+; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v4, v5, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v7
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
-; GFX10-DL-NOXNACK-NEXT:    v_lshl_or_b32 v1, v10, 16, v1
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v0, v0, v6, 0x5040100
+; GFX10-DL-NOXNACK-NEXT:    v_perm_b32 v1, v1, v10, 0x5040100
 ; GFX10-DL-NOXNACK-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_add_nc_u16 v3, v3, v4
 ; GFX10-DL-NOXNACK-NEXT:    v_pk_mul_lo_u16 v0, v1, v0
@@ -2771,14 +2757,14 @@ define amdgpu_kernel void @idot8_acc16_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-DL-NEXT:    global_store_short v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                              <8 x i4> addrspace(1)* %src2,
-                                              i16 addrspace(1)* nocapture %dst) {
+                                              ptr addrspace(1) %src2,
+                                              ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i16>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i16>
@@ -2793,7 +2779,7 @@ entry:
   %mul6 = extractelement <8 x i16> %mul, i64 6
   %mul7 = extractelement <8 x i16> %mul, i64 7
 
-  %acc = load i16, i16 addrspace(1)* %dst, align 4
+  %acc = load i16, ptr addrspace(1) %dst, align 4
   %add1 = add i16 %mul0, %acc
   %add2 = add i16 %add1, %mul1
   %add3 = add i16 %add2, %mul2
@@ -2803,12 +2789,12 @@ entry:
   %add7 = add i16 %add6, %mul6
   %add8 = add i16 %add7, %mul7
 
-  store i16 %add8, i16 addrspace(1)* %dst, align 4
+  store i16 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 
 ; TODO: Support this pattern.
-define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
+define amdgpu_kernel void @idot8_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX7-LABEL: idot8_acc8_vecMul:
 ; GFX7:       ; %bb.0: ; %entry
 ; GFX7-NEXT:    s_mov_b32 s12, SCRATCH_RSRC_DWORD0
@@ -2832,50 +2818,50 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX7-NEXT:    buffer_load_ubyte v1, off, s[0:3], 0
 ; GFX7-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX7-NEXT:    s_waitcnt vmcnt(2)
-; GFX7-NEXT:    v_bfe_i32 v7, v2, 0, 4
-; GFX7-NEXT:    v_bfe_i32 v3, v2, 24, 4
+; GFX7-NEXT:    v_bfe_i32 v8, v2, 0, 4
+; GFX7-NEXT:    v_ashrrev_i32_e32 v3, 28, v2
 ; GFX7-NEXT:    s_waitcnt vmcnt(1)
-; GFX7-NEXT:    v_bfe_i32 v14, v0, 0, 4
-; GFX7-NEXT:    v_bfe_i32 v4, v2, 20, 4
-; GFX7-NEXT:    v_bfe_i32 v5, v2, 16, 4
-; GFX7-NEXT:    v_bfe_i32 v6, v2, 8, 4
-; GFX7-NEXT:    v_ashrrev_i32_e32 v8, 28, v2
+; GFX7-NEXT:    v_bfe_i32 v15, v0, 0, 4
+; GFX7-NEXT:    v_bfe_i32 v4, v2, 24, 4
+; GFX7-NEXT:    v_bfe_i32 v5, v2, 20, 4
+; GFX7-NEXT:    v_bfe_i32 v6, v2, 16, 4
+; GFX7-NEXT:    v_bfe_i32 v7, v2, 8, 4
 ; GFX7-NEXT:    v_bfe_i32 v9, v2, 12, 4
 ; GFX7-NEXT:    v_bfe_i32 v2, v2, 4, 4
-; GFX7-NEXT:    v_and_b32_e32 v7, 0xff, v7
-; GFX7-NEXT:    v_bfe_i32 v10, v0, 24, 4
-; GFX7-NEXT:    v_bfe_i32 v11, v0, 20, 4
-; GFX7-NEXT:    v_bfe_i32 v12, v0, 16, 4
-; GFX7-NEXT:    v_bfe_i32 v13, v0, 8, 4
-; GFX7-NEXT:    v_ashrrev_i32_e32 v15, 28, v0
+; GFX7-NEXT:    v_and_b32_e32 v8, 0xff, v8
+; GFX7-NEXT:    v_ashrrev_i32_e32 v10, 28, v0
+; GFX7-NEXT:    v_bfe_i32 v11, v0, 24, 4
+; GFX7-NEXT:    v_bfe_i32 v12, v0, 20, 4
+; GFX7-NEXT:    v_bfe_i32 v13, v0, 16, 4
+; GFX7-NEXT:    v_bfe_i32 v14, v0, 8, 4
 ; GFX7-NEXT:    v_bfe_i32 v16, v0, 12, 4
 ; GFX7-NEXT:    v_bfe_i32 v0, v0, 4, 4
-; GFX7-NEXT:    v_and_b32_e32 v14, 0xff, v14
+; GFX7-NEXT:    v_and_b32_e32 v15, 0xff, v15
 ; GFX7-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_mad_u32_u24 v1, v7, v14, v1
-; GFX7-NEXT:    v_and_b32_e32 v6, 0xff, v6
+; GFX7-NEXT:    v_mad_u32_u24 v1, v8, v15, v1
+; GFX7-NEXT:    v_and_b32_e32 v7, 0xff, v7
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v9, 24, v9
-; GFX7-NEXT:    v_and_b32_e32 v13, 0xff, v13
+; GFX7-NEXT:    v_and_b32_e32 v14, 0xff, v14
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v16, 24, v16
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v2, v0, v1
 ; GFX7-NEXT:    v_alignbit_b32 v9, 0, v9, 24
 ; GFX7-NEXT:    v_alignbit_b32 v16, 0, v16, 24
-; GFX7-NEXT:    v_mad_u32_u24 v0, v6, v13, v0
+; GFX7-NEXT:    v_mad_u32_u24 v0, v7, v14, v0
+; GFX7-NEXT:    v_and_b32_e32 v6, 0xff, v6
+; GFX7-NEXT:    v_and_b32_e32 v13, 0xff, v13
+; GFX7-NEXT:    v_mad_u32_u24 v0, v9, v16, v0
 ; GFX7-NEXT:    v_and_b32_e32 v5, 0xff, v5
 ; GFX7-NEXT:    v_and_b32_e32 v12, 0xff, v12
-; GFX7-NEXT:    v_mad_u32_u24 v0, v9, v16, v0
+; GFX7-NEXT:    v_mad_u32_u24 v0, v6, v13, v0
 ; GFX7-NEXT:    v_and_b32_e32 v4, 0xff, v4
 ; GFX7-NEXT:    v_and_b32_e32 v11, 0xff, v11
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v5, v12, v0
 ; GFX7-NEXT:    v_and_b32_e32 v3, 0xff, v3
 ; GFX7-NEXT:    v_and_b32_e32 v10, 0xff, v10
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v4, v11, v0
-; GFX7-NEXT:    v_and_b32_e32 v8, 0xff, v8
-; GFX7-NEXT:    v_and_b32_e32 v15, 0xff, v15
 ; GFX7-NEXT:    v_mad_u32_u24 v0, v3, v10, v0
-; GFX7-NEXT:    v_mad_u32_u24 v0, v8, v15, v0
 ; GFX7-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;
@@ -3458,14 +3444,14 @@ define amdgpu_kernel void @idot8_acc8_vecMul(<8 x i4> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_add_nc_u32_sdwa v1, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_3
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[4:5]
 ; GFX10-DL-NEXT:    s_endpgm
-                                             <8 x i4> addrspace(1)* %src2,
-                                             i8 addrspace(1)* nocapture %dst) {
+                                             ptr addrspace(1) %src2,
+                                             ptr addrspace(1) nocapture %dst) {
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep1 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src1, i32 %idx
-  %vec1 = load <8 x i4>, <8 x i4> addrspace(1)* %gep1
-  %gep2 = getelementptr <8 x i4>, <8 x i4> addrspace(1)* %src2, i32 %idx
-  %vec2 = load <8 x i4>, <8 x i4> addrspace(1)* %gep2
+  %gep1 = getelementptr <8 x i4>, ptr addrspace(1) %src1, i32 %idx
+  %vec1 = load <8 x i4>, ptr addrspace(1) %gep1
+  %gep2 = getelementptr <8 x i4>, ptr addrspace(1) %src2, i32 %idx
+  %vec2 = load <8 x i4>, ptr addrspace(1) %gep2
 
   %cvec1 = sext <8 x i4> %vec1 to <8 x i8>
   %cvec2 = sext <8 x i4> %vec2 to <8 x i8>
@@ -3480,7 +3466,7 @@ entry:
   %mul6 = extractelement <8 x i8> %mul, i64 6
   %mul7 = extractelement <8 x i8> %mul, i64 7
 
-  %acc = load i8, i8 addrspace(1)* %dst, align 4
+  %acc = load i8, ptr addrspace(1) %dst, align 4
   %add1 = add i8 %mul0, %acc
   %add2 = add i8 %add1, %mul1
   %add3 = add i8 %add2, %mul2
@@ -3490,7 +3476,7 @@ entry:
   %add7 = add i8 %add6, %mul6
   %add8 = add i8 %add7, %mul7
 
-  store i8 %add8, i8 addrspace(1)* %dst, align 4
+  store i8 %add8, ptr addrspace(1) %dst, align 4
   ret void
 }
 

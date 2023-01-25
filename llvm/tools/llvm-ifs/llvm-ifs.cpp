@@ -32,6 +32,7 @@
 #include "llvm/TextAPI/InterfaceFile.h"
 #include "llvm/TextAPI/TextAPIReader.h"
 #include "llvm/TextAPI/TextAPIWriter.h"
+#include <optional>
 #include <set>
 #include <string>
 #include <vector>
@@ -59,11 +60,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -75,22 +79,24 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class IFSOptTable : public opt::OptTable {
+class IFSOptTable : public opt::GenericOptTable {
 public:
-  IFSOptTable() : OptTable(InfoTable) { setGroupedShortOptions(true); }
+  IFSOptTable() : opt::GenericOptTable(InfoTable) {
+    setGroupedShortOptions(true);
+  }
 };
 
 struct DriverConfig {
   std::vector<std::string> InputFilePaths;
 
-  Optional<FileFormat> InputFormat;
-  Optional<FileFormat> OutputFormat;
+  std::optional<FileFormat> InputFormat;
+  std::optional<FileFormat> OutputFormat;
 
-  Optional<std::string> HintIfsTarget;
-  Optional<std::string> OptTargetTriple;
-  Optional<IFSArch> OverrideArch;
-  Optional<IFSBitWidthType> OverrideBitWidth;
-  Optional<IFSEndiannessType> OverrideEndianness;
+  std::optional<std::string> HintIfsTarget;
+  std::optional<std::string> OptTargetTriple;
+  std::optional<IFSArch> OverrideArch;
+  std::optional<IFSBitWidthType> OverrideBitWidth;
+  std::optional<IFSEndiannessType> OverrideEndianness;
 
   bool StripIfsArch = false;
   bool StripIfsBitwidth = false;
@@ -102,12 +108,12 @@ struct DriverConfig {
 
   std::vector<std::string> Exclude;
 
-  Optional<std::string> SoName;
+  std::optional<std::string> SoName;
 
-  Optional<std::string> Output;
-  Optional<std::string> OutputElf;
-  Optional<std::string> OutputIfs;
-  Optional<std::string> OutputTbd;
+  std::optional<std::string> Output;
+  std::optional<std::string> OutputElf;
+  std::optional<std::string> OutputIfs;
+  std::optional<std::string> OutputTbd;
 
   bool WriteIfChanged = false;
 };
@@ -129,7 +135,7 @@ static std::string getTypeName(IFSSymbolType Type) {
 }
 
 static Expected<std::unique_ptr<IFSStub>>
-readInputFile(Optional<FileFormat> &InputFormat, StringRef FilePath) {
+readInputFile(std::optional<FileFormat> &InputFormat, StringRef FilePath) {
   // Read in file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrError =
       MemoryBuffer::getFileOrSTDIN(FilePath, /*IsText=*/true);
@@ -305,10 +311,10 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   for (const opt::Arg *A : Args.filtered(OPT_INPUT))
     Config.InputFilePaths.push_back(A->getValue());
   if (const opt::Arg *A = Args.getLastArg(OPT_input_format_EQ)) {
-    Config.InputFormat = StringSwitch<Optional<FileFormat>>(A->getValue())
+    Config.InputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
                              .Case("IFS", FileFormat::IFS)
                              .Case("ELF", FileFormat::ELF)
-                             .Default(None);
+                             .Default(std::nullopt);
     if (!Config.InputFormat)
       fatalError(Twine("invalid argument '") + A->getValue());
   }
@@ -318,11 +324,11 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
                " option: Cannot find option named '" + OptionName + "'!");
   };
   if (const opt::Arg *A = Args.getLastArg(OPT_output_format_EQ)) {
-    Config.OutputFormat = StringSwitch<Optional<FileFormat>>(A->getValue())
+    Config.OutputFormat = StringSwitch<std::optional<FileFormat>>(A->getValue())
                               .Case("IFS", FileFormat::IFS)
                               .Case("ELF", FileFormat::ELF)
                               .Case("TBD", FileFormat::TBD)
-                              .Default(None);
+                              .Default(std::nullopt);
     if (!Config.OutputFormat)
       OptionNotFound("--output-format", A->getValue());
   }
@@ -340,10 +346,10 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   }
   if (const opt::Arg *A = Args.getLastArg(OPT_endianness_EQ)) {
     Config.OverrideEndianness =
-        StringSwitch<Optional<IFSEndiannessType>>(A->getValue())
+        StringSwitch<std::optional<IFSEndiannessType>>(A->getValue())
             .Case("little", IFSEndiannessType::Little)
             .Case("big", IFSEndiannessType::Big)
-            .Default(None);
+            .Default(std::nullopt);
     if (!Config.OverrideEndianness)
       OptionNotFound("--endianness", A->getValue());
   }
@@ -376,7 +382,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   return Config;
 }
 
-int main(int argc, char *argv[]) {
+int llvm_ifs_main(int argc, char **argv) {
   DriverConfig Config = parseArgs(argc, argv);
 
   if (Config.InputFilePaths.empty())
@@ -533,33 +539,32 @@ int main(int argc, char *argv[]) {
             << "Triple should be defined when output format is TBD";
         return -1;
       }
-      return writeTbdStub(llvm::Triple(Stub.Target.Triple.value()),
-                          Stub.Symbols, "TBD", Out);
+      return writeTbdStub(llvm::Triple(*Stub.Target.Triple), Stub.Symbols,
+                          "TBD", Out);
     }
     case FileFormat::IFS: {
       Stub.IfsVersion = IfsVersionCurrent;
-      if (Config.InputFormat.value() == FileFormat::ELF &&
-          Config.HintIfsTarget) {
+      if (*Config.InputFormat == FileFormat::ELF && Config.HintIfsTarget) {
         std::error_code HintEC(1, std::generic_category());
         IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
-        if (Stub.Target.Arch.value() != HintTarget.Arch.value())
+        if (*Stub.Target.Arch != *HintTarget.Arch)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual architecture", HintEC));
-        if (Stub.Target.Endianness.value() != HintTarget.Endianness.value())
+        if (*Stub.Target.Endianness != *HintTarget.Endianness)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual endianness", HintEC));
-        if (Stub.Target.BitWidth.value() != HintTarget.BitWidth.value())
+        if (*Stub.Target.BitWidth != *HintTarget.BitWidth)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual bit width", HintEC));
 
         stripIFSTarget(Stub, true, false, false, false);
-        Stub.Target.Triple = Config.HintIfsTarget.value();
+        Stub.Target.Triple = *Config.HintIfsTarget;
       } else {
         stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
                        Config.StripIfsEndianness, Config.StripIfsBitwidth);
       }
       Error IFSWriteError =
-          writeIFS(Config.Output.value(), Stub, Config.WriteIfChanged);
+          writeIFS(*Config.Output, Stub, Config.WriteIfChanged);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));
       break;
@@ -588,28 +593,27 @@ int main(int argc, char *argv[]) {
     }
     if (Config.OutputIfs) {
       Stub.IfsVersion = IfsVersionCurrent;
-      if (Config.InputFormat.value() == FileFormat::ELF &&
-          Config.HintIfsTarget) {
+      if (*Config.InputFormat == FileFormat::ELF && Config.HintIfsTarget) {
         std::error_code HintEC(1, std::generic_category());
         IFSTarget HintTarget = parseTriple(*Config.HintIfsTarget);
-        if (Stub.Target.Arch.value() != HintTarget.Arch.value())
+        if (*Stub.Target.Arch != *HintTarget.Arch)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual architecture", HintEC));
-        if (Stub.Target.Endianness.value() != HintTarget.Endianness.value())
+        if (*Stub.Target.Endianness != *HintTarget.Endianness)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual endianness", HintEC));
-        if (Stub.Target.BitWidth.value() != HintTarget.BitWidth.value())
+        if (*Stub.Target.BitWidth != *HintTarget.BitWidth)
           fatalError(make_error<StringError>(
               "Triple hint does not match the actual bit width", HintEC));
 
         stripIFSTarget(Stub, true, false, false, false);
-        Stub.Target.Triple = Config.HintIfsTarget.value();
+        Stub.Target.Triple = *Config.HintIfsTarget;
       } else {
         stripIFSTarget(Stub, Config.StripIfsTarget, Config.StripIfsArch,
                        Config.StripIfsEndianness, Config.StripIfsBitwidth);
       }
       Error IFSWriteError =
-          writeIFS(Config.OutputIfs.value(), Stub, Config.WriteIfChanged);
+          writeIFS(*Config.OutputIfs, Stub, Config.WriteIfChanged);
       if (IFSWriteError)
         fatalError(std::move(IFSWriteError));
     }
@@ -626,8 +630,8 @@ int main(int argc, char *argv[]) {
             << "Triple should be defined when output format is TBD";
         return -1;
       }
-      return writeTbdStub(llvm::Triple(Stub.Target.Triple.value()),
-                          Stub.Symbols, "TBD", Out);
+      return writeTbdStub(llvm::Triple(*Stub.Target.Triple), Stub.Symbols,
+                          "TBD", Out);
     }
   }
   return 0;

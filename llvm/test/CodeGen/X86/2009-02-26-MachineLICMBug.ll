@@ -16,16 +16,16 @@ define ptr @t(ptr %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    orq $2097152, %r14 ## imm = 0x200000
-; CHECK-NEXT:    andl $15728640, %r14d ## imm = 0xF00000
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
+; CHECK-NEXT:    orq $2097152, %rbx ## imm = 0x200000
+; CHECK-NEXT:    andl $15728640, %ebx ## imm = 0xF00000
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_1: ## %bb4
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq _xxGetOffsetForCode
-; CHECK-NEXT:    movq %rbx, %rdi
+; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq _xxCalculateMidType
@@ -33,7 +33,7 @@ define ptr @t(ptr %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:  ## %bb.2: ## %bb26
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    cmpl $1048576, %r14d ## imm = 0x100000
+; CHECK-NEXT:    cmpl $1048576, %ebx ## imm = 0x100000
 ; CHECK-NEXT:    jne LBB0_1
 ; CHECK-NEXT:  ## %bb.3: ## %bb.i
 ; CHECK-NEXT:    ## in Loop: Header=BB0_1 Depth=1

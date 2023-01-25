@@ -8,6 +8,7 @@
 
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 
 #if LLDB_ENABLE_PYTHON
@@ -19,6 +20,7 @@
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedProcessPythonInterface.h"
 #include "ScriptedThreadPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -35,16 +37,18 @@ StructuredData::GenericSP ScriptedProcessPythonInterface::CreatePluginObject(
   if (class_name.empty())
     return {};
 
-  TargetSP target_sp = exe_ctx.GetTargetSP();
   StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
   Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
                  Locker::FreeLock);
 
-  PythonObject ret_val = LLDBSwigPythonCreateScriptedProcess(
-      class_name.str().c_str(), m_interpreter.GetDictionaryName(), target_sp,
-      args_impl, error_string);
+  lldb::ExecutionContextRefSP exe_ctx_ref_sp =
+      std::make_shared<ExecutionContextRef>(exe_ctx);
+
+  PythonObject ret_val = LLDBSwigPythonCreateScriptedObject(
+      class_name.str().c_str(), m_interpreter.GetDictionaryName(),
+      exe_ctx_ref_sp, args_impl, error_string);
 
   m_object_instance_sp =
       StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
@@ -74,10 +78,10 @@ Status ScriptedProcessPythonInterface::Stop() {
   return GetStatusFromMethod("stop");
 }
 
-llvm::Optional<MemoryRegionInfo>
+std::optional<MemoryRegionInfo>
 ScriptedProcessPythonInterface::GetMemoryRegionContainingAddress(
     lldb::addr_t address, Status &error) {
-  auto mem_region = Dispatch<llvm::Optional<MemoryRegionInfo>>(
+  auto mem_region = Dispatch<std::optional<MemoryRegionInfo>>(
       "get_memory_region_containing_address", error, address);
 
   if (error.Fail()) {
@@ -120,8 +124,15 @@ ScriptedProcessPythonInterface::GetRegistersForThread(lldb::tid_t tid) {
 
 lldb::DataExtractorSP ScriptedProcessPythonInterface::ReadMemoryAtAddress(
     lldb::addr_t address, size_t size, Status &error) {
-  return Dispatch<lldb::DataExtractorSP>("read_memory_at_address", error,
-                                         address, size);
+  Status py_error;
+  lldb::DataExtractorSP data_sp = Dispatch<lldb::DataExtractorSP>(
+      "read_memory_at_address", py_error, address, size, error);
+
+  // If there was an error on the python call, surface it to the user.
+  if (py_error.Fail())
+    error = py_error;
+
+  return data_sp;
 }
 
 StructuredData::ArraySP ScriptedProcessPythonInterface::GetLoadedImages() {
@@ -161,7 +172,7 @@ bool ScriptedProcessPythonInterface::IsAlive() {
   return obj->GetBooleanValue();
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_scripted_thread_plugin", error);
@@ -175,6 +186,17 @@ ScriptedProcessPythonInterface::GetScriptedThreadPluginName() {
 lldb::ScriptedThreadInterfaceSP
 ScriptedProcessPythonInterface::CreateScriptedThreadInterface() {
   return std::make_shared<ScriptedThreadPythonInterface>(m_interpreter);
+}
+
+StructuredData::DictionarySP ScriptedProcessPythonInterface::GetMetadata() {
+  Status error;
+  StructuredData::DictionarySP dict =
+      Dispatch<StructuredData::DictionarySP>("get_process_metadata", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+    return {};
+
+  return dict;
 }
 
 #endif

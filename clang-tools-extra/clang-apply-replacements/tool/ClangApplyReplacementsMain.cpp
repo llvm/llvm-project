@@ -91,7 +91,7 @@ static void printVersion(raw_ostream &OS) {
 }
 
 int main(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(VisibleCategories));
+  cl::HideUnrelatedOptions(ArrayRef(VisibleCategories));
 
   cl::SetVersionPrinter(printVersion);
   cl::ParseCommandLineOptions(argc, argv);

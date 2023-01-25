@@ -48,7 +48,7 @@ struct TestCompiler {
         std::make_shared<clang::TargetOptions>(compiler.getTargetOpts())));
 
     const clang::TargetInfo &TInfo = compiler.getTarget();
-    PtrSize = TInfo.getPointerWidth(0) / 8;
+    PtrSize = TInfo.getPointerWidth(clang::LangAS::Default) / 8;
 
     compiler.createFileManager();
     compiler.createSourceManager(compiler.getFileManager());

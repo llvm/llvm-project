@@ -13,6 +13,7 @@
 #include "ABIX86.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -50,7 +51,7 @@ enum RegKind {
 struct RegData {
   RegKind subreg_kind;
   llvm::StringRef subreg_name;
-  llvm::Optional<uint32_t> base_index;
+  std::optional<uint32_t> base_index;
 };
 
 static void
@@ -100,8 +101,8 @@ addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
     if (regdata1->subreg_name != regdata2->subreg_name)
       continue;
 
-    uint32_t base_index1 = regdata1->base_index.value();
-    uint32_t base_index2 = regdata2->base_index.value();
+    uint32_t base_index1 = *regdata1->base_index;
+    uint32_t base_index2 = *regdata2->base_index;
     if (regs[base_index1].byte_size != base_size ||
         regs[base_index2].byte_size != base_size)
       continue;
@@ -130,42 +131,44 @@ typedef llvm::SmallDenseMap<llvm::StringRef, llvm::SmallVector<RegData, 4>, 64>
 
 #define GPRh(l)                                                                \
   {                                                                            \
-    is64bit                                                                    \
-        ? BaseRegToRegsMap::value_type("r" l "x",                              \
-                                       {{GPR32, "e" l "x", llvm::None},        \
-                                        {GPR16, l "x", llvm::None},            \
-                                        {GPR8h, l "h", llvm::None},            \
-                                        {GPR8, l "l", llvm::None}})            \
-        : BaseRegToRegsMap::value_type("e" l "x", {{GPR16, l "x", llvm::None}, \
-                                                   {GPR8h, l "h", llvm::None}, \
-                                                   {GPR8, l "l", llvm::None}}) \
+    is64bit ? BaseRegToRegsMap::value_type("r" l "x",                          \
+                                           {{GPR32, "e" l "x", std::nullopt},  \
+                                            {GPR16, l "x", std::nullopt},      \
+                                            {GPR8h, l "h", std::nullopt},      \
+                                            {GPR8, l "l", std::nullopt}})      \
+            : BaseRegToRegsMap::value_type("e" l "x",                          \
+                                           {{GPR16, l "x", std::nullopt},      \
+                                            {GPR8h, l "h", std::nullopt},      \
+                                            {GPR8, l "l", std::nullopt}})      \
   }
 
 #define GPR(r16)                                                               \
   {                                                                            \
-    is64bit                                                                    \
-        ? BaseRegToRegsMap::value_type("r" r16, {{GPR32, "e" r16, llvm::None}, \
-                                                 {GPR16, r16, llvm::None},     \
-                                                 {GPR8, r16 "l", llvm::None}}) \
-        : BaseRegToRegsMap::value_type("e" r16, {{GPR16, r16, llvm::None},     \
-                                                 {GPR8, r16 "l", llvm::None}}) \
+    is64bit ? BaseRegToRegsMap::value_type("r" r16,                            \
+                                           {{GPR32, "e" r16, std::nullopt},    \
+                                            {GPR16, r16, std::nullopt},        \
+                                            {GPR8, r16 "l", std::nullopt}})    \
+            : BaseRegToRegsMap::value_type(                                    \
+                  "e" r16,                                                     \
+                  {{GPR16, r16, std::nullopt}, {GPR8, r16 "l", std::nullopt}}) \
   }
 
 #define GPR64(n)                                                               \
   {                                                                            \
-    BaseRegToRegsMap::value_type("r" #n, {{GPR32, "r" #n "d", llvm::None},     \
-                                          {GPR16, "r" #n "w", llvm::None},     \
-                                          {GPR8, "r" #n "l", llvm::None}})     \
+    BaseRegToRegsMap::value_type("r" #n, {{GPR32, "r" #n "d", std::nullopt},   \
+                                          {GPR16, "r" #n "w", std::nullopt},   \
+                                          {GPR8, "r" #n "l", std::nullopt}})   \
   }
 
 #define STMM(n)                                                                \
-  { BaseRegToRegsMap::value_type("st" #n, {{MM, "mm" #n, llvm::None}}) }
+  { BaseRegToRegsMap::value_type("st" #n, {{MM, "mm" #n, std::nullopt}}) }
 
 #define YMM(n)                                                                 \
   {BaseRegToRegsMap::value_type("ymm" #n "h",                                  \
-                                {{YMM_YMMh, "ymm" #n, llvm::None}})},          \
+                                {{YMM_YMMh, "ymm" #n, std::nullopt}})},        \
   {                                                                            \
-    BaseRegToRegsMap::value_type("xmm" #n, {{YMM_XMM, "ymm" #n, llvm::None}})  \
+    BaseRegToRegsMap::value_type("xmm" #n,                                     \
+                                 {{YMM_XMM, "ymm" #n, std::nullopt}})          \
   }
 
 BaseRegToRegsMap makeBaseRegMap(bool is64bit) {

@@ -3,41 +3,41 @@
 ;Radar 7937109
 
 ;XCore default subtarget does not support 8-byte alignment on stack.
-;XFAIL: xcore
+;XFAIL: target=xcore{{.*}}
 
 %struct.anon = type { i64, i32, i32, i32, [1 x i32] }
-%struct.gpm_t = type { i32, i8*, [16 x i8], i32, i64, i64, i64, i64, i64, i64, i32, i16, i16, [8 x %struct.gpmr_t] }
+%struct.gpm_t = type { i32, ptr, [16 x i8], i32, i64, i64, i64, i64, i64, i64, i32, i16, i16, [8 x %struct.gpmr_t] }
 %struct.gpmr_t = type { [48 x i8], [48 x i8], [16 x i8], i64, i64, i64, i64, i16 }
 %struct.gpt_t = type { [8 x i8], i32, i32, i32, i32, i64, i64, i64, i64, [16 x i8], %struct.anon }
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (void (%struct.gpm_t*, %struct.gpt_t*)* @gpt2gpm to i8*)], section "llvm.metadata" ; <[1 x i8*]*> [#uses=0]
+@llvm.used = appending global [1 x ptr] [ptr @gpt2gpm], section "llvm.metadata" ; <ptr> [#uses=0]
 
-define fastcc void @gpt2gpm(%struct.gpm_t* %gpm, %struct.gpt_t* %gpt) nounwind optsize ssp {
+define fastcc void @gpt2gpm(ptr %gpm, ptr %gpt) nounwind optsize ssp {
 entry:
-  %data_addr.i18 = alloca i64, align 8            ; <i64*> [#uses=1]
-  %data_addr.i17 = alloca i64, align 8            ; <i64*> [#uses=2]
-  %data_addr.i16 = alloca i64, align 8            ; <i64*> [#uses=0]
-  %data_addr.i15 = alloca i32, align 4            ; <i32*> [#uses=0]
-  %data_addr.i = alloca i64, align 8              ; <i64*> [#uses=0]
-  %0 = getelementptr inbounds %struct.gpm_t, %struct.gpm_t* %gpm, i32 0, i32 2, i32 0 ; <i8*> [#uses=1]
-  %1 = getelementptr inbounds %struct.gpt_t, %struct.gpt_t* %gpt, i32 0, i32 9, i32 0 ; <i8*> [#uses=1]
-  call void @uuid_LtoB(i8* %0, i8* %1) nounwind, !dbg !0
-  %a9 = load volatile i64, i64* %data_addr.i18, align 8 ; <i64> [#uses=1]
+  %data_addr.i18 = alloca i64, align 8            ; <ptr> [#uses=1]
+  %data_addr.i17 = alloca i64, align 8            ; <ptr> [#uses=2]
+  %data_addr.i16 = alloca i64, align 8            ; <ptr> [#uses=0]
+  %data_addr.i15 = alloca i32, align 4            ; <ptr> [#uses=0]
+  %data_addr.i = alloca i64, align 8              ; <ptr> [#uses=0]
+  %0 = getelementptr inbounds %struct.gpm_t, ptr %gpm, i32 0, i32 2, i32 0 ; <ptr> [#uses=1]
+  %1 = getelementptr inbounds %struct.gpt_t, ptr %gpt, i32 0, i32 9, i32 0 ; <ptr> [#uses=1]
+  call void @uuid_LtoB(ptr %0, ptr %1) nounwind, !dbg !0
+  %a9 = load volatile i64, ptr %data_addr.i18, align 8 ; <i64> [#uses=1]
   %a10 = call i64 @llvm.bswap.i64(i64 %a9) nounwind ; <i64> [#uses=1]
-  %a11 = getelementptr inbounds %struct.gpt_t, %struct.gpt_t* %gpt, i32 0, i32 8, !dbg !7 ; <i64*> [#uses=1]
-  %a12 = load i64, i64* %a11, align 4, !dbg !7         ; <i64> [#uses=1]
-  call void @llvm.dbg.declare(metadata i64* %data_addr.i17, metadata !8, metadata !DIExpression()) nounwind, !dbg !14
-  store i64 %a12, i64* %data_addr.i17, align 8
+  %a11 = getelementptr inbounds %struct.gpt_t, ptr %gpt, i32 0, i32 8, !dbg !7 ; <ptr> [#uses=1]
+  %a12 = load i64, ptr %a11, align 4, !dbg !7         ; <i64> [#uses=1]
+  call void @llvm.dbg.declare(metadata ptr %data_addr.i17, metadata !8, metadata !DIExpression()) nounwind, !dbg !14
+  store i64 %a12, ptr %data_addr.i17, align 8
   call void @llvm.dbg.value(metadata !6, metadata !15, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !16)
   call void @llvm.dbg.value(metadata i32 0, metadata !19, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !16)
   call void @llvm.dbg.declare(metadata !6, metadata !23, metadata !DIExpression()) nounwind, !dbg !DILocation(scope: !24)
-  call void @llvm.dbg.value(metadata i64* %data_addr.i17, metadata !34, metadata !DIExpression(DW_OP_deref)) nounwind, !dbg !DILocation(scope: !24)
-  %a13 = load volatile i64, i64* %data_addr.i17, align 8 ; <i64> [#uses=1]
+  call void @llvm.dbg.value(metadata ptr %data_addr.i17, metadata !34, metadata !DIExpression(DW_OP_deref)) nounwind, !dbg !DILocation(scope: !24)
+  %a13 = load volatile i64, ptr %data_addr.i17, align 8 ; <i64> [#uses=1]
   %a14 = call i64 @llvm.bswap.i64(i64 %a13) nounwind ; <i64> [#uses=2]
   %a15 = add i64 %a10, %a14, !dbg !7              ; <i64> [#uses=1]
   %a16 = sub i64 %a15, %a14                       ; <i64> [#uses=1]
-  %a17 = getelementptr inbounds %struct.gpm_t, %struct.gpm_t* %gpm, i32 0, i32 5, !dbg !7 ; <i64*> [#uses=1]
-  store i64 %a16, i64* %a17, align 4, !dbg !7
+  %a17 = getelementptr inbounds %struct.gpm_t, ptr %gpm, i32 0, i32 5, !dbg !7 ; <ptr> [#uses=1]
+  store i64 %a16, ptr %a17, align 4, !dbg !7
   ret void, !dbg !7
 }
 
@@ -49,7 +49,7 @@ declare i32 @llvm.bswap.i32(i32) nounwind readnone
 
 declare i64 @llvm.bswap.i64(i64) nounwind readnone
 
-declare void @uuid_LtoB(i8*, i8*)
+declare void @uuid_LtoB(ptr, ptr)
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!41}

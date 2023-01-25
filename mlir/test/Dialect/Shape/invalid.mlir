@@ -272,3 +272,20 @@ func.func @const_shape() {
   %0 = shape.const_shape [4, 5, 6] : tensor<2xindex>
   return
 }
+
+// -----
+
+func.func @invalid_meet(%arg0 : !shape.shape, %arg1 : index) -> index {
+  // expected-error@+1 {{requires all sizes or shapes}}
+  %result = shape.meet %arg0, %arg1 : !shape.shape, index -> index
+  return %result : index
+}
+
+// -----
+
+func.func @invalid_meet(%arg0 : tensor<2xindex>, %arg1 : tensor<3xindex>) -> tensor<?xindex> {
+  // expected-error@+1 {{unequal shape cardinality}}
+  %result = shape.meet %arg0, %arg1 : tensor<2xindex>, tensor<3xindex> -> tensor<?xindex>
+  return %result : tensor<?xindex>
+}
+

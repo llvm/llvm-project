@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -63,7 +64,7 @@ ProgramStateRef taint::addTaint(ProgramStateRef State, SVal V,
   // their parent region, which is a conjured symbol default-bound to the base
   // region of the parent region.
   if (auto LCV = V.getAs<nonloc::LazyCompoundVal>()) {
-    if (Optional<SVal> binding =
+    if (std::optional<SVal> binding =
             State->getStateManager().getStoreManager().getDefaultBinding(
                 *LCV)) {
       if (SymbolRef Sym = binding->getAsSymbol())

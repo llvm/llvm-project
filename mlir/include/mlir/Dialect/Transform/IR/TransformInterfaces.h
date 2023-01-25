@@ -9,177 +9,14 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMINTERFACES_H
 
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
+#include "mlir/Dialect/Transform/Utils/DiagnosedSilenceableFailure.h"
 #include "mlir/IR/OpDefinition.h"
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/ADT/ScopeExit.h"
+#include "mlir/Support/LogicalResult.h"
 
 namespace mlir {
-
-/// The result of a transform IR operation application. This can have one of the
-/// three states:
-///   - success;
-///   - silenceable (recoverable) failure with yet-unreported diagnostic;
-///   - definite failure.
-/// Silenceable failure is intended to communicate information about
-/// transformations that did not apply but in a way that supports recovery,
-/// for example, they did not modify the payload IR or modified it in some
-/// predictable way. They are associated with a Diagnostic that provides more
-/// details on the failure. Silenceable failure can be discarded, turning the
-/// result into success, or "reported", emitting the diagnostic and turning the
-/// result into definite failure.
-/// Transform IR operations containing other operations are allowed to do either
-/// with the results of the nested transformations, but must propagate definite
-/// failures as their diagnostics have been already reported to the user.
-class LLVM_NODISCARD DiagnosedSilenceableFailure {
-public:
-  explicit DiagnosedSilenceableFailure(LogicalResult result) : result(result) {}
-  DiagnosedSilenceableFailure(const DiagnosedSilenceableFailure &) = delete;
-  DiagnosedSilenceableFailure &
-  operator=(const DiagnosedSilenceableFailure &) = delete;
-  DiagnosedSilenceableFailure(DiagnosedSilenceableFailure &&) = default;
-  DiagnosedSilenceableFailure &
-  operator=(DiagnosedSilenceableFailure &&) = default;
-
-  /// Constructs a DiagnosedSilenceableFailure in the success state.
-  static DiagnosedSilenceableFailure success() {
-    return DiagnosedSilenceableFailure(::mlir::success());
-  }
-
-  /// Constructs a DiagnosedSilenceableFailure in the failure state. Typically,
-  /// a diagnostic has been emitted before this.
-  static DiagnosedSilenceableFailure definiteFailure() {
-    return DiagnosedSilenceableFailure(::mlir::failure());
-  }
-
-  /// Constructs a DiagnosedSilenceableFailure in the silenceable failure state,
-  /// ready to emit the given diagnostic. This is considered a failure
-  /// regardless of the diagnostic severity.
-  static DiagnosedSilenceableFailure silenceableFailure(Diagnostic &&diag) {
-    return DiagnosedSilenceableFailure(std::forward<Diagnostic>(diag));
-  }
-  static DiagnosedSilenceableFailure
-  silenceableFailure(SmallVector<Diagnostic> &&diag) {
-    return DiagnosedSilenceableFailure(
-        std::forward<SmallVector<Diagnostic>>(diag));
-  }
-
-  /// Converts all kinds of failure into a LogicalResult failure, emitting the
-  /// diagnostic if necessary. Must not be called more than once.
-  LogicalResult checkAndReport() {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-    assert(!reported && "attempting to report a diagnostic more than once");
-    reported = true;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    if (!diagnostics.empty()) {
-      for (auto &&diagnostic : diagnostics) {
-        diagnostic.getLocation().getContext()->getDiagEngine().emit(
-            std::move(diagnostic));
-      }
-      diagnostics.clear();
-      result = ::mlir::failure();
-    }
-    return result;
-  }
-
-  /// Returns `true` if this is a success.
-  bool succeeded() const {
-    return ::mlir::succeeded(result) && diagnostics.empty();
-  }
-
-  /// Returns `true` if this is a definite failure.
-  bool isDefiniteFailure() const {
-    return ::mlir::failed(result) && diagnostics.empty();
-  }
-
-  /// Returns `true` if this is a silenceable failure.
-  bool isSilenceableFailure() const { return !diagnostics.empty(); }
-
-  /// Returns the diagnostic message without emitting it. Expects this object
-  /// to be a silenceable failure.
-  std::string getMessage() const {
-    std::string res;
-    for (auto &diagnostic : diagnostics) {
-      res.append(diagnostic.str());
-      res.append("\n");
-    }
-    return res;
-  }
-
-  /// Returns a string representation of the failure mode (for error reporting).
-  std::string getStatusString() const {
-    if (succeeded())
-      return "success";
-    if (isSilenceableFailure())
-      return "silenceable failure";
-    return "definite failure";
-  }
-
-  /// Converts silenceable failure into LogicalResult success without reporting
-  /// the diagnostic, preserves the other states.
-  LogicalResult silence() {
-    if (!diagnostics.empty()) {
-      diagnostics.clear();
-      result = ::mlir::success();
-    }
-    return result;
-  }
-
-  /// Take the diagnostic and silence.
-  SmallVector<Diagnostic> &&takeDiagnostics() {
-    assert(!diagnostics.empty() && "expected a diagnostic to be present");
-    auto guard = llvm::make_scope_exit([&]() { diagnostics.clear(); });
-    return std::move(diagnostics);
-  }
-
-  /// Streams the given values into the last diagnotic.
-  /// Expects this object to be a silenceable failure.
-  template <typename T>
-  DiagnosedSilenceableFailure &operator<<(T &&value) & {
-    assert(isSilenceableFailure() &&
-           "can only append output in silenceable failure state");
-    diagnostics.back() << std::forward<T>(value);
-    return *this;
-  }
-  template <typename T>
-  DiagnosedSilenceableFailure &&operator<<(T &&value) && {
-    return std::move(this->operator<<(std::forward<T>(value)));
-  }
-
-  /// Attaches a note to the last diagnostic.
-  /// Expects this object to be a silenceable failure.
-  Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
-    assert(isSilenceableFailure() &&
-           "can only attach notes to silenceable failures");
-    return diagnostics.back().attachNote(loc);
-  }
-
-private:
-  explicit DiagnosedSilenceableFailure(Diagnostic &&diagnostic)
-      : diagnostics(), result(failure()) {
-    diagnostics.emplace_back(std::move(diagnostic));
-  }
-  explicit DiagnosedSilenceableFailure(SmallVector<Diagnostic> &&diagnostics)
-      : diagnostics(std::move(diagnostics)), result(failure()) {}
-
-  /// The diagnostics associated with this object. If non-empty, the object is
-  /// considered to be in the silenceable failure state regardless of the
-  /// `result` field.
-  SmallVector<Diagnostic, 1> diagnostics;
-
-  /// The "definite" logical state, either success or failure.
-  /// Ignored if the diagnostics message is present.
-  LogicalResult result;
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// Whether the associated diagnostics have been reported.
-  /// Diagnostics reporting consumes the diagnostics, so we need a mechanism to
-  /// differentiate reported diagnostics from a state where it was never
-  /// created.
-  bool reported = false;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-};
-
 namespace transform {
 
 class TransformOpInterface;
@@ -205,56 +42,78 @@ private:
   bool expensiveChecksEnabled = true;
 };
 
+/// Entry point to the Transform dialect infrastructure. Applies the
+/// transformation specified by `transform` to payload IR contained in
+/// `payloadRoot`. The `transform` operation may contain other operations that
+/// will be executed following the internal logic of the operation. It must
+/// have the `PossibleTopLevelTransformOp` trait and not have any operands.
+/// This function internally keeps track of the transformation state.
+LogicalResult
+applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
+                const TransformOptions &options = TransformOptions());
+
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
-/// which transformations apply are referred to as payload IR. The state thus
-/// contains the mapping between values defined in the transform IR ops and
-/// payload IR ops. It assumes that each value in the transform IR can be used
-/// at most once (since transformations are likely to change the payload IR ops
-/// the value corresponds to). Checks that transform IR values correspond to
-/// disjoint sets of payload IR ops throughout the transformation.
+/// which transformations apply are referred to as payload IR. Transform IR
+/// operates on values that can be associated either with a list of payload IR
+/// operations (such values are referred to as handles) or with a list of
+/// parameters represented as attributes. The state thus contains the mapping
+/// between values defined in the transform IR ops and either payload IR ops or
+/// parameters. For payload ops, the mapping is many-to-many and the reverse
+/// mapping is also stored. The "expensive-checks" option can be passed to the
+/// constructor at transformation execution time that transform IR values used
+/// as operands by a transform IR operation are not associated with dangling
+/// pointers to payload IR operations that are known to have been erased by
+/// previous transformation through the same or a different transform IR value.
 ///
 /// A reference to this class is passed as an argument to "apply" methods of the
-/// transform op interface. Thus the "apply" method can call
+/// transform op interface. Thus the "apply" method can call either
 /// `state.getPayloadOps( getSomeOperand() )` to obtain the list of operations
-/// associated with its operand and subject to transformation. The method is
-/// expected to populate the `TransformResults` class instance in order to
-/// update the mapping. The `applyTransform` method takes care of propagating
-/// the state of `TransformResults` into the instance of this class.
+/// or `state.getParams( getSomeOperand() )` to obtain the list of parameters
+/// associated with its operand. The method is expected to populate the
+/// `TransformResults` class instance in order to update the mapping. The
+/// `applyTransform` method takes care of propagating the state of
+/// `TransformResults` into the instance of this class.
 ///
 /// When applying transform IR operations with regions, the client is expected
-/// to create a RegionScope RAII object to create a new "stack frame" for
+/// to create a `RegionScope` RAII object to create a new "stack frame" for
 /// values defined inside the region. The mappings from and to these values will
 /// be automatically dropped when the object goes out of scope, typically at the
-/// end of the "apply" function of the parent operation. If a region contains
+/// end of the `apply` function of the parent operation. If a region contains
 /// blocks with arguments, the client can map those arguments to payload IR ops
-/// using "mapBlockArguments".
+/// using `mapBlockArguments`.
 class TransformState {
+public:
+  using Param = Attribute;
+
+private:
   /// Mapping between a Value in the transform IR and the corresponding set of
   /// operations in the payload IR.
-  using TransformOpMapping = DenseMap<Value, SmallVector<Operation *>>;
+  using TransformOpMapping = DenseMap<Value, SmallVector<Operation *, 2>>;
 
-  /// Mapping between a payload IR operation and the transform IR value it is
-  /// currently associated with.
-  using TransformOpReverseMapping = DenseMap<Operation *, Value>;
+  /// Mapping between a payload IR operation and the transform IR values it is
+  /// associated with.
+  using TransformOpReverseMapping =
+      DenseMap<Operation *, SmallVector<Value, 2>>;
 
-  /// Bidirectional mappings between transform IR values and payload IR
-  /// operations.
+  /// Mapping between a Value in the transform IR and the corresponding list of
+  /// parameters.
+  using ParamMapping = DenseMap<Value, SmallVector<Param>>;
+
+  /// The bidirectional mappings between transform IR values and payload IR
+  /// operations, and the mapping between transform IR values and parameters.
   struct Mappings {
     TransformOpMapping direct;
     TransformOpReverseMapping reverse;
+    ParamMapping params;
   };
 
-public:
-  /// Creates a state for transform ops living in the given region. The parent
-  /// operation of the region. The second argument points to the root operation
-  /// in the payload IR beind transformed, which may or may not contain the
-  /// region with transform ops. Additional options can be provided through the
-  /// trailing configuration object.
-  TransformState(Region &region, Operation *root,
-                 const TransformOptions &options = TransformOptions());
+  friend LogicalResult applyTransforms(Operation *payloadRoot,
+                                       TransformOpInterface transform,
+                                       const TransformOptions &options);
 
+public:
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
   Operation *getTopLevel() const;
@@ -263,9 +122,14 @@ public:
   /// This is helpful for transformations that apply to a particular handle.
   ArrayRef<Operation *> getPayloadOps(Value value) const;
 
-  /// Returns the Transform IR handle for the given Payload IR op if it exists
-  /// in the state, null otherwise.
-  Value getHandleForPayloadOp(Operation *op) const;
+  /// Returns the list of parameters that the given transform IR value
+  /// corresponds to.
+  ArrayRef<Attribute> getParams(Value value) const;
+
+  /// Populates `handles` with all handles pointing to the given Payload IR op.
+  /// Returns success if such handles exist, failure otherwise.
+  LogicalResult getHandlesForPayloadOp(Operation *op,
+                                       SmallVectorImpl<Value> &handles) const;
 
   /// Applies the transformation specified by the given transform op and updates
   /// the state accordingly.
@@ -275,6 +139,9 @@ public:
   /// list of operations in the payload IR. The arguments must be defined in
   /// blocks of the currently processed transform IR region, typically after a
   /// region scope is defined.
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value.
   LogicalResult mapBlockArguments(BlockArgument argument,
                                   ArrayRef<Operation *> operations) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -379,7 +246,8 @@ public:
     const TransformState &getTransformState() const { return state; }
 
     /// Replaces the given payload op with another op. If the replacement op is
-    /// null, removes the association of the payload op with its handle.
+    /// null, removes the association of the payload op with its handle. Returns
+    /// failure if the op is not associated with any handle.
     LogicalResult replacePayloadOp(Operation *op, Operation *replacement);
 
   private:
@@ -429,6 +297,13 @@ private:
   /// Identifier for storing top-level value in the `operations` mapping.
   static constexpr Value kTopLevelValue = Value();
 
+  /// Creates a state for transform ops living in the given region. The second
+  /// argument points to the root operation in the payload IR being transformed,
+  /// which may or may not contain the region with transform ops. Additional
+  /// options can be provided through the trailing configuration object.
+  TransformState(Region *region, Operation *payloadRoot,
+                 const TransformOptions &options = TransformOptions());
+
   /// Returns the mappings frame for the reigon in which the value is defined.
   const Mappings &getMapping(Value value) const {
     return const_cast<TransformState *>(this)->getMapping(value);
@@ -451,20 +326,39 @@ private:
     return it->second;
   }
 
-  /// Sets the payload IR ops associated with the given transform IR value.
-  /// Fails if this would result in multiple transform IR values with uses
-  /// corresponding to the same payload IR ops. For example, a hypothetical
-  /// "find function by name" transform op would (indirectly) call this
-  /// function for its result. Having two such calls in a row with for different
-  /// values, e.g. coming from different ops:
+  /// Removes the mapping between the given payload IR operation and the given
+  /// transform IR value.
+  void dropReverseMapping(Mappings &mappings, Operation *op, Value value);
+
+  /// Sets the payload IR ops associated with the given transform IR value
+  /// (handle). A payload op may be associated multiple handles as long as
+  /// at most one of them gets consumed by further transformations.
+  /// For example, a hypothetical "find function by name" may be called twice in
+  /// a row to produce two handles pointing to the same function:
   ///
   ///   %0 = transform.find_func_by_name { name = "myfunc" }
   ///   %1 = transform.find_func_by_name { name = "myfunc" }
   ///
-  /// would lead to both values pointing to the same operation. The second call
-  /// to setPayloadOps will fail, unless the association with the %0 value is
-  /// removed first by calling update/removePayloadOps.
+  /// which is valid by itself. However, calling a hypothetical "rewrite and
+  /// rename function" transform on both handles:
+  ///
+  ///   transform.rewrite_and_rename %0 { new_name = "func" }
+  ///   transform.rewrite_and_rename %1 { new_name = "func" }
+  ///
+  /// is invalid given the transformation "consumes" the handle as expressed
+  /// by side effects. Practically, a transformation consuming a handle means
+  /// that the associated payload operation may no longer exist.
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value. The value is expected to have a type
+  /// implementing TransformHandleTypeInterface.
   LogicalResult setPayloadOps(Value value, ArrayRef<Operation *> targets);
+
+  /// Sets the parameters associated with the given transform IR value. Returns
+  /// failure if the parameters do not satisfy the conditions associated with
+  /// the type of the value. The value is expected to have a type implementing
+  /// TransformParamTypeInterface.
+  LogicalResult setParams(Value value, ArrayRef<Param> params);
 
   /// Forgets the payload IR ops associated with the given transform IR value.
   void removePayloadOps(Value value);
@@ -473,24 +367,22 @@ private:
   /// The callback function is called once per associated operation and is
   /// expected to return the modified operation or nullptr. In the latter case,
   /// the corresponding operation is no longer associated with the transform IR
-  /// value. May fail if the operation produced by the update callback is
-  /// already associated with a different Transform IR handle value.
+  /// value.
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value.
   LogicalResult
   updatePayloadOps(Value value,
                    function_ref<Operation *(Operation *)> callback);
 
-  /// Attempts to record the mapping between the given Payload IR operation and
-  /// the given Transform IR handle. Fails and reports an error if the operation
-  /// is already tracked by another handle.
-  static LogicalResult tryEmplaceReverseMapping(Mappings &map, Operation *op,
-                                                Value handle);
-
   /// If the operand is a handle consumed by the operation, i.e. has the "free"
   /// memory effect associated with it, identifies other handles that are
   /// pointing to payload IR operations nested in the operations pointed to by
-  /// the consumed handle. Marks all such handles as invalidated so trigger
+  /// the consumed handle. Marks all such handles as invalidated to trigger
   /// errors if they are used.
   void recordHandleInvalidation(OpOperand &handle);
+  void recordHandleInvalidationOne(OpOperand &handle, Operation *payloadOp,
+                                   Value otherHandle);
 
   /// Checks that the operation does not use invalidated handles as operands.
   /// Reports errors and returns failure if it does. Otherwise, invalidates the
@@ -516,8 +408,9 @@ private:
 
   /// The mapping from invalidated handles to the error-reporting functions that
   /// describe when the handles were invalidated. Calling such a function emits
-  /// a user-visible diagnostic.
-  DenseMap<Value, std::function<void()>> invalidatedHandles;
+  /// a user-visible diagnostic with an additional note pointing to the given
+  /// location.
+  DenseMap<Value, std::function<void(Location)>> invalidatedHandles;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// A stack of nested regions that are being processed in the transform IR.
@@ -535,26 +428,60 @@ class TransformResults {
 public:
   /// Indicates that the result of the transform IR op at the given position
   /// corresponds to the given list of payload IR ops. Each result must be set
-  /// by the transformation exactly once.
+  /// by the transformation exactly once. The value must have a type
+  /// implementing TransformHandleTypeInterface.
   void set(OpResult value, ArrayRef<Operation *> ops);
+
+  /// Indicates that the result of the transform IR op at the given position
+  /// corresponds to the given list of parameters. Each result must be set by
+  /// the transformation exactly once. The value must have a type implementing
+  /// TransformParamTypeInterface.
+  void setParams(OpResult value, ArrayRef<TransformState::Param> params);
 
 private:
   /// Creates an instance of TransformResults that expects mappings for
-  /// `numSegments` values.
+  /// `numSegments` values, which may be associated with payload operations or
+  /// parameters.
   explicit TransformResults(unsigned numSegments);
 
   /// Gets the list of operations associated with the result identified by its
-  /// number in the list of operation results.
+  /// number in the list of operation results. The result must have been set to
+  /// be associated with payload IR operations.
   ArrayRef<Operation *> get(unsigned resultNumber) const;
+
+  /// Gets the list of parameters associated with the result identified by its
+  /// number in the list of operation results. The result must have been set to
+  /// be associated with parameters.
+  ArrayRef<TransformState::Param> getParams(unsigned resultNumber) const;
+
+  /// Returns `true` if the result identified by its number in the list of
+  /// operation results is associated with a list of parameters, `false` if it
+  /// is associated with the list of payload IR operations.
+  bool isParam(unsigned resultNumber) const;
+
+  /// Returns `true` if the result identified by its number in the list of
+  /// operation results is associated with something.
+  bool isSet(unsigned resultNumber) const;
 
   /// Storage for pointers to payload IR ops that are associated with results of
   /// a transform IR op. `segments` contains as many entries as the transform IR
-  /// op has results. Each entry is a reference to a contiguous segment in
-  /// the `operations` list that contains the pointers to operations. This
-  /// allows for operations to be stored contiguously without nested vectors and
-  /// for different segments to be set in any order.
+  /// op has results, even if some of them are not associated with payload IR
+  /// operations. Each entry is a reference to a contiguous segment in the
+  /// `operations` list that contains the pointers to operations. This allows
+  /// for operations to be stored contiguously without nested vectors and for
+  /// different segments to be set in any order.
   SmallVector<ArrayRef<Operation *>, 2> segments;
   SmallVector<Operation *> operations;
+
+  /// Storage for parameters that are associated with results of the transform
+  /// IR op. `paramSegments` contains as many entries as the transform IR op has
+  /// results, even if some of them are not associated with parameters. Each
+  /// entry is a reference to a contiguous segment in the `params` list that
+  /// contains the actual parameters. This allows for parameters to be stored
+  /// contiguously without nested vectors and for different segments to be set
+  /// in any order.
+  SmallVector<ArrayRef<TransformState::Param>, 2> paramSegments;
+  SmallVector<TransformState::Param> params;
 };
 
 TransformState::RegionScope TransformState::make_region_scope(Region &region) {
@@ -571,6 +498,9 @@ mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
+
+/// Verification hook for TransformOpInterface.
+LogicalResult verifyTransformOpInterface(Operation *op);
 } // namespace detail
 
 /// This trait is supposed to be attached to Transform dialect operations that
@@ -604,7 +534,6 @@ public:
   /// Sets up the mapping between the entry block of the given region of this op
   /// and the relevant list of Payload IR operations in the given state. The
   /// state is expected to be already scoped at the region of this operation.
-  /// Returns failure if the mapping failed, e.g., the value is already mapped.
   LogicalResult mapBlockArguments(TransformState &state, Region &region) {
     assert(region.getParentOp() == this->getOperation() &&
            "op comes from the wrong region");
@@ -620,8 +549,8 @@ public:
 };
 
 /// Trait implementing the TransformOpInterface for operations applying a
-/// transformation to a single operation handle and producing zero, one or
-/// multiple operation handles.
+/// transformation to a single operation handle and producing an arbitrary
+/// number of handles and parameter values.
 /// The op must implement a method with the following signature:
 ///   - DiagnosedSilenceableFailure applyToOne(OpTy,
 ///       SmallVector<Operation*> &results, state)
@@ -770,6 +699,39 @@ public:
   }
 };
 
+namespace detail {
+/// Non-template implementation of ParamProducerTransformOpTrait::getEffects().
+void getParamProducerTransformOpTraitEffects(
+    Operation *op, SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
+/// Non-template implementation of ParamProducerTransformOpTrait::verify().
+LogicalResult verifyParamProducerTransformOpTrait(Operation *op);
+} // namespace detail
+
+/// Trait implementing the MemoryEffectsOpInterface for operations that produce
+/// transform dialect parameters. It marks all op results of
+/// TransformHandleTypeInterface as produced by the op, all operands as only
+/// read by the op and, if at least one of the operand is a handle to payload
+/// ops, the entire payload as potentially read. The op must only produce
+/// parameter-typed results.
+template <typename OpTy>
+class ParamProducerTransformOpTrait
+    : public OpTrait::TraitBase<OpTy, ParamProducerTransformOpTrait> {
+public:
+  /// Populates `effects` with effect instances described in the trait
+  /// documentation.
+  void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+    detail::getParamProducerTransformOpTraitEffects(this->getOperation(),
+                                                    effects);
+  }
+
+  /// Checks that the op matches the expectation of this trait, i.e., that it
+  /// implements the MemoryEffectsOpInterface and only produces parameter-typed
+  /// results.
+  static LogicalResult verifyTrait(Operation *op) {
+    return detail::verifyParamProducerTransformOpTrait(op);
+  }
+};
+
 } // namespace transform
 } // namespace mlir
 
@@ -777,7 +739,82 @@ public:
 
 namespace mlir {
 namespace transform {
+
+/// A single result of applying a transform op with `ApplyEachOpTrait` to a
+/// single payload operation.
+using ApplyToEachResult = llvm::PointerUnion<Operation *, Attribute>;
+
+/// A list of results of applying a transform op with `ApplyEachOpTrait` to a
+/// single payload operation, co-indexed with the results of the transform op.
+class ApplyToEachResultList {
+public:
+  ApplyToEachResultList() = default;
+  explicit ApplyToEachResultList(unsigned size) : results(size) {}
+
+  /// Sets the list of results to `size` null pointers.
+  void assign(unsigned size, std::nullptr_t) { results.assign(size, nullptr); }
+
+  /// Sets the list of results to the given range of values.
+  template <typename Range>
+  void assign(Range &&range) {
+    // This is roughly the implementation of SmallVectorImpl::assign.
+    // Dispatching to it with map_range and template type inference would result
+    // in more complex code here.
+    results.clear();
+    results.reserve(llvm::size(range));
+    for (auto element : range) {
+      if constexpr (std::is_convertible_v<decltype(*std::begin(range)),
+                                          Operation *>) {
+        results.push_back(static_cast<Operation *>(element));
+      } else {
+        results.push_back(static_cast<Attribute>(element));
+      }
+    }
+  }
+
+  /// Appends an element to the list.
+  void push_back(Operation *op) { results.push_back(op); }
+  void push_back(Attribute attr) { results.push_back(attr); }
+
+  /// Reserves space for `size` elements in the list.
+  void reserve(unsigned size) { results.reserve(size); }
+
+  /// Iterators over the list.
+  auto begin() { return results.begin(); }
+  auto end() { return results.end(); }
+  auto begin() const { return results.begin(); }
+  auto end() const { return results.end(); }
+
+  /// Returns the number of elements in the list.
+  size_t size() const { return results.size(); }
+
+  /// Element access. Expects the index to be in bounds.
+  ApplyToEachResult &operator[](size_t index) { return results[index]; }
+  const ApplyToEachResult &operator[](size_t index) const {
+    return results[index];
+  }
+
+private:
+  /// Underlying storage.
+  SmallVector<ApplyToEachResult> results;
+};
+
 namespace detail {
+
+/// Check that the contents of `partialResult` matches the number, kind (payload
+/// op or parameter) and nullity (either all or none) requirements of
+/// `transformOp`. Report errors and return failure otherwise.
+LogicalResult checkApplyToOne(Operation *transformOp, Location payloadOpLoc,
+                              const ApplyToEachResultList &partialResult);
+
+/// "Transpose" the results produced by individual applications, arranging them
+/// per result value of the transform op, and populate `transformResults` with
+/// that. The number, kind and nullity of per-application results are assumed to
+/// have been verified.
+void setApplyToOneResults(Operation *transformOp,
+                          TransformResults &transformResults,
+                          ArrayRef<ApplyToEachResultList> results);
+
 /// Applies a one-to-one or a one-to-many transform to each of the given
 /// targets. Puts the results of transforms, if any, in `results` in the same
 /// order. Fails if any of the application fails. Individual transforms must be
@@ -789,38 +826,46 @@ namespace detail {
 ///   - a concrete Op class, in which case a check is performed whether
 ///   `targets` contains operations of the same class and a silenceable failure
 ///   is reported if it does not.
-template <typename FnTy>
-DiagnosedSilenceableFailure applyTransformToEach(
-    Location loc, int expectedNumResults, ArrayRef<Operation *> targets,
-    SmallVectorImpl<SmallVector<Operation *>> &results, FnTy transform) {
-  SmallVector<Diagnostic> silenceableStack;
-  using OpTy = typename llvm::function_traits<FnTy>::template arg_t<0>;
+template <typename TransformOpTy>
+DiagnosedSilenceableFailure
+applyTransformToEach(TransformOpTy transformOp, ArrayRef<Operation *> targets,
+                     SmallVectorImpl<ApplyToEachResultList> &results,
+                     TransformState &state) {
+  using OpTy = typename llvm::function_traits<
+      decltype(&TransformOpTy::applyToOne)>::template arg_t<0>;
   static_assert(std::is_convertible<OpTy, Operation *>::value,
                 "expected transform function to take an operation");
-  for (Operation *target : targets) {
-    // Emplace back a placeholder for the returned new ops.
-    // This is filled with `expectedNumResults` if the op fails to apply.
-    results.push_back(SmallVector<Operation *>());
 
+  SmallVector<Diagnostic> silenceableStack;
+  unsigned expectedNumResults = transformOp->getNumResults();
+  for (Operation *target : targets) {
     auto specificOp = dyn_cast<OpTy>(target);
     if (!specificOp) {
-      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      Diagnostic diag(transformOp->getLoc(), DiagnosticSeverity::Error);
       diag << "transform applied to the wrong op kind";
       diag.attachNote(target->getLoc()) << "when applied to this op";
-      // Producing `expectedNumResults` nullptr is a silenceableFailure mode.
-      // TODO: encode this implicit `expectedNumResults` nullptr ==
-      // silenceableFailure with a proper trait.
-      results.back().assign(expectedNumResults, nullptr);
       silenceableStack.push_back(std::move(diag));
       continue;
     }
 
-    DiagnosedSilenceableFailure result = transform(specificOp, results.back());
-    if (result.isDefiniteFailure())
-      return result;
-    if (result.isSilenceableFailure())
-      for (auto &&diag : result.takeDiagnostics())
-        silenceableStack.push_back(std::move(diag));
+    ApplyToEachResultList partialResults;
+    partialResults.reserve(expectedNumResults);
+    Location specificOpLoc = specificOp->getLoc();
+    DiagnosedSilenceableFailure res =
+        transformOp.applyToOne(specificOp, partialResults, state);
+    if (res.isDefiniteFailure())
+      return DiagnosedSilenceableFailure::definiteFailure();
+
+    if (res.isSilenceableFailure()) {
+      res.takeDiagnostics(silenceableStack);
+      continue;
+    }
+
+    if (failed(detail::checkApplyToOne(transformOp, specificOpLoc,
+                                       partialResults))) {
+      return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    results.push_back(std::move(partialResults));
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(
@@ -829,23 +874,6 @@ DiagnosedSilenceableFailure applyTransformToEach(
   return DiagnosedSilenceableFailure::success();
 }
 
-/// Helper function: transpose MxN into NxM; assumes that the input is a valid.
-static inline SmallVector<SmallVector<Operation *, 1>>
-transposeResults(const SmallVector<SmallVector<Operation *>, 1> &m) {
-  SmallVector<SmallVector<Operation *, 1>> res;
-  if (m.empty())
-    return res;
-  int64_t rows = m.size(), cols = m[0].size();
-  for (int64_t j = 0; j < cols; ++j)
-    res.push_back(SmallVector<Operation *, 1>(rows, nullptr));
-  for (int64_t i = 0; i < rows; ++i) {
-    assert(static_cast<int64_t>(m[i].size()) == cols);
-    for (int64_t j = 0; j < cols; ++j) {
-      res[j][i] = m[i][j];
-    }
-  }
-  return res;
-}
 } // namespace detail
 } // namespace transform
 } // namespace mlir
@@ -854,8 +882,6 @@ template <typename OpTy>
 mlir::DiagnosedSilenceableFailure
 mlir::transform::TransformEachOpTrait<OpTy>::apply(
     TransformResults &transformResults, TransformState &state) {
-  using TransformOpType = typename llvm::function_traits<
-      decltype(&OpTy::applyToOne)>::template arg_t<0>;
   ArrayRef<Operation *> targets =
       state.getPayloadOps(this->getOperation()->getOperand(0));
 
@@ -864,88 +890,35 @@ mlir::transform::TransformEachOpTrait<OpTy>::apply(
   // propagate gracefully.
   // In this case, we fill all results with an empty vector.
   if (targets.empty()) {
-    SmallVector<Operation *> empty;
-    for (auto r : this->getOperation()->getResults())
-      transformResults.set(r.template cast<OpResult>(), empty);
+    SmallVector<Operation *> emptyPayload;
+    SmallVector<Attribute> emptyParams;
+    for (OpResult r : this->getOperation()->getResults()) {
+      if (r.getType().isa<TransformParamTypeInterface>())
+        transformResults.setParams(r, emptyParams);
+      else
+        transformResults.set(r, emptyPayload);
+    }
     return DiagnosedSilenceableFailure::success();
   }
 
   // Step 2. Call applyToOne on each target and record newly produced ops in its
   // corresponding results entry.
-  int expectedNumResults = this->getOperation()->getNumResults();
-  SmallVector<SmallVector<Operation *>, 1> results;
+  SmallVector<ApplyToEachResultList, 1> results;
+  results.reserve(targets.size());
   DiagnosedSilenceableFailure result = detail::applyTransformToEach(
-      this->getOperation()->getLoc(), expectedNumResults, targets, results,
-      [&](TransformOpType specificOp, SmallVector<Operation *> &partialResult) {
-        auto res = static_cast<OpTy *>(this)->applyToOne(specificOp,
-                                                         partialResult, state);
-        if (res.isDefiniteFailure())
-          return res;
-
-        // TODO: encode this implicit must always produce `expectedNumResults`
-        // and nullptr is fine with a proper trait.
-        if (static_cast<int>(partialResult.size()) != expectedNumResults) {
-          auto loc = this->getOperation()->getLoc();
-          auto diag = mlir::emitError(loc, "applications of ")
-                      << OpTy::getOperationName() << " expected to produce "
-                      << expectedNumResults << " results (actually produced "
-                      << partialResult.size() << ").";
-          diag.attachNote(loc)
-              << "If you need variadic results, consider a generic `apply` "
-              << "instead of the specialized `applyToOne`.";
-          diag.attachNote(loc)
-              << "Producing " << expectedNumResults << " null results is "
-              << "allowed if the use case warrants it.";
-          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
-          return DiagnosedSilenceableFailure::definiteFailure();
-        }
-        // Check that all is null or none is null
-        // TODO: relax this behavior and encode with a proper trait.
-        if (llvm::any_of(partialResult, [](Operation *op) { return op; }) &&
-            llvm::any_of(partialResult, [](Operation *op) { return !op; })) {
-          auto loc = this->getOperation()->getLoc();
-          auto diag = mlir::emitError(loc, "unexpected application of ")
-                      << OpTy::getOperationName()
-                      << " produces both null and non null results.";
-          diag.attachNote(specificOp->getLoc()) << "when applied to this op";
-          return DiagnosedSilenceableFailure::definiteFailure();
-        }
-        return res;
-      });
+      cast<OpTy>(this->getOperation()), targets, results, state);
 
   // Step 3. Propagate the definite failure if any and bail out.
   if (result.isDefiniteFailure())
     return result;
 
-  // Step 4. If there are no results, return early.
-  if (OpTy::template hasTrait<OpTrait::ZeroResults>())
-    return result;
+  // Step 4. "Transpose" the results produced by individual applications,
+  // arranging them per result value of the transform op. The number, kind and
+  // nullity of per-application results have been verified by the callback
+  // above.
+  detail::setApplyToOneResults(this->getOperation(), transformResults, results);
 
-  // Step 5. Perform transposition of M applications producing N results each
-  // into N results for each of the M applications.
-  SmallVector<SmallVector<Operation *, 1>> transposedResults =
-      detail::transposeResults(results);
-
-  // Step 6. Single result applies to M ops produces one single M-result.
-  if (OpTy::template hasTrait<OpTrait::OneResult>()) {
-    assert(transposedResults.size() == 1 && "Expected single result");
-    transformResults.set(
-        this->getOperation()->getResult(0).template cast<OpResult>(),
-        transposedResults[0]);
-    // ApplyToOne may have returned silenceableFailure, propagate it.
-    return result;
-  }
-
-  // Step 7. Filter out empty results and set the transformResults.
-  for (const auto &it :
-       llvm::zip(this->getOperation()->getResults(), transposedResults)) {
-    SmallVector<Operation *, 1> filtered;
-    llvm::copy_if(std::get<1>(it), std::back_inserter(filtered),
-                  [](Operation *op) { return op; });
-    transformResults.set(std::get<0>(it).template cast<OpResult>(), filtered);
-  }
-
-  // Step 8. ApplyToOne may have returned silenceableFailure, propagate it.
+  // Step 5. ApplyToOne may have returned silenceableFailure, propagate it.
   return result;
 }
 

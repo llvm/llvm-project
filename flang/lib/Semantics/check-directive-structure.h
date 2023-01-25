@@ -495,9 +495,7 @@ template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
     ClauseEnumSize>::CheckNotAllowedIfClause(C clause,
     common::EnumSet<C, ClauseEnumSize> set) {
-  if (std::find(GetContext().actualClauses.begin(),
-          GetContext().actualClauses.end(),
-          clause) == GetContext().actualClauses.end()) {
+  if (!llvm::is_contained(GetContext().actualClauses, clause)) {
     return; // Clause is not present
   }
 

@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   AsmPrinter
   DebugInfoDWARF
   DWARFLinker
+  DWARFLinkerParallel
   MC
   Object
   CodeGen
@@ -16,6 +17,7 @@ set(LLVM_LINK_COMPONENTS
   Remarks
   Support
   Target
+  TargetParser
   )
 
 add_llvm_tool(dsymutil
@@ -33,13 +35,10 @@ add_llvm_tool(dsymutil
   intrinsics_gen
   ${tablegen_deps}
   DsymutilTableGen
-  GENERATE_DRIVER
   )
 
 if(APPLE)
   target_link_libraries(dsymutil PRIVATE "-framework CoreFoundation")
 endif(APPLE)
 
-if(HAVE_CXX_ATOMICS_WITH_LIB OR HAVE_CXX_ATOMICS64_WITH_LIB)
-  target_link_libraries(dsymutil PRIVATE atomic)
-endif()
+target_link_libraries(dsymutil PRIVATE ${LLVM_ATOMIC_LIB})

@@ -296,11 +296,6 @@ standard error in a human-readable form.
 This pass, only available in ``opt``, printsthe SCCs of each function CFG to
 standard error in a human-readable fom.
 
-``-print-dom-info``: Dominator Info Printer
--------------------------------------------
-
-Dominator Info Printer.
-
 ``-print-externalfnconstants``: Print external fn callsites passed constants
 ----------------------------------------------------------------------------
 

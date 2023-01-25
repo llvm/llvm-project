@@ -13,6 +13,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
 
 using AIX = clang::driver::toolchains::AIX;
@@ -72,6 +73,29 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec = Args.MakeArgString(getToolChain().GetProgramPath("as"));
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Inputs, Output));
+}
+
+// Determine whether there are any linker options that supply an export list
+// (or equivalent information about what to export) being sent to the linker.
+static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
+  for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
+    llvm::StringRef ArgString(CmdArgs[i]);
+
+    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+        ArgString == "-bexpall" || ArgString == "-bexpfull")
+      return true;
+
+    // If we split -b option, check the next opt.
+    if (ArgString == "-b" && i + 1 < Size) {
+      ++i;
+      llvm::StringRef ArgNextString(CmdArgs[i]);
+      if (ArgNextString.startswith("E:") ||
+          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+          ArgNextString == "expfull")
+        return true;
+    }
+  }
+  return false;
 }
 
 void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
@@ -168,6 +192,46 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
+
+  if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
+
+    const char *CreateExportListExec = Args.MakeArgString(
+        path::parent_path(ToolChain.getDriver().ClangExecutable) +
+        "/llvm-nm");
+    ArgStringList CreateExportCmdArgs;
+
+    std::string CreateExportListPath =
+        C.getDriver().GetTemporaryPath("CreateExportList", "exp");
+    const char *ExportList =
+        C.addTempFile(C.getArgs().MakeArgString(CreateExportListPath));
+
+    for (const auto &II : Inputs)
+      if (II.isFilename())
+        CreateExportCmdArgs.push_back(II.getFilename());
+
+    CreateExportCmdArgs.push_back("--export-symbols");
+    CreateExportCmdArgs.push_back("-X");
+    if (IsArch32Bit) {
+      CreateExportCmdArgs.push_back("32");
+    } else {
+      // Must be 64-bit, otherwise asserted already.
+      CreateExportCmdArgs.push_back("64");
+    }
+
+    auto ExpCommand = std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), CreateExportListExec,
+        CreateExportCmdArgs, Inputs, Output);
+    ExpCommand->setRedirectFiles(
+        {std::nullopt, std::string(ExportList), std::nullopt});
+    C.addCommand(std::move(ExpCommand));
+    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-bE:") + ExportList));
+  }
+
   // Add directory to library search path.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
@@ -179,6 +243,25 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
+    // Add OpenMP runtime if -fopenmp is specified.
+    if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                     options::OPT_fno_openmp, false)) {
+      switch (ToolChain.getDriver().getOpenMPRuntime(Args)) {
+      case Driver::OMPRT_OMP:
+        CmdArgs.push_back("-lomp");
+        break;
+      case Driver::OMPRT_IOMP5:
+        CmdArgs.push_back("-liomp5");
+        break;
+      case Driver::OMPRT_GOMP:
+        CmdArgs.push_back("-lgomp");
+        break;
+      case Driver::OMPRT_Unknown:
+        // Already diagnosed.
+        break;
+      }
+    }
+
     // Support POSIX threads if "-pthreads" or "-pthread" is present.
     if (Args.hasArg(options::OPT_pthreads, options::OPT_pthread))
       CmdArgs.push_back("-lpthreads");
@@ -187,6 +270,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-lm");
 
     CmdArgs.push_back("-lc");
+
+    if (Args.hasArg(options::OPT_pg)) {
+      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                           "/lib/profiled"));
+      CmdArgs.push_back(Args.MakeArgString((llvm::Twine("-L") + D.SysRoot) +
+                                           "/usr/lib/profiled"));
+    }
   }
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
@@ -284,6 +374,16 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   }
 
   llvm_unreachable("Unexpected C++ library type; only libc++ is supported.");
+}
+
+void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
+                           llvm::opt::ArgStringList &CmdArgs) const {
+  // Add linker option -u__llvm_profile_runtime to cause runtime
+  // initialization to occur.
+  if (needsProfileRT(Args))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+  ToolChain::addProfileRTLibs(Args, CmdArgs);
 }
 
 ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {

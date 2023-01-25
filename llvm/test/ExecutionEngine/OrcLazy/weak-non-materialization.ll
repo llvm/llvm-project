@@ -9,9 +9,9 @@
 
 declare void @foo()
 
-define i32 @main(i32 %argc, i8** %argv) {
+define i32 @main(i32 %argc, ptr %argv) {
 entry:
   call void @foo()
-  %0 = load i32, i32* @X
+  %0 = load i32, ptr @X
   ret i32 %0
 }

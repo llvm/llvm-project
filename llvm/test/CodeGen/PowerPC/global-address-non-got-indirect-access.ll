@@ -33,7 +33,7 @@
 ; CHECK-NEXT:    plbz r3, _ZL13StaticBoolVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @_ZL13StaticBoolVar, align 1, !range !0
+  %0 = load i8, ptr @_ZL13StaticBoolVar, align 1, !range !0
   %tobool = icmp ne i8 %0, 0
   ret i1 %tobool
 }
@@ -45,7 +45,7 @@ entry:
 ; CHECK-NEXT:    extsb r3, r3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @_ZL19StaticSignedCharVar, align 1
+  %0 = load i8, ptr @_ZL19StaticSignedCharVar, align 1
   ret i8 %0
 }
 
@@ -55,7 +55,7 @@ entry:
 ; CHECK-NEXT:    plbz r3, _ZL21StaticUnsignedCharVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @_ZL21StaticUnsignedCharVar, align 1
+  %0 = load i8, ptr @_ZL21StaticUnsignedCharVar, align 1
   ret i8 %0
 }
 
@@ -65,7 +65,7 @@ entry:
 ; CHECK-NEXT:    plha r3, _ZL20StaticSignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* @_ZL20StaticSignedShortVar, align 2
+  %0 = load i16, ptr @_ZL20StaticSignedShortVar, align 2
   ret i16 %0
 }
 
@@ -75,7 +75,7 @@ entry:
 ; CHECK-NEXT:    plhz r3, _ZL22StaticUnsignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* @_ZL22StaticUnsignedShortVar, align 2
+  %0 = load i16, ptr @_ZL22StaticUnsignedShortVar, align 2
   ret i16 %0
 }
 
@@ -85,7 +85,7 @@ entry:
 ; CHECK-NEXT:    plwa r3, _ZL18StaticSignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @_ZL18StaticSignedIntVar, align 4
+  %0 = load i32, ptr @_ZL18StaticSignedIntVar, align 4
   ret i32 %0
 }
 
@@ -95,7 +95,7 @@ entry:
 ; CHECK-NEXT:    plwz r3, _ZL20StaticUnsignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @_ZL20StaticUnsignedIntVar, align 4
+  %0 = load i32, ptr @_ZL20StaticUnsignedIntVar, align 4
   ret i32 %0
 }
 
@@ -106,7 +106,7 @@ define i64 @_Z23ReadStaticSignedLongVarv() {
 ; CHECK-NEXT:    pld r3, _ZL19StaticSignedLongVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* @_ZL19StaticSignedLongVar, align 8
+  %0 = load i64, ptr @_ZL19StaticSignedLongVar, align 8
   ret i64 %0
 }
 
@@ -116,7 +116,7 @@ entry:
 ; CHECK-NEXT:    plfs f1, _ZL14StaticFloatVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* @_ZL14StaticFloatVar, align 4
+  %0 = load float, ptr @_ZL14StaticFloatVar, align 4
   ret float %0
 }
 
@@ -126,7 +126,7 @@ entry:
 ; CHECK-NEXT:    plfd f1, _ZL15StaticDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* @_ZL15StaticDoubleVar, align 8
+  %0 = load double, ptr @_ZL15StaticDoubleVar, align 8
   ret double %0
 }
 
@@ -138,7 +138,7 @@ define ppc_fp128 @_Z23ReadStaticLongDoubleVarv() {
 ; CHECK-NEXT:    plfd f2, _ZL19StaticLongDoubleVar@PCREL+8(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @_ZL19StaticLongDoubleVar, align 16
+  %0 = load ppc_fp128, ptr @_ZL19StaticLongDoubleVar, align 16
   ret ppc_fp128 %0
 }
 
@@ -150,7 +150,7 @@ define i128 @_Z27ReadStaticSigned__Int128Varv() {
 ; CHECK-NEXT:    pld r4, _ZL23StaticSigned__Int128Var@PCREL+8(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i128, i128* @_ZL23StaticSigned__Int128Var, align 16
+  %0 = load i128, ptr @_ZL23StaticSigned__Int128Var, align 16
   ret i128 %0
 }
 
@@ -160,7 +160,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL19Static__Float128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @_ZL19Static__Float128Var, align 16
+  %0 = load fp128, ptr @_ZL19Static__Float128Var, align 16
   ret fp128 %0
 }
 
@@ -170,7 +170,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL25StaticVectorSignedCharVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @_ZL25StaticVectorSignedCharVar, align 16
+  %0 = load <16 x i8>, ptr @_ZL25StaticVectorSignedCharVar, align 16
   ret <16 x i8> %0
 }
 
@@ -180,7 +180,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL26StaticVectorSignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @_ZL26StaticVectorSignedShortVar, align 16
+  %0 = load <8 x i16>, ptr @_ZL26StaticVectorSignedShortVar, align 16
   ret <8 x i16> %0
 }
 
@@ -190,7 +190,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL24StaticVectorSignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @_ZL24StaticVectorSignedIntVar, align 16
+  %0 = load <4 x i32>, ptr @_ZL24StaticVectorSignedIntVar, align 16
   ret <4 x i32> %0
 }
 
@@ -200,7 +200,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL29StaticVectorSignedLongLongVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @_ZL29StaticVectorSignedLongLongVar, align 16
+  %0 = load <2 x i64>, ptr @_ZL29StaticVectorSignedLongLongVar, align 16
   ret <2 x i64> %0
 }
 
@@ -210,7 +210,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL29StaticVectorSigned__Int128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <1 x i128>, <1 x i128>* @_ZL29StaticVectorSigned__Int128Var, align 16
+  %0 = load <1 x i128>, ptr @_ZL29StaticVectorSigned__Int128Var, align 16
   ret <1 x i128> %0
 }
 
@@ -220,7 +220,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL20StaticVectorFloatVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <4 x float>, <4 x float>* @_ZL20StaticVectorFloatVar, align 16
+  %0 = load <4 x float>, ptr @_ZL20StaticVectorFloatVar, align 16
   ret <4 x float> %0
 }
 
@@ -230,7 +230,7 @@ entry:
 ; CHECK-NEXT:    plxv v2, _ZL21StaticVectorDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x double>, <2 x double>* @_ZL21StaticVectorDoubleVar, align 16
+  %0 = load <2 x double>, ptr @_ZL21StaticVectorDoubleVar, align 16
   ret <2 x double> %0
 }
 
@@ -243,7 +243,7 @@ entry:
 ; CHECK-NEXT:    blr
 entry:
   %frombool = zext i1 %val to i8
-  store i8 %frombool, i8* @_ZL13StaticBoolVar, align 1
+  store i8 %frombool, ptr @_ZL13StaticBoolVar, align 1
   ret void
 }
 
@@ -253,7 +253,7 @@ entry:
 ; CHECK-NEXT:    pstb r3, _ZL19StaticSignedCharVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i8 %val, i8* @_ZL19StaticSignedCharVar, align 1
+  store i8 %val, ptr @_ZL19StaticSignedCharVar, align 1
   ret void
 }
 
@@ -263,7 +263,7 @@ entry:
 ; CHECK-NEXT:    pstb r3, _ZL21StaticUnsignedCharVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i8 %val, i8* @_ZL21StaticUnsignedCharVar, align 1
+  store i8 %val, ptr @_ZL21StaticUnsignedCharVar, align 1
   ret void
 }
 
@@ -273,7 +273,7 @@ entry:
 ; CHECK-NEXT:    psth r3, _ZL20StaticSignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i16 %val, i16* @_ZL20StaticSignedShortVar, align 2
+  store i16 %val, ptr @_ZL20StaticSignedShortVar, align 2
   ret void
 }
 
@@ -283,7 +283,7 @@ entry:
 ; CHECK-NEXT:    psth r3, _ZL22StaticUnsignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i16 %val, i16* @_ZL22StaticUnsignedShortVar, align 2
+  store i16 %val, ptr @_ZL22StaticUnsignedShortVar, align 2
   ret void
 }
 
@@ -293,7 +293,7 @@ entry:
 ; CHECK-NEXT:    pstw r3, _ZL18StaticSignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 %val, i32* @_ZL18StaticSignedIntVar, align 4
+  store i32 %val, ptr @_ZL18StaticSignedIntVar, align 4
   ret void
 }
 
@@ -303,7 +303,7 @@ entry:
 ; CHECK-NEXT:    pstw r3, _ZL20StaticUnsignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 %val, i32* @_ZL20StaticUnsignedIntVar, align 4
+  store i32 %val, ptr @_ZL20StaticUnsignedIntVar, align 4
   ret void
 }
 
@@ -313,7 +313,7 @@ entry:
 ; CHECK-NEXT:    pstd r3, _ZL19StaticSignedLongVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i64 %val, i64* @_ZL19StaticSignedLongVar, align 8
+  store i64 %val, ptr @_ZL19StaticSignedLongVar, align 8
   ret void
 }
 
@@ -323,7 +323,7 @@ entry:
 ; CHECK-NEXT:    pstfs f1, _ZL14StaticFloatVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store float %val, float* @_ZL14StaticFloatVar, align 4
+  store float %val, ptr @_ZL14StaticFloatVar, align 4
   ret void
 }
 
@@ -333,7 +333,7 @@ entry:
 ; CHECK-NEXT:    pstfd f1, _ZL15StaticDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store double %val, double* @_ZL15StaticDoubleVar, align 8
+  store double %val, ptr @_ZL15StaticDoubleVar, align 8
   ret void
 }
 
@@ -345,7 +345,7 @@ define void @_Z24WriteStaticLongDoubleVarg(ppc_fp128 %val) {
 ; CHECK-NEXT:    pstfd f1, _ZL19StaticLongDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store ppc_fp128 %val, ppc_fp128* @_ZL19StaticLongDoubleVar, align 16
+  store ppc_fp128 %val, ptr @_ZL19StaticLongDoubleVar, align 16
   ret void
 }
 
@@ -357,7 +357,7 @@ define void @_Z28WriteStaticSigned__Int128Varn(i128 %val) {
 ; CHECK-NEXT:    pstd r3, _ZL23StaticSigned__Int128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i128 %val, i128* @_ZL23StaticSigned__Int128Var, align 16
+  store i128 %val, ptr @_ZL23StaticSigned__Int128Var, align 16
   ret void
 }
 
@@ -367,7 +367,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL19Static__Float128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store fp128 %val, fp128* @_ZL19Static__Float128Var, align 16
+  store fp128 %val, ptr @_ZL19Static__Float128Var, align 16
   ret void
 }
 
@@ -377,7 +377,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL25StaticVectorSignedCharVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <16 x i8> %val, <16 x i8>* @_ZL25StaticVectorSignedCharVar, align 16
+  store <16 x i8> %val, ptr @_ZL25StaticVectorSignedCharVar, align 16
   ret void
 }
 
@@ -387,7 +387,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL26StaticVectorSignedShortVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <8 x i16> %val, <8 x i16>* @_ZL26StaticVectorSignedShortVar, align 16
+  store <8 x i16> %val, ptr @_ZL26StaticVectorSignedShortVar, align 16
   ret void
 }
 
@@ -397,7 +397,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL24StaticVectorSignedIntVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x i32> %val, <4 x i32>* @_ZL24StaticVectorSignedIntVar, align 16
+  store <4 x i32> %val, ptr @_ZL24StaticVectorSignedIntVar, align 16
   ret void
 }
 
@@ -407,7 +407,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL29StaticVectorSignedLongLongVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <2 x i64> %val, <2 x i64>* @_ZL29StaticVectorSignedLongLongVar, align 16
+  store <2 x i64> %val, ptr @_ZL29StaticVectorSignedLongLongVar, align 16
   ret void
 }
 
@@ -417,7 +417,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL29StaticVectorSigned__Int128Var@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <1 x i128> %val, <1 x i128>* @_ZL29StaticVectorSigned__Int128Var, align 16
+  store <1 x i128> %val, ptr @_ZL29StaticVectorSigned__Int128Var, align 16
   ret void
 }
 
@@ -427,7 +427,7 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL20StaticVectorFloatVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <4 x float> %val, <4 x float>* @_ZL20StaticVectorFloatVar, align 16
+  store <4 x float> %val, ptr @_ZL20StaticVectorFloatVar, align 16
   ret void
 }
 
@@ -437,11 +437,11 @@ entry:
 ; CHECK-NEXT:    pstxv v2, _ZL21StaticVectorDoubleVar@PCREL(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store <2 x double> %val, <2 x double>* @_ZL21StaticVectorDoubleVar, align 16
+  store <2 x double> %val, ptr @_ZL21StaticVectorDoubleVar, align 16
   ret void
 }
 
- @_ZL3ptr = internal unnamed_addr global i32* null, align 8
+ @_ZL3ptr = internal unnamed_addr global ptr null, align 8
 define void @_Z14WriteStaticPtrv() {
 ; CHECK-LABEL: _Z14WriteStaticPtrv:
 ; CHECK:       # %bb.0: # %entry
@@ -450,13 +450,13 @@ define void @_Z14WriteStaticPtrv() {
 ; CHECK-NEXT:    stw r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32*, i32** @_ZL3ptr, align 8
-  store i32 3, i32* %0, align 4
+  %0 = load ptr, ptr @_ZL3ptr, align 8
+  store i32 3, ptr %0, align 4
   ret void
 }
 
  @.str = private unnamed_addr constant [13 x i8] c"Hello World\0A\00", align 1
-@str = dso_local local_unnamed_addr global i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i64 0, i64 0), align 8
+@str = dso_local local_unnamed_addr global ptr @.str, align 8
 
  define zeroext i8 @_Z17Char0InStrLiteralv() {
 ; CHECK-LABEL: _Z17Char0InStrLiteralv:
@@ -465,8 +465,8 @@ entry:
 ; CHECK-NEXT:    lbz r3, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8*, i8** @str, align 8
-  %1 = load i8, i8* %0, align 1
+  %0 = load ptr, ptr @str, align 8
+  %1 = load i8, ptr %0, align 1
   ret i8 %1
 }
 
@@ -477,9 +477,9 @@ entry:
 ; CHECK-NEXT:    lbz r3, 3(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8*, i8** @str, align 8
-  %arrayidx = getelementptr inbounds i8, i8* %0, i64 3
-  %1 = load i8, i8* %arrayidx, align 1
+  %0 = load ptr, ptr @str, align 8
+  %arrayidx = getelementptr inbounds i8, ptr %0, i64 3
+  %1 = load i8, ptr %arrayidx, align 1
   ret i8 %1
 }
 
@@ -492,7 +492,7 @@ define signext i32 @_Z15ReadStaticArrayv() {
 ; CHECK-NEXT:    plwa r3, _ZL5array@PCREL+12(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @_ZL5array, i64 0, i64 3), align 4
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @_ZL5array, i64 0, i64 3), align 4
   ret i32 %0
 }
 
@@ -504,7 +504,7 @@ define void @_Z16WriteStaticArrayv() {
 ; CHECK-NEXT:    pstw r3, _ZL5array@PCREL+12(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 5, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @_ZL5array, i64 0, i64 3), align 4
+  store i32 5, ptr getelementptr inbounds ([10 x i32], ptr @_ZL5array, i64 0, i64 3), align 4
   ret void
 }
 
@@ -518,7 +518,7 @@ define signext i32 @_Z16ReadStaticStructv() {
 ; CHECK-NEXT:    plwa r3, _ZL9structure@PCREL+4(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @_ZL9structure, i64 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.Struct, ptr @_ZL9structure, i64 0, i32 2), align 4
   ret i32 %0
 }
 
@@ -530,7 +530,7 @@ define void @_Z17WriteStaticStructv() {
 ; CHECK-NEXT:    pstw r3, _ZL9structure@PCREL+4(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  store i32 3, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @_ZL9structure, i64 0, i32 2), align 4
+  store i32 3, ptr getelementptr inbounds (%struct.Struct, ptr @_ZL9structure, i64 0, i32 2), align 4
   ret void
 }
 

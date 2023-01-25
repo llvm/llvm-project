@@ -9,9 +9,9 @@ define dso_local half @test2(i64 %a, i64 %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    add r3, r4, r3
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    addi r3, r3, 11
 ; CHECK-NEXT:    clrlwi r3, r3, 16
 ; CHECK-NEXT:    bl __gnu_h2f_ieee

@@ -144,6 +144,9 @@ public:
 
     /// The stack index for sret demotion.
     int DemoteStackIndex;
+
+    /// Expected type identifier for indirect calls with a CFI check.
+    const ConstantInt *CFIType = nullptr;
   };
 
   /// Argument handling is mostly uniform between the four places that
@@ -349,6 +352,9 @@ protected:
   ISD::ArgFlagsTy getAttributesForArgIdx(const CallBase &Call,
                                          unsigned ArgIdx) const;
 
+  /// \returns Flags corresponding to the attributes on the return from \p Call.
+  ISD::ArgFlagsTy getAttributesForReturn(const CallBase &Call) const;
+
   /// Adds flags to \p Flags based off of the attributes in \p Attrs.
   /// \p OpIdx is the index in \p Attrs to add flags from.
   void addArgFlagsFromAttributes(ISD::ArgFlagsTy &Flags,
@@ -389,21 +395,20 @@ protected:
   /// \p Handler to move them to the assigned locations.
   ///
   /// \return True if everything has succeeded, false otherwise.
-  bool
-  determineAndHandleAssignments(ValueHandler &Handler, ValueAssigner &Assigner,
-                                SmallVectorImpl<ArgInfo> &Args,
-                                MachineIRBuilder &MIRBuilder,
-                                CallingConv::ID CallConv, bool IsVarArg,
-                                ArrayRef<Register> ThisReturnRegs = None) const;
+  bool determineAndHandleAssignments(
+      ValueHandler &Handler, ValueAssigner &Assigner,
+      SmallVectorImpl<ArgInfo> &Args, MachineIRBuilder &MIRBuilder,
+      CallingConv::ID CallConv, bool IsVarArg,
+      ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
 
   /// Use \p Handler to insert code to handle the argument/return values
   /// represented by \p Args. It's expected determineAssignments previously
   /// processed these arguments to populate \p CCState and \p ArgLocs.
-  bool handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
-                         CCState &CCState,
-                         SmallVectorImpl<CCValAssign> &ArgLocs,
-                         MachineIRBuilder &MIRBuilder,
-                         ArrayRef<Register> ThisReturnRegs = None) const;
+  bool
+  handleAssignments(ValueHandler &Handler, SmallVectorImpl<ArgInfo> &Args,
+                    CCState &CCState, SmallVectorImpl<CCValAssign> &ArgLocs,
+                    MachineIRBuilder &MIRBuilder,
+                    ArrayRef<Register> ThisReturnRegs = std::nullopt) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be

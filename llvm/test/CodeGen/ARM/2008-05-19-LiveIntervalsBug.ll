@@ -1,19 +1,19 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin
 
 	%struct.BiContextType = type { i16, i8, i32 }
-	%struct.Bitstream = type { i32, i32, i8, i32, i32, i8, i8, i32, i32, i8*, i32 }
-	%struct.DataPartition = type { %struct.Bitstream*, %struct.EncodingEnvironment, %struct.EncodingEnvironment }
-	%struct.DecRefPicMarking_t = type { i32, i32, i32, i32, i32, %struct.DecRefPicMarking_t* }
-	%struct.EncodingEnvironment = type { i32, i32, i32, i32, i32, i8*, i32*, i32, i32 }
-	%struct.ImageParameters = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8**, i8**, i32, i32***, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [9 x [16 x [16 x i16]]], [5 x [16 x [16 x i16]]], [9 x [8 x [8 x i16]]], [2 x [4 x [16 x [16 x i16]]]], [16 x [16 x i16]], [16 x [16 x i32]], i32****, i32***, i32***, i32***, i32****, i32****, %struct.Picture*, %struct.Slice*, %struct.Macroblock*, i32*, i32*, i32, i32, i32, i32, [4 x [4 x i32]], i32, i32, i32, i32, i32, double, i32, i32, i32, i32, i16******, i16******, i16******, i16******, [15 x i16], i32, i32, i32, i32, i32, i32, i32, i32, [6 x [32 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1 x i32], i32, i32, [2 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, %struct.DecRefPicMarking_t*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, double**, double***, i32***, double**, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x [2 x i32]], [2 x i32], i32, i32, i16, i32, i32, i32, i32, i32 }
-	%struct.Macroblock = type { i32, i32, i32, [2 x i32], i32, [8 x i32], %struct.Macroblock*, %struct.Macroblock*, i32, [2 x [4 x [4 x [2 x i32]]]], [16 x i8], [16 x i8], i32, i64, [4 x i32], [4 x i32], i64, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i16, double, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
+	%struct.Bitstream = type { i32, i32, i8, i32, i32, i8, i8, i32, i32, ptr, i32 }
+	%struct.DataPartition = type { ptr, %struct.EncodingEnvironment, %struct.EncodingEnvironment }
+	%struct.DecRefPicMarking_t = type { i32, i32, i32, i32, i32, ptr }
+	%struct.EncodingEnvironment = type { i32, i32, i32, i32, i32, ptr, ptr, i32, i32 }
+	%struct.ImageParameters = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr, i32, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [9 x [16 x [16 x i16]]], [5 x [16 x [16 x i16]]], [9 x [8 x [8 x i16]]], [2 x [4 x [16 x [16 x i16]]]], [16 x [16 x i16]], [16 x [16 x i32]], ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, [4 x [4 x i32]], i32, i32, i32, i32, i32, double, i32, i32, i32, i32, ptr, ptr, ptr, ptr, [15 x i16], i32, i32, i32, i32, i32, i32, i32, i32, [6 x [32 x i32]], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [1 x i32], i32, i32, [2 x i32], i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, ptr, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, [3 x [2 x i32]], [2 x i32], i32, i32, i16, i32, i32, i32, i32, i32 }
+	%struct.Macroblock = type { i32, i32, i32, [2 x i32], i32, [8 x i32], ptr, ptr, i32, [2 x [4 x [4 x [2 x i32]]]], [16 x i8], [16 x i8], i32, i64, [4 x i32], [4 x i32], i64, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i16, double, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 	%struct.MotionInfoContexts = type { [3 x [11 x %struct.BiContextType]], [2 x [9 x %struct.BiContextType]], [2 x [10 x %struct.BiContextType]], [2 x [6 x %struct.BiContextType]], [4 x %struct.BiContextType], [4 x %struct.BiContextType], [3 x %struct.BiContextType] }
-	%struct.Picture = type { i32, i32, [100 x %struct.Slice*], i32, float, float, float }
-	%struct.Slice = type { i32, i32, i32, i32, i32, i32, %struct.DataPartition*, %struct.MotionInfoContexts*, %struct.TextureInfoContexts*, i32, i32*, i32*, i32*, i32, i32*, i32*, i32*, i32 (i32)*, [3 x [2 x i32]] }
+	%struct.Picture = type { i32, i32, [100 x ptr], i32, float, float, float }
+	%struct.Slice = type { i32, i32, i32, i32, i32, i32, ptr, ptr, ptr, i32, ptr, ptr, ptr, i32, ptr, ptr, ptr, ptr, [3 x [2 x i32]] }
 	%struct.TextureInfoContexts = type { [2 x %struct.BiContextType], [4 x %struct.BiContextType], [3 x [4 x %struct.BiContextType]], [10 x [4 x %struct.BiContextType]], [10 x [15 x %struct.BiContextType]], [10 x [15 x %struct.BiContextType]], [10 x [5 x %struct.BiContextType]], [10 x [5 x %struct.BiContextType]], [10 x [15 x %struct.BiContextType]], [10 x [15 x %struct.BiContextType]] }
-@images = external global %struct.ImageParameters		; <%struct.ImageParameters*> [#uses=2]
+@images = external global %struct.ImageParameters		; <ptr> [#uses=2]
 
-declare i8* @calloc(i32, i32)
+declare ptr @calloc(i32, i32)
 
 define fastcc void @init_global_buffers() nounwind {
 entry:
@@ -21,16 +21,16 @@ entry:
 	br i1 false, label %init_orig_buffers.exit, label %cond_true.i29
 
 cond_true.i29:		; preds = %entry
-	%tmp17.i = load i32, i32* getelementptr (%struct.ImageParameters, %struct.ImageParameters* @images, i32 0, i32 20), align 8		; <i32> [#uses=1]
-	%tmp20.i27 = load i32, i32* getelementptr (%struct.ImageParameters, %struct.ImageParameters* @images, i32 0, i32 16), align 8		; <i32> [#uses=1]
+	%tmp17.i = load i32, ptr getelementptr (%struct.ImageParameters, ptr @images, i32 0, i32 20), align 8		; <i32> [#uses=1]
+	%tmp20.i27 = load i32, ptr getelementptr (%struct.ImageParameters, ptr @images, i32 0, i32 16), align 8		; <i32> [#uses=1]
 	%tmp8.i.i = select i1 false, i32 1, i32 0		; <i32> [#uses=1]
 	br label %bb.i8.us.i
 
 bb.i8.us.i:		; preds = %get_mem2Dpel.exit.i.us.i, %cond_true.i29
 	%j.04.i.us.i = phi i32 [ %indvar.next39.i, %get_mem2Dpel.exit.i.us.i ], [ 0, %cond_true.i29 ]		; <i32> [#uses=2]
-	%tmp13.i.us.i = getelementptr i16**, i16*** null, i32 %j.04.i.us.i		; <i16***> [#uses=0]
-	%tmp15.i.i.us.i = tail call i8* @calloc( i32 0, i32 2 )		; <i8*> [#uses=0]
-	store i16* null, i16** null, align 4
+	%tmp13.i.us.i = getelementptr ptr, ptr null, i32 %j.04.i.us.i		; <ptr> [#uses=0]
+	%tmp15.i.i.us.i = tail call ptr @calloc( i32 0, i32 2 )		; <ptr> [#uses=0]
+	store ptr null, ptr null, align 4
 	br label %bb.i.i.us.i
 
 get_mem2Dpel.exit.i.us.i:		; preds = %bb.i.i.us.i

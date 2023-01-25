@@ -27,9 +27,9 @@
 #include "UnusedAliasDeclsCheck.h"
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
+#include "UseAnonymousNamespaceCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace misc {
 
 class MiscModule : public ClangTidyModule {
@@ -68,6 +68,8 @@ public:
         "misc-unused-parameters");
     CheckFactories.registerCheck<UnusedUsingDeclsCheck>(
         "misc-unused-using-decls");
+    CheckFactories.registerCheck<UseAnonymousNamespaceCheck>(
+        "misc-use-anonymous-namespace");
   }
 };
 
@@ -81,5 +83,4 @@ static ClangTidyModuleRegistry::Add<misc::MiscModule>
 // and thus register the MiscModule.
 volatile int MiscModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

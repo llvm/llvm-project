@@ -4,7 +4,7 @@
 declare <16 x i32> @llvm.abs.v16i32(<16 x i32>, i1 immarg)
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i32 @test_sad_v16i8_zext(i8* nocapture readonly %a, i8* nocapture readonly %b) {
+define i32 @test_sad_v16i8_zext(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: test_sad_v16i8_zext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -15,19 +15,17 @@ define i32 @test_sad_v16i8_zext(i8* nocapture readonly %a, i8* nocapture readonl
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = zext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3
-  %5 = zext <16 x i8> %4 to <16 x i32>
-  %6 = sub nsw <16 x i32> %5, %2
-  %7 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %6, i1 true)
-  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
-  ret i32 %8
+  %0 = load <16 x i8>, ptr %a
+  %1 = zext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b
+  %3 = zext <16 x i8> %2 to <16 x i32>
+  %4 = sub nsw <16 x i32> %3, %1
+  %5 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %4, i1 true)
+  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
+  ret i32 %6
 }
 
-define i32 @test_sad_v16i8_sext(i8* nocapture readonly %a, i8* nocapture readonly %b) {
+define i32 @test_sad_v16i8_sext(ptr nocapture readonly %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: test_sad_v16i8_sext:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -38,14 +36,12 @@ define i32 @test_sad_v16i8_sext(i8* nocapture readonly %a, i8* nocapture readonl
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %a to <16 x i8>*
-  %1 = load <16 x i8>, <16 x i8>* %0
-  %2 = sext <16 x i8> %1 to <16 x i32>
-  %3 = bitcast i8* %b to <16 x i8>*
-  %4 = load <16 x i8>, <16 x i8>* %3
-  %5 = sext <16 x i8> %4 to <16 x i32>
-  %6 = sub nsw <16 x i32> %5, %2
-  %7 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %6, i1 true)
-  %8 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %7)
-  ret i32 %8
+  %0 = load <16 x i8>, ptr %a
+  %1 = sext <16 x i8> %0 to <16 x i32>
+  %2 = load <16 x i8>, ptr %b
+  %3 = sext <16 x i8> %2 to <16 x i32>
+  %4 = sub nsw <16 x i32> %3, %1
+  %5 = call <16 x i32> @llvm.abs.v16i32(<16 x i32> %4, i1 true)
+  %6 = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %5)
+  ret i32 %6
 }

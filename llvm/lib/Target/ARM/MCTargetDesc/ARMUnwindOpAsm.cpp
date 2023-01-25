@@ -110,7 +110,7 @@ void UnwindOpcodeAssembler::EmitVFPRegSave(uint32_t VFPRegSave) {
   for (uint32_t Regs : {VFPRegSave & 0xffff0000u, VFPRegSave & 0x0000ffffu}) {
     while (Regs) {
       // Now look for a run of set bits. Remember the MSB and LSB of the run.
-      auto RangeMSB = 32 - countLeadingZeros(Regs);
+      auto RangeMSB = llvm::bit_width(Regs);
       auto RangeLen = countLeadingOnes(Regs << (32 - RangeMSB));
       auto RangeLSB = RangeMSB - RangeLen;
 

@@ -14,8 +14,10 @@
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -29,6 +31,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
 using llvm::dbgs;
@@ -57,14 +60,14 @@ struct HoistableRead {
 
 /// Return true if op1 and op2 are the same constant or the same SSA value.
 static bool isEqualOffsetSizeOrStride(OpFoldResult op1, OpFoldResult op2) {
-  auto getConstantIntValue = [](OpFoldResult ofr) -> llvm::Optional<int64_t> {
+  auto getConstantIntValue = [](OpFoldResult ofr) -> std::optional<int64_t> {
     Attribute attr = ofr.dyn_cast<Attribute>();
     // Note: isa+cast-like pattern allows writing the condition below as 1 line.
     if (!attr && ofr.get<Value>().getDefiningOp<arith::ConstantOp>())
       attr = ofr.get<Value>().getDefiningOp<arith::ConstantOp>().getValue();
     if (auto intAttr = attr.dyn_cast_or_null<IntegerAttr>())
       return intAttr.getValue().getSExtValue();
-    return llvm::None;
+    return std::nullopt;
   };
   auto cst1 = getConstantIntValue(op1), cst2 = getConstantIntValue(op2);
   if (cst1 && cst2 && *cst1 == *cst2)
@@ -106,8 +109,10 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
   if (write.insertSliceOp)
     LLVM_DEBUG(DBGS() << "findMatchingTransferRead inserSliceOp: "
                       << *write.insertSliceOp.getOperation() << "\n");
-
-  for (Operation *user : srcTensor.getUsers()) {
+  SmallVector<Operation *> users(srcTensor.getUsers().begin(),
+                                 srcTensor.getUsers().end());
+  while (!users.empty()) {
+    Operation *user = users.pop_back_val();
     LLVM_DEBUG(DBGS() << "findMatchingTransferRead inspect user: " << *user
                       << "\n");
 
@@ -153,6 +158,16 @@ static HoistableRead findMatchingTransferRead(HoistableWrite write,
     if (read && read.getIndices() == write.transferWriteOp.getIndices() &&
         read.getVectorType() == write.transferWriteOp.getVectorType())
       return HoistableRead{read, sliceOp};
+
+    if (isa<vector::TransferWriteOp>(user)) {
+      // If we find a write with disjoint indices recurse through its uses.
+      if (vector::isDisjointTransferIndices(
+              cast<VectorTransferOpInterface>(user),
+              cast<VectorTransferOpInterface>(
+                  write.transferWriteOp.getOperation()))) {
+        users.append(user->getUsers().begin(), user->getUsers().end());
+      }
+    }
   }
   return HoistableRead();
 }
@@ -413,10 +428,10 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
 
       LLVM_DEBUG(DBGS() << "Candidate for hoisting: "
                         << *transferRead.getOperation() << "\n");
-      auto loop = dyn_cast<scf::ForOp>(transferRead->getParentOp());
+      auto loop = dyn_cast<LoopLikeOpInterface>(transferRead->getParentOp());
       LLVM_DEBUG(DBGS() << "Parent op: " << *transferRead->getParentOp()
                         << "\n");
-      if (!loop)
+      if (!isa_and_nonnull<scf::ForOp, AffineForOp>(loop))
         return WalkResult::advance();
 
       LLVM_DEBUG(DBGS() << "Candidate read: " << *transferRead.getOperation()
@@ -501,18 +516,43 @@ void mlir::linalg::hoistRedundantVectorTransfers(func::FuncOp func) {
                                     ArrayRef<BlockArgument> newBBArgs) {
         return SmallVector<Value>{transferWrite.getVector()};
       };
-      auto newForOp =
-          replaceLoopWithNewYields(b, loop, transferRead.getVector(), yieldFn);
 
       // Transfer write has been hoisted, need to update the written vector by
       // the value yielded by the newForOp.
-      transferWrite.getVectorMutable().assign(newForOp.getResults().back());
-
-      changed = true;
-      loop.erase();
-      // Need to interrupt and restart because erasing the loop messes up the
-      // walk.
-      return WalkResult::interrupt();
+      return TypeSwitch<Operation *, WalkResult>(loop)
+          .Case<scf::ForOp>([&](scf::ForOp scfForOp) {
+            auto newForOp = replaceLoopWithNewYields(
+                b, scfForOp, transferRead.getVector(), yieldFn);
+            transferWrite.getVectorMutable().assign(
+                newForOp.getResults().back());
+            changed = true;
+            loop.erase();
+            // Need to interrupt and restart because erasing the loop messes up
+            // the walk.
+            return WalkResult::interrupt();
+          })
+          .Case<AffineForOp>([&](AffineForOp affineForOp) {
+            auto newForOp = replaceForOpWithNewYields(
+                b, affineForOp, transferRead.getVector(),
+                SmallVector<Value>{transferWrite.getVector()},
+                transferWrite.getVector());
+            // Replace all uses of the `transferRead` with the corresponding
+            // basic block argument.
+            transferRead.getVector().replaceUsesWithIf(
+                newForOp.getLoopBody().getArguments().back(),
+                [&](OpOperand &use) {
+                  Operation *user = use.getOwner();
+                  return newForOp->isProperAncestor(user);
+                });
+            transferWrite.getVectorMutable().assign(
+                newForOp.getResults().back());
+            changed = true;
+            loop.erase();
+            // Need to interrupt and restart because erasing the loop messes up
+            // the walk.
+            return WalkResult::interrupt();
+          })
+          .Default([](Operation *) { return WalkResult::interrupt(); });
     });
   }
 }

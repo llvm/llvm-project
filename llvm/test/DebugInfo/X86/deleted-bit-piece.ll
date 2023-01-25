@@ -14,7 +14,7 @@ entry:
   br i1 undef, label %exit, label %bb
 
 bb:                                               ; preds = %entry
-  call void @llvm.dbg.value(metadata i8* undef, metadata !15, metadata !16), !dbg !17
+  call void @llvm.dbg.value(metadata ptr undef, metadata !15, metadata !16), !dbg !17
   br label %exit
 
 exit:                                             ; preds = %bb, %entry

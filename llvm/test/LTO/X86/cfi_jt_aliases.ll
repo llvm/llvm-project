@@ -51,7 +51,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@f = internal global [4 x void ()*] [void ()* @a, void ()* @b, void ()* @c, void ()* null], align 16
+@f = internal global [4 x ptr] [ptr @a, ptr @b, ptr @c, ptr null], align 16
 
 define dso_local void @a() !type !5 !type !6 { ret void }
 define dso_local void @b() !type !5 !type !6 { ret void }
@@ -60,25 +60,24 @@ define dso_local void @c() !type !5 !type !6 { ret void }
 define dso_local void @d() !type !5 !type !6 {
 entry:
   %i = alloca i32, align 4
-  store i32 0, i32* %i, align 4
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4
+  %0 = load i32, ptr %i, align 4
   %idxprom = sext i32 %0 to i64
-  %arrayidx = getelementptr inbounds [4 x void ()*], [4 x void ()*]* @f, i64 0, i64 %idxprom
-  %1 = load void ()*, void ()** %arrayidx, align 8
-  %tobool = icmp ne void ()* %1, null
+  %arrayidx = getelementptr inbounds [4 x ptr], ptr @f, i64 0, i64 %idxprom
+  %1 = load ptr, ptr %arrayidx, align 8
+  %tobool = icmp ne ptr %1, null
   br i1 %tobool, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i32, i32* %i, align 4
+  %2 = load i32, ptr %i, align 4
   %idxprom1 = sext i32 %2 to i64
-  %arrayidx2 = getelementptr inbounds [4 x void ()*], [4 x void ()*]* @f, i64 0, i64 %idxprom1
-  %3 = load void ()*, void ()** %arrayidx2, align 8
-  %4 = bitcast void ()* %3 to i8*, !nosanitize !7
-  %5 = call i1 @llvm.type.test(i8* %4, metadata !"_ZTSFvvE"), !nosanitize !7
-  br i1 %5, label %cont, label %trap, !nosanitize !7
+  %arrayidx2 = getelementptr inbounds [4 x ptr], ptr @f, i64 0, i64 %idxprom1
+  %3 = load ptr, ptr %arrayidx2, align 8
+  %4 = call i1 @llvm.type.test(ptr %3, metadata !"_ZTSFvvE"), !nosanitize !7
+  br i1 %4, label %cont, label %trap, !nosanitize !7
 
 trap:                                             ; preds = %for.body
   call void @llvm.ubsantrap(i8 2), !nosanitize !7
@@ -89,16 +88,16 @@ cont:                                             ; preds = %for.body
   br label %for.inc
 
 for.inc:                                          ; preds = %cont
-  %6 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %6, 1
-  store i32 %inc, i32* %i, align 4
+  %5 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %5, 1
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
   ret void
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.ubsantrap(i8 immarg)
 
 !llvm.module.flags = !{!0, !1, !2, !3}

@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/GSYM/LineTable.h"
 #include "llvm/DebugInfo/GSYM/InlineInfo.h"
 #include "llvm/Support/DataExtractor.h"
+#include <optional>
 
 using namespace llvm;
 using namespace gsym;
@@ -178,8 +179,8 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
         Offset - 4);
   LR.FuncName = GR.getString(NameOffset);
   bool Done = false;
-  Optional<LineEntry> LineEntry;
-  Optional<DataExtractor> InlineInfoData;
+  std::optional<LineEntry> LineEntry;
+  std::optional<DataExtractor> InlineInfoData;
   while (!Done) {
     if (!Data.isValidOffsetForDataOfSize(Offset, 8))
       return createStringError(std::errc::io_error,
@@ -226,7 +227,7 @@ llvm::Expected<LookupResult> FunctionInfo::lookup(DataExtractor &Data,
     return LR;
   }
 
-  Optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
+  std::optional<FileEntry> LineEntryFile = GR.getFile(LineEntry->File);
   if (!LineEntryFile)
     return createStringError(std::errc::invalid_argument,
                               "failed to extract file[%" PRIu32 "]",

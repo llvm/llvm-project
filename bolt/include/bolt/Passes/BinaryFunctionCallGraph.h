@@ -56,15 +56,14 @@ inline bool NoFilter(const BinaryFunction &) { return false; }
 /// The arguments control how the graph is constructed.
 /// Filter is called on each function, any function that it returns true for
 /// is omitted from the graph.
-/// If IncludeColdCalls is true, then calls from cold BBs are considered for the
-/// graph, otherwise they are ignored.
-/// UseFunctionHotSize controls whether the hot size of a function is used when
-/// filling in the Size attribute of new Nodes.
-/// UseEdgeCounts is used to control if the Weight attribute on Arcs is computed
-/// using the number of calls.
+/// If IncludeSplitCalls is true, then calls from cold BBs are considered for
+/// the graph, otherwise they are ignored. UseFunctionHotSize controls whether
+/// the hot size of a function is used when filling in the Size attribute of new
+/// Nodes. UseEdgeCounts is used to control if the Weight attribute on Arcs is
+/// computed using the number of calls.
 BinaryFunctionCallGraph
 buildCallGraph(BinaryContext &BC, CgFilterFunction Filter = NoFilter,
-               bool CgFromPerfData = false, bool IncludeColdCalls = true,
+               bool CgFromPerfData = false, bool IncludeSplitCalls = true,
                bool UseFunctionHotSize = false, bool UseSplitHotSize = false,
                bool UseEdgeCounts = false, bool IgnoreRecursiveCalls = false);
 

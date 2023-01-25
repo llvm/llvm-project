@@ -14,7 +14,7 @@ body: |
     successors: %bb.1, %bb.2
 
     %0:intregs = IMPLICIT_DEF
-    %1:intregs = L2_loadrub_io killed %0:intregs, 0 :: (load (s8) from `i8* undef`, align 2)
+    %1:intregs = L2_loadrub_io killed %0:intregs, 0 :: (load (s8) from `ptr undef`, align 2)
     %2:predregs = C2_cmpeqi %1:intregs, 5
     %3:intregs = A2_tfrsi 0
     S2_pstorerbt_io %2:predregs, %stack.0, 267, killed %3:intregs :: (store (s8) into %stack.0)

@@ -15,7 +15,6 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
@@ -102,7 +101,7 @@ Compilation::getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
     }
 
     // Add allocated arguments to the final DAL.
-    for (auto ArgPtr : AllocatedArgs)
+    for (auto *ArgPtr : AllocatedArgs)
       Entry->AddSynthesizedArg(ArgPtr);
   }
 
@@ -283,9 +282,9 @@ void Compilation::initCompilationForDiagnostics() {
       options::OPT_o,  options::OPT_MD, options::OPT_MMD, options::OPT_M,
       options::OPT_MM, options::OPT_MF, options::OPT_MG,  options::OPT_MJ,
       options::OPT_MQ, options::OPT_MT, options::OPT_MV};
-  for (unsigned i = 0, e = llvm::array_lengthof(OutputOpts); i != e; ++i) {
-    if (TranslatedArgs->hasArg(OutputOpts[i]))
-      TranslatedArgs->eraseArg(OutputOpts[i]);
+  for (const auto &Opt : OutputOpts) {
+    if (TranslatedArgs->hasArg(Opt))
+      TranslatedArgs->eraseArg(Opt);
   }
   TranslatedArgs->ClaimAllArgs();
 
@@ -297,7 +296,7 @@ void Compilation::initCompilationForDiagnostics() {
   TCArgs.clear();
 
   // Redirect stdout/stderr to /dev/null.
-  Redirects = {None, {""}, {""}};
+  Redirects = {std::nullopt, {""}, {""}};
 
   // Temporary files added by diagnostics should be kept.
   ForceKeepTempFiles = true;
@@ -307,6 +306,6 @@ StringRef Compilation::getSysRoot() const {
   return getDriver().SysRoot;
 }
 
-void Compilation::Redirect(ArrayRef<Optional<StringRef>> Redirects) {
+void Compilation::Redirect(ArrayRef<std::optional<StringRef>> Redirects) {
   this->Redirects = Redirects;
 }

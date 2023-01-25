@@ -1,7 +1,6 @@
 """Test that a dSYM can be found when a binary is in a bundle hnd has dots in the filename."""
 
 
-#import unittest2
 import os.path
 from time import sleep
 
@@ -68,6 +67,6 @@ class BundleWithDotInFilenameTestCase(TestBase):
             mod = target.GetModuleAtIndex(i)
             if mod.GetFileSpec().GetFilename() == 'com.apple.sbd':
                 dsym_name = mod.GetSymbolFileSpec().GetFilename()
-                self.assertTrue (dsym_name == 'com.apple.sbd', "Check that we found the dSYM for the bundle that was loaded")
+                self.assertEqual(dsym_name, 'com.apple.sbd', "Check that we found the dSYM for the bundle that was loaded")
             i=i+1
         os.chdir(self.getSourceDir());

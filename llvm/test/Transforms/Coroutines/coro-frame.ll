@@ -1,5 +1,5 @@
 ; Check that we can handle spills of the result of the invoke instruction
-; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 define i8* @f(i64 %this) presplitcoroutine personality i32 0 {
 entry:
@@ -44,7 +44,7 @@ pad:
 ; CHECK: ret i8* %hdl
 
 ; See if the float was loaded from the frame
-; CHECK-LABEL: @f.resume(%f.Frame* noalias nonnull align 8
+; CHECK-LABEL: @f.resume(%f.Frame* noundef nonnull align 8
 ; CHECK: %r.reload = load double, double* %r.reload.addr
 ; CHECK: call double @print(double %r.reload)
 ; CHECK: ret void

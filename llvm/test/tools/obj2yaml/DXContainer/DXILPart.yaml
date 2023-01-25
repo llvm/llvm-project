@@ -15,17 +15,17 @@ Header:
   PartCount:       7
   PartOffsets:     [ 60, 76, 92, 108, 236, 1932, 1960 ]
 Parts:
-  - Name:            SFI0
+  - Name:            FKE0
     Size:            8
-  - Name:            ISG1
+  - Name:            FKE1
     Size:            8
-  - Name:            OSG1
+  - Name:            FKE2
     Size:            8
-  - Name:            PSV0
+  - Name:            FKE3
     Size:            120
-  - Name:            STAT
+  - Name:            FKE4
     Size:            1688
-  - Name:            HASH
+  - Name:            FKE5
     Size:            20
   - Name:            DXIL
     Size:            28

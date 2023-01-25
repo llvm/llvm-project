@@ -11,6 +11,9 @@ module m1
   integer, parameter :: repeat = -1
   integer :: myAge = 2
   type(person) associated
+  type hasAlloc
+    integer, allocatable :: a(:)
+  end type
 end
 
 subroutine CheckRepeat
@@ -63,4 +66,7 @@ subroutine CheckValue
   data y / a(i) /
   !ERROR: DATA statement value 'b(1_8)' for 'z' is not a constant
   data z / b(1) /
+  type(hasAlloc) ha
+  !ERROR: DATA statement value 'hasalloc(a=0_4)' for 'ha' is not a constant
+  data ha / hasAlloc(0) /
 end

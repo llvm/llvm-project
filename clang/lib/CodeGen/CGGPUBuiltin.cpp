@@ -162,7 +162,7 @@ RValue EmitDevicePrintfCallExpr(const CallExpr *E, CodeGenFunction *CGF,
     // amdgpu
     llvm::Constant *Size =
         llvm::ConstantInt::get(llvm::Type::getInt32Ty(CGM.getLLVMContext()),
-                               static_cast<uint32_t>(r.second.getFixedSize()));
+                               static_cast<uint32_t>(r.second.getFixedValue()));
 
     Vec.push_back(Size);
   }

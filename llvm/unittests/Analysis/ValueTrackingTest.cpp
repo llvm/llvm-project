@@ -202,7 +202,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero1) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero2) {
@@ -213,7 +213,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero2) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero3) {
@@ -224,7 +224,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero3) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero4) {
@@ -235,7 +235,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero4) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero5) {
@@ -246,7 +246,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero5) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero6) {
@@ -257,7 +257,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero6) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero7) {
@@ -268,7 +268,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero7) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero8) {
@@ -279,7 +279,7 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero8) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero1) {
@@ -290,7 +290,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero1) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero2) {
@@ -301,7 +301,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero2) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero3) {
@@ -312,7 +312,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero3) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero4) {
@@ -323,7 +323,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero4) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero5) {
@@ -334,7 +334,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero5) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero6) {
@@ -345,7 +345,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero6) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero7) {
@@ -356,7 +356,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero7) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, false});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero8) {
@@ -367,7 +367,7 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero8) {
       "  ret float %A\n"
       "}\n");
   // The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, true});
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZeroVecUndef) {
@@ -847,68 +847,89 @@ TEST(ValueTracking, propagatesPoison) {
       "i1 %cond, i8* %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (propagates poison?, IR instruction)
-  SmallVector<std::pair<bool, std::string>, 32> Data = {
-      {true, "add i32 %x, %y"},
-      {true, "add nsw nuw i32 %x, %y"},
-      {true, "ashr i32 %x, %y"},
-      {true, "lshr exact i32 %x, 31"},
-      {true, "fadd float %fx, %fy"},
-      {true, "fsub float %fx, %fy"},
-      {true, "fmul float %fx, %fy"},
-      {true, "fdiv float %fx, %fy"},
-      {true, "frem float %fx, %fy"},
-      {true, "fneg float %fx"},
-      {true, "fcmp oeq float %fx, %fy"},
-      {true, "icmp eq i32 %x, %y"},
-      {true, "getelementptr i8, i8* %p, i32 %x"},
-      {true, "getelementptr inbounds i8, i8* %p, i32 %x"},
-      {true, "bitcast float %fx to i32"},
-      {false, "select i1 %cond, i32 %x, i32 %y"},
-      {false, "freeze i32 %x"},
-      {true, "udiv i32 %x, %y"},
-      {true, "urem i32 %x, %y"},
-      {true, "sdiv exact i32 %x, %y"},
-      {true, "srem i32 %x, %y"},
-      {false, "call i32 @g(i32 %x)"},
-      {true, "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.smul.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)"},
-      {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)"},
-      {false, "call float @llvm.sqrt.f32(float %fx)"},
-      {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)"},
-      {false, "call float @llvm.sin.f32(float %fx)"},
-      {false, "call float @llvm.cos.f32(float %fx)"},
-      {false, "call float @llvm.pow.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.exp.f32(float %fx)"},
-      {false, "call float @llvm.exp2.f32(float %fx)"},
-      {false, "call float @llvm.log.f32(float %fx)"},
-      {false, "call float @llvm.log10.f32(float %fx)"},
-      {false, "call float @llvm.log2.f32(float %fx)"},
-      {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)"},
-      {false, "call float @llvm.fabs.f32(float %fx)"},
-      {false, "call float @llvm.minnum.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.maxnum.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.minimum.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.maximum.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.copysign.f32(float %fx, float %fy)"},
-      {false, "call float @llvm.floor.f32(float %fx)"},
-      {false, "call float @llvm.ceil.f32(float %fx)"},
-      {false, "call float @llvm.trunc.f32(float %fx)"},
-      {false, "call float @llvm.rint.f32(float %fx)"},
-      {false, "call float @llvm.nearbyint.f32(float %fx)"},
-      {false, "call float @llvm.round.f32(float %fx)"},
-      {false, "call float @llvm.roundeven.f32(float %fx)"},
-      {false, "call i32 @llvm.lround.f32(float %fx)"},
-      {false, "call i64 @llvm.llround.f32(float %fx)"},
-      {false, "call i32 @llvm.lrint.f32(float %fx)"},
-      {false, "call i64 @llvm.llrint.f32(float %fx)"},
-      {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)"}};
+  SmallVector<std::tuple<bool, std::string, unsigned>, 32> Data = {
+      {true, "add i32 %x, %y", 0},
+      {true, "add i32 %x, %y", 1},
+      {true, "add nsw nuw i32 %x, %y", 0},
+      {true, "add nsw nuw i32 %x, %y", 1},
+      {true, "ashr i32 %x, %y", 0},
+      {true, "ashr i32 %x, %y", 1},
+      {true, "lshr exact i32 %x, 31", 0},
+      {true, "lshr exact i32 %x, 31", 1},
+      {true, "fadd float %fx, %fy", 0},
+      {true, "fadd float %fx, %fy", 1},
+      {true, "fsub float %fx, %fy", 0},
+      {true, "fsub float %fx, %fy", 1},
+      {true, "fmul float %fx, %fy", 0},
+      {true, "fmul float %fx, %fy", 1},
+      {true, "fdiv float %fx, %fy", 0},
+      {true, "fdiv float %fx, %fy", 1},
+      {true, "frem float %fx, %fy", 0},
+      {true, "frem float %fx, %fy", 1},
+      {true, "fneg float %fx", 0},
+      {true, "fcmp oeq float %fx, %fy", 0},
+      {true, "fcmp oeq float %fx, %fy", 1},
+      {true, "icmp eq i32 %x, %y", 0},
+      {true, "icmp eq i32 %x, %y", 1},
+      {true, "getelementptr i8, i8* %p, i32 %x", 0},
+      {true, "getelementptr i8, i8* %p, i32 %x", 1},
+      {true, "getelementptr inbounds i8, i8* %p, i32 %x", 0},
+      {true, "getelementptr inbounds i8, i8* %p, i32 %x", 1},
+      {true, "bitcast float %fx to i32", 0},
+      {true, "select i1 %cond, i32 %x, i32 %y", 0},
+      {false, "select i1 %cond, i32 %x, i32 %y", 1},
+      {false, "select i1 %cond, i32 %x, i32 %y", 2},
+      {false, "freeze i32 %x", 0},
+      {true, "udiv i32 %x, %y", 0},
+      {true, "udiv i32 %x, %y", 1},
+      {true, "urem i32 %x, %y", 0},
+      {true, "urem i32 %x, %y", 1},
+      {true, "sdiv exact i32 %x, %y", 0},
+      {true, "sdiv exact i32 %x, %y", 1},
+      {true, "srem i32 %x, %y", 0},
+      {true, "srem i32 %x, %y", 1},
+      {false, "call i32 @g(i32 %x)", 0},
+      {false, "call i32 @g(i32 %x)", 1},
+      {true, "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call {i32, i1} @llvm.smul.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call {i32, i1} @llvm.usub.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {true, "call {i32, i1} @llvm.umul.with.overflow.i32(i32 %x, i32 %y)", 0},
+      {false, "call float @llvm.sqrt.f32(float %fx)", 0},
+      {false, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
+      {false, "call float @llvm.sin.f32(float %fx)", 0},
+      {false, "call float @llvm.cos.f32(float %fx)", 0},
+      {false, "call float @llvm.pow.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.exp.f32(float %fx)", 0},
+      {false, "call float @llvm.exp2.f32(float %fx)", 0},
+      {false, "call float @llvm.log.f32(float %fx)", 0},
+      {false, "call float @llvm.log10.f32(float %fx)", 0},
+      {false, "call float @llvm.log2.f32(float %fx)", 0},
+      {false, "call float @llvm.fma.f32(float %fx, float %fx, float %fy)", 0},
+      {false, "call float @llvm.fabs.f32(float %fx)", 0},
+      {false, "call float @llvm.minnum.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.maxnum.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.minimum.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.maximum.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.copysign.f32(float %fx, float %fy)", 0},
+      {false, "call float @llvm.floor.f32(float %fx)", 0},
+      {false, "call float @llvm.ceil.f32(float %fx)", 0},
+      {false, "call float @llvm.trunc.f32(float %fx)", 0},
+      {false, "call float @llvm.rint.f32(float %fx)", 0},
+      {false, "call float @llvm.nearbyint.f32(float %fx)", 0},
+      {false, "call float @llvm.round.f32(float %fx)", 0},
+      {false, "call float @llvm.roundeven.f32(float %fx)", 0},
+      {false, "call i32 @llvm.lround.f32(float %fx)", 0},
+      {false, "call i64 @llvm.llround.f32(float %fx)", 0},
+      {false, "call i32 @llvm.lrint.f32(float %fx)", 0},
+      {false, "call i64 @llvm.llrint.f32(float %fx)", 0},
+      {false, "call float @llvm.fmuladd.f32(float %fx, float %fx, float %fy)",
+       0}};
 
   std::string AssemblyStr = AsmHead;
   for (auto &Itm : Data)
-    AssemblyStr += Itm.second + "\n";
+    AssemblyStr += std::get<1>(Itm) + "\n";
   AssemblyStr += AsmTail;
 
   LLVMContext Context;
@@ -925,7 +946,9 @@ TEST(ValueTracking, propagatesPoison) {
   for (auto &I : BB) {
     if (isa<ReturnInst>(&I))
       break;
-    EXPECT_EQ(propagatesPoison(cast<Operator>(&I)), Data[Index].first)
+    bool ExpectedVal = std::get<0>(Data[Index]);
+    unsigned OpIdx = std::get<2>(Data[Index]);
+    EXPECT_EQ(propagatesPoison(I.getOperandUse(OpIdx)), ExpectedVal)
         << "Incorrect answer at instruction " << Index << " = " << I;
     Index++;
   }
@@ -1323,7 +1346,7 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAnd) {
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL), true);
   EXPECT_EQ(isImpliedCondition(A, A3, DL), false);
-  EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL), std::nullopt);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAnd2) {
@@ -1342,7 +1365,7 @@ TEST_F(ValueTrackingTest, IsImpliedConditionAnd2) {
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL), true);
   EXPECT_EQ(isImpliedCondition(A, A3, DL), false);
-  EXPECT_EQ(isImpliedCondition(A, A4, DL), None);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL), std::nullopt);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionAndVec) {
@@ -1373,7 +1396,7 @@ TEST_F(ValueTrackingTest, IsImpliedConditionOr) {
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL, false), false);
   EXPECT_EQ(isImpliedCondition(A, A3, DL, false), true);
-  EXPECT_EQ(isImpliedCondition(A, A4, DL, false), None);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL, false), std::nullopt);
 }
 
 TEST_F(ValueTrackingTest, IsImpliedConditionOr2) {
@@ -1392,7 +1415,7 @@ TEST_F(ValueTrackingTest, IsImpliedConditionOr2) {
   const DataLayout &DL = M->getDataLayout();
   EXPECT_EQ(isImpliedCondition(A, A2, DL, false), false);
   EXPECT_EQ(isImpliedCondition(A, A3, DL, false), true);
-  EXPECT_EQ(isImpliedCondition(A, A4, DL, false), None);
+  EXPECT_EQ(isImpliedCondition(A, A4, DL, false), std::nullopt);
 }
 
 TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
@@ -1624,7 +1647,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
   EXPECT_EQ(Known.Zero.getZExtValue(), 0u);
 
   BasicBlock *BB = BasicBlock::Create(Context);
-  BB->getInstList().push_back(CI);
+  CI->insertInto(BB, BB->end());
   Known = computeKnownBits(CI, M.getDataLayout(), /* Depth */ 0);
   // There is no parent function so we cannot look up the vscale_range
   // attribute to determine the number of bits.

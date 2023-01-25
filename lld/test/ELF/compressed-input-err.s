@@ -10,8 +10,8 @@
 # RUN: yaml2obj --docnum=3 %s -o %t3.o
 # RUN: not ld.lld %t3.o -o /dev/null -shared 2>&1 | FileCheck %s
 
-## Check we are able to report zlib uncompress errors.
-# CHECK: error: {{.*}}.o:(.debug_info): uncompress failed: zlib error: Z_DATA_ERROR
+## Check we are able to report zlib decompress errors.
+# CHECK: error: {{.*}}.o:(.debug_info): decompress failed: zlib error: Z_DATA_ERROR
 
 --- !ELF
 FileHeader:

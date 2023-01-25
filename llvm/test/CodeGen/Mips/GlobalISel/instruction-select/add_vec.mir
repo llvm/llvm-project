@@ -2,10 +2,10 @@
 # RUN: llc -mtriple=mipsel-linux-gnu -mcpu=mips32r5 -mattr=+msa,+fp64,+nan2008 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=P5600
 --- |
 
-  define void @add_v16i8(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
-  define void @add_v8i16(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
-  define void @add_v4i32(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
-  define void @add_v2i64(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @add_v16i8(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @add_v8i16(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @add_v4i32(ptr %a, ptr %b, ptr %c) { entry: ret void }
+  define void @add_v2i64(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
 ...
 ---

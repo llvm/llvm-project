@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -84,7 +85,7 @@ static SVal computeExtentBegin(SValBuilder &svalBuilder,
 static std::pair<NonLoc, nonloc::ConcreteInt>
 getSimplifiedOffsets(NonLoc offset, nonloc::ConcreteInt extent,
                      SValBuilder &svalBuilder) {
-  Optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
+  std::optional<nonloc::SymbolVal> SymVal = offset.getAs<nonloc::SymbolVal>();
   if (SymVal && SymVal->isExpression()) {
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(SymVal->getSymbol())) {
       llvm::APSInt constant =
@@ -143,7 +144,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
 
   SVal extentBegin = computeExtentBegin(svalBuilder, rawOffset.getRegion());
 
-  if (Optional<NonLoc> NV = extentBegin.getAs<NonLoc>()) {
+  if (std::optional<NonLoc> NV = extentBegin.getAs<NonLoc>()) {
     if (auto ConcreteNV = NV->getAs<nonloc::ConcreteInt>()) {
       std::pair<NonLoc, nonloc::ConcreteInt> simplifiedOffsets =
           getSimplifiedOffsets(rawOffset.getByteOffset(), *ConcreteNV,
@@ -155,7 +156,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
     SVal lowerBound = svalBuilder.evalBinOpNN(state, BO_LT, rawOffsetVal, *NV,
                                               svalBuilder.getConditionType());
 
-    Optional<NonLoc> lowerBoundToCheck = lowerBound.getAs<NonLoc>();
+    std::optional<NonLoc> lowerBoundToCheck = lowerBound.getAs<NonLoc>();
     if (!lowerBoundToCheck)
       return;
 
@@ -194,7 +195,7 @@ void ArrayBoundCheckerV2::checkLocation(SVal location, bool isLoad,
                                               Size.castAs<NonLoc>(),
                                               svalBuilder.getConditionType());
 
-    Optional<NonLoc> upperboundToCheck = upperbound.getAs<NonLoc>();
+    std::optional<NonLoc> upperboundToCheck = upperbound.getAs<NonLoc>();
     if (!upperboundToCheck)
       break;
 

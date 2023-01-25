@@ -29,6 +29,9 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -41,6 +44,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define DEBUG_TYPE "aarch64-postlegalizer-lowering"
 
@@ -108,12 +112,12 @@ static bool isTRNMask(ArrayRef<int> M, unsigned NumElts,
 
 /// Check if a G_EXT instruction can handle a shuffle mask \p M when the vector
 /// sources of the shuffle are different.
-static Optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
-                                                      unsigned NumElts) {
+static std::optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
+                                                           unsigned NumElts) {
   // Look for the first non-undef element.
   auto FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
   if (FirstRealElt == M.end())
-    return None;
+    return std::nullopt;
 
   // Use APInt to handle overflow when calculating expected element.
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
@@ -124,7 +128,7 @@ static Optional<std::pair<bool, uint64_t>> getExtMask(ArrayRef<int> M,
   if (any_of(
           make_range(std::next(FirstRealElt), M.end()),
           [&ExpectedElt](int Elt) { return Elt != ExpectedElt++ && Elt >= 0; }))
-    return None;
+    return std::nullopt;
 
   // The index of an EXT is the first element if it is not UNDEF.
   // Watch out for the beginning UNDEFs. The EXT index should be the expected
@@ -190,10 +194,10 @@ static bool isZipMask(ArrayRef<int> M, unsigned NumElts,
 /// G_INSERT_VECTOR_ELT destination should be the LHS of the G_SHUFFLE_VECTOR.
 ///
 /// Second element is the destination lane for the G_INSERT_VECTOR_ELT.
-static Optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
-                                                int NumInputElements) {
+static std::optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
+                                                     int NumInputElements) {
   if (M.size() != static_cast<size_t>(NumInputElements))
-    return None;
+    return std::nullopt;
   int NumLHSMatch = 0, NumRHSMatch = 0;
   int LastLHSMismatch = -1, LastRHSMismatch = -1;
   for (int Idx = 0; Idx < NumInputElements; ++Idx) {
@@ -210,7 +214,7 @@ static Optional<std::pair<bool, int>> isINSMask(ArrayRef<int> M,
     return std::make_pair(true, LastLHSMismatch);
   if (NumRHSMatch == NumNeededToMatch)
     return std::make_pair(false, LastRHSMismatch);
-  return None;
+  return std::nullopt;
 }
 
 /// \return true if a G_SHUFFLE_VECTOR instruction \p MI can be replaced with a
@@ -370,22 +374,60 @@ static bool matchDup(MachineInstr &MI, MachineRegisterInfo &MRI,
   return false;
 }
 
+// Check if an EXT instruction can handle the shuffle mask when the vector
+// sources of the shuffle are the same.
+static bool isSingletonExtMask(ArrayRef<int> M, LLT Ty) {
+  unsigned NumElts = Ty.getNumElements();
+
+  // Assume that the first shuffle index is not UNDEF.  Fail if it is.
+  if (M[0] < 0)
+    return false;
+
+  // If this is a VEXT shuffle, the immediate value is the index of the first
+  // element.  The other shuffle indices must be the successive elements after
+  // the first one.
+  unsigned ExpectedElt = M[0];
+  for (unsigned I = 1; I < NumElts; ++I) {
+    // Increment the expected index.  If it wraps around, just follow it
+    // back to index zero and keep going.
+    ++ExpectedElt;
+    if (ExpectedElt == NumElts)
+      ExpectedElt = 0;
+
+    if (M[I] < 0)
+      continue; // Ignore UNDEF indices.
+    if (ExpectedElt != static_cast<unsigned>(M[I]))
+      return false;
+  }
+
+  return true;
+}
+
 static bool matchEXT(MachineInstr &MI, MachineRegisterInfo &MRI,
                      ShuffleVectorPseudo &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR);
   Register Dst = MI.getOperand(0).getReg();
-  auto ExtInfo = getExtMask(MI.getOperand(3).getShuffleMask(),
-                            MRI.getType(Dst).getNumElements());
-  if (!ExtInfo)
-    return false;
-  bool ReverseExt;
-  uint64_t Imm;
-  std::tie(ReverseExt, Imm) = *ExtInfo;
+  LLT DstTy = MRI.getType(Dst);
   Register V1 = MI.getOperand(1).getReg();
   Register V2 = MI.getOperand(2).getReg();
+  auto Mask = MI.getOperand(3).getShuffleMask();
+  uint64_t Imm;
+  auto ExtInfo = getExtMask(Mask, DstTy.getNumElements());
+  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
+
+  if (!ExtInfo) {
+    if (!getOpcodeDef<GImplicitDef>(V2, MRI) ||
+        !isSingletonExtMask(Mask, DstTy))
+      return false;
+
+    Imm = Mask[0] * ExtFactor;
+    MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V1, Imm});
+    return true;
+  }
+  bool ReverseExt;
+  std::tie(ReverseExt, Imm) = *ExtInfo;
   if (ReverseExt)
     std::swap(V1, V2);
-  uint64_t ExtFactor = MRI.getType(V1).getScalarSizeInBits() / 8;
   Imm *= ExtFactor;
   MatchInfo = ShuffleVectorPseudo(AArch64::G_EXT, Dst, {V1, V2, Imm});
   return true;
@@ -516,12 +558,12 @@ static bool applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
 /// be used to optimize the instruction.
 ///
 /// \note This assumes that the comparison has been legalized.
-Optional<std::pair<uint64_t, CmpInst::Predicate>>
+std::optional<std::pair<uint64_t, CmpInst::Predicate>>
 tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
-                          const MachineRegisterInfo &MRI) {
+                        const MachineRegisterInfo &MRI) {
   const auto &Ty = MRI.getType(RHS);
   if (Ty.isVector())
-    return None;
+    return std::nullopt;
   unsigned Size = Ty.getSizeInBits();
   assert((Size == 32 || Size == 64) && "Expected 32 or 64 bit compare only?");
 
@@ -529,16 +571,16 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   // immediate, then there is nothing to change.
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
-    return None;
+    return std::nullopt;
   uint64_t C = ValAndVReg->Value.getZExtValue();
   if (isLegalArithImmed(C))
-    return None;
+    return std::nullopt;
 
   // We have a non-arithmetic immediate. Check if adjusting the immediate and
   // adjusting the predicate will result in a legal arithmetic immediate.
   switch (P) {
   default:
-    return None;
+    return std::nullopt;
   case CmpInst::ICMP_SLT:
   case CmpInst::ICMP_SGE:
     // Check for
@@ -549,7 +591,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the smallest possible negative number.
     if ((Size == 64 && static_cast<int64_t>(C) == INT64_MIN) ||
         (Size == 32 && static_cast<int32_t>(C) == INT32_MIN))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
     C -= 1;
     break;
@@ -562,7 +604,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     //
     // When c is not zero.
     if (C == 0)
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
     C -= 1;
     break;
@@ -576,7 +618,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the largest possible signed integer.
     if ((Size == 32 && static_cast<int32_t>(C) == INT32_MAX) ||
         (Size == 64 && static_cast<int64_t>(C) == INT64_MAX))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
     C += 1;
     break;
@@ -590,7 +632,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // When c is not the largest possible unsigned integer.
     if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
         (Size == 64 && C == UINT64_MAX))
-      return None;
+      return std::nullopt;
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
     C += 1;
     break;
@@ -601,7 +643,7 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   if (Size == 32)
     C = static_cast<uint32_t>(C);
   if (!isLegalArithImmed(C))
-    return None;
+    return std::nullopt;
   return {{C, P}};
 }
 
@@ -928,9 +970,20 @@ static bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
 
   // Compares against 0 have special target-specific pseudos.
   bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
-  bool Invert;
-  AArch64CC::CondCode CC, CC2;
-  changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
+
+
+  bool Invert = false;
+  AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
+  if (Pred == CmpInst::Predicate::FCMP_ORD && IsZero) {
+    // The special case "fcmp ord %a, 0" is the canonical check that LHS isn't
+    // NaN, so equivalent to a == a and doesn't need the two comparisons an
+    // "ord" normally would.
+    RHS = LHS;
+    IsZero = false;
+    CC = AArch64CC::EQ;
+  } else
+    changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
+
   bool NoNans = ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
 
   // Instead of having an apply function, just build here to simplify things.
@@ -976,6 +1029,25 @@ static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
+// Lower vector G_SEXT_INREG back to shifts for selection. We allowed them to
+// form in the first place for combine opportunities, so any remaining ones
+// at this stage need be lowered back.
+static bool matchVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  return DstTy.isVector();
+}
+
+static void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B,
+                                 GISelChangeObserver &Observer) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  B.setInstrAndDebugLoc(MI);
+  LegalizerHelper Helper(*MI.getMF(), Observer, B);
+  Helper.lower(MI, 0, /* Unused hint type */ LLT());
+}
+
 #define AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenPostLegalizeGILowering.inc"
 #undef AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS
@@ -1004,7 +1076,7 @@ public:
 bool AArch64PostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
                                                MachineInstr &MI,
                                                MachineIRBuilder &B) const {
-  CombinerHelper Helper(Observer, B);
+  CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false);
   AArch64GenPostLegalizerLoweringHelper Generated(GeneratedRuleCfg);
   return Generated.tryCombineAll(Observer, MI, B, Helper);
 }

@@ -1,60 +1,60 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-@globalfuncAlias = alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-@globalfuncWeakAlias = weak alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-@globalfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-@globalfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
-@globalfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+@globalfuncAlias = alias void (...), ptr @globalfunc
+@globalfuncWeakAlias = weak alias void (...), ptr @globalfunc
+@globalfuncLinkonceAlias = linkonce alias void (...), ptr @globalfunc
+@globalfuncWeakODRAlias = weak_odr alias void (...), ptr @globalfunc
+@globalfuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @globalfunc
 define hidden void @globalfunc() {
 entry:
   ret void
 }
 
-@internalfuncAlias = alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-@internalfuncWeakAlias = weak alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-@internalfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-@internalfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @internalfunc to void (...)*)
-@internalfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @internalfunc to void (...)*)
+@internalfuncAlias = alias void (...), ptr @internalfunc
+@internalfuncWeakAlias = weak alias void (...), ptr @internalfunc
+@internalfuncLinkonceAlias = linkonce alias void (...), ptr @internalfunc
+@internalfuncWeakODRAlias = weak_odr alias void (...), ptr @internalfunc
+@internalfuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @internalfunc
 define internal void @internalfunc() {
 entry:
   ret void
 }
 
-@linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-@linkonceODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-@linkonceODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-@linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
-@linkonceODRfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+@linkonceODRfuncAlias = alias void (...), ptr @linkonceODRfunc
+@linkonceODRfuncWeakAlias = weak alias void (...), ptr @linkonceODRfunc
+@linkonceODRfuncLinkonceAlias = linkonce alias void (...), ptr @linkonceODRfunc
+@linkonceODRfuncWeakODRAlias = weak_odr alias void (...), ptr @linkonceODRfunc
+@linkonceODRfuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @linkonceODRfunc
 define linkonce_odr void @linkonceODRfunc() {
 entry:
   ret void
 }
 
-@weakODRfuncAlias = alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-@weakODRfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-@weakODRfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-@weakODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
-@weakODRfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+@weakODRfuncAlias = alias void (...), ptr @weakODRfunc
+@weakODRfuncWeakAlias = weak alias void (...), ptr @weakODRfunc
+@weakODRfuncLinkonceAlias = linkonce alias void (...), ptr @weakODRfunc
+@weakODRfuncWeakODRAlias = weak_odr alias void (...), ptr @weakODRfunc
+@weakODRfuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @weakODRfunc
 define weak_odr void @weakODRfunc() {
 entry:
   ret void
 }
 
-@linkoncefuncAlias = alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-@linkoncefuncWeakAlias = weak alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-@linkoncefuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-@linkoncefuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
-@linkoncefuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+@linkoncefuncAlias = alias void (...), ptr @linkoncefunc
+@linkoncefuncWeakAlias = weak alias void (...), ptr @linkoncefunc
+@linkoncefuncLinkonceAlias = linkonce alias void (...), ptr @linkoncefunc
+@linkoncefuncWeakODRAlias = weak_odr alias void (...), ptr @linkoncefunc
+@linkoncefuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @linkoncefunc
 define linkonce void @linkoncefunc() {
 entry:
   ret void
 }
 
-@weakfuncAlias = alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-@weakfuncWeakAlias = weak alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-@weakfuncLinkonceAlias = linkonce alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-@weakfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)
-@weakfuncLinkonceODRAlias = linkonce_odr alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+@weakfuncAlias = alias void (...), ptr @weakfunc
+@weakfuncWeakAlias = weak alias void (...), ptr @weakfunc
+@weakfuncLinkonceAlias = linkonce alias void (...), ptr @weakfunc
+@weakfuncWeakODRAlias = weak_odr alias void (...), ptr @weakfunc
+@weakfuncLinkonceODRAlias = linkonce_odr alias void (...), ptr @weakfunc
 define weak void @weakfunc() {
 entry:
   ret void

@@ -25,7 +25,7 @@
 ; CHECK-DT-INVALIDATE: Running analysis: MemoryDependenceAnalysis
 ;
 
-define void @test_use_domtree(i32* nocapture %bufUInt, i32* nocapture %pattern) nounwind {
+define void @test_use_domtree(ptr nocapture %bufUInt, ptr nocapture %pattern) nounwind {
 entry:
   br label %for.body
 
@@ -34,28 +34,27 @@ for.exit:                                         ; preds = %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %i.01 = phi i32 [ 0, %entry ], [ %tmp8.7, %for.body ]
-  %arrayidx = getelementptr i32, i32* %bufUInt, i32 %i.01
-  %arrayidx5 = getelementptr i32, i32* %pattern, i32 %i.01
-  %tmp6 = load i32, i32* %arrayidx5, align 4
-  store i32 %tmp6, i32* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr %bufUInt, i32 %i.01
+  %arrayidx5 = getelementptr i32, ptr %pattern, i32 %i.01
+  %tmp6 = load i32, ptr %arrayidx5, align 4
+  store i32 %tmp6, ptr %arrayidx, align 4
   %tmp8.7 = add i32 %i.01, 8
   %cmp.7 = icmp ult i32 %tmp8.7, 1024
   br i1 %cmp.7, label %for.body, label %for.exit
 }
 
 %t = type { i32 }
-declare void @foo(i8*)
+declare void @foo(ptr)
 
-define void @test_use_aa(%t* noalias %stuff ) {
+define void @test_use_aa(ptr noalias %stuff ) {
 entry:
-  %p = getelementptr inbounds %t, %t* %stuff, i32 0, i32 0
-  %before = load i32, i32* %p
+  %before = load i32, ptr %stuff
 
-  call void @foo(i8* null)
+  call void @foo(ptr null)
 
-  %after = load i32, i32* %p
+  %after = load i32, ptr %stuff
   %sum = add i32 %before, %after
 
-  store i32 %sum, i32* %p
+  store i32 %sum, ptr %stuff
   ret void
 }

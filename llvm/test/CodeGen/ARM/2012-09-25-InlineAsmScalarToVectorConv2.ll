@@ -4,8 +4,8 @@
 ; CHECK: scalar-to-vector conversion failed, possible invalid constraint for vector type
 ; CHECK: scalar-to-vector conversion failed, possible invalid constraint for vector type
 
-define hidden void @f(i32* %corr, i32 %order) nounwind ssp {
-  tail call void asm sideeffect "vst1.s32 { ${1:q}, ${2:q} }, [$0]", "r,{q0},{q1}"(i32* %corr, <2 x i64>* undef, i32 %order) nounwind, !srcloc !0
+define hidden void @f(ptr %corr, i32 %order) nounwind ssp {
+  tail call void asm sideeffect "vst1.s32 { ${1:q}, ${2:q} }, [$0]", "r,{q0},{q1}"(ptr %corr, ptr undef, i32 %order) nounwind, !srcloc !0
   ret void
 }
 

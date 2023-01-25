@@ -13,7 +13,7 @@
 ;
 target datalayout = "e-m:e-i32:64-f80:128-n8:16:32:64-S128"
 
-define void @wrap(i32* %A, i32 %N, i32 %p) {
+define void @wrap(ptr %A, i32 %N, i32 %p) {
 bb:
   br label %bb2
 
@@ -24,8 +24,8 @@ bb2:                                              ; preds = %bb7, %bb
 
 bb4:                                              ; preds = %bb2
   %tmp5 = add i32 %indvars.iv, %p
-  %tmp6 = getelementptr inbounds i32, i32* %A, i32 %tmp5
-  store i32 0, i32* %tmp6, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %A, i32 %tmp5
+  store i32 0, ptr %tmp6, align 4
   br label %bb7
 
 bb7:                                              ; preds = %bb4

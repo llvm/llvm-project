@@ -65,8 +65,8 @@ s_and_b32 s2, 0xFFFF0000, -65536
 
 s_and_b64 null, s[4:5], s[6:7]
 // GFX10: s_and_b64 null, s[4:5], s[6:7] ; encoding: [0x04,0x06,0xfd,0x87]
-// NOSICIVI: error: 'null' operand is not supported on this GPU
-// NOGFX9: error: 'null' operand is not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: 'null' operand is not supported on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: 'null' operand is not supported on this GPU
 
 s_and_b64 s[2:3], s[4:5], s[6:7]
 // SICI: s_and_b64 s[2:3], s[4:5], s[6:7] ; encoding: [0x04,0x06,0x82,0x87]
@@ -216,17 +216,17 @@ s_bfe_i64 s[2:3], s[4:5], s6
 s_cbranch_g_fork s[4:5], s[6:7]
 // SICI: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[4:5], s[6:7] ; encoding: [0x04,0x06,0x80,0x94]
-// GFX10-ERR: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cbranch_g_fork 1, s[6:7]
 // SICI: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x95]
 // GFX89: s_cbranch_g_fork 1, s[6:7] ; encoding: [0x81,0x06,0x80,0x94]
-// GFX10-ERR: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cbranch_g_fork s[6:7], 2
 // SICI: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x95]
 // GFX89: s_cbranch_g_fork s[6:7], 2 ; encoding: [0x06,0x82,0x80,0x94]
-// GFX10-ERR: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_absdiff_i32 s2, s4, s6
 // SICI: s_absdiff_i32 s2, s4, s6 ; encoding: [0x04,0x06,0x02,0x96]
@@ -235,95 +235,95 @@ s_absdiff_i32 s2, s4, s6
 
 s_add_u32 s101, s102, s103
 // SICI: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
-// NOGFX89: error: register not available on this GPU
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
 // GFX10: s_add_u32 s101, s102, s103 ; encoding: [0x66,0x67,0x65,0x80]
 
 s_lshl1_add_u32 s5, s1, s2
 // GFX9:     s_lshl1_add_u32 s5, s1, s2 ; encoding: [0x01,0x02,0x05,0x97]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl1_add_u32 s5, s1, s2 ; encoding: [0x01,0x02,0x05,0x97]
 
 s_lshl1_add_u32 s5, -1, s2
 // GFX9:     s_lshl1_add_u32 s5, -1, s2 ; encoding: [0xc1,0x02,0x05,0x97]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl1_add_u32 s5, -1, s2 ; encoding: [0xc1,0x02,0x05,0x97]
 
 s_lshl1_add_u32 s5, s1, 0
 // GFX9:     s_lshl1_add_u32 s5, s1, 0 ; encoding: [0x01,0x80,0x05,0x97]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl1_add_u32 s5, s1, 0 ; encoding: [0x01,0x80,0x05,0x97]
 
 s_lshl1_add_u32 s5, s1, 0x3f717273
 // GFX9:     s_lshl1_add_u32 s5, s1, 0x3f717273 ; encoding: [0x01,0xff,0x05,0x97,0x73,0x72,0x71,0x3f]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl1_add_u32 s5, s1, 0x3f717273 ; encoding: [0x01,0xff,0x05,0x97,0x73,0x72,0x71,0x3f]
 
 s_lshl2_add_u32 s101, s1, s2
 // GFX9:     s_lshl2_add_u32 s101, s1, s2 ; encoding: [0x01,0x02,0xe5,0x97]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl2_add_u32 s101, s1, s2 ; encoding: [0x01,0x02,0xe5,0x97]
 
 s_lshl2_add_u32 s5, 0xaf123456, s2
 // GFX9:     s_lshl2_add_u32 s5, 0xaf123456, s2 ; encoding: [0xff,0x02,0x85,0x97,0x56,0x34,0x12,0xaf]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl2_add_u32 s5, 0xaf123456, s2 ; encoding: [0xff,0x02,0x85,0x97,0x56,0x34,0x12,0xaf]
 
 s_lshl3_add_u32 s5, 0x3f717273, s2
 // GFX9:     s_lshl3_add_u32 s5, 0x3f717273, s2 ; encoding: [0xff,0x02,0x05,0x98,0x73,0x72,0x71,0x3f]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl3_add_u32 s5, 0x3f717273, s2 ; encoding: [0xff,0x02,0x05,0x98,0x73,0x72,0x71,0x3f]
 
 s_lshl3_add_u32 s5, s1, s101
 // GFX9:     s_lshl3_add_u32 s5, s1, s101 ; encoding: [0x01,0x65,0x05,0x98]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl3_add_u32 s5, s1, s101 ; encoding: [0x01,0x65,0x05,0x98]
 
 s_lshl4_add_u32 s5, s1, 0xaf123456
 // GFX9:     s_lshl4_add_u32 s5, s1, 0xaf123456 ; encoding: [0x01,0xff,0x85,0x98,0x56,0x34,0x12,0xaf]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl4_add_u32 s5, s1, 0xaf123456 ; encoding: [0x01,0xff,0x85,0x98,0x56,0x34,0x12,0xaf]
 
 s_lshl4_add_u32 s5, -1, s2
 // GFX9:     s_lshl4_add_u32 s5, -1, s2 ; encoding: [0xc1,0x02,0x85,0x98]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_lshl4_add_u32 s5, -1, s2 ; encoding: [0xc1,0x02,0x85,0x98]
 
 s_mul_hi_i32 s5, s101, s2
 // GFX9:     s_mul_hi_i32 s5, s101, s2 ; encoding: [0x65,0x02,0x85,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_i32 s5, s101, s2 ; encoding: [0x65,0x02,0x05,0x9b]
 
 s_mul_hi_i32 s5, 0, s2
 // GFX9:     s_mul_hi_i32 s5, 0, s2 ; encoding: [0x80,0x02,0x85,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_i32 s5, 0, s2 ; encoding: [0x80,0x02,0x05,0x9b]
 
 s_mul_hi_i32 s5, 0x3f717273, s2
 // GFX9:     s_mul_hi_i32 s5, 0x3f717273, s2 ; encoding: [0xff,0x02,0x85,0x96,0x73,0x72,0x71,0x3f]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_i32 s5, 0x3f717273, s2 ; encoding: [0xff,0x02,0x05,0x9b,0x73,0x72,0x71,0x3f]
 
 s_mul_hi_i32 s5, s1, s101
 // GFX9:     s_mul_hi_i32 s5, s1, s101 ; encoding: [0x01,0x65,0x85,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_i32 s5, s1, s101 ; encoding: [0x01,0x65,0x05,0x9b]
 
 s_mul_hi_i32 s5, s1, 0
 // GFX9:     s_mul_hi_i32 s5, s1, 0 ; encoding: [0x01,0x80,0x85,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_i32 s5, s1, 0 ; encoding: [0x01,0x80,0x05,0x9b]
 
 s_mul_hi_u32 s5, s1, 0x3f717273
 // GFX9:     s_mul_hi_u32 s5, s1, 0x3f717273 ; encoding: [0x01,0xff,0x05,0x96,0x73,0x72,0x71,0x3f]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_u32 s5, s1, 0x3f717273 ; encoding: [0x01,0xff,0x85,0x9a,0x73,0x72,0x71,0x3f]
 
 s_mul_hi_u32 s5, s1, s101
 // GFX9:     s_mul_hi_u32 s5, s1, s101 ; encoding: [0x01,0x65,0x05,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_u32 s5, s1, s101 ; encoding: [0x01,0x65,0x85,0x9a]
 
 s_mul_hi_u32 s5, s1, 0
 // GFX9:     s_mul_hi_u32 s5, s1, 0 ; encoding: [0x01,0x80,0x05,0x96]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_mul_hi_u32 s5, s1, 0 ; encoding: [0x01,0x80,0x85,0x9a]

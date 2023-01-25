@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple csky -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple csky -target-feature +fpuv2_df -target-feature +fpuv2_sf \
+// RUN: %clang_cc1 -triple csky -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple csky -target-feature +fpuv2_df -target-feature +fpuv2_sf \
 // RUN:   -target-feature +hard-float -target-feature +hard-float-abi -emit-llvm %s -o -   | FileCheck %s
 
 // This file contains test cases that will have the same output for the hard-float
@@ -117,7 +117,7 @@ void f_agg_large(struct large x) {
 
 // The address where the struct should be written to will be the first
 // argument
-// CHECK-LABEL: define{{.*}} void @f_agg_large_ret(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 noundef %i, i8 noundef signext %j)
+// CHECK-LABEL: define{{.*}} void @f_agg_large_ret(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %i, i8 noundef signext %j)
 struct large f_agg_large_ret(int32_t i, int8_t j) {
   return (struct large){1, 2, 3, 4};
 }
@@ -144,7 +144,7 @@ int f_scalar_stack_1(struct tiny a, struct small b, struct small_aligned c,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(%struct.large* noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, i64 noundef %c, double noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
+// CHECK-LABEL: define{{.*}} void @f_scalar_stack_2(ptr noalias sret(%struct.large) align 4 %agg.result, i32 noundef %a, i64 noundef %b, i64 noundef %c, double noundef %d, i8 noundef zeroext %e, i8 noundef signext %f, i8 noundef zeroext %g)
 struct large f_scalar_stack_2(int32_t a, int64_t b, int64_t c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
@@ -180,22 +180,19 @@ void f_va_caller(void) {
               (struct large){12, 13, 14, 15});
 }
 
-// CHECK-LABEL: define{{.*}} i32 @f_va_1(i8* noundef %fmt, ...) {{.*}} {
-// CHECK:   [[FMT_ADDR:%.*]] = alloca i8*, align 4
-// CHECK:   [[VA:%.*]] = alloca i8*, align 4
+// CHECK-LABEL: define{{.*}} i32 @f_va_1(ptr noundef %fmt, ...) {{.*}} {
+// CHECK:   [[FMT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK:   [[VA:%.*]] = alloca ptr, align 4
 // CHECK:   [[V:%.*]] = alloca i32, align 4
-// CHECK:   store i8* %fmt, i8** [[FMT_ADDR]], align 4
-// CHECK:   [[VA1:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK:   call void @llvm.va_start(i8* [[VA1]])
-// CHECK:   [[ARGP_CUR:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK:   [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 4
-// CHECK:   store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
-// CHECK:   [[TMP0:%.*]] = bitcast i8* [[ARGP_CUR]] to i32*
-// CHECK:   [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK:   store i32 [[TMP1]], i32* [[V]], align 4
-// CHECK:   [[VA2:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK:   call void @llvm.va_end(i8* [[VA2]])
-// CHECK:   [[TMP2:%.*]] = load i32, i32* [[V]], align 4
+// CHECK:   store ptr %fmt, ptr [[FMT_ADDR]], align 4
+// CHECK:   call void @llvm.va_start(ptr [[VA]])
+// CHECK:   [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK:   [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK:   store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
+// CHECK:   [[TMP1:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
+// CHECK:   store i32 [[TMP1]], ptr [[V]], align 4
+// CHECK:   call void @llvm.va_end(ptr [[VA]])
+// CHECK:   [[TMP2:%.*]] = load i32, ptr [[V]], align 4
 // CHECK:   ret i32 [[TMP2]]
 // CHECK: }
 int f_va_1(char *fmt, ...) {
@@ -209,21 +206,18 @@ int f_va_1(char *fmt, ...) {
 }
 
 // CHECK-LABEL: @f_va_2(
-// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
-// CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
+// CHECK:         [[FMT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca double, align 4
-// CHECK-NEXT:    store i8* [[FMT:%.*]], i8** [[FMT_ADDR]], align 4
-// CHECK-NEXT:    [[VA1:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_start(i8* [[VA1]])
-// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 8
-// CHECK-NEXT:    store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ARGP_CUR]] to double*
-// CHECK-NEXT:    [[TMP4:%.*]] = load double, double* [[TMP3]], align 4
-// CHECK-NEXT:    store double [[TMP4]], double* [[V]], align 4
-// CHECK-NEXT:    [[VA2:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_end(i8* [[VA2]])
-// CHECK-NEXT:    [[TMP5:%.*]] = load double, double* [[V]], align 4
+// CHECK-NEXT:    store ptr [[FMT:%.*]], ptr [[FMT_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    store double [[TMP4]], ptr [[V]], align 4
+// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    [[TMP5:%.*]] = load double, ptr [[V]], align 4
 // CHECK-NEXT:    ret double [[TMP5]]
 double f_va_2(char *fmt, ...) {
   __builtin_va_list va;
@@ -236,36 +230,31 @@ double f_va_2(char *fmt, ...) {
 }
 
 // CHECK-LABEL: @f_va_3(
-// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
-// CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
+// CHECK:         [[FMT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca double, align 4
 // CHECK-NEXT:    [[W:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[X:%.*]] = alloca double, align 4
-// CHECK-NEXT:    store i8* [[FMT:%.*]], i8** [[FMT_ADDR]], align 4
-// CHECK-NEXT:    [[VA1:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_start(i8* [[VA1]])
-// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 8
-// CHECK-NEXT:    store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8* [[ARGP_CUR]] to double*
-// CHECK-NEXT:    [[TMP4:%.*]] = load double, double* [[TMP3]], align 4
-// CHECK-NEXT:    store double [[TMP4]], double* [[V]], align 4
-// CHECK-NEXT:    [[ARGP_CUR2:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT3:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR2]], i32 4
-// CHECK-NEXT:    store i8* [[ARGP_NEXT3]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ARGP_CUR2]] to i32*
-// CHECK-NEXT:    [[TMP6:%.*]] = load i32, i32* [[TMP5]], align 4
-// CHECK-NEXT:    store i32 [[TMP6]], i32* [[W]], align 4
-// CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR4]], i32 8
-// CHECK-NEXT:    store i8* [[ARGP_NEXT5]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP10:%.*]] = bitcast i8* [[ARGP_CUR4]] to double*
-// CHECK-NEXT:    [[TMP11:%.*]] = load double, double* [[TMP10]], align 4
-// CHECK-NEXT:    store double [[TMP11]], double* [[X]], align 4
-// CHECK-NEXT:    [[VA6:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_end(i8* [[VA6]])
-// CHECK-NEXT:    [[TMP12:%.*]] = load double, double* [[V]], align 4
-// CHECK-NEXT:    [[TMP13:%.*]] = load double, double* [[X]], align 4
+// CHECK-NEXT:    store ptr [[FMT:%.*]], ptr [[FMT_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    store double [[TMP4]], ptr [[V]], align 4
+// CHECK-NEXT:    [[ARGP_CUR2:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT3:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR2]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT3]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARGP_CUR2]], align 4
+// CHECK-NEXT:    store i32 [[TMP6]], ptr [[W]], align 4
+// CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR4]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT5]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP11:%.*]] = load double, ptr [[ARGP_CUR4]], align 4
+// CHECK-NEXT:    store double [[TMP11]], ptr [[X]], align 4
+// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
+// CHECK-NEXT:    [[TMP12:%.*]] = load double, ptr [[V]], align 4
+// CHECK-NEXT:    [[TMP13:%.*]] = load double, ptr [[X]], align 4
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP12]], [[TMP13]]
 // CHECK-NEXT:    ret double [[ADD]]
 double f_va_3(char *fmt, ...) {
@@ -280,53 +269,40 @@ double f_va_3(char *fmt, ...) {
   return v + x;
 }
 
-// CHECK-LABEL: define{{.*}} i32 @f_va_4(i8* noundef %fmt, ...) {{.*}} {
-// CHECK:         [[FMT_ADDR:%.*]] = alloca i8*, align 4
-// CHECK-NEXT:    [[VA:%.*]] = alloca i8*, align 4
+// CHECK-LABEL: define{{.*}} i32 @f_va_4(ptr noundef %fmt, ...) {{.*}} {
+// CHECK:         [[FMT_ADDR:%.*]] = alloca ptr, align 4
+// CHECK-NEXT:    [[VA:%.*]] = alloca ptr, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[LD:%.*]] = alloca double, align 4
 // CHECK-NEXT:    [[TS:%.*]] = alloca [[STRUCT_TINY:%.*]], align 1
 // CHECK-NEXT:    [[SS:%.*]] = alloca [[STRUCT_SMALL:%.*]], align 4
 // CHECK-NEXT:    [[LS:%.*]] = alloca [[STRUCT_LARGE:%.*]], align 4
 // CHECK-NEXT:    [[RET:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    store i8* [[FMT:%.*]], i8** [[FMT_ADDR]], align 4
-// CHECK-NEXT:    [[VA1:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_start(i8* [[VA1]])
-// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR]], i32 4
-// CHECK-NEXT:    store i8* [[ARGP_NEXT]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARGP_CUR]] to i32*
-// CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK-NEXT:    store i32 [[TMP1]], i32* [[V]], align 4
-// CHECK-NEXT:    [[ARGP_CUR2:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT3:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR2]], i32 8
-// CHECK-NEXT:    store i8* [[ARGP_NEXT3]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARGP_CUR2]] to double*
-// CHECK-NEXT:    [[TMP4:%.*]] = load double, double* [[TMP2]], align 4
-// CHECK-NEXT:    store double [[TMP4]], double* [[LD]], align 4
-// CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR4]], i32 4
-// CHECK-NEXT:    store i8* [[ARGP_NEXT5]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[ARGP_CUR4]] to %struct.tiny*
-// CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.tiny* [[TS]] to i8*
-// CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.tiny* [[TMP5]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 [[TMP6]], i8* align 4 [[TMP7]], i32 4, i1 false)
-// CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR6]], i32 8
-// CHECK-NEXT:    store i8* [[ARGP_NEXT7]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = bitcast i8* [[ARGP_CUR6]] to %struct.small*
-// CHECK-NEXT:    [[TMP9:%.*]] = bitcast %struct.small* [[SS]] to i8*
-// CHECK-NEXT:    [[TMP10:%.*]] = bitcast %struct.small* [[TMP8]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP9]], i8* align 4 [[TMP10]], i32 8, i1 false)
-// CHECK-NEXT:    [[ARGP_CUR8:%.*]] = load i8*, i8** [[VA]], align 4
-// CHECK-NEXT:    [[ARGP_NEXT9:%.*]] = getelementptr inbounds i8, i8* [[ARGP_CUR8]], i32 16
-// CHECK-NEXT:    store i8* [[ARGP_NEXT9]], i8** [[VA]], align 4
-// CHECK-NEXT:    [[TMP11:%.*]] = bitcast i8* [[ARGP_CUR8]] to %struct.large*
-// CHECK-NEXT:    [[TMP13:%.*]] = bitcast %struct.large* [[LS]] to i8*
-// CHECK-NEXT:    [[TMP14:%.*]] = bitcast %struct.large* [[TMP11]] to i8*
-// CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP13]], i8* align 4 [[TMP14]], i32 16, i1 false)
-// CHECK-NEXT:    [[VA10:%.*]] = bitcast i8** [[VA]] to i8*
-// CHECK-NEXT:    call void @llvm.va_end(i8* [[VA10]])
+// CHECK-NEXT:    store ptr [[FMT:%.*]], ptr [[FMT_ADDR]], align 4
+// CHECK-NEXT:    call void @llvm.va_start(ptr [[VA]])
+// CHECK-NEXT:    [[ARGP_CUR:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARGP_CUR]], align 4
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[V]], align 4
+// CHECK-NEXT:    [[ARGP_CUR2:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT3:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR2]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT3]], ptr [[VA]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = load double, ptr [[ARGP_CUR2]], align 4
+// CHECK-NEXT:    store double [[TMP4]], ptr [[LD]], align 4
+// CHECK-NEXT:    [[ARGP_CUR4:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT5:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR4]], i32 4
+// CHECK-NEXT:    store ptr [[ARGP_NEXT5]], ptr [[VA]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[TS]], ptr align 4 [[ARGP_CUR4]], i32 4, i1 false)
+// CHECK-NEXT:    [[ARGP_CUR6:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT7:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR6]], i32 8
+// CHECK-NEXT:    store ptr [[ARGP_NEXT7]], ptr [[VA]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[SS]], ptr align 4 [[ARGP_CUR6]], i32 8, i1 false)
+// CHECK-NEXT:    [[ARGP_CUR8:%.*]] = load ptr, ptr [[VA]], align 4
+// CHECK-NEXT:    [[ARGP_NEXT9:%.*]] = getelementptr inbounds i8, ptr [[ARGP_CUR8]], i32 16
+// CHECK-NEXT:    store ptr [[ARGP_NEXT9]], ptr [[VA]], align 4
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[LS]], ptr align 4 [[ARGP_CUR8]], i32 16, i1 false)
+// CHECK-NEXT:    call void @llvm.va_end(ptr [[VA]])
 int f_va_4(char *fmt, ...) {
   __builtin_va_list va;
 

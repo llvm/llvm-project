@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-threads
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 #include <cassert>
 #include <thread>
 

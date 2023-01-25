@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 struct X {
   X();
   ~X();
@@ -13,7 +13,7 @@ struct Y {
 void f(int argc, const char* argv[]) {
   // CHECK: call void @_ZN1XC1Ev
   X x;
-  // CHECK: call i8* @llvm.stacksave(
+  // CHECK: call ptr @llvm.stacksave(
   const char *argv2[argc];
   // CHECK: call void @_ZN1YC1Ev
   Y y;

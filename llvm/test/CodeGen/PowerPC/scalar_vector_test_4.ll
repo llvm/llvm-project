@@ -22,7 +22,7 @@
 ; RUN:    --check-prefixes=AIX,P8-AIX-32
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @s2v_test1(i32* nocapture readonly %int32, <4 x i32> %vec)  {
+define <4 x i32> @s2v_test1(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P9LE-LABEL: s2v_test1:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lwz r3, 0(r3)
@@ -82,13 +82,13 @@ define <4 x i32> @s2v_test1(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load i32, i32* %int32, align 4
+  %0 = load i32, ptr %int32, align 4
   %vecins = insertelement <4 x i32> %vec, i32 %0, i32 0
   ret <4 x i32> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @s2v_test2(i32* nocapture readonly %int32, <4 x i32> %vec)  {
+define <4 x i32> @s2v_test2(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P9LE-LABEL: s2v_test2:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lwz r3, 4(r3)
@@ -151,14 +151,14 @@ define <4 x i32> @s2v_test2(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %int32, i64 1
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %int32, i64 1
+  %0 = load i32, ptr %arrayidx, align 4
   %vecins = insertelement <4 x i32> %vec, i32 %0, i32 0
   ret <4 x i32> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @s2v_test3(i32* nocapture readonly %int32, <4 x i32> %vec, i32 signext %Idx)  {
+define <4 x i32> @s2v_test3(ptr nocapture readonly %int32, <4 x i32> %vec, i32 signext %Idx)  {
 ; P9LE-LABEL: s2v_test3:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r7, 2
@@ -234,14 +234,14 @@ define <4 x i32> @s2v_test3(i32* nocapture readonly %int32, <4 x i32> %vec, i32 
 ; P8-AIX-32-NEXT:    blr
 entry:
   %idxprom = sext i32 %Idx to i64
-  %arrayidx = getelementptr inbounds i32, i32* %int32, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %int32, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %vecins = insertelement <4 x i32> %vec, i32 %0, i32 0
   ret <4 x i32> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @s2v_test4(i32* nocapture readonly %int32, <4 x i32> %vec)  {
+define <4 x i32> @s2v_test4(ptr nocapture readonly %int32, <4 x i32> %vec)  {
 ; P9LE-LABEL: s2v_test4:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lwz r3, 4(r3)
@@ -304,14 +304,14 @@ define <4 x i32> @s2v_test4(i32* nocapture readonly %int32, <4 x i32> %vec)  {
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %int32, i64 1
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %int32, i64 1
+  %0 = load i32, ptr %arrayidx, align 4
   %vecins = insertelement <4 x i32> %vec, i32 %0, i32 0
   ret <4 x i32> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @s2v_test5(<4 x i32> %vec, i32* nocapture readonly %ptr1)  {
+define <4 x i32> @s2v_test5(<4 x i32> %vec, ptr nocapture readonly %ptr1)  {
 ; P9LE-LABEL: s2v_test5:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lwz r3, 0(r5)
@@ -371,13 +371,13 @@ define <4 x i32> @s2v_test5(<4 x i32> %vec, i32* nocapture readonly %ptr1)  {
 ; P8-AIX-32-NEXT:    vperm v2, v4, v2, v3
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load i32, i32* %ptr1, align 4
+  %0 = load i32, ptr %ptr1, align 4
   %vecins = insertelement <4 x i32> %vec, i32 %0, i32 0
   ret <4 x i32> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec)  {
+define <4 x float> @s2v_test_f1(ptr nocapture readonly %f64, <4 x float> %vec)  {
 ; P9LE-LABEL: s2v_test_f1:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lwz r3, 0(r3)
@@ -434,13 +434,13 @@ define <4 x float> @s2v_test_f1(float* nocapture readonly %f64, <4 x float> %vec
 ; P8-AIX-32-NEXT:    vperm v2, v3, v2, v4
 ; P8-AIX-32-NEXT:    blr
 entry:
-  %0 = load float, float* %f64, align 4
+  %0 = load float, ptr %f64, align 4
   %vecins = insertelement <4 x float> %vec, float %0, i32 0
   ret <4 x float> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x float> @s2v_test_f2(float* nocapture readonly %f64, <2 x float> %vec)  {
+define <2 x float> @s2v_test_f2(ptr nocapture readonly %f64, <2 x float> %vec)  {
 ; P9LE-LABEL: s2v_test_f2:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addi r3, r3, 4
@@ -478,14 +478,14 @@ define <2 x float> @s2v_test_f2(float* nocapture readonly %f64, <2 x float> %vec
 ; AIX-NEXT:    vmrgow v2, v3, v2
 ; AIX-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %f64, i64 1
-  %0 = load float, float* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds float, ptr %f64, i64 1
+  %0 = load float, ptr %arrayidx, align 8
   %vecins = insertelement <2 x float> %vec, float %0, i32 0
   ret <2 x float> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec, i32 signext %Idx)  {
+define <2 x float> @s2v_test_f3(ptr nocapture readonly %f64, <2 x float> %vec, i32 signext %Idx)  {
 ; P9LE-LABEL: s2v_test_f3:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r7, 2
@@ -545,14 +545,14 @@ define <2 x float> @s2v_test_f3(float* nocapture readonly %f64, <2 x float> %vec
 ; P8-AIX-32-NEXT:    blr
 entry:
   %idxprom = sext i32 %Idx to i64
-  %arrayidx = getelementptr inbounds float, float* %f64, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds float, ptr %f64, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 8
   %vecins = insertelement <2 x float> %vec, float %0, i32 0
   ret <2 x float> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x float> @s2v_test_f4(float* nocapture readonly %f64, <2 x float> %vec)  {
+define <2 x float> @s2v_test_f4(ptr nocapture readonly %f64, <2 x float> %vec)  {
 ; P9LE-LABEL: s2v_test_f4:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    addi r3, r3, 4
@@ -590,14 +590,14 @@ define <2 x float> @s2v_test_f4(float* nocapture readonly %f64, <2 x float> %vec
 ; AIX-NEXT:    vmrgow v2, v3, v2
 ; AIX-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %f64, i64 1
-  %0 = load float, float* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds float, ptr %f64, i64 1
+  %0 = load float, ptr %arrayidx, align 8
   %vecins = insertelement <2 x float> %vec, float %0, i32 0
   ret <2 x float> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x float> @s2v_test_f5(<2 x float> %vec, float* nocapture readonly %ptr1)  {
+define <2 x float> @s2v_test_f5(<2 x float> %vec, ptr nocapture readonly %ptr1)  {
 ; P9LE-LABEL: s2v_test_f5:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfiwzx f0, 0, r5
@@ -630,7 +630,7 @@ define <2 x float> @s2v_test_f5(<2 x float> %vec, float* nocapture readonly %ptr
 ; AIX-NEXT:    vmrgow v2, v3, v2
 ; AIX-NEXT:    blr
 entry:
-  %0 = load float, float* %ptr1, align 8
+  %0 = load float, ptr %ptr1, align 8
   %vecins = insertelement <2 x float> %vec, float %0, i32 0
   ret <2 x float> %vecins
 }

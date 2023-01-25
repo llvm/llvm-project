@@ -29,14 +29,12 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
 
     ADDITIONAL_HEADER_DIRS
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
     ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR}
 
     LINK_LIBS
     PRIVATE
     elf_common
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${additional_libs}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs"
 
@@ -46,18 +44,17 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
   # Install plugin under the lib destination folder.
   install(TARGETS  "omptarget.rtl.${tmachine_libname}" LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES 
-    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+    CXX_VISIBILITY_PRESET protected)
 
   target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
     ${LIBOMPTARGET_INCLUDE_DIR}
-    ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR}
     ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
 
   target_link_libraries(
     "omptarget.rtl.${tmachine_libname}"
     elf_common
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-    ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
     ${additional_libs}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs")
 

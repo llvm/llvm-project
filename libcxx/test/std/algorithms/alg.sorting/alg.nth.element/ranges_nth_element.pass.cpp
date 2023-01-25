@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <algorithm>
 
-// template<random_­access_­iterator I, sentinel_­for<I> S, class Comp = ranges::less,
+// template<random_access_iterator I, sentinel_for<I> S, class Comp = ranges::less,
 //         class Proj = identity>
 //   requires sortable<I, Comp, Proj>
 //   constexpr I
 //     ranges::nth_element(I first, I nth, S last, Comp comp = {}, Proj proj = {});            // since C++20
 //
-// template<random_­access_­range R, class Comp = ranges::less, class Proj = identity>
+// template<random_access_range R, class Comp = ranges::less, class Proj = identity>
 //   requires sortable<iterator_t<R>, Comp, Proj>
 //   constexpr borrowed_iterator_t<R>
 //     ranges::nth_element(R&& r, iterator_t<R> nth, Comp comp = {}, Proj proj = {});          // since C++20

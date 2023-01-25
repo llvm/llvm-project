@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -83,8 +84,7 @@ ValueObjectMemory::ValueObjectMemory(ExecutionContextScope *exe_scope,
     : ValueObject(exe_scope, manager), m_address(address), m_type_sp(),
       m_compiler_type(ast_type) {
   // Do not attempt to construct one of these objects with no variable!
-  assert(m_compiler_type.GetTypeSystem());
-  assert(m_compiler_type.GetOpaqueQualType());
+  assert(m_compiler_type.IsValid());
 
   TargetSP target_sp(GetTargetSP());
 
@@ -139,7 +139,7 @@ size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
   return child_count <= max ? child_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectMemory::GetByteSize() {
+std::optional<uint64_t> ValueObjectMemory::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
   if (m_type_sp)
     return m_type_sp->GetByteSize(exe_ctx.GetBestExecutionContextScope());

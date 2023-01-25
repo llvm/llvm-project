@@ -19,7 +19,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.fmuladd.f32(float, float, float) #0
 
 ; CHECK: s_endpgm
-define amdgpu_kernel void @foo(float addrspace(1)* noalias nocapture readonly %arg, float addrspace(1)* noalias nocapture readonly %arg1, float addrspace(1)* noalias nocapture %arg2, float %arg3) local_unnamed_addr !reqd_work_group_size !0 {
+define amdgpu_kernel void @foo(ptr addrspace(1) noalias nocapture readonly %arg, ptr addrspace(1) noalias nocapture readonly %arg1, ptr addrspace(1) noalias nocapture %arg2, float %arg3) local_unnamed_addr !reqd_work_group_size !0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.y()
   %tmp4 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -28,7 +28,6 @@ bb:
   %tmp7 = sub i32 %tmp6, 0
   %tmp8 = add i32 %tmp7, 0
   %tmp9 = add i32 %tmp8, 0
-  %tmp10 = getelementptr inbounds [462 x float], [462 x float] addrspace(3)* @0, i32 0, i32 0
   br label %bb12
 
 bb11:                                             ; preds = %bb30
@@ -58,8 +57,8 @@ bb17:                                             ; preds = %bb13
 bb21:                                             ; preds = %bb21, %bb17
   %tmp22 = phi i32 [ %tmp4, %bb17 ], [ %tmp25, %bb21 ]
   %tmp23 = add i32 %tmp22, %tmp16
-  %tmp24 = getelementptr inbounds float, float addrspace(3)* %tmp10, i32 %tmp23
-  store float undef, float addrspace(3)* %tmp24, align 4
+  %tmp24 = getelementptr inbounds float, ptr addrspace(3) @0, i32 %tmp23
+  store float undef, ptr addrspace(3) %tmp24, align 4
   %tmp25 = add nuw i32 %tmp22, 8
   br i1 undef, label %bb21, label %.loopexit
 
@@ -77,8 +76,8 @@ bb30:                                             ; preds = %bb31
 
 bb31:                                             ; preds = %bb31, %bb26
   %tmp32 = phi i32 [ %tmp9, %bb26 ], [ undef, %bb31 ]
-  %tmp33 = getelementptr inbounds [462 x float], [462 x float] addrspace(3)* @0, i32 0, i32 %tmp32
-  %tmp34 = load float, float addrspace(3)* %tmp33, align 4
+  %tmp33 = getelementptr inbounds [462 x float], ptr addrspace(3) @0, i32 0, i32 %tmp32
+  %tmp34 = load float, ptr addrspace(3) %tmp33, align 4
   %tmp35 = tail call float @llvm.fmuladd.f32(float %tmp34, float undef, float undef)
   %tmp36 = tail call float @llvm.fmuladd.f32(float undef, float undef, float %tmp35)
   br i1 undef, label %bb30, label %bb31

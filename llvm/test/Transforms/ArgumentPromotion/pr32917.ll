@@ -7,29 +7,29 @@
 
 define i32 @fn2() local_unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@fn2() local_unnamed_addr {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @b, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to i32*
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, i32* [[TMP3]], i64 -1
-; CHECK-NEXT:    [[DOTVAL:%.*]] = load i32, i32* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i64 -4
+; CHECK-NEXT:    [[DOTVAL:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    call fastcc void @fn1(i32 [[DOTVAL]])
 ; CHECK-NEXT:    ret i32 undef
 ;
-  %1 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @b, align 4
   %2 = sext i32 %1 to i64
-  %3 = inttoptr i64 %2 to i32*
-  call fastcc void @fn1(i32* %3)
+  %3 = inttoptr i64 %2 to ptr
+  call fastcc void @fn1(ptr %3)
   ret i32 undef
 }
 
-define internal fastcc void @fn1(i32* nocapture readonly) unnamed_addr {
+define internal fastcc void @fn1(ptr nocapture readonly) unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@fn1
 ; CHECK-SAME: (i32 [[DOT_4_VAL:%.*]]) unnamed_addr {
-; CHECK-NEXT:    store i32 [[DOT_4_VAL]], i32* @a, align 4
+; CHECK-NEXT:    store i32 [[DOT_4_VAL]], ptr @a, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %2 = getelementptr inbounds i32, i32* %0, i64 -1
-  %3 = load i32, i32* %2, align 4
-  store i32 %3, i32* @a, align 4
+  %2 = getelementptr inbounds i32, ptr %0, i64 -1
+  %3 = load i32, ptr %2, align 4
+  store i32 %3, ptr @a, align 4
   ret void
 }

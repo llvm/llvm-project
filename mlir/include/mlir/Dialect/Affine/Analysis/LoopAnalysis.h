@@ -15,7 +15,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace mlir {
 
@@ -37,10 +37,10 @@ class Value;
 void getTripCountMapAndOperands(AffineForOp forOp, AffineMap *map,
                                 SmallVectorImpl<Value> *operands);
 
-/// Returns the trip count of the loop if it's a constant, None otherwise. This
-/// uses affine expression analysis and is able to determine constant trip count
-/// in non-trivial cases.
-Optional<uint64_t> getConstantTripCount(AffineForOp forOp);
+/// Returns the trip count of the loop if it's a constant, std::nullopt
+/// otherwise. This uses affine expression analysis and is able to determine
+/// constant trip count in non-trivial cases.
+std::optional<uint64_t> getConstantTripCount(AffineForOp forOp);
 
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and

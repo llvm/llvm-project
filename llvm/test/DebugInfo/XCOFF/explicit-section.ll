@@ -15,7 +15,7 @@ entry:
 define i32 @main() #0 section "explicit_main_sec" !dbg !14 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   %call = call i32 @bar(), !dbg !15
   ret i32 %call, !dbg !16
 }
@@ -94,9 +94,9 @@ entry:
 ; CHECK-NEXT:  # %bb.0:                                # %entry
 ; CHECK-NEXT:  L..tmp3:
 ; CHECK-NEXT:          mflr 0
-; CHECK-NEXT:          stw 0, 8(1)
 ; CHECK-NEXT:          stwu 1, -64(1)
 ; CHECK-NEXT:          li 3, 0
+; CHECK-NEXT:          stw 0, 72(1)
 ; CHECK-NEXT:          stw 3, 60(1)
 ; CHECK-NEXT:  L..tmp4:
 ; CHECK-NEXT:  L..tmp5:

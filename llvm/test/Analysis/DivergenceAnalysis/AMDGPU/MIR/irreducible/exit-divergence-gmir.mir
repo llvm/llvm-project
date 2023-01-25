@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# CHECK-LABEL: MachineUniformityInfo for function: basic
+# CHECK-NOT: CYCLES ASSSUMED DIVERGENT:
+# CHECK: CYCLES WITH DIVERGENT EXIT:
+# CHECK: depth=1: entries(bb.1 bb.3) bb.2
+
+---
+name:            basic
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.3, %bb.1
+
+    %0:_(s32) = G_CONSTANT i32 0
+    %1:_(s32) = G_CONSTANT i32 1
+
+    %2:_(s32) = G_IMPLICIT_DEF
+    %3:_(s32) = G_IMPLICIT_DEF
+
+    %6:_(s1) = G_ICMP intpred(slt), %2(s32), %0(s32) ;uniform condition
+    %7:_(s1) = G_ICMP intpred(eq), %4(s32), %0 ;divergent condition
+    %4:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+    G_BRCOND %6(s1), %bb.3
+    G_BR %bb.1
+
+  bb.1:
+    successors: %bb.2
+
+    %8:_(s32) = G_PHI %2(s32), %bb.0, %3(s32), %bb.3
+    %10:_(s32) = G_PHI %2(s32), %bb.0, %16(s32), %bb.3
+    %9:_(s32) = G_ADD %3(s32), %1(s32)
+    G_BR %bb.2
+
+  bb.2:
+    successors: %bb.3, %bb.4
+
+    %13:_(s32) = G_ADD %3(s32), %1(s32)
+    %14:_(s32) = G_ADD %10(s32), %1(s32)
+    %15:_(s32) = G_ADD %10(s32), %1(s32)
+
+    G_BRCOND %7(s1), %bb.3
+    G_BR %bb.4
+
+  bb.3:
+    successors: %bb.1
+    %16:_(s32) = G_PHI %13(s32), %bb.2, %2(s32), %bb.0
+    %17:_(s32) = G_ADD %3(s32), %1(s32)
+    G_BR %bb.1
+  bb.4:
+    ; CHECK-LABEL: bb.4
+    ; CHECK: DIVERGENT:
+    ; CHECK: DIVERGENT:
+    ; CHECK-NOT: DIVERGENT:
+    %18:_(s32) = G_ADD %8(s32), %3(s32)
+    %19:_(s32) = G_ADD %8(s32), %3(s32)
+    %20:_(s32) = G_ADD %3(s32), %1(s32)
+    S_ENDPGM 0
+...

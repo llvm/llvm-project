@@ -22,11 +22,11 @@ define dso_local i32 @vec_caller() {
 ; 32BIT-LABEL: vec_caller:
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    mflr 0
-; 32BIT-NEXT:    stw 0, 8(1)
 ; 32BIT-NEXT:    stwu 1, -64(1)
 ; 32BIT-NEXT:    lwz 3, L..C0(2)
 ; 32BIT-NEXT:    lwz 4, L..C1(2)
 ; 32BIT-NEXT:    xxlxor 34, 34, 34
+; 32BIT-NEXT:    stw 0, 72(1)
 ; 32BIT-NEXT:    xxlxor 35, 35, 35
 ; 32BIT-NEXT:    xxlxor 36, 36, 36
 ; 32BIT-NEXT:    lxvw4x 0, 0, 3
@@ -55,11 +55,11 @@ define dso_local i32 @vec_caller() {
 ; 64BIT-LABEL: vec_caller:
 ; 64BIT:       # %bb.0: # %entry
 ; 64BIT-NEXT:    mflr 0
-; 64BIT-NEXT:    std 0, 16(1)
 ; 64BIT-NEXT:    stdu 1, -112(1)
 ; 64BIT-NEXT:    ld 3, L..C0(2)
 ; 64BIT-NEXT:    ld 4, L..C1(2)
 ; 64BIT-NEXT:    xxlxor 34, 34, 34
+; 64BIT-NEXT:    std 0, 128(1)
 ; 64BIT-NEXT:    xxlxor 35, 35, 35
 ; 64BIT-NEXT:    xxlxor 36, 36, 36
 ; 64BIT-NEXT:    lxvw4x 0, 0, 3
@@ -91,7 +91,7 @@ define dso_local i32 @vec_caller() {
 ; LITERAL-NEXT:    .tc L..CPI0_1[TC],L..CPI0_1
 
 entry:
-  %call = call i32 bitcast (i32 (...)* @vec_callee_stack to i32 (<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>)*)(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 49, i32 50, i32 51, i32 52>, <4 x i32> <i32 53, i32 54, i32 55, i32 56>)
+  %call = call i32 @vec_callee_stack(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32> <i32 49, i32 50, i32 51, i32 52>, <4 x i32> <i32 53, i32 54, i32 55, i32 56>)
   ret i32 %call
 }
 

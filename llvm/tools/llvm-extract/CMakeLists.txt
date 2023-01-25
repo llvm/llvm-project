@@ -1,8 +1,11 @@
 set(LLVM_LINK_COMPONENTS
+  Analysis
   BitWriter
   Core
   IPO
   IRReader
+  IRPrinter
+  Passes
   Support
   )
 

@@ -9,7 +9,7 @@ define arm_aapcs_vfpcc void @push_out_add_sub_block(i32* noalias nocapture reado
 ; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> <i32 0, i32 2, i32 4, i32 6>, <i32 6, i32 6, i32 6, i32 6>
 ; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 32, i32 32, i32 32, i32 32>
@@ -70,7 +70,7 @@ define arm_aapcs_vfpcc void @push_out_mul_sub_block(i32* noalias nocapture reado
 ; CHECK-NEXT:    [[PUSHEDOUTADD:%.*]] = add <4 x i32> [[PUSHEDOUTMUL]], <i32 6, i32 6, i32 6, i32 6>
 ; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[PUSHEDOUTADD]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[PREINCREMENTSTARTINDEX:%.*]] = sub <4 x i32> [[STARTINDEX]], <i32 96, i32 96, i32 96, i32 96>
@@ -139,7 +139,7 @@ define arm_aapcs_vfpcc void @push_out_mul_sub_loop(i32* noalias nocapture readon
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul <4 x i32> [[VEC_IND]], <i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    [[SCALEDINDEX:%.*]] = shl <4 x i32> [[TMP0]], <i32 2, i32 2, i32 2, i32 2>
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[DATA:%.*]] to i32
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i32 0
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[STARTINDEX:%.*]] = add <4 x i32> [[SCALEDINDEX]], [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.arm.mve.vldr.gather.base.v4i32.v4i32(<4 x i32> [[STARTINDEX]], i32 24)

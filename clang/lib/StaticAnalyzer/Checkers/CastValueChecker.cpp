@@ -24,7 +24,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;
@@ -472,7 +472,7 @@ bool CastValueChecker::evalCall(const CallEvent &Call,
   const CastCheck &Check = Lookup->first;
   CallKind Kind = Lookup->second;
 
-  Optional<DefinedOrUnknownSVal> DV;
+  std::optional<DefinedOrUnknownSVal> DV;
 
   switch (Kind) {
   case CallKind::Function: {

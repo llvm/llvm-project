@@ -4,7 +4,7 @@
 
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
 ; THUMB-LABEL: test_basic:
@@ -63,13 +63,13 @@ define void @test_basic() #0 {
 ; ARM-NEXT:    add sp, sp, #40
 ; ARM-NEXT:    pop {r11, pc}
   %mem = alloca i32, i32 10
-  call void @dummy_use (i32* %mem, i32 10)
+  call void @dummy_use (ptr %mem, i32 10)
   ret void
 }
 
 define void @test_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; THUMB-LABEL:   test_large:
@@ -123,7 +123,7 @@ define void @test_large() #0 {
 
 define fastcc void @test_fastcc_large() #0 {
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 0)
+        call void @dummy_use (ptr %mem, i32 0)
         ret void
 
 ; THUMB-LABEL:   test_fastcc_large:

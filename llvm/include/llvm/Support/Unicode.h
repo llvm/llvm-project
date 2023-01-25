@@ -14,8 +14,8 @@
 #ifndef LLVM_SUPPORT_UNICODE_H
 #define LLVM_SUPPORT_UNICODE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -67,14 +67,14 @@ int foldCharSimple(int C);
 /// For compatibility with the semantics of named character escape sequences in
 /// C++, this mapping does an exact match sensitive to casing and spacing.
 /// \return The codepoint of the corresponding character, if any.
-Optional<char32_t> nameToCodepointStrict(StringRef Name);
+std::optional<char32_t> nameToCodepointStrict(StringRef Name);
 
 struct LooseMatchingResult {
   char32_t CodePoint;
   SmallString<64> Name;
 };
 
-Optional<LooseMatchingResult> nameToCodepointLooseMatching(StringRef Name);
+std::optional<LooseMatchingResult> nameToCodepointLooseMatching(StringRef Name);
 
 struct MatchForCodepointName {
   std::string Name;

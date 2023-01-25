@@ -12,10 +12,9 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -60,7 +59,7 @@ private:
   /// \returns \c true if the next token after the given \p MacroLoc is \b not a
   /// semicolon.
   bool shouldAppendSemi(SourceRange MacroLoc) {
-    llvm::Optional<Token> Next = Lexer::findNextToken(
+    std::optional<Token> Next = Lexer::findNextToken(
         MacroLoc.getEnd(), PP.getSourceManager(), PP.getLangOpts());
     return !(Next && Next->is(tok::semi));
   }
@@ -87,6 +86,4 @@ void ReplaceDisallowCopyAndAssignMacroCheck::storeOptions(
   Options.store(Opts, "MacroName", MacroName);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

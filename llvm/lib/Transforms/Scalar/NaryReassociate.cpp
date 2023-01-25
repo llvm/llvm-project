@@ -403,8 +403,9 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   // Replace the I-th index with LHS.
   IndexExprs[I] = SE->getSCEV(LHS);
   if (isKnownNonNegative(LHS, *DL, 0, AC, GEP, DT) &&
-      DL->getTypeSizeInBits(LHS->getType()).getFixedSize() <
-          DL->getTypeSizeInBits(GEP->getOperand(I)->getType()).getFixedSize()) {
+      DL->getTypeSizeInBits(LHS->getType()).getFixedValue() <
+          DL->getTypeSizeInBits(GEP->getOperand(I)->getType())
+              .getFixedValue()) {
     // Zero-extend LHS if it is non-negative. InstCombine canonicalizes sext to
     // zext if the source operand is proved non-negative. We should do that
     // consistently so that CandidateExpr more likely appears before. See
@@ -576,13 +577,13 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
 }
 
 template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
-  if (std::is_same<smax_pred_ty, typename MaxMinT::PredType>::value)
+  if (std::is_same_v<smax_pred_ty, typename MaxMinT::PredType>)
     return scSMaxExpr;
-  else if (std::is_same<umax_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<umax_pred_ty, typename MaxMinT::PredType>)
     return scUMaxExpr;
-  else if (std::is_same<smin_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<smin_pred_ty, typename MaxMinT::PredType>)
     return scSMinExpr;
-  else if (std::is_same<umin_pred_ty, typename MaxMinT::PredType>::value)
+  else if (std::is_same_v<umin_pred_ty, typename MaxMinT::PredType>)
     return scUMinExpr;
 
   llvm_unreachable("Can't convert MinMax pattern to SCEV type");

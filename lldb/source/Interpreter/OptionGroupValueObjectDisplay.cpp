@@ -62,7 +62,7 @@ static const OptionDefinition g_option_table[] = {
 
 llvm::ArrayRef<OptionDefinition>
 OptionGroupValueObjectDisplay::GetDefinitions() {
-  return llvm::makeArrayRef(g_option_table);
+  return llvm::ArrayRef(g_option_table);
 }
 
 Status OptionGroupValueObjectDisplay::SetOptionValue(

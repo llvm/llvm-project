@@ -574,7 +574,7 @@ public:
     }
   };
 
-  virtual std::unique_ptr<MCInstMatcher>
+  std::unique_ptr<MCInstMatcher>
   matchAdd(std::unique_ptr<MCInstMatcher> A,
            std::unique_ptr<MCInstMatcher> B) const override {
     return std::unique_ptr<MCInstMatcher>(
@@ -612,7 +612,7 @@ public:
     }
   };
 
-  virtual std::unique_ptr<MCInstMatcher>
+  std::unique_ptr<MCInstMatcher>
   matchLoadAddr(std::unique_ptr<MCInstMatcher> Target) const override {
     return std::unique_ptr<MCInstMatcher>(new LEAMatcher(std::move(Target)));
   }
@@ -1002,7 +1002,7 @@ public:
         if (isUpper8BitReg(Operand.getReg()))
           return true;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return false;
     }
@@ -2588,7 +2588,7 @@ public:
     return Code;
   }
 
-  Optional<Relocation>
+  std::optional<Relocation>
   createRelocation(const MCFixup &Fixup,
                    const MCAsmBackend &MAB) const override {
     const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
@@ -2600,7 +2600,7 @@ public:
     if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
       switch (FKI.TargetSize) {
       default:
-        return NoneType();
+        return std::nullopt;
       case  8: RelType = ELF::R_X86_64_PC8; break;
       case 16: RelType = ELF::R_X86_64_PC16; break;
       case 32: RelType = ELF::R_X86_64_PC32; break;
@@ -2609,7 +2609,7 @@ public:
     } else {
       switch (FKI.TargetSize) {
       default:
-        return NoneType();
+        return std::nullopt;
       case  8: RelType = ELF::R_X86_64_8; break;
       case 16: RelType = ELF::R_X86_64_16; break;
       case 32: RelType = ELF::R_X86_64_32; break;
@@ -3594,7 +3594,7 @@ public:
 
         if (CallOrJmp.getOpcode() == X86::CALL64r ||
             CallOrJmp.getOpcode() == X86::CALL64pcrel32) {
-          if (Optional<uint32_t> Offset = getOffset(CallInst))
+          if (std::optional<uint32_t> Offset = getOffset(CallInst))
             // Annotated as duplicated call
             setOffset(CallOrJmp, *Offset);
         }
@@ -3602,7 +3602,7 @@ public:
         if (isInvoke(CallInst) && !isInvoke(CallOrJmp)) {
           // Copy over any EH or GNU args size information from the original
           // call.
-          Optional<MCPlus::MCLandingPad> EHInfo = getEHInfo(CallInst);
+          std::optional<MCPlus::MCLandingPad> EHInfo = getEHInfo(CallInst);
           if (EHInfo)
             addEHInfo(CallOrJmp, *EHInfo);
           int64_t GnuArgsSize = getGnuArgsSize(CallInst);

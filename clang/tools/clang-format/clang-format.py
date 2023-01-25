@@ -10,9 +10,9 @@
 #     imap <C-I> <c-o>:py3f <path-to-this-file>/clang-format.py<cr>
 #   endif
 #
-# The if-elseif-endif conditional should pick either the python3 or python2 
+# The if-elseif-endif conditional should pick either the python3 or python2
 # integration depending on your vim setup.
-# 
+#
 # The first mapping enables clang-format for NORMAL and VISUAL mode, the second
 # mapping adds support for INSERT mode. Change "C-I" to another binding if you
 # need clang-format on a different key (C-I stands for Ctrl+i).
@@ -41,6 +41,7 @@ from __future__ import absolute_import, division, print_function
 
 import difflib
 import json
+import os.path
 import platform
 import subprocess
 import sys
@@ -76,7 +77,8 @@ def main():
   # Determine range to format.
   if vim.eval('exists("l:lines")') == '1':
     lines = ['-lines', vim.eval('l:lines')]
-  elif vim.eval('exists("l:formatdiff")') == '1':
+  elif vim.eval('exists("l:formatdiff")') == '1' and \
+       os.path.exists(vim.current.buffer.name):
     with open(vim.current.buffer.name, 'r') as f:
       ondisk = f.read().splitlines();
     sequence = difflib.SequenceMatcher(None, ondisk, vim.current.buffer)
@@ -134,7 +136,7 @@ def main():
     )
   else:
     header, content = stdout.split(b'\n', 1)
-    header = json.loads(header)
+    header = json.loads(header.decode('utf-8'))
     # Strip off the trailing newline (added above).
     # This maintains trailing empty lines present in the buffer if
     # the -lines specification requests them to remain unchanged.

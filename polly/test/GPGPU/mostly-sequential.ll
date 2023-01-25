@@ -43,7 +43,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A) {
+define void @foo(ptr %A) {
 bb:
   br label %bb3
 
@@ -54,10 +54,10 @@ bb3:                                              ; preds = %bb8, %bb
 
 bb4:                                              ; preds = %bb3
   %tmp = sitofp i64 %i.0 to float
-  %tmp5 = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp6 = load float, float* %tmp5, align 4
+  %tmp5 = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp6 = load float, ptr %tmp5, align 4
   %tmp7 = fadd float %tmp6, %tmp
-  store float %tmp7, float* %tmp5, align 4
+  store float %tmp7, ptr %tmp5, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb4
@@ -83,10 +83,10 @@ bb13:                                             ; preds = %bb20, %bb12
 bb14:                                             ; preds = %bb13
   %tmp15 = add nuw nsw i64 %i1.0, %j.0
   %tmp16 = sitofp i64 %tmp15 to float
-  %tmp17 = getelementptr inbounds float, float* %A, i64 42
-  %tmp18 = load float, float* %tmp17, align 4
+  %tmp17 = getelementptr inbounds float, ptr %A, i64 42
+  %tmp18 = load float, ptr %tmp17, align 4
   %tmp19 = fadd float %tmp18, %tmp16
-  store float %tmp19, float* %tmp17, align 4
+  store float %tmp19, ptr %tmp17, align 4
   br label %bb20
 
 bb20:                                             ; preds = %bb14

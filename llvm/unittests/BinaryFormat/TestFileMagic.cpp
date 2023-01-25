@@ -128,7 +128,7 @@ TEST_F(MagicTest, Magic) {
   };
 
   // Create some files filled with magic.
-  for (type *i = types, *e = types + (sizeof(types) / sizeof(type)); i != e;
+  for (type *i = types, *e = types + std::size(types); i != e;
        ++i) {
     SmallString<128> file_pathname(TestDirectory);
     llvm::sys::path::append(file_pathname, i->filename);

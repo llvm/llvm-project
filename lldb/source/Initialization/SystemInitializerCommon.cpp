@@ -12,8 +12,9 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Target/Statistics.h"
+#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Version/Version.h"
 
@@ -32,38 +33,12 @@
 #include <string>
 
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 SystemInitializerCommon::SystemInitializerCommon(
     HostInfo::SharedLibraryDirectoryHelper *helper)
     : m_shlib_dir_helper(helper) {}
 
 SystemInitializerCommon::~SystemInitializerCommon() = default;
-
-/// Initialize the FileSystem based on the current reproducer mode.
-static llvm::Error InitializeFileSystem() {
-  auto &r = repro::Reproducer::Instance();
-
-  if (repro::Generator *g = r.GetGenerator()) {
-    repro::VersionProvider &vp = g->GetOrCreate<repro::VersionProvider>();
-    vp.SetVersion(lldb_private::GetVersion());
-
-    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-
-    FileSystem::Initialize(llvm::FileCollector::createCollectorVFS(
-        llvm::vfs::getRealFileSystem(), fp.GetFileCollector()));
-
-    fp.RecordInterestingDirectory(
-        g->GetOrCreate<repro::WorkingDirectoryProvider>().GetDirectory());
-    fp.RecordInterestingDirectory(
-        g->GetOrCreate<repro::HomeDirectoryProvider>().GetDirectory());
-
-    return llvm::Error::success();
-  }
-
-  FileSystem::Initialize();
-  return llvm::Error::success();
-}
 
 llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_WIN32)
@@ -88,17 +63,10 @@ llvm::Error SystemInitializerCommon::Initialize() {
   }
 #endif
 
-  // If the reproducer wasn't initialized before, we can safely assume it's
-  // off.
-  if (!Reproducer::Initialized()) {
-    if (auto e = Reproducer::Initialize(ReproducerMode::Off, llvm::None))
-      return e;
-  }
-
-  if (auto e = InitializeFileSystem())
-    return e;
-
   InitializeLldbChannel();
+
+  Diagnostics::Initialize();
+  FileSystem::Initialize();
   HostInfo::Initialize(m_shlib_dir_helper);
 
   llvm::Error error = Socket::Initialize();
@@ -130,5 +98,5 @@ void SystemInitializerCommon::Terminate() {
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();
-  Reproducer::Terminate();
+  Diagnostics::Terminate();
 }

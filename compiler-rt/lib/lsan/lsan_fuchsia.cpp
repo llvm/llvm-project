@@ -68,7 +68,7 @@ void InitializeMainThread() {
 }
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
-  GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *arg) {
         auto ctx = static_cast<ThreadContext *>(tctx);
         static_cast<decltype(caches)>(arg)->push_back(ctx->cache_begin());
@@ -110,7 +110,7 @@ void __sanitizer_thread_create_hook(void *hook, thrd_t thread, int error) {
   // On success, there is nothing to do here.
   if (error != thrd_success) {
     // Clean up the thread registry for the thread creation that didn't happen.
-    GetThreadRegistryLocked()->FinishThread(tid);
+    GetLsanThreadRegistryLocked()->FinishThread(tid);
   }
 }
 

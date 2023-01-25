@@ -3,155 +3,142 @@
 
 @block = global [64 x [8192 x i8]] zeroinitializer, align 1
 
-define <2 x i8*> @vectorindex1() {
+define <2 x ptr> @vectorindex1() {
 ; CHECK-LABEL: @vectorindex1(
-; CHECK-NEXT:    ret <2 x i8*> getelementptr inbounds ([64 x [8192 x i8]], [64 x [8192 x i8]]* @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> zeroinitializer)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> zeroinitializer)
 ;
-  %1 = getelementptr inbounds [64 x [8192 x i8]], [64 x [8192 x i8]]* @block, i64 0, <2 x i64> <i64 0, i64 1>, i64 8192
-  ret <2 x i8*> %1
+  %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, <2 x i64> <i64 0, i64 1>, i64 8192
+  ret <2 x ptr> %1
 }
 
-define <2 x i8*> @vectorindex2() {
+define <2 x ptr> @vectorindex2() {
 ; CHECK-LABEL: @vectorindex2(
-; CHECK-NEXT:    ret <2 x i8*> getelementptr inbounds ([64 x [8192 x i8]], [64 x [8192 x i8]]* @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> <i64 8191, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 1, i64 2>, <2 x i64> <i64 8191, i64 1>)
 ;
-  %1 = getelementptr inbounds [64 x [8192 x i8]], [64 x [8192 x i8]]* @block, i64 0, i64 1, <2 x i64> <i64 8191, i64 8193>
-  ret <2 x i8*> %1
+  %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, i64 1, <2 x i64> <i64 8191, i64 8193>
+  ret <2 x ptr> %1
 }
 
-define <2 x i8*> @vectorindex3() {
+define <2 x ptr> @vectorindex3() {
 ; CHECK-LABEL: @vectorindex3(
-; CHECK-NEXT:    ret <2 x i8*> getelementptr inbounds ([64 x [8192 x i8]], [64 x [8192 x i8]]* @block, <2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 2>, <2 x i64> <i64 8191, i64 1>)
+; CHECK-NEXT:    ret <2 x ptr> getelementptr inbounds ([64 x [8192 x i8]], ptr @block, <2 x i64> zeroinitializer, <2 x i64> <i64 0, i64 2>, <2 x i64> <i64 8191, i64 1>)
 ;
-  %1 = getelementptr inbounds [64 x [8192 x i8]], [64 x [8192 x i8]]* @block, i64 0, <2 x i64> <i64 0, i64 1>, <2 x i64> <i64 8191, i64 8193>
-  ret <2 x i8*> %1
+  %1 = getelementptr inbounds [64 x [8192 x i8]], ptr @block, i64 0, <2 x i64> <i64 0, i64 1>, <2 x i64> <i64 8191, i64 8193>
+  ret <2 x ptr> %1
 }
 
 ; Negative test - datalayout's alloc size for the 2 types must match.
 
-define i32* @bitcast_vec_to_array_gep(<7 x i32>* %x, i64 %y, i64 %z) {
+define ptr @bitcast_vec_to_array_gep(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep(
-; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], [7 x i32]* [[ARR_PTR]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], ptr [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
-  %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
-  %gep = getelementptr [7 x i32], [7 x i32]* %arr_ptr, i64 %y, i64 %z
-  ret i32* %gep
+  %gep = getelementptr [7 x i32], ptr %x, i64 %y, i64 %z
+  ret ptr %gep
 }
 
 ; Negative test - datalayout's alloc size for the 2 types must match.
 
-define i32* @bitcast_array_to_vec_gep([3 x i32]* %x, i64 %y, i64 %z) {
+define ptr @bitcast_array_to_vec_gep(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep(
-; CHECK-NEXT:    [[VEC_PTR:%.*]] = bitcast [3 x i32]* [[X:%.*]] to <3 x i32>*
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <3 x i32>, <3 x i32>* [[VEC_PTR]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <3 x i32>, ptr [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
-  %vec_ptr = bitcast [3 x i32]* %x to <3 x i32>*
-  %gep = getelementptr inbounds <3 x i32>, <3 x i32>* %vec_ptr, i64 %y, i64 %z
-  ret i32* %gep
+  %gep = getelementptr inbounds <3 x i32>, ptr %x, i64 %y, i64 %z
+  ret ptr %gep
 }
 
 ; Sizes and types match - safe to remove bitcast.
 
-define i32* @bitcast_vec_to_array_gep_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+define ptr @bitcast_vec_to_array_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_gep_matching_alloc_size(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i32], ptr [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
-  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
-  %gep = getelementptr [4 x i32], [4 x i32]* %arr_ptr, i64 %y, i64 %z
-  ret i32* %gep
+  %gep = getelementptr [4 x i32], ptr %x, i64 %y, i64 %z
+  ret ptr %gep
 }
 
 ; Sizes and types match - safe to remove bitcast.
 
-define i32* @bitcast_array_to_vec_gep_matching_alloc_size([4 x i32]* %x, i64 %y, i64 %z) {
+define ptr @bitcast_array_to_vec_gep_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_array_to_vec_gep_matching_alloc_size(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32* [[GEP]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr [[GEP]]
 ;
-  %vec_ptr = bitcast [4 x i32]* %x to <4 x i32>*
-  %gep = getelementptr inbounds <4 x i32>, <4 x i32>* %vec_ptr, i64 %y, i64 %z
-  ret i32* %gep
+  %gep = getelementptr inbounds <4 x i32>, ptr %x, i64 %y, i64 %z
+  ret ptr %gep
 }
 
 ; Negative test - datalayout's alloc size for the 2 types must match.
 
-define i32 addrspace(3)* @bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, i64 %z) {
+define ptr addrspace(3) @bitcast_vec_to_array_addrspace(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace(
-; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
-; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast [7 x i32]* [[ARR_PTR]] to [7 x i32] addrspace(3)*
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], [7 x i32] addrspace(3)* [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32 addrspace(3)* [[GEP]]
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [7 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
-  %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
-  %asc = addrspacecast [7 x i32]* %arr_ptr to [7 x i32] addrspace(3)*
-  %gep = getelementptr [7 x i32], [7 x i32] addrspace(3)* %asc, i64 %y, i64 %z
-  ret i32 addrspace(3)* %gep
+  %asc = addrspacecast ptr %x to ptr addrspace(3)
+  %gep = getelementptr [7 x i32], ptr addrspace(3) %asc, i64 %y, i64 %z
+  ret ptr addrspace(3) %gep
 }
 
 ; Negative test - datalayout's alloc size for the 2 types must match.
 
-define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace(<7 x i32>* %x, i64 %y, i64 %z) {
+define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace(
-; CHECK-NEXT:    [[ARR_PTR:%.*]] = bitcast <7 x i32>* [[X:%.*]] to [7 x i32]*
-; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast [7 x i32]* [[ARR_PTR]] to [7 x i32] addrspace(3)*
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [7 x i32], [7 x i32] addrspace(3)* [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    ret i32 addrspace(3)* [[GEP]]
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [7 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
-  %arr_ptr = bitcast <7 x i32>* %x to [7 x i32]*
-  %asc = addrspacecast [7 x i32]* %arr_ptr to [7 x i32] addrspace(3)*
-  %gep = getelementptr inbounds [7 x i32], [7 x i32] addrspace(3)* %asc, i64 %y, i64 %z
-  ret i32 addrspace(3)* %gep
+  %asc = addrspacecast ptr %x to ptr addrspace(3)
+  %gep = getelementptr inbounds [7 x i32], ptr addrspace(3) %asc, i64 %y, i64 %z
+  ret ptr addrspace(3) %gep
 }
 
 ; Sizes and types match - safe to remove bitcast.
 
-define i32 addrspace(3)* @bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+define ptr addrspace(3) @bitcast_vec_to_array_addrspace_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @bitcast_vec_to_array_addrspace_matching_alloc_size(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
-; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
-  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
-  %asc = addrspacecast [4 x i32]* %arr_ptr to [4 x i32] addrspace(3)*
-  %gep = getelementptr [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
-  ret i32 addrspace(3)* %gep
+  %asc = addrspacecast ptr %x to ptr addrspace(3)
+  %gep = getelementptr [4 x i32], ptr addrspace(3) %asc, i64 %y, i64 %z
+  ret ptr addrspace(3) %gep
 }
 
 ; Sizes and types match - safe to remove bitcast.
 
-define i32 addrspace(3)* @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(<4 x i32>* %x, i64 %y, i64 %z) {
+define ptr addrspace(3) @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(ptr %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: @inbounds_bitcast_vec_to_array_addrspace_matching_alloc_size(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32>* [[X:%.*]], i64 [[Y:%.*]], i64 [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[GEP]] to i32 addrspace(3)*
-; CHECK-NEXT:    ret i32 addrspace(3)* [[TMP1]]
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr [[X:%.*]] to ptr addrspace(3)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i32], ptr addrspace(3) [[ASC]], i64 [[Y:%.*]], i64 [[Z:%.*]]
+; CHECK-NEXT:    ret ptr addrspace(3) [[GEP]]
 ;
-  %arr_ptr = bitcast <4 x i32>* %x to [4 x i32]*
-  %asc = addrspacecast [4 x i32]* %arr_ptr to [4 x i32] addrspace(3)*
-  %gep = getelementptr inbounds [4 x i32], [4 x i32] addrspace(3)* %asc, i64 %y, i64 %z
-  ret i32 addrspace(3)* %gep
+  %asc = addrspacecast ptr %x to ptr addrspace(3)
+  %gep = getelementptr inbounds [4 x i32], ptr addrspace(3) %asc, i64 %y, i64 %z
+  ret ptr addrspace(3) %gep
 }
 
-; Negative test - avoid doing bitcast on i8*, because '16' should be scaled by 'vscale'.
+; Negative test - avoid doing bitcast on ptr, because '16' should be scaled by 'vscale'.
 
-define i8* @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %pg, i8* %base) {
-; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero
-; CHECK-NEXT:   %bc = bitcast i8* %base to <vscale x 16 x i8>*
-; CHECK-NEXT:   %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 1, i64 4
-; CHECK-NEXT:   ret i8* %gep
-  %bc = bitcast i8* %base to <vscale x 16 x i8>*
-  %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 1, i64 4
-  ret i8* %gep
+define ptr @test_accumulate_constant_offset_vscale_nonzero(<vscale x 16 x i1> %pg, ptr %base) {
+; CHECK-LABEL: @test_accumulate_constant_offset_vscale_nonzero(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 1, i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 1, i64 4
+  ret ptr %gep
 }
 
-define i8* @test_accumulate_constant_offset_vscale_zero(<vscale x 16 x i1> %pg, i8* %base) {
-; CHECK-LABEL: @test_accumulate_constant_offset_vscale_zero
-; CHECK-NEXT:   %[[RES:.*]] = getelementptr i8, i8* %base, i64 4
-; CHECK-NEXT:   ret i8* %[[RES]]
-  %bc = bitcast i8* %base to <vscale x 16 x i8>*
-  %gep = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %bc, i64 0, i64 4
-  ret i8* %gep
+define ptr @test_accumulate_constant_offset_vscale_zero(<vscale x 16 x i1> %pg, ptr %base) {
+; CHECK-LABEL: @test_accumulate_constant_offset_vscale_zero(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr <vscale x 16 x i8>, ptr [[BASE:%.*]], i64 0, i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %gep = getelementptr <vscale x 16 x i8>, ptr %base, i64 0, i64 4
+  ret ptr %gep
 }

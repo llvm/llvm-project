@@ -1,14 +1,14 @@
-; RUN: opt < %s -indvars
+; RUN: opt < %s -passes=indvars
 ; PR2857
 
-@foo = external global i32		; <i32*> [#uses=1]
+@foo = external global i32		; <ptr> [#uses=1]
 
 define void @test(i32 %n, i32 %arg) {
 entry:
 	br i1 false, label %bb.nph, label %return
 
 bb.nph:		; preds = %entry
-	%0 = load i32, i32* @foo, align 4		; <i32> [#uses=1]
+	%0 = load i32, ptr @foo, align 4		; <i32> [#uses=1]
 	%1 = sext i32 %0 to i64		; <i64> [#uses=1]
 	br label %bb
 

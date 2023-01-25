@@ -8,19 +8,19 @@ define void @foo(ptr %a, ptr %b, ptr noalias %c, i64 %s) {
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %r9
-; CHECK-NEXT:    cmpq %rcx, %r9
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %body
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl $1, (%rdx,%r9,4)
-; CHECK-NEXT:    movzbl (%rdi,%r9,4), %r8d
-; CHECK-NEXT:    movzbl (%rsi,%r9,4), %eax
-; CHECK-NEXT:    andl %r8d, %eax
-; CHECK-NEXT:    andl $1, %eax
-; CHECK-NEXT:    movl %eax, (%rdi,%r9,4)
-; CHECK-NEXT:    incq %r9
-; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl $1, (%rdx,%rax,4)
+; CHECK-NEXT:    movzbl (%rdi,%rax,4), %r8d
+; CHECK-NEXT:    movzbl (%rsi,%rax,4), %r9d
+; CHECK-NEXT:    andl %r8d, %r9d
+; CHECK-NEXT:    andl $1, %r9d
+; CHECK-NEXT:    movl %r9d, (%rdi,%rax,4)
+; CHECK-NEXT:    incq %rax
+; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_3: # %endloop
 ; CHECK-NEXT:    retq

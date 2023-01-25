@@ -10,18 +10,17 @@ target triple = "hexagon"
 define i32 @foo(i32 %a) #0 {
 entry:
   %x = alloca i32, align 4
-  %x.0.x.0..sroa_cast = bitcast i32* %x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %x.0.x.0..sroa_cast)
-  store volatile i32 0, i32* %x, align 4
-  %call = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)() #0
-  %x.0.x.0. = load volatile i32, i32* %x, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
+  store volatile i32 0, ptr %x, align 4
+  %call = tail call i32 @bar() #0
+  %x.0.x.0. = load volatile i32, ptr %x, align 4
   %add = add nsw i32 %x.0.x.0., %a
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %x.0.x.0..sroa_cast)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
   ret i32 %add
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare i32 @bar(...) #0
 

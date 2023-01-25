@@ -20,6 +20,6 @@ define amdgpu_kernel void @stack_write_fi() {
 ; CHECK-NEXT:    s_endpgm
 entry:
   %alloca = alloca i64, align 4, addrspace(5)
-  store volatile i64 0, i64 addrspace(5)* %alloca, align 4
+  store volatile i64 0, ptr addrspace(5) %alloca, align 4
   ret void
 }

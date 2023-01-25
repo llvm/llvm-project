@@ -85,7 +85,7 @@ static_assert(f({}), "should be constexpr");
 
 A &forward_rval_as_lval() {
   std::forward<A&&>(A()); // expected-warning {{const attribute}}
-  return std::forward<A&>(A()); // expected-note {{instantiation of}}
+  return std::forward<A&>(A()); // expected-note {{instantiation of}} expected-warning {{returning reference}}
 }
 
 struct B {};

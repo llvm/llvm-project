@@ -41,7 +41,7 @@ define i32 @uxtb_2(i32 %x, i32 %y) {
   ret i32 %r
 }
 
-define void @uxth_loop(i32* %a, i32 %n) {
+define void @uxth_loop(ptr %a, i32 %n) {
 ; V6M-LABEL: uxth_loop:
 ; V6M:       .LBB4_1:
 ; V6M-NEXT:    ldrh r2, [r0]
@@ -54,10 +54,10 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i
-  %x = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i
+  %x = load i32, ptr %arrayidx
   %xn = and i32 %x, 65535
-  store i32 %xn, i32* %arrayidx
+  store i32 %xn, ptr %arrayidx
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -66,7 +66,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @uxth_loop_2(i32* %a, i32 %n) {
+define void @uxth_loop_2(ptr %a, i32 %n) {
 ; V6M-LABEL: uxth_loop_2:
 ; V6M:         .save {r4, lr}
 ; V6M-NEXT:    push {r4, lr}
@@ -85,12 +85,12 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i
-  %x = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i
+  %x = load i32, ptr %arrayidx
   %xn = and i32 %x, 65535
   %in = and i32 %i, 65535
   %s = mul i32 %xn, %in
-  store i32 %s, i32* %arrayidx
+  store i32 %s, ptr %arrayidx
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -99,7 +99,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @uxtb_loop(i32* %a, i32 %n) {
+define void @uxtb_loop(ptr %a, i32 %n) {
 ; V6M-LABEL: uxtb_loop:
 ; V6M:       .LBB6_1:
 ; V6M-NEXT:    ldrb r2, [r0]
@@ -112,10 +112,10 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i
-  %x = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i
+  %x = load i32, ptr %arrayidx
   %xn = and i32 %x, 255
-  store i32 %xn, i32* %arrayidx
+  store i32 %xn, ptr %arrayidx
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -124,7 +124,7 @@ for.cond.cleanup:
   ret void
 }
 
-define void @uxtb_loop_2(i32* %a, i32 %n) {
+define void @uxtb_loop_2(ptr %a, i32 %n) {
 ; V6M-LABEL: uxtb_loop_2:
 ; V6M:         .save {r4, lr}
 ; V6M-NEXT:    push {r4, lr}
@@ -143,12 +143,12 @@ entry:
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i
-  %x = load i32, i32* %arrayidx
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i
+  %x = load i32, ptr %arrayidx
   %xn = and i32 %x, 255
   %in = and i32 %i, 255
   %s = mul i32 %xn, %in
-  store i32 %s, i32* %arrayidx
+  store i32 %s, ptr %arrayidx
   %inc = add nuw nsw i32 %i, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

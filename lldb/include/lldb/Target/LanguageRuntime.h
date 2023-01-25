@@ -21,6 +21,7 @@
 #include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -150,8 +151,8 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
-    return llvm::None;
+  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+    return std::nullopt;
   }
 
   void ModulesDidLoad(const ModuleList &module_list) override {}

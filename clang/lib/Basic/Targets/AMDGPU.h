@@ -20,13 +20,13 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TargetParser.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
 
   enum AddrSpace {
@@ -95,17 +95,18 @@ public:
 
   void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
 
-  uint64_t getPointerWidthV(unsigned AddrSpace) const override {
+  uint64_t getPointerWidthV(LangAS AS) const override {
     if (isR600(getTriple()))
       return 32;
+    unsigned TargetAS = getTargetAddressSpace(AS);
 
-    if (AddrSpace == Private || AddrSpace == Local)
+    if (TargetAS == Private || TargetAS == Local)
       return 32;
 
     return 64;
   }
 
-  uint64_t getPointerAlignV(unsigned AddrSpace) const override {
+  uint64_t getPointerAlignV(LangAS AddrSpace) const override {
     return getPointerWidthV(AddrSpace);
   }
 
@@ -113,12 +114,15 @@ public:
     return getTriple().getArch() == llvm::Triple::amdgcn ? 64 : 32;
   }
 
+  bool hasBFloat16Type() const override { return isAMDGCN(getTriple()); }
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
+
   const char *getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   /// Accepted register names: (n, m is unsigned integer, n < m)
@@ -366,7 +370,7 @@ public:
     }
   }
 
-  llvm::Optional<LangAS> getConstantAddressSpace() const override {
+  std::optional<LangAS> getConstantAddressSpace() const override {
     return getLangASFromTargetAS(Constant);
   }
 
@@ -390,9 +394,9 @@ public:
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
   ///
-  /// \returns Otherwise return None and no conversion will be emitted in the
-  /// DWARF.
-  Optional<unsigned>
+  /// \returns Otherwise return std::nullopt and no conversion will be emitted
+  /// in the DWARF.
+  std::optional<unsigned>
   getDWARFAddressSpace(unsigned AddressSpace) const override {
     const unsigned DWARF_Private = 1;
     const unsigned DWARF_Local = 2;
@@ -401,7 +405,7 @@ public:
     } else if (AddressSpace == Local) {
       return DWARF_Local;
     } else {
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -449,9 +453,9 @@ public:
     return true;
   }
 
-  Optional<std::string> getTargetID() const override {
+  std::optional<std::string> getTargetID() const override {
     if (!isAMDGCN(getTriple()))
-      return llvm::None;
+      return std::nullopt;
     // When -target-cpu is not set, we assume generic code that it is valid
     // for all GPU and use an empty string as target ID to represent that.
     if (GPUKind == llvm::AMDGPU::GK_NONE)

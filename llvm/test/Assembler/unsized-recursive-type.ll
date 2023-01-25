@@ -3,7 +3,7 @@
 ; CHECK: base element of getelementptr must be sized
 
 %myTy = type { %myTy }
-define void @foo(%myTy* %p){
-  %0 = getelementptr %myTy, %myTy* %p, i32 0
+define void @foo(ptr %p){
+  getelementptr %myTy, ptr %p, i64 1
   ret void
 }

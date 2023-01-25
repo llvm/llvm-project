@@ -231,3 +231,12 @@ template <typename T> void bar() {
   foo<T>();
 // CHECK: [[@LINE-1]]:3 | function/C | foo | c:@FT@>1#Tfoo#v# | <no-cgname> | Ref,Call,RelCall,RelCont | rel: 1
 }
+
+struct Foo {
+  template <typename T> void bar();
+  // CHECK: [[@LINE-1]]:30 | instance-method/C++ | bar | c:@S@Foo@FT@>1#Tbar#v# | <no-cgname> | Decl,RelChild | rel: 1
+};
+template <typename T> void baz(Foo f) {
+  f.bar<T>();
+  // CHECK: [[@LINE-1]]:5 | instance-method/C++ | bar | c:@S@Foo@FT@>1#Tbar#v# | <no-cgname> | Ref,Call,RelCall,RelCont | rel: 1
+}

@@ -8,9 +8,7 @@
 
 #include "ExceptionAnalyzer.h"
 
-namespace clang {
-namespace tidy {
-namespace utils {
+namespace clang::tidy::utils {
 
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType) {
@@ -274,7 +272,4 @@ ExceptionAnalyzer::analyze(const Stmt *Stmt) {
   return analyzeDispatch(Stmt);
 }
 
-} // namespace utils
-} // namespace tidy
-
-} // namespace clang
+} // namespace clang::tidy::utils

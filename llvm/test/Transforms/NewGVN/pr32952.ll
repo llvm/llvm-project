@@ -7,7 +7,7 @@
 
 define i32 @tinkywinky() {
 entry:
-  %0 = load i16, i16* @a, align 2
+  %0 = load i16, ptr @a, align 2
   %conv = sext i16 %0 to i32
   %neg = xor i32 %conv, -1
   %conv1 = trunc i32 %neg to i16
@@ -16,7 +16,7 @@ entry:
   br i1 %cmp, label %tinky, label %winky
 
 tinky:
-  store i16 2, i16* @a, align 2
+  store i16 2, ptr @a, align 2
   br label %patatino
 
 winky:
@@ -34,9 +34,9 @@ end:
 ; CHECK: %other = zext i16 %meh to i32
   %promoted = zext i16 %banana to i32
   %other = zext i16 %meh to i32
-  %first = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %promoted)
-  %second = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i32 %other)
+  %first = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %promoted)
+  %second = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %other)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

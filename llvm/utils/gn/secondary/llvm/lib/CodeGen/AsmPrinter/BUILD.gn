@@ -13,6 +13,7 @@ static_library("AsmPrinter") {
     "//llvm/lib/Remarks",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "AIXException.cpp",

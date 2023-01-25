@@ -21,17 +21,17 @@ bb:
   br i1 undef, label %bb1, label %bb2
 
 bb1:
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 1), align 1
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 0), align 4
-  store i8 -1, i8* getelementptr inbounds (i8, i8* @a, i32 2), align 2
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 3), align 1
+  store i8 0, ptr getelementptr inbounds (i8, ptr @a, i32 1), align 1
+  store i8 0, ptr @a, align 4
+  store i8 -1, ptr getelementptr inbounds (i8, ptr @a, i32 2), align 2
+  store i8 0, ptr getelementptr inbounds (i8, ptr @a, i32 3), align 1
   br label %bb3
 
 bb2:
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 9), align 1
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 8), align 4
-  store i8 -1, i8* getelementptr inbounds (i8, i8* @a, i32 10), align 2
-  store i8 0, i8* getelementptr inbounds (i8, i8* @a, i32 11), align 1
+  store i8 0, ptr getelementptr inbounds (i8, ptr @a, i32 9), align 1
+  store i8 0, ptr getelementptr inbounds (i8, ptr @a, i32 8), align 4
+  store i8 -1, ptr getelementptr inbounds (i8, ptr @a, i32 10), align 2
+  store i8 0, ptr getelementptr inbounds (i8, ptr @a, i32 11), align 1
   br label %bb3
 
 bb3:

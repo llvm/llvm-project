@@ -38,16 +38,24 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                             void **ArgMappers, AsyncInfoTy &AsyncInfo,
                             bool FromMapper = false);
 
-extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
-                  void **ArgBases, void **Args, int64_t *ArgSizes,
-                  int64_t *ArgTypes, map_var_info_t *ArgNames,
-                  void **ArgMappers, int32_t TeamNum, int32_t ThreadLimit,
-                  uint64_t Tripcount, int IsTeamConstruct,
-                  AsyncInfoTy &AsyncInfo);
+extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                  KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
+
+extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
+                         void *DeviceMemory, int64_t DeviceMemorySize,
+                         void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,
+                         int32_t NumTeams, int32_t ThreadLimit,
+                         uint64_t LoopTripCount, AsyncInfoTy &AsyncInfo);
 
 extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
 extern void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
+                                 const char *Name);
+extern void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
+                               const char *Name);
+extern void *targetLockExplicit(void *HostPtr, size_t Size, int DeviceNum,
+                                const char *Name);
+extern void targetUnlockExplicit(void *HostPtr, int DeviceNum,
                                  const char *Name);
 
 // This structure stores information of a mapped memory region.
@@ -67,7 +75,7 @@ struct MapComponentInfoTy {
 // components are dynamically decided, so we utilize C++ STL vector
 // implementation here.
 struct MapperComponentsTy {
-  std::vector<MapComponentInfoTy> Components;
+  llvm::SmallVector<MapComponentInfoTy> Components;
   int32_t size() { return Components.size(); }
 };
 
@@ -115,6 +123,11 @@ void __kmpc_omp_wait_deps(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 ndeps,
                           kmp_depend_info_t *dep_list, kmp_int32 ndeps_noalias,
                           kmp_depend_info_t *noalias_dep_list)
     __attribute__((weak));
+void **__kmpc_omp_get_target_async_handle_ptr(kmp_int32 gtid)
+    __attribute__((weak));
+bool __kmpc_omp_has_task_team(kmp_int32 gtid) __attribute__((weak));
+// Invalid GTID as defined by libomp; keep in sync
+#define KMP_GTID_DNE (-2)
 #ifdef __cplusplus
 }
 #endif
@@ -187,7 +200,98 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
   }
 }
 
-#ifdef OMPTARGET_PROFILE_ENABLED
+// Wrapper for task stored async info objects.
+class TaskAsyncInfoWrapperTy {
+  const int ExecThreadID = KMP_GTID_DNE;
+  AsyncInfoTy LocalAsyncInfo;
+  AsyncInfoTy *AsyncInfo = &LocalAsyncInfo;
+  void **TaskAsyncInfoPtr = nullptr;
+
+public:
+  TaskAsyncInfoWrapperTy(DeviceTy &Device)
+      : ExecThreadID(__kmpc_global_thread_num(NULL)), LocalAsyncInfo(Device) {
+    // If we failed to acquired the current global thread id, we cannot
+    // re-enqueue the current task. Thus we should use the local blocking async
+    // info.
+    if (ExecThreadID == KMP_GTID_DNE)
+      return;
+
+    // Only tasks with an assigned task team can be re-enqueue and thus can
+    // use the non-blocking synchronization scheme. Thus we should use the local
+    // blocking async info, if we don´t have one.
+    if (!__kmpc_omp_has_task_team(ExecThreadID))
+      return;
+
+    // Acquire a pointer to the AsyncInfo stored inside the current task being
+    // executed.
+    TaskAsyncInfoPtr = __kmpc_omp_get_target_async_handle_ptr(ExecThreadID);
+
+    // If we cannot acquire such pointer, fallback to using the local blocking
+    // async info.
+    if (!TaskAsyncInfoPtr)
+      return;
+
+    // When creating a new task async info, the task handle must always be
+    // invalid. We must never overwrite any task async handle and there should
+    // never be any valid handle store inside the task at this point.
+    assert((*TaskAsyncInfoPtr) == nullptr &&
+           "Task async handle is not empty when dispatching new device "
+           "operations. The handle was not cleared properly or "
+           "__tgt_target_nowait_query should have been called!");
+
+    // If no valid async handle is present, a new AsyncInfo will be allocated
+    // and stored in the current task.
+    AsyncInfo = new AsyncInfoTy(Device, AsyncInfoTy::SyncTy::NON_BLOCKING);
+    *TaskAsyncInfoPtr = (void *)AsyncInfo;
+  }
+
+  ~TaskAsyncInfoWrapperTy() {
+    // Local async info destruction is automatically handled by ~AsyncInfoTy.
+    if (AsyncInfo == &LocalAsyncInfo)
+      return;
+
+    // If the are device operations still pending, return immediately without
+    // deallocating the handle.
+    if (!AsyncInfo->isDone())
+      return;
+
+    // Delete the handle and unset it from the OpenMP task data.
+    delete AsyncInfo;
+    *TaskAsyncInfoPtr = nullptr;
+  }
+
+  operator AsyncInfoTy &() { return *AsyncInfo; }
+};
+
+// Implement exponential backoff counting.
+// Linearly increments until given maximum, exponentially decrements based on
+// given backoff factor.
+class ExponentialBackoff {
+  int64_t Count = 0;
+  const int64_t MaxCount = 0;
+  const int64_t CountThreshold = 0;
+  const float BackoffFactor = 0.0f;
+
+public:
+  ExponentialBackoff(int64_t MaxCount, int64_t CountThreshold,
+                     float BackoffFactor)
+      : MaxCount(MaxCount), CountThreshold(CountThreshold),
+        BackoffFactor(BackoffFactor) {
+    assert(MaxCount >= 0 &&
+           "ExponentialBackoff: maximum count value should be non-negative");
+    assert(CountThreshold >= 0 &&
+           "ExponentialBackoff: count threshold value should be non-negative");
+    assert(BackoffFactor >= 0 && BackoffFactor < 1 &&
+           "ExponentialBackoff: backoff factor should be in [0, 1) interval");
+  }
+
+  void increment() { Count = std::min(Count + 1, MaxCount); }
+
+  void decrement() { Count *= BackoffFactor; }
+
+  bool isAboveThreshold() const { return Count > CountThreshold; }
+};
+
 #include "llvm/Support/TimeProfiler.h"
 #define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
 #define TIMESCOPE_WITH_IDENT(IDENT)                                            \
@@ -200,6 +304,5 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
-#endif
 
 #endif

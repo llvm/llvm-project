@@ -13,9 +13,8 @@
 //===----------------------------------
 // Atomic fences
 //===----------------------------------
-let AddedComplexity = 15, Size = 0 in
-def CompilerBarrier : Pseudo<(outs), (ins i32imm:$ordering),
-                             [(atomic_fence timm:$ordering, 0)]>, Sched<[]>;
+let AddedComplexity = 15 in
+def : Pat<(atomic_fence (timm), 0), (MEMBARRIER)>;
 def : Pat<(atomic_fence (i64 4), (timm)), (DMB (i32 0x9))>;
 def : Pat<(atomic_fence (timm), (timm)), (DMB (i32 0xb))>;
 
@@ -49,8 +48,7 @@ class seq_cst_load<PatFrags base>
   let IsAtomicOrderingSequentiallyConsistent = 1;
 }
 
-// RCPC extension, currently opt-in under a separate feature.
-let Predicates = [HasLDAPR] in {
+let Predicates = [HasRCPC] in {
   // v8.3 Release Consistent Processor Consistent support, optional in v8.2.
   // 8-bit loads
   def : Pat<(acquiring_load<atomic_load_8> GPR64sp:$ptr), (LDAPRB GPR64sp:$ptr)>;

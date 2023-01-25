@@ -43,7 +43,7 @@ body:             |
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY4]], %subreg.sub1, killed [[COPY5]], %subreg.sub2, killed [[S_MOV_B32_]], %subreg.sub3
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET [[DEF]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+  ; GCN-NEXT:   BUFFER_STORE_DWORD_OFFSET [[DEF]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
   bb.0:
     liveins: $sgpr0_sgpr1
 
@@ -61,6 +61,6 @@ body:             |
     %9:sreg_32 = S_MOV_B32 -1
     %10:sgpr_128 = REG_SEQUENCE killed %6:sreg_32, %subreg.sub0, killed %7:sreg_32, %subreg.sub1, killed %8:sreg_32, %subreg.sub2, killed %9:sreg_32, %subreg.sub3
     %11:vgpr_32 = IMPLICIT_DEF
-    BUFFER_STORE_DWORD_OFFSET %11:vgpr_32, killed %10:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    BUFFER_STORE_DWORD_OFFSET %11:vgpr_32, killed %10:sgpr_128, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 1)
 ...
 

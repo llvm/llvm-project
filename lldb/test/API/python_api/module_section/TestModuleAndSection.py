@@ -2,9 +2,6 @@
 Test some SBModule and SBSection APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -156,6 +153,5 @@ class ModuleAndSectionAPIsTestCase(TestBase):
             for source_name in source_name_list:
                 list = module.FindCompileUnits(lldb.SBFileSpec(source_name, False))
                 for sc in list:
-                    self.assertTrue(
-                        sc.GetCompileUnit().GetFileSpec().GetFilename() ==
-                        source_name)
+                    self.assertEqual(
+                        sc.GetCompileUnit().GetFileSpec().GetFilename(), source_name)

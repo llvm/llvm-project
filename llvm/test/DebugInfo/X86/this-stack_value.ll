@@ -28,26 +28,22 @@ target triple = "x86_64-apple-macosx10.12.0"
 %class.A = type { i32, i32 }
 
 ; Function Attrs: ssp uwtable
-define noalias nonnull %struct.B* @_Z4getBv() local_unnamed_addr #0 !dbg !7 {
+define noalias nonnull ptr @_Z4getBv() local_unnamed_addr #0 !dbg !7 {
 entry:
-  %call = tail call i8* @_Znwm(i64 12) #3, !dbg !20
-  %0 = bitcast i8* %call to %struct.B*, !dbg !20
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !21, metadata !28), !dbg !29
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !31, metadata !28), !dbg !34
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !36, metadata !44), !dbg !45
-  tail call void @llvm.dbg.value(metadata %struct.B* %0, metadata !47, metadata !44), !dbg !50
-  %a1.i.i.i.i = bitcast i8* %call to i32*, !dbg !52
-  store i32 23, i32* %a1.i.i.i.i, align 4, !dbg !52, !tbaa !53
-  %a2.i.i.i.i = getelementptr inbounds i8, i8* %call, i64 4, !dbg !58
-  %1 = bitcast i8* %a2.i.i.i.i to i32*, !dbg !58
-  store i32 42, i32* %1, align 4, !dbg !58, !tbaa !59
-  %b.i.i = getelementptr inbounds i8, i8* %call, i64 8, !dbg !60
-  %2 = bitcast i8* %b.i.i to i32*, !dbg !60
-  store i32 48, i32* %2, align 4, !dbg !60, !tbaa !61
-  ret %struct.B* %0, !dbg !63
+  %call = tail call ptr @_Znwm(i64 12) #3, !dbg !20
+  tail call void @llvm.dbg.value(metadata ptr %call, metadata !21, metadata !28), !dbg !29
+  tail call void @llvm.dbg.value(metadata ptr %call, metadata !31, metadata !28), !dbg !34
+  tail call void @llvm.dbg.value(metadata ptr %call, metadata !36, metadata !44), !dbg !45
+  tail call void @llvm.dbg.value(metadata ptr %call, metadata !47, metadata !44), !dbg !50
+  store i32 23, ptr %call, align 4, !dbg !52, !tbaa !53
+  %a2.i.i.i.i = getelementptr inbounds i8, ptr %call, i64 4, !dbg !58
+  store i32 42, ptr %a2.i.i.i.i, align 4, !dbg !58, !tbaa !59
+  %b.i.i = getelementptr inbounds i8, ptr %call, i64 8, !dbg !60
+  store i32 48, ptr %b.i.i, align 4, !dbg !60, !tbaa !61
+  ret ptr %call, !dbg !63
 }
 
-declare noalias nonnull i8* @_Znwm(i64) local_unnamed_addr #1
+declare noalias nonnull ptr @_Znwm(i64) local_unnamed_addr #1
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2
 
 attributes #0 = { ssp uwtable }

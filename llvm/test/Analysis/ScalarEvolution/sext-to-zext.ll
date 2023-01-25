@@ -20,7 +20,8 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:    --> {(zext i32 %start to i64),+,(sext i32 %step to i64)}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((zext i32 %start to i64) + (99 * (sext i32 %step to i64))<nsw>) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 99
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 99
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 99
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 99
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 99
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 100

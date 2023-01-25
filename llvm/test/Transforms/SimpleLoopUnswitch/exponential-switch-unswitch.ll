@@ -11,19 +11,19 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=0 -unswitch-siblings-toplevel-div=16 \
-; RUN:     -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
+; RUN: -passes='loop-mssa(simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | FileCheck %s --check-prefixes=LOOP1
 ;
 ; With relaxed candidates multiplier (unscaled candidates == 8) we should allow
 ; some unswitches to happen until siblings multiplier starts kicking in:
@@ -34,7 +34,7 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=1 \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX
 ;
 ; With relaxed candidates multiplier (unscaled candidates == 8) and with relaxed
@@ -43,13 +43,13 @@
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX2
 ;
 ; We get hundreds of copies of the loop when cost multiplier is disabled:
 ;
 ; RUN: opt < %s -enable-unswitch-cost-multiplier=false \
-; RUN:     -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
+; RUN: -passes='loop-mssa(licm,simple-loop-unswitch<nontrivial>),print<loops>' -disable-output 2>&1 | \
 ; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-MAX
 
 ; Single loop nest, not unswitched
@@ -76,10 +76,9 @@
 ; LOOP-MAX-COUNT-111:     Loop at depth 2 containing:
 ; LOOP-MAX-NOT: Loop at depth 2 containing:
 
-define i32 @loop_switch(i32* %addr, i32 %c1, i32 %c2) {
+define i32 @loop_switch(ptr %addr, i32 %c1, i32 %c2) {
 entry:
-  %addr1 = getelementptr i32, i32* %addr, i64 0
-  %addr2 = getelementptr i32, i32* %addr, i64 1
+  %addr2 = getelementptr i32, ptr %addr, i64 1
   %check0 = icmp eq i32 %c2, 0
   %check1 = icmp eq i32 %c2, 31
   %check2 = icmp eq i32 %c2, 32
@@ -114,12 +113,12 @@ case0:
   br i1 %check0, label %exit, label %inner_latch
 
 inner_latch:
-  store volatile i32 0, i32* %addr1
+  store volatile i32 0, ptr %addr
   %test_inner = icmp slt i32 %iv2, 50
   br i1 %test_inner, label %inner_loop, label %outer_latch
 
 outer_latch:
-  store volatile i32 0, i32* %addr2
+  store volatile i32 0, ptr %addr2
   %test_outer = icmp slt i32 %iv1, 50
   br i1 %test_outer, label %outer_loop, label %exit
 

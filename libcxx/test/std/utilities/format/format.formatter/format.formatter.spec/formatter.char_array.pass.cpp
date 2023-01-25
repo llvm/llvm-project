@@ -12,6 +12,7 @@
 
 // <format>
 
+// C++23 the formatter is a debug-enabled specialization.
 // [format.functions]/25
 //   Preconditions: formatter<remove_cvref_t<Ti>, charT> meets the
 //   BasicFormatter requirements ([formatter.requirements]) for each Ti in
@@ -22,10 +23,12 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
+#define SV(S) MAKE_STRING_VIEW(CharT, S)
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 // This is based on the method found in
@@ -57,7 +60,8 @@ struct Tester {
     // Note not too found of this hack
     Str* data = reinterpret_cast<Str*>(const_cast<CharT*>(buffer.c_str()));
 
-    auto format_ctx = std::__format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
+    FormatCtxT format_ctx =
+        test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
     formatter.format(*data, format_ctx);
     assert(result == expected);
   }
@@ -77,10 +81,34 @@ struct Tester {
   }
 };
 
+template <size_t N>
+Tester(const char (&)[N]) -> Tester<N>;
+
 template <Tester t, class CharT>
 void test_helper_wrapper(std::basic_string<CharT> expected, std::basic_string<CharT> fmt) {
   t.test_termination_condition(expected, fmt);
 }
+
+#if TEST_STD_VER > 20
+template <class CharT>
+constexpr bool test_set_debug_format() {
+  std::formatter<CharT[1], CharT> formatter;
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__default);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  std::basic_string_view fmt = SV("s}");
+  std::basic_format_parse_context<CharT> parse_ctx{fmt};
+  formatter.parse(parse_ctx);
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__string);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  return true;
+}
+#endif
 
 template <class CharT>
 void test_array() {
@@ -102,6 +130,11 @@ void test_array() {
 
   test_helper_wrapper<"world">(STR("%world%"), STR("%^7.7}"));
   test_helper_wrapper<"universe">(STR("univers"), STR("%^7.7}"));
+
+#if TEST_STD_VER > 20
+  test_set_debug_format<CharT>();
+  static_assert(test_set_debug_format<CharT>());
+#endif
 }
 
 int main(int, char**) {

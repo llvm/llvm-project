@@ -12,7 +12,7 @@
 ; RUN: llc -march=mips64el -O0 -mcpu=mips64r2 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS64EL
 ; RUN: llc -march=mips64el -O0 -mcpu=mips64r6 -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIPS64ELR6
 
-define i32 @test_max_32(i32* nocapture %ptr, i32 signext %val) {
+define i32 @test_max_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-LABEL: test_max_32:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -211,11 +211,11 @@ define i32 @test_max_32(i32* nocapture %ptr, i32 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw max i32* %ptr, i32 %val seq_cst
+  %0 = atomicrmw max ptr %ptr, i32 %val seq_cst
   ret i32 %0
 }
 
-define i32 @test_min_32(i32* nocapture %ptr, i32 signext %val) {
+define i32 @test_min_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-LABEL: test_min_32:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -414,11 +414,11 @@ define i32 @test_min_32(i32* nocapture %ptr, i32 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw min i32* %ptr, i32 %val seq_cst
+  %0 = atomicrmw min ptr %ptr, i32 %val seq_cst
   ret i32 %0
 }
 
-define i32 @test_umax_32(i32* nocapture %ptr, i32 signext %val) {
+define i32 @test_umax_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-LABEL: test_umax_32:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -617,11 +617,11 @@ define i32 @test_umax_32(i32* nocapture %ptr, i32 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umax i32* %ptr, i32 %val seq_cst
+  %0 = atomicrmw umax ptr %ptr, i32 %val seq_cst
   ret i32 %0
 }
 
-define i32 @test_umin_32(i32* nocapture %ptr, i32 signext %val) {
+define i32 @test_umin_32(ptr nocapture %ptr, i32 signext %val) {
 ; MIPS-LABEL: test_umin_32:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    sync
@@ -820,11 +820,11 @@ define i32 @test_umin_32(i32* nocapture %ptr, i32 signext %val) {
 ; MIPS64ELR6-NEXT:    sync
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umin i32* %ptr, i32 %val seq_cst
+  %0 = atomicrmw umin ptr %ptr, i32 %val seq_cst
   ret i32 %0
 }
 
-define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
+define i16 @test_max_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-LABEL: test_max_16:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -1301,11 +1301,11 @@ define i16 @test_max_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw max i16* %ptr, i16 %val seq_cst
+  %0 = atomicrmw max ptr %ptr, i16 %val seq_cst
   ret i16 %0
 }
 
-define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
+define i16 @test_min_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-LABEL: test_min_16:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -1782,11 +1782,11 @@ define i16 @test_min_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw min i16* %ptr, i16 %val seq_cst
+  %0 = atomicrmw min ptr %ptr, i16 %val seq_cst
   ret i16 %0
 }
 
-define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
+define i16 @test_umax_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-LABEL: test_umax_16:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -2263,11 +2263,11 @@ define i16 @test_umax_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umax i16* %ptr, i16 %val seq_cst
+  %0 = atomicrmw umax ptr %ptr, i16 %val seq_cst
   ret i16 %0
 }
 
-define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
+define i16 @test_umin_16(ptr nocapture %ptr, i16 signext %val) {
 ; MIPS-LABEL: test_umin_16:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -2744,12 +2744,12 @@ define i16 @test_umin_16(i16* nocapture %ptr, i16 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umin i16* %ptr, i16 %val seq_cst
+  %0 = atomicrmw umin ptr %ptr, i16 %val seq_cst
   ret i16 %0
 }
 
 
-define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
+define i8 @test_max_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-LABEL: test_max_8:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -3226,11 +3226,11 @@ define i8 @test_max_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw max i8* %ptr, i8 %val seq_cst
+  %0 = atomicrmw max ptr %ptr, i8 %val seq_cst
   ret i8 %0
 }
 
-define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
+define i8 @test_min_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-LABEL: test_min_8:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -3707,11 +3707,11 @@ define i8 @test_min_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw min i8* %ptr, i8 %val seq_cst
+  %0 = atomicrmw min ptr %ptr, i8 %val seq_cst
   ret i8 %0
 }
 
-define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
+define i8 @test_umax_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-LABEL: test_umax_8:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -4188,11 +4188,11 @@ define i8 @test_umax_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umax i8* %ptr, i8 %val seq_cst
+  %0 = atomicrmw umax ptr %ptr, i8 %val seq_cst
   ret i8 %0
 }
 
-define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
+define i8 @test_umin_8(ptr nocapture %ptr, i8 signext %val) {
 ; MIPS-LABEL: test_umin_8:
 ; MIPS:       # %bb.0: # %entry
 ; MIPS-NEXT:    addiu $sp, $sp, -8
@@ -4669,6 +4669,6 @@ define i8 @test_umin_8(i8* nocapture %ptr, i8 signext %val) {
 ; MIPS64ELR6-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64ELR6-NEXT:    jrc $ra
 entry:
-  %0 = atomicrmw umin i8* %ptr, i8 %val seq_cst
+  %0 = atomicrmw umin ptr %ptr, i8 %val seq_cst
   ret i8 %0
 }

@@ -147,116 +147,116 @@ define i64 @lshr_exact(i64 %x, i64 %y) {
 	ret i64 %z
 }
 
-define i64* @gep_nw(i64* %p, i64 %x) {
-; CHECK: %z = getelementptr inbounds i64, i64* %p, i64 %x
-	%z = getelementptr inbounds i64, i64* %p, i64 %x
-        ret i64* %z
+define ptr @gep_nw(ptr %p, i64 %x) {
+; CHECK: %z = getelementptr inbounds i64, ptr %p, i64 %x
+	%z = getelementptr inbounds i64, ptr %p, i64 %x
+        ret ptr %z
 }
 
-define i64* @gep_plain(i64* %p, i64 %x) {
-; CHECK: %z = getelementptr i64, i64* %p, i64 %x
-	%z = getelementptr i64, i64* %p, i64 %x
-        ret i64* %z
+define ptr @gep_plain(ptr %p, i64 %x) {
+; CHECK: %z = getelementptr i64, ptr %p, i64 %x
+	%z = getelementptr i64, ptr %p, i64 %x
+        ret ptr %z
 }
 
 define i64 @add_both_ce() {
-; CHECK: ret i64 add nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 add nsw nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 add nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 add nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @sub_both_ce() {
-; CHECK: ret i64 sub nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sub nsw nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 sub nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 sub nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @mul_both_ce() {
-; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 mul nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @ashr_exact_ce() {
-; CHECK: ret i64 ashr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
-	ret i64 ashr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
+; CHECK: ret i64 ashr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
+	ret i64 ashr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
 }
 
 define i64 @lshr_exact_ce() {
-; CHECK: ret i64 lshr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
-	ret i64 lshr exact (i64 ptrtoint (i64* @addr to i64), i64 9)
+; CHECK: ret i64 lshr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
+	ret i64 lshr exact (i64 ptrtoint (ptr @addr to i64), i64 9)
 }
 
-define i64* @gep_nw_ce() {
-; CHECK: ret i64* getelementptr inbounds (i64, i64* @addr, i64 171)
-        ret i64* getelementptr inbounds (i64, i64* @addr, i64 171)
+define ptr @gep_nw_ce() {
+; CHECK: ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
+        ret ptr getelementptr inbounds (i64, ptr @addr, i64 171)
 }
 
 define i64 @add_plain_ce() {
-; CHECK: ret i64 add (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 add (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 add (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 add (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @sub_plain_ce() {
-; CHECK: ret i64 sub (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sub (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 sub (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 sub (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @mul_plain_ce() {
-; CHECK: ret i64 mul (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 mul (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 mul (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 mul (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
-define i64* @gep_plain_ce() {
-; CHECK: ret i64* getelementptr (i64, i64* @addr, i64 171)
-        ret i64* getelementptr (i64, i64* @addr, i64 171)
+define ptr @gep_plain_ce() {
+; CHECK: ret ptr getelementptr (i64, ptr @addr, i64 171)
+        ret ptr getelementptr (i64, ptr @addr, i64 171)
 }
 
 define i64 @add_both_reversed_ce() {
-; CHECK: ret i64 add nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 add nsw nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 add nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 add nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @sub_both_reversed_ce() {
-; CHECK: ret i64 sub nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sub nsw nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 sub nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 sub nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @mul_both_reversed_ce() {
-; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 mul nsw nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 mul nuw nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 mul nsw nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @add_signed_ce() {
-; CHECK: ret i64 add nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 add nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 add nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 add nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @sub_signed_ce() {
-; CHECK: ret i64 sub nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sub nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 sub nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 sub nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @mul_signed_ce() {
-; CHECK: ret i64 mul nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 mul nsw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 mul nsw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @shl_signed_ce() {
-; CHECK: ret i64 shl nsw (i64 ptrtoint (i64* @addr to i64), i64 17)
-	ret i64 shl nsw (i64 ptrtoint (i64* @addr to i64), i64 17)
+; CHECK: ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
+	ret i64 shl nsw (i64 ptrtoint (ptr @addr to i64), i64 17)
 }
 
 
 define i64 @add_unsigned_ce() {
-; CHECK: ret i64 add nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 add nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 add nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @sub_unsigned_ce() {
-; CHECK: ret i64 sub nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 sub nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 sub nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 sub nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 
 define i64 @mul_unsigned_ce() {
-; CHECK: ret i64 mul nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
-	ret i64 mul nuw (i64 ptrtoint (i64* @addr to i64), i64 91)
+; CHECK: ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
+	ret i64 mul nuw (i64 ptrtoint (ptr @addr to i64), i64 91)
 }
 

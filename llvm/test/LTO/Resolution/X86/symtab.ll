@@ -72,4 +72,4 @@ $g12 = comdat nodeduplicate
 ; CHECK: D--WI--- _a1
 ; CHECK-NEXT: comdat any _g9
 ; CHECK-NEXT: fallback _g9
-@a1 = weak alias i32, i32* @g9
+@a1 = weak alias i32, ptr @g9

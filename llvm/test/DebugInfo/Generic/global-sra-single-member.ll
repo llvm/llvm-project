@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 ; struct {
 ;   int f0;
 ; } static a;
@@ -19,10 +19,10 @@ target triple = "x86_64-apple-macosx10.12.0"
 define i32 @main() #0 !dbg !15 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* getelementptr inbounds (%struct.anon, %struct.anon* @a, i32 0, i32 0), align 4, !dbg !18
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @a, align 4, !dbg !18
   %inc = add nsw i32 %0, 1, !dbg !18
-  store i32 %inc, i32* getelementptr inbounds (%struct.anon, %struct.anon* @a, i32 0, i32 0), align 4, !dbg !18
+  store i32 %inc, ptr @a, align 4, !dbg !18
   ret i32 0, !dbg !19
 }
 

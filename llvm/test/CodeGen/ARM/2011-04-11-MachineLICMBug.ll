@@ -3,7 +3,7 @@
 ; Overly aggressive LICM simply adds copies of constants
 ; rdar://9266679
 
-define zeroext i1 @t(i32* nocapture %A, i32 %size, i32 %value) nounwind readonly ssp {
+define zeroext i1 @t(ptr nocapture %A, i32 %size, i32 %value) nounwind readonly ssp {
 ; CHECK-LABEL: t:
 entry:
   br label %for.cond
@@ -18,8 +18,8 @@ for.body:
 ; CHECK: mov{{.*}} r{{[0-9]+}}, #{{[01]}}
 ; CHECK: mov{{.*}} r{{[0-9]+}}, #{{[01]}}
 ; CHECK-NOT: mov r{{[0-9]+}}, #{{[01]}}
-  %arrayidx = getelementptr i32, i32* %A, i32 %0
-  %tmp4 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr %A, i32 %0
+  %tmp4 = load i32, ptr %arrayidx, align 4
   %cmp6 = icmp eq i32 %tmp4, %value
   br i1 %cmp6, label %return, label %for.inc
 

@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   ObjCopy
   Option
   Support
+  TargetParser
   MC
   BinaryFormat
   )

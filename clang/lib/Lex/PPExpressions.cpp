@@ -869,7 +869,7 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 /// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
-  SaveAndRestore<bool> PPDir(ParsingIfOrElifDirective, true);
+  SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
   // in which case a directive is undefined behavior.  We want macros to be able

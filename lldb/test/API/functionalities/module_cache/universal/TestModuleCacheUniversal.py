@@ -43,7 +43,7 @@ class ModuleCacheTestcaseUniversal(TestBase):
         exe = self.getBuildArtifact(exe_basename)
         self.yaml2obj(yaml_path, exe)
         self.assertTrue(os.path.exists(exe))
-        # Create a module with no depedencies.
+        # Create a module with no dependencies.
         self.runCmd('target create -d --arch x86_64 %s' % (exe))
         self.runCmd('image dump symtab %s' % (exe_basename))
         self.runCmd('target create -d --arch arm64 %s' % (exe))

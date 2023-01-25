@@ -194,6 +194,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                    MVT::v2f64})
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
 
+    // Support splatting
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+		   MVT::v2f64})
+      setOperationAction(ISD::SPLAT_VECTOR, T, Legal);
+
     // Custom lowering since wasm shifts must have a scalar shift amount
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64})
@@ -751,12 +756,12 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-bool WebAssemblyTargetLowering::isCheapToSpeculateCttz() const {
+bool WebAssemblyTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   // Assume ctz is a relatively cheap operation.
   return true;
 }
 
-bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz() const {
+bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   // Assume clz is a relatively cheap operation.
   return true;
 }
@@ -781,7 +786,7 @@ bool WebAssemblyTargetLowering::isLegalAddressingMode(const DataLayout &DL,
 
 bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
     EVT /*VT*/, unsigned /*AddrSpace*/, Align /*Align*/,
-    MachineMemOperand::Flags /*Flags*/, bool *Fast) const {
+    MachineMemOperand::Flags /*Flags*/, unsigned *Fast) const {
   // WebAssembly supports unaligned accesses, though it should be declared
   // with the p2align attribute on loads and stores which do so, and there
   // may be a performance impact. We tell LLVM they're "fast" because
@@ -789,7 +794,7 @@ bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
   // of constants, etc.), WebAssembly implementations will either want the
   // unaligned access or they'll split anyway.
   if (Fast)
-    *Fast = true;
+    *Fast = 1;
   return true;
 }
 
@@ -1449,86 +1454,14 @@ static bool IsWebAssemblyGlobal(SDValue Op) {
   return false;
 }
 
-static Optional<unsigned> IsWebAssemblyLocal(SDValue Op, SelectionDAG &DAG) {
+static std::optional<unsigned> IsWebAssemblyLocal(SDValue Op,
+                                                  SelectionDAG &DAG) {
   const FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Op);
   if (!FI)
-    return None;
+    return std::nullopt;
 
   auto &MF = DAG.getMachineFunction();
   return WebAssemblyFrameLowering::getLocalForStackObject(MF, FI->getIndex());
-}
-
-static bool IsWebAssemblyTable(SDValue Op) {
-  const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op);
-  if (GA && WebAssembly::isWasmVarAddressSpace(GA->getAddressSpace())) {
-    const GlobalValue *Value = GA->getGlobal();
-    const Type *Ty = Value->getValueType();
-
-    if (Ty->isArrayTy() && WebAssembly::isRefType(Ty->getArrayElementType()))
-      return true;
-  }
-  return false;
-}
-
-// This function will accept as Op any access to a table, so Op can
-// be the actual table or an offset into the table.
-static bool IsWebAssemblyTableWithOffset(SDValue Op) {
-  if (Op->getOpcode() == ISD::ADD && Op->getNumOperands() == 2)
-    return (Op->getOperand(1).getSimpleValueType() == MVT::i32 &&
-            IsWebAssemblyTableWithOffset(Op->getOperand(0))) ||
-           (Op->getOperand(0).getSimpleValueType() == MVT::i32 &&
-            IsWebAssemblyTableWithOffset(Op->getOperand(1)));
-
-  return IsWebAssemblyTable(Op);
-}
-
-// Helper for table pattern matching used in LowerStore and LowerLoad
-bool WebAssemblyTargetLowering::MatchTableForLowering(SelectionDAG &DAG,
-                                                      const SDLoc &DL,
-                                                      const SDValue &Base,
-                                                      GlobalAddressSDNode *&GA,
-                                                      SDValue &Idx) const {
-  // We expect the following graph for a load of the form:
-  // table[<var> + <constant offset>]
-  //
-  // Case 1:
-  // externref = load t1
-  // t1: i32 = add t2, i32:<constant offset>
-  // t2: i32 = add tX, table
-  //
-  // This is in some cases simplified to just:
-  // Case 2:
-  // externref = load t1
-  // t1: i32 = add t2, i32:tX
-  //
-  // So, unfortunately we need to check for both cases and if we are in the
-  // first case extract the table GlobalAddressNode and build a new node tY
-  // that's tY: i32 = add i32:<constant offset>, i32:tX
-  //
-  if (IsWebAssemblyTable(Base)) {
-    GA = cast<GlobalAddressSDNode>(Base);
-    Idx = DAG.getConstant(0, DL, MVT::i32);
-  } else {
-    GA = dyn_cast<GlobalAddressSDNode>(Base->getOperand(0));
-    if (GA) {
-      // We are in Case 2 above.
-      Idx = Base->getOperand(1);
-      assert(GA->getNumValues() == 1);
-    } else {
-      // This might be Case 1 above (or an error)
-      SDValue V = Base->getOperand(0);
-      GA = dyn_cast<GlobalAddressSDNode>(V->getOperand(1));
-
-      if (V->getOpcode() != ISD::ADD || V->getNumOperands() != 2 || !GA)
-        return false;
-
-      SDValue IdxV = DAG.getNode(ISD::ADD, DL, MVT::i32, Base->getOperand(1),
-                                 V->getOperand(0));
-      Idx = IdxV;
-    }
-  }
-
-  return true;
 }
 
 SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
@@ -1538,26 +1471,6 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
   const SDValue &Value = SN->getValue();
   const SDValue &Base = SN->getBasePtr();
   const SDValue &Offset = SN->getOffset();
-
-  if (IsWebAssemblyTableWithOffset(Base)) {
-    if (!Offset->isUndef())
-      report_fatal_error(
-          "unexpected offset when loading from webassembly table", false);
-
-    SDValue Idx;
-    GlobalAddressSDNode *GA;
-
-    if (!MatchTableForLowering(DAG, DL, Base, GA, Idx))
-      report_fatal_error("failed pattern matching for lowering table store",
-                         false);
-
-    SDVTList Tys = DAG.getVTList(MVT::Other);
-    SDValue TableSetOps[] = {SN->getChain(), SDValue(GA, 0), Idx, Value};
-    SDValue TableSet =
-        DAG.getMemIntrinsicNode(WebAssemblyISD::TABLE_SET, DL, Tys, TableSetOps,
-                                SN->getMemoryVT(), SN->getMemOperand());
-    return TableSet;
-  }
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
@@ -1570,7 +1483,7 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
                                    SN->getMemoryVT(), SN->getMemOperand());
   }
 
-  if (Optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
+  if (std::optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
     if (!Offset->isUndef())
       report_fatal_error("unexpected offset when storing to webassembly local",
                          false);
@@ -1581,6 +1494,11 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
     return DAG.getNode(WebAssemblyISD::LOCAL_SET, DL, Tys, Ops);
   }
 
+  if (WebAssembly::isWasmVarAddressSpace(SN->getAddressSpace()))
+    report_fatal_error(
+        "Encountered an unlowerable store to the wasm_var address space",
+        false);
+
   return Op;
 }
 
@@ -1590,26 +1508,6 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
   LoadSDNode *LN = cast<LoadSDNode>(Op.getNode());
   const SDValue &Base = LN->getBasePtr();
   const SDValue &Offset = LN->getOffset();
-
-  if (IsWebAssemblyTableWithOffset(Base)) {
-    if (!Offset->isUndef())
-      report_fatal_error(
-          "unexpected offset when loading from webassembly table", false);
-
-    GlobalAddressSDNode *GA;
-    SDValue Idx;
-
-    if (!MatchTableForLowering(DAG, DL, Base, GA, Idx))
-      report_fatal_error("failed pattern matching for lowering table load",
-                         false);
-
-    SDVTList Tys = DAG.getVTList(LN->getValueType(0), MVT::Other);
-    SDValue TableGetOps[] = {LN->getChain(), SDValue(GA, 0), Idx};
-    SDValue TableGet =
-        DAG.getMemIntrinsicNode(WebAssemblyISD::TABLE_GET, DL, Tys, TableGetOps,
-                                LN->getMemoryVT(), LN->getMemOperand());
-    return TableGet;
-  }
 
   if (IsWebAssemblyGlobal(Base)) {
     if (!Offset->isUndef())
@@ -1622,7 +1520,7 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
                                    LN->getMemoryVT(), LN->getMemOperand());
   }
 
-  if (Optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
+  if (std::optional<unsigned> Local = IsWebAssemblyLocal(Base, DAG)) {
     if (!Offset->isUndef())
       report_fatal_error(
           "unexpected offset when loading from webassembly local", false);
@@ -1635,6 +1533,11 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
     assert(Result->getNumValues() == 2 && "Loads must carry a chain!");
     return Result;
   }
+
+  if (WebAssembly::isWasmVarAddressSpace(LN->getAddressSpace()))
+    report_fatal_error(
+        "Encountered an unlowerable load from the wasm_var address space",
+        false);
 
   return Op;
 }
@@ -1845,7 +1748,7 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   const auto &MBBs = MJTI->getJumpTables()[JT->getIndex()].MBBs;
 
   // Add an operand for each case.
-  for (auto MBB : MBBs)
+  for (auto *MBB : MBBs)
     Ops.push_back(DAG.getBasicBlock(MBB));
 
   // Add the first MBB as a dummy default target for now. This will be replaced
@@ -2263,18 +2166,8 @@ SDValue WebAssemblyTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       return IsConstant(Lane);
     };
   } else {
-    // Use a splat, but possibly a load_splat
-    LoadSDNode *SplattedLoad;
-    if ((SplattedLoad = dyn_cast<LoadSDNode>(SplatValue)) &&
-        SplattedLoad->getMemoryVT() == VecT.getVectorElementType()) {
-      Result = DAG.getMemIntrinsicNode(
-          WebAssemblyISD::LOAD_SPLAT, DL, DAG.getVTList(VecT),
-          {SplattedLoad->getChain(), SplattedLoad->getBasePtr(),
-           SplattedLoad->getOffset()},
-          SplattedLoad->getMemoryVT(), SplattedLoad->getMemOperand());
-    } else {
-      Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
-    }
+    // Use a splat (which might be selected as a load splat)
+    Result = DAG.getSplatBuildVector(VecT, DL, SplatValue);
     IsLaneConstructed = [&SplatValue](size_t _, const SDValue &Lane) {
       return Lane == SplatValue;
     };
@@ -2312,8 +2205,10 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   // Expand mask indices to byte indices and materialize them as operands
   for (int M : Mask) {
     for (size_t J = 0; J < LaneBytes; ++J) {
-      // Lower undefs (represented by -1 in mask) to zero
-      uint64_t ByteIndex = M == -1 ? 0 : (uint64_t)M * LaneBytes + J;
+      // Lower undefs (represented by -1 in mask) to {0..J}, which use a
+      // whole lane of vector input, to allow further reduction at VM. E.g.
+      // match an 8x16 byte shuffle to an equivalent cheaper 32x4 shuffle.
+      uint64_t ByteIndex = M == -1 ? J : (uint64_t)M * LaneBytes + J;
       Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
     }
   }
@@ -2345,11 +2240,16 @@ WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
                                                     SelectionDAG &DAG) const {
   // Allow constant lane indices, expand variable lane indices
   SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
-  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef())
-    return Op;
-  else
-    // Perform default expansion
-    return SDValue();
+  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef()) {
+    // Ensure the index type is i32 to match the tablegen patterns
+    uint64_t Idx = cast<ConstantSDNode>(IdxNode)->getZExtValue();
+    SmallVector<SDValue, 3> Ops(Op.getNode()->ops());
+    Ops[Op.getNumOperands() - 1] =
+        DAG.getConstant(Idx, SDLoc(IdxNode), MVT::i32);
+    return DAG.getNode(Op.getOpcode(), SDLoc(Op), Op.getValueType(), Ops);
+  }
+  // Perform default expansion
+  return SDValue();
 }
 
 static SDValue unrollVectorShift(SDValue Op, SelectionDAG &DAG) {
@@ -2454,6 +2354,32 @@ performVECTOR_SHUFFLECombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SDValue NewShuffle = DAG.getVectorShuffle(
       SrcType, SDLoc(N), CastOp, DAG.getUNDEF(SrcType), Shuffle->getMask());
   return DAG.getBitcast(DstType, NewShuffle);
+}
+
+/// Convert ({u,s}itofp vec) --> ({u,s}itofp ({s,z}ext vec)) so it doesn't get
+/// split up into scalar instructions during legalization, and the vector
+/// extending instructions are selected in performVectorExtendCombine below.
+static SDValue
+performVectorExtendToFPCombine(SDNode *N,
+                               TargetLowering::DAGCombinerInfo &DCI) {
+  auto &DAG = DCI.DAG;
+  assert(N->getOpcode() == ISD::UINT_TO_FP ||
+         N->getOpcode() == ISD::SINT_TO_FP);
+
+  EVT InVT = N->getOperand(0)->getValueType(0);
+  EVT ResVT = N->getValueType(0);
+  MVT ExtVT;
+  if (ResVT == MVT::v4f32 && (InVT == MVT::v4i16 || InVT == MVT::v4i8))
+    ExtVT = MVT::v4i32;
+  else if (ResVT == MVT::v2f64 && (InVT == MVT::v2i16 || InVT == MVT::v2i8))
+    ExtVT = MVT::v2i32;
+  else
+    return SDValue();
+
+  unsigned Op =
+      N->getOpcode() == ISD::UINT_TO_FP ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND;
+  SDValue Conv = DAG.getNode(Op, SDLoc(N), ExtVT, N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, Conv);
 }
 
 static SDValue
@@ -2741,6 +2667,9 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
     return performVectorExtendCombine(N, DCI);
+  case ISD::UINT_TO_FP:
+  case ISD::SINT_TO_FP:
+    return performVectorExtendToFPCombine(N, DCI);
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
   case ISD::FP_ROUND:

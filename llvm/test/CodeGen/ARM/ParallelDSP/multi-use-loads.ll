@@ -2,7 +2,7 @@
 ; RUN: llc -O3 -mtriple=arm-none-none-eabi -mcpu=cortex-m33 < %s | FileCheck %s --check-prefixes=CHECK-LE
 ; RUN: llc -O3 -mtriple=armeb-none-none-eabi -mcpu=cortex-m33 < %s | FileCheck %s --check-prefixes=CHECK-BE
 
-define i32 @add_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define i32 @add_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LE-LABEL: add_user:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -70,8 +70,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -84,19 +84,19 @@ for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %count = phi i32 [ %count.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %count.next = add i32 %conv4, %count
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -106,7 +106,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define i32 @mul_bottom_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define i32 @mul_bottom_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LE-LABEL: mul_bottom_user:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, r5, r7, lr}
@@ -175,8 +175,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -189,18 +189,18 @@ for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %count = phi i32 [ %count.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -211,7 +211,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define i32 @mul_top_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define i32 @mul_top_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LE-LABEL: mul_top_user:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -280,8 +280,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -294,18 +294,18 @@ for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %count = phi i32 [ %count.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %mul = mul nsw i32 %conv, %conv4
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %3 = load i16, i16* %arrayidx6, align 2
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -316,7 +316,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define i32 @and_user(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define i32 @and_user(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LE-LABEL: and_user:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -385,8 +385,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -399,19 +399,19 @@ for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %count = phi i32 [ %count.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %bottom = and i32 %conv4, 65535
   %mul = mul nsw i32 %conv, %conv4
-  %3 = load i16, i16* %arrayidx6, align 2
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8
@@ -422,7 +422,7 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
-define i32 @multi_uses(i32 %arg, i32* nocapture readnone %arg1, i16* nocapture readonly %arg2, i16* nocapture readonly %arg3) {
+define i32 @multi_uses(i32 %arg, ptr nocapture readnone %arg1, ptr nocapture readonly %arg2, ptr nocapture readonly %arg3) {
 ; CHECK-LE-LABEL: multi_uses:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    .save {r4, lr}
@@ -494,8 +494,8 @@ entry:
   br i1 %cmp24, label %for.body.preheader, label %for.cond.cleanup
 
 for.body.preheader:
-  %.pre = load i16, i16* %arg3, align 2
-  %.pre27 = load i16, i16* %arg2, align 2
+  %.pre = load i16, ptr %arg3, align 2
+  %.pre27 = load i16, ptr %arg2, align 2
   br label %for.body
 
 for.cond.cleanup:
@@ -508,19 +508,19 @@ for.body:
   %mac1.026 = phi i32 [ %add11, %for.body ], [ 0, %for.body.preheader ]
   %i.025 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
   %count = phi i32 [ %count.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i16, i16* %arg3, i32 %i.025
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %arg3, i32 %i.025
+  %0 = load i16, ptr %arrayidx, align 2
   %add = add nuw nsw i32 %i.025, 1
-  %arrayidx1 = getelementptr inbounds i16, i16* %arg3, i32 %add
-  %arrayidx3 = getelementptr inbounds i16, i16* %arg2, i32 %i.025
-  %arrayidx6 = getelementptr inbounds i16, i16* %arg2, i32 %add
-  %1 = load i16, i16* %arrayidx1, align 2
-  %2 = load i16, i16* %arrayidx3, align 2
+  %arrayidx1 = getelementptr inbounds i16, ptr %arg3, i32 %add
+  %arrayidx3 = getelementptr inbounds i16, ptr %arg2, i32 %i.025
+  %arrayidx6 = getelementptr inbounds i16, ptr %arg2, i32 %add
+  %1 = load i16, ptr %arrayidx1, align 2
+  %2 = load i16, ptr %arrayidx3, align 2
   %conv = sext i16 %2 to i32
   %conv4 = sext i16 %0 to i32
   %bottom = and i32 %conv4, 65535
   %mul = mul nsw i32 %conv, %conv4
-  %3 = load i16, i16* %arrayidx6, align 2
+  %3 = load i16, ptr %arrayidx6, align 2
   %conv7 = sext i16 %3 to i32
   %conv8 = sext i16 %1 to i32
   %mul9 = mul nsw i32 %conv7, %conv8

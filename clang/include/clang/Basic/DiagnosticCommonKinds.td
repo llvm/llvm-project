@@ -269,24 +269,26 @@ def note_constexpr_invalid_template_arg : Note<
   "%select{type_info object|string literal|temporary object|"
   "predefined '%3' variable}2 is not allowed in a template argument">;
 def err_constexpr_invalid_template_arg : Error<
-  note_constexpr_invalid_template_arg.Text>;
+  note_constexpr_invalid_template_arg.Summary>;
 
 // Sema && Frontend
 let CategoryName = "Inline Assembly Issue" in {
-  def err_asm_invalid_type_in_input : Error<
-    "invalid type %0 in asm input for constraint '%1'">;
+def err_asm_invalid_type_in_input : Error<
+  "invalid type %0 in asm input for constraint '%1'">;
 
-  def err_asm_invalid_type : Error<
-    "invalid type %0 in asm %select{input|output}1">;
+def err_asm_invalid_type : Error<
+  "invalid type %0 in asm %select{input|output}1">;
 
-  def warn_stack_clash_protection_inline_asm : Warning<
-    "Unable to protect inline asm that clobbers stack pointer against stack clash">,
-    InGroup<DiagGroup<"stack-protector">>;
+def err_ms_asm_bitfield_unsupported : Error<
+  "an inline asm block cannot have an operand which is a bit-field">;
 
-  def warn_slh_does_not_support_asm_goto
-      : Warning<"Speculative load hardening does not protect functions with "
-                "asm goto">,
-        InGroup<DiagGroup<"slh-asm-goto">>;
+def warn_stack_clash_protection_inline_asm : Warning<
+  "unable to protect inline asm that clobbers stack pointer against stack "
+  "clash">, InGroup<DiagGroup<"stack-protector">>;
+
+def warn_slh_does_not_support_asm_goto : Warning<
+  "speculative load hardening does not protect functions with asm goto">,
+  InGroup<DiagGroup<"slh-asm-goto">>;
 }
 
 // Sema && Serialization
@@ -343,6 +345,17 @@ def err_unable_to_rename_temp : Error<
   "unable to rename temporary '%0' to output file '%1': '%2'">;
 def err_unable_to_make_temp : Error<
   "unable to make temporary file: %0">;
+def remark_sloc_usage : Remark<
+  "source manager location address space usage:">,
+  InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
+def note_total_sloc_usage : Note<
+  "%0B in local locations, %1B in locations loaded from AST files, for a total "
+  "of %2B (%3%% of available space)">;
+def note_file_sloc_usage : Note<
+  "file entered %0 time%s0 using %1B of space"
+  "%plural{0:|: plus %2B for macro expansions}2">;
+def note_file_misc_sloc_usage : Note<
+  "%0 additional files entered using a total of %1B of space">;
 
 // Modules
 def err_module_format_unhandled : Error<

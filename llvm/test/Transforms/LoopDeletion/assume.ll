@@ -12,7 +12,7 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.Domain.67 = type { %class.DomainBase.68 }
 %class.DomainBase.68 = type { i32 }
 
-define dso_local void @_ZSt8_DestroyIP3LocILi3EES1_EvT_S3_RSaIT0_E(%class.Loc.95* %0) #0 {
+define dso_local void @_ZSt8_DestroyIP3LocILi3EES1_EvT_S3_RSaIT0_E(ptr %0) #0 {
 ; CHECK-LABEL: @_ZSt8_DestroyIP3LocILi3EES1_EvT_S3_RSaIT0_E(
 ; CHECK-NEXT:    br label [[_ZST8_DESTROYIP3LOCILI3EEEVT_S3__EXIT:%.*]]
 ; CHECK:       _ZSt8_DestroyIP3LocILi3EEEvT_S3_.exit:
@@ -21,13 +21,13 @@ define dso_local void @_ZSt8_DestroyIP3LocILi3EES1_EvT_S3_RSaIT0_E(%class.Loc.95
   br label %2
 
 2:                                                ; preds = %4, %1
-  %.0.i.i = phi %class.Loc.95* [ undef, %1 ], [ %5, %4 ]
-  %3 = icmp ne %class.Loc.95* %.0.i.i, %0
+  %.0.i.i = phi ptr [ undef, %1 ], [ %5, %4 ]
+  %3 = icmp ne ptr %.0.i.i, %0
   br i1 %3, label %4, label %_ZSt8_DestroyIP3LocILi3EEEvT_S3_.exit
 
 4:                                                ; preds = %2
-  call void @llvm.assume(i1 true) [ "align"(%class.Loc.95* %.0.i.i, i64 4) ]
-  %5 = getelementptr inbounds %class.Loc.95, %class.Loc.95* %.0.i.i, i32 1
+  call void @llvm.assume(i1 true) [ "align"(ptr %.0.i.i, i64 4) ]
+  %5 = getelementptr inbounds %class.Loc.95, ptr %.0.i.i, i32 1
   br label %2
 
 _ZSt8_DestroyIP3LocILi3EEEvT_S3_.exit:            ; preds = %2

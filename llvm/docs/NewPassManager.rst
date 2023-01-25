@@ -171,13 +171,17 @@ managers created by that ``PassBuilder``. See the documentation for
 
 If a ``PassBuilder`` has a corresponding ``TargetMachine`` for a backend, it
 will call ``TargetMachine::registerPassBuilderCallbacks()`` to allow the
-backend to inject passes into the pipeline. This is equivalent to the legacy
-PM's ``TargetMachine::adjustPassManager()``.
+backend to inject passes into the pipeline.
 
 Clang's ``BackendUtil.cpp`` shows examples of a frontend adding (mostly
 sanitizer) passes to various parts of the pipeline.
 ``AMDGPUTargetMachine::registerPassBuilderCallbacks()`` is an example of a
 backend adding passes to various parts of the pipeline.
+
+Pass plugins can also add passes into default pipelines. Different tools have
+different ways of loading dynamic pass plugins. For example, ``opt
+-load-pass-plugin=path/to/plugin.so`` loads a pass plugin into ``opt``. For
+information on writing a pass plugin, see :doc:`WritingAnLLVMNewPMPass`.
 
 Using Analyses
 ==============
@@ -430,6 +434,8 @@ To use the new PM:
 .. code-block:: shell
 
   $ opt -passes='pass1,pass2' /tmp/a.ll -S
+  # -p is an alias for -passes
+  $ opt -p pass1,pass2 /tmp/a.ll -S
 
 The new PM typically requires explicit pass nesting. For example, to run a
 function pass, then a module pass, we need to wrap the function pass in a module
@@ -500,21 +506,22 @@ Status of the New and Legacy Pass Managers
 ==========================================
 
 LLVM currently contains two pass managers, the legacy PM and the new PM. The
-optimization pipeline (aka the middle-end) works with both the legacy PM and
-the new PM, whereas the backend target-dependent code generation only works
-with the legacy PM.
+optimization pipeline (aka the middle-end) uses the new PM, whereas the backend
+target-dependent code generation uses the legacy PM.
 
-For the optimization pipeline, the new PM is the default PM. Using the legacy PM
-for the optimization pipeline is deprecated and there are ongoing efforts to
-remove its usage.
+The legacy PM somewhat works with the optimization pipeline, but this is
+deprecated and there are ongoing efforts to remove its usage.
 
 Some IR passes are considered part of the backend codegen pipeline even if
 they are LLVM IR passes (whereas all MIR passes are codegen passes). This
 includes anything added via ``TargetPassConfig`` hooks, e.g.
-``TargetPassConfig::addCodeGenPrepare()``. As mentioned before, passes added
-in ``TargetMachine::adjustPassManager()`` are part of the optimization
-pipeline, and should have a corresponding line in
-``TargetMachine::registerPassBuilderCallbacks()``.
+``TargetPassConfig::addCodeGenPrepare()``.
+
+The ``TargetMachine::adjustPassManager()`` function that was used to extend a
+legacy PM with passes on a per target basis has been removed. It was mainly
+used from opt, but since support for using the default pipelines has been
+removed in opt the function isn't needed any longer. In the new PM such
+adjustments are done by using ``TargetMachine::registerPassBuilderCallbacks()``.
 
 Currently there are efforts to make the codegen pipeline work with the new
 PM.

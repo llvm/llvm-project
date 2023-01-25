@@ -9,57 +9,57 @@ declare i16 @llvm.vector.reduce.add.v4i16(<4 x i16>)
 declare i8 @llvm.vector.reduce.add.v8i8(<8 x i8>)
 declare i8 @llvm.vector.reduce.add.v16i8(<16 x i8>)
 
-define i8 @add_B(<16 x i8>* %arr)  {
+define i8 @add_B(ptr %arr)  {
 ; CHECK-LABEL: add_B:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    addv b0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %bin.rdx = load <16 x i8>, <16 x i8>* %arr
+  %bin.rdx = load <16 x i8>, ptr %arr
   %r = call i8 @llvm.vector.reduce.add.v16i8(<16 x i8> %bin.rdx)
   ret i8 %r
 }
 
-define i16 @add_H(<8 x i16>* %arr)  {
+define i16 @add_H(ptr %arr)  {
 ; CHECK-LABEL: add_H:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    addv h0, v0.8h
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %bin.rdx = load <8 x i16>, <8 x i16>* %arr
+  %bin.rdx = load <8 x i16>, ptr %arr
   %r = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> %bin.rdx)
   ret i16 %r
 }
 
-define i32 @add_S( <4 x i32>* %arr)  {
+define i32 @add_S( ptr %arr)  {
 ; CHECK-LABEL: add_S:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %bin.rdx = load <4 x i32>, <4 x i32>* %arr
+  %bin.rdx = load <4 x i32>, ptr %arr
   %r = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %bin.rdx)
   ret i32 %r
 }
 
-define i64 @add_D(<2 x i64>* %arr)  {
+define i64 @add_D(ptr %arr)  {
 ; CHECK-LABEL: add_D:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    addp d0, v0.2d
 ; CHECK-NEXT:    fmov x0, d0
 ; CHECK-NEXT:    ret
-  %bin.rdx = load <2 x i64>, <2 x i64>* %arr
+  %bin.rdx = load <2 x i64>, ptr %arr
   %r = call i64 @llvm.vector.reduce.add.v2i64(<2 x i64> %bin.rdx)
   ret i64 %r
 }
 
 declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 
-define i32 @oversized_ADDV_256(i8* noalias nocapture readonly %arg1, i8* noalias nocapture readonly %arg2) {
+define i32 @oversized_ADDV_256(ptr noalias nocapture readonly %arg1, ptr noalias nocapture readonly %arg2) {
 ; CHECK-LABEL: oversized_ADDV_256:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -69,23 +69,21 @@ define i32 @oversized_ADDV_256(i8* noalias nocapture readonly %arg1, i8* noalias
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
 entry:
-  %0 = bitcast i8* %arg1 to <8 x i8>*
-  %1 = load <8 x i8>, <8 x i8>* %0, align 1
-  %2 = zext <8 x i8> %1 to <8 x i32>
-  %3 = bitcast i8* %arg2 to <8 x i8>*
-  %4 = load <8 x i8>, <8 x i8>* %3, align 1
-  %5 = zext <8 x i8> %4 to <8 x i32>
-  %6 = sub nsw <8 x i32> %2, %5
-  %7 = icmp slt <8 x i32> %6, zeroinitializer
-  %8 = sub nsw <8 x i32> zeroinitializer, %6
-  %9 = select <8 x i1> %7, <8 x i32> %8, <8 x i32> %6
-  %r = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %9)
+  %0 = load <8 x i8>, ptr %arg1, align 1
+  %1 = zext <8 x i8> %0 to <8 x i32>
+  %2 = load <8 x i8>, ptr %arg2, align 1
+  %3 = zext <8 x i8> %2 to <8 x i32>
+  %4 = sub nsw <8 x i32> %1, %3
+  %5 = icmp slt <8 x i32> %4, zeroinitializer
+  %6 = sub nsw <8 x i32> zeroinitializer, %4
+  %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
+  %r = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %7)
   ret i32 %r
 }
 
 declare i32 @llvm.vector.reduce.add.v16i32(<16 x i32>)
 
-define i32 @oversized_ADDV_512(<16 x i32>* %arr)  {
+define i32 @oversized_ADDV_512(ptr %arr)  {
 ; CHECK-LABEL: oversized_ADDV_512:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp q0, q1, [x0, #32]
@@ -96,7 +94,7 @@ define i32 @oversized_ADDV_512(<16 x i32>* %arr)  {
 ; CHECK-NEXT:    addv s0, v0.4s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
-  %bin.rdx = load <16 x i32>, <16 x i32>* %arr
+  %bin.rdx = load <16 x i32>, ptr %arr
   %r = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %bin.rdx)
   ret i32 %r
 }

@@ -250,7 +250,7 @@ XCoreRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   return false;
 }
 
-void
+bool
 XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                        int SPAdj, unsigned FIOperandNum,
                                        RegScavenger *RS) const {
@@ -284,7 +284,7 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.isDebugValue()) {
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false /*isDef*/);
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   // fold constant into offset.
@@ -313,6 +313,7 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Erase old instruction.
   MachineBasicBlock &MBB = *MI.getParent();
   MBB.erase(II);
+  return true;
 }
 
 

@@ -7,8 +7,7 @@ define i1 @reduce_and_nxv16i1(<vscale x 16 x i1> %vec) {
 ; CHECK-LABEL: reduce_and_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.and.i1.nxv16i1(<vscale x 16 x i1> %vec)
@@ -19,8 +18,7 @@ define i1 @reduce_and_nxv8i1(<vscale x 8 x i1> %vec) {
 ; CHECK-LABEL: reduce_and_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.and.i1.nxv8i1(<vscale x 8 x i1> %vec)
@@ -31,8 +29,7 @@ define i1 @reduce_and_nxv4i1(<vscale x 4 x i1> %vec) {
 ; CHECK-LABEL: reduce_and_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.and.i1.nxv4i1(<vscale x 4 x i1> %vec)
@@ -43,8 +40,7 @@ define i1 @reduce_and_nxv2i1(<vscale x 2 x i1> %vec) {
 ; CHECK-LABEL: reduce_and_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.and.i1.nxv2i1(<vscale x 2 x i1> %vec)
@@ -185,8 +181,7 @@ define i1 @reduce_smax_nxv16i1(<vscale x 16 x i1> %vec) {
 ; CHECK-LABEL: reduce_smax_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smax.i1.nxv16i1(<vscale x 16 x i1> %vec)
@@ -197,8 +192,7 @@ define i1 @reduce_smax_nxv8i1(<vscale x 8 x i1> %vec) {
 ; CHECK-LABEL: reduce_smax_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smax.i1.nxv8i1(<vscale x 8 x i1> %vec)
@@ -209,8 +203,7 @@ define i1 @reduce_smax_nxv4i1(<vscale x 4 x i1> %vec) {
 ; CHECK-LABEL: reduce_smax_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smax.i1.nxv4i1(<vscale x 4 x i1> %vec)
@@ -221,8 +214,7 @@ define i1 @reduce_smax_nxv2i1(<vscale x 2 x i1> %vec) {
 ; CHECK-LABEL: reduce_smax_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.smax.i1.nxv2i1(<vscale x 2 x i1> %vec)
@@ -362,8 +354,7 @@ define i1 @reduce_umin_nxv16i1(<vscale x 16 x i1> %vec) {
 ; CHECK-LABEL: reduce_umin_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umin.i1.nxv16i1(<vscale x 16 x i1> %vec)
@@ -374,8 +365,7 @@ define i1 @reduce_umin_nxv8i1(<vscale x 8 x i1> %vec) {
 ; CHECK-LABEL: reduce_umin_nxv8i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umin.i1.nxv8i1(<vscale x 8 x i1> %vec)
@@ -386,8 +376,7 @@ define i1 @reduce_umin_nxv4i1(<vscale x 4 x i1> %vec) {
 ; CHECK-LABEL: reduce_umin_nxv4i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umin.i1.nxv4i1(<vscale x 4 x i1> %vec)
@@ -411,8 +400,7 @@ define i1 @reduce_umin_nxv2i1(<vscale x 2 x i1> %vec) {
 ; CHECK-LABEL: reduce_umin_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %res = call i1 @llvm.vector.reduce.umin.i1.nxv2i1(<vscale x 2 x i1> %vec)

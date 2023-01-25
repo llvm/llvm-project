@@ -334,6 +334,26 @@ void ErrorBadParamsToAnnotateContiguousContainer::Print() {
   ReportErrorSummary(scariness.GetDescription(), stack);
 }
 
+void ErrorBadParamsToAnnotateDoubleEndedContiguousContainer::Print() {
+  Report(
+      "ERROR: AddressSanitizer: bad parameters to "
+      "__sanitizer_annotate_double_ended_contiguous_container:\n"
+      "      storage_beg        : %p\n"
+      "      storage_end        : %p\n"
+      "      old_container_beg  : %p\n"
+      "      old_container_end  : %p\n"
+      "      new_container_beg  : %p\n"
+      "      new_container_end  : %p\n",
+      (void *)storage_beg, (void *)storage_end, (void *)old_container_beg,
+      (void *)old_container_end, (void *)new_container_beg,
+      (void *)new_container_end);
+  uptr granularity = ASAN_SHADOW_GRANULARITY;
+  if (!IsAligned(storage_beg, granularity))
+    Report("ERROR: storage_beg is not aligned by %zu\n", granularity);
+  stack->Print();
+  ReportErrorSummary(scariness.GetDescription(), stack);
+}
+
 void ErrorODRViolation::Print() {
   Decorator d;
   Printf("%s", d.Error());
@@ -539,7 +559,8 @@ static void PrintShadowBytes(InternalScopedString *str, const char *before,
                              u8 *bytes, u8 *guilty, uptr n) {
   Decorator d;
   if (before)
-    str->append("%s%p:", before, (void *)bytes);
+    str->append("%s%p:", before,
+                (void *)ShadowToMem(reinterpret_cast<uptr>(bytes)));
   for (uptr i = 0; i < n; i++) {
     u8 *p = bytes + i;
     const char *before =

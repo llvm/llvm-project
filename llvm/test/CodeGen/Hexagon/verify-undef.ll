@@ -19,11 +19,11 @@ b0:
   br i1 %v0, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  %v1 = tail call i32 bitcast (i32 (...)* @f1 to i32 (i32)*)(i32 %a0) #0
+  %v1 = tail call i32 @f1(i32 %a0) #0
   br label %b3
 
 b2:                                               ; preds = %b0
-  store i32 0, i32* @g0, align 4
+  store i32 0, ptr @g0, align 4
   br label %b3
 
 b3:                                               ; preds = %b2, %b1

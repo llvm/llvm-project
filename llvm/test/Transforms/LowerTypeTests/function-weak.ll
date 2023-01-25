@@ -8,24 +8,24 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @x = global void ()* null, align 8
-@x = global void ()* @f, align 8
+; CHECK: @x = global ptr null, align 8
+@x = global ptr @f, align 8
 
-; CHECK: @x2 = global void ()* null, align 8
-@x2 = global void ()* @f, align 8
+; CHECK: @x2 = global ptr null, align 8
+@x2 = global ptr @f, align 8
 
-; CHECK: @x3 = internal global void ()* null, align 8
-@x3 = internal constant void ()* @f, align 8
+; CHECK: @x3 = internal global ptr null, align 8
+@x3 = internal constant ptr @f, align 8
 
 ; f + addend
-; CHECK: @x4 = global void ()* null, align 8
-@x4 = global void ()* bitcast (i8* getelementptr (i8, i8* bitcast (void ()* @f to i8*), i64 42) to void ()*), align 8
+; CHECK: @x4 = global ptr null, align 8
+@x4 = global ptr getelementptr (i8, ptr @f, i64 42), align 8
 
 ; aggregate initializer
-; CHECK: @s = global { void ()*, void ()*, i32 } zeroinitializer, align 8
-@s = global { void ()*, void ()*, i32 } { void ()* @f, void ()* @f, i32 42 }, align 8
+; CHECK: @s = global { ptr, ptr, i32 } zeroinitializer, align 8
+@s = global { ptr, ptr, i32 } { ptr @f, ptr @f, i32 42 }, align 8
 
-; CHECK:  @llvm.global_ctors = appending global {{.*}}{ i32 0, void ()* @__cfi_global_var_init
+; CHECK:  @llvm.global_ctors = appending global {{.*}}{ i32 0, ptr @__cfi_global_var_init
 
 ; CHECK: declare !type !0 extern_weak void @f()
 declare !type !0 extern_weak void @f()
@@ -33,8 +33,8 @@ declare !type !0 extern_weak void @f()
 ; CHECK: define zeroext i1 @check_f()
 define zeroext i1 @check_f() {
 entry:
-; CHECK: ret i1 icmp ne (void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT:.*]], void ()* null), void ()* null)
-  ret i1 icmp ne (void ()* @f, void ()* null)
+; CHECK: ret i1 icmp ne (ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT:.*]], ptr null), ptr null)
+  ret i1 icmp ne (ptr @f, ptr null)
 }
 
 ; CHECK: define void @call_f() {
@@ -45,10 +45,10 @@ entry:
   ret void
 }
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 
@@ -58,11 +58,11 @@ define i1 @foo(i8* %p) {
 
 ; CHECK: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x, align 8
-; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x2, align 8
-; CHECK-NEXT: store void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()** @x3, align 8
-; CHECK-NEXT: store void ()* bitcast (i8* getelementptr (i8, i8* bitcast (void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null) to i8*), i64 42) to void ()*), void ()** @x4, align 8
-; CHECK-NEXT: store { void ()*, void ()*, i32 } { void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), void ()* select (i1 icmp ne (void ()* @f, void ()* null), void ()* @[[JT]], void ()* null), i32 42 }, { void ()*, void ()*, i32 }* @s, align 8
+; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x, align 8
+; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x2, align 8
+; CHECK-NEXT: store ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr @x3, align 8
+; CHECK-NEXT: store ptr getelementptr (i8, ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), i64 42), ptr @x4, align 8
+; CHECK-NEXT: store { ptr, ptr, i32 } { ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), ptr select (i1 icmp ne (ptr @f, ptr null), ptr @[[JT]], ptr null), i32 42 }, ptr @s, align 8
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
 

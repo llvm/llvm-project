@@ -2,17 +2,17 @@
 ; REQUIRES: asserts
 
 ; Function Attrs: nounwind
-define void @f0(i32* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
   br i1 undef, label %b1, label %b2
 
 b1:                                               ; preds = %b1, %b0
   %v0 = phi i64 [ %v9, %b1 ], [ 0, %b0 ]
   %v1 = phi i32 [ %v10, %b1 ], [ 0, %b0 ]
-  %v2 = getelementptr inbounds i32, i32* %a0, i32 %v1
-  %v3 = load i32, i32* %v2, align 4, !tbaa !0
+  %v2 = getelementptr inbounds i32, ptr %a0, i32 %v1
+  %v3 = load i32, ptr %v2, align 4, !tbaa !0
   %v4 = zext i32 %v3 to i64
-  %v5 = load i32, i32* undef, align 4, !tbaa !0
+  %v5 = load i32, ptr undef, align 4, !tbaa !0
   %v6 = zext i32 %v5 to i64
   %v7 = shl nuw i64 %v6, 32
   %v8 = or i64 %v7, %v4

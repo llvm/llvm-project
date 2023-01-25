@@ -1,12 +1,12 @@
 ; RUN: llc < %s
 
-	%struct.exception = type { i8, i8, i32, i8*, i8*, i32, i8* }
-@program_error = external global %struct.exception		; <%struct.exception*> [#uses=1]
+	%struct.exception = type { i8, i8, i32, ptr, ptr, i32, ptr }
+@program_error = external global %struct.exception		; <ptr> [#uses=1]
 
 define void @typeinfo() {
 entry:
-	%eh_typeid = tail call i32 @llvm.eh.typeid.for( i8* getelementptr (%struct.exception, %struct.exception* @program_error, i32 0, i32 0) )		; <i32> [#uses=0]
+	%eh_typeid = tail call i32 @llvm.eh.typeid.for( ptr @program_error )		; <i32> [#uses=0]
 	ret void
 }
 
-declare i32 @llvm.eh.typeid.for(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)

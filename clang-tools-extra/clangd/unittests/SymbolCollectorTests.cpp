@@ -22,11 +22,11 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
-#include "gmock/gmock-more-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -132,7 +132,7 @@ protected:
   std::string HeaderName = "f.h";
   std::string FileName = "f.cpp";
   TestTU File;
-  llvm::Optional<ParsedAST> AST; // Initialized after build.
+  std::optional<ParsedAST> AST; // Initialized after build.
 };
 
 TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
@@ -870,14 +870,14 @@ TEST_F(SymbolCollectorTest, RefContainers) {
   CollectorOpts.RefFilter = RefKind::All;
   CollectorOpts.CollectMainFileRefs = true;
   runSymbolCollector("", Code.code());
-  auto FindRefWithRange = [&](Range R) -> Optional<Ref> {
+  auto FindRefWithRange = [&](Range R) -> std::optional<Ref> {
     for (auto &Entry : Refs) {
       for (auto &Ref : Entry.second) {
         if (rangesMatch(Ref.Location, R))
           return Ref;
       }
     }
-    return llvm::None;
+    return std::nullopt;
   };
   auto Container = [&](llvm::StringRef RangeName) {
     auto Ref = FindRefWithRange(Code.range(RangeName));
@@ -1316,6 +1316,11 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
       Black
     };
     }
+    class Color3 {
+      enum {
+        Blue
+      };
+    };
   )";
   runSymbolCollector(Header, /*Main=*/"");
   EXPECT_THAT(Symbols,
@@ -1324,9 +1329,11 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
                   AllOf(qName("Color"), forCodeCompletion(true)),
                   AllOf(qName("Green"), forCodeCompletion(true)),
                   AllOf(qName("Color2"), forCodeCompletion(true)),
-                  AllOf(qName("Color2::Yellow"), forCodeCompletion(false)),
+                  AllOf(qName("Color2::Yellow"), forCodeCompletion(true)),
                   AllOf(qName("ns"), forCodeCompletion(true)),
-                  AllOf(qName("ns::Black"), forCodeCompletion(true))));
+                  AllOf(qName("ns::Black"), forCodeCompletion(true)),
+                  AllOf(qName("Color3"), forCodeCompletion(true)),
+                  AllOf(qName("Color3::Blue"), forCodeCompletion(true))));
 }
 
 TEST_F(SymbolCollectorTest, NamelessSymbols) {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -disable-output
+; RUN: opt < %s -passes=reassociate -disable-output
 ; PR13041
 
 define void @foo() {

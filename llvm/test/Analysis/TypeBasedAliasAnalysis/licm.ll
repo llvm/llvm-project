@@ -1,14 +1,14 @@
-; RUN: opt -tbaa -licm -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa -passes=licm -S < %s | FileCheck %s
 
 ; LICM should be able to hoist the address load out of the loop
 ; by using TBAA information.
 
 ; CHECK: @foo
 ; CHECK:      entry:
-; CHECK-NEXT:   %tmp3 = load double*, double** @P
+; CHECK-NEXT:   %tmp3 = load ptr, ptr @P
 ; CHECK-NEXT:   br label %for.body
 
-@P = common global double* null
+@P = common global ptr null
 
 define void @foo(i64 %n) nounwind {
 entry:
@@ -16,11 +16,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.07 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
-  %tmp3 = load double*, double** @P, !tbaa !1
-  %scevgep = getelementptr double, double* %tmp3, i64 %i.07
-  %tmp4 = load double, double* %scevgep, !tbaa !2
+  %tmp3 = load ptr, ptr @P, !tbaa !1
+  %scevgep = getelementptr double, ptr %tmp3, i64 %i.07
+  %tmp4 = load double, ptr %scevgep, !tbaa !2
   %mul = fmul double %tmp4, 2.300000e+00
-  store double %mul, double* %scevgep, !tbaa !2
+  store double %mul, ptr %scevgep, !tbaa !2
   %inc = add i64 %i.07, 1
   %exitcond = icmp eq i64 %inc, %n
   br i1 %exitcond, label %for.end, label %for.body
@@ -43,16 +43,15 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: store
 ; CHECK: br label %loop
 
-define void @bar(i8** %p) nounwind {
+define void @bar(ptr %p) nounwind {
 entry:
-  %q = bitcast i8** %p to i8*
   br label %loop
 
 loop:
-  %tmp51 = load i8*, i8** %p, !tbaa !4
-  store i8* %tmp51, i8** %p
-  %tmp40 = load i8, i8* %q, !tbaa !5
-  store i8 %tmp40, i8* %q
+  %tmp51 = load ptr, ptr %p, !tbaa !4
+  store ptr %tmp51, ptr %p
+  %tmp40 = load i8, ptr %p, !tbaa !5
+  store i8 %tmp40, ptr %p
   br label %loop
 }
 

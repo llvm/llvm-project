@@ -105,7 +105,9 @@ public:
   }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(BlockT *Block) const { return is_contained(Entries, Block); }
+  bool isEntry(const BlockT *Block) const {
+    return is_contained(Entries, Block);
+  }
 
   /// \brief Return whether \p Block is contained in the cycle.
   bool contains(const BlockT *Block) const {
@@ -232,14 +234,23 @@ public:
 private:
   ContextT Context;
 
-  /// Map basic blocks to their inner-most containing loop.
+  /// Map basic blocks to their inner-most containing cycle.
   DenseMap<BlockT *, CycleT *> BlockMap;
 
-  /// Outermost cycles discovered by any DFS.
+  /// Map basic blocks to their top level containing cycle.
+  DenseMap<BlockT *, CycleT *> BlockMapTopLevel;
+
+  /// Top-level cycles discovered by any DFS.
   ///
   /// Note: The implementation treats the nullptr as the parent of
   /// every top-level cycle. See \ref contains for an example.
   std::vector<std::unique_ptr<CycleT>> TopLevelCycles;
+
+  /// Move \p Child to \p NewParent by manipulating Children vectors.
+  ///
+  /// Note: This is an incomplete operation that does not update the depth of
+  /// the subtree.
+  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
 public:
   GenericCycleInfo() = default;
@@ -254,13 +265,7 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
-
-  /// Move \p Child to \p NewParent by manipulating Children vectors.
-  ///
-  /// Note: This is an incomplete operation that does not update the
-  /// list of blocks in the new parent or the depth of the subtree.
-  void moveToNewParent(CycleT *NewParent, CycleT *Child);
+  CycleT *getTopLevelParentCycle(BlockT *Block);
 
   /// Methods for debug and self-test.
   //@{

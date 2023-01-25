@@ -53,7 +53,7 @@ choice.
 C++ Standard Versions
 ---------------------
 
-Unless otherwise documented, LLVM subprojects are written using standard C++14
+Unless otherwise documented, LLVM subprojects are written using standard C++17
 code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
@@ -63,7 +63,13 @@ section `Software`).
 Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
-* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx14
+
+  * libc++: https://libcxx.llvm.org/Status/Cxx17.html
+
+* GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx17
+
+  * libstdc++: https://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html#status.iso.2017
+
 * MSVC: https://msdn.microsoft.com/en-us/library/hh567368.aspx
 
 
@@ -95,25 +101,6 @@ subjects is available in the :doc:`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult `that section of the programmer's manual
 <https://llvm.org/docs/ProgrammersManual.html#picking-the-right-data-structure-for-a-task>`_.
-
-Guidelines for Go code
-----------------------
-
-Any code written in the Go programming language is not subject to the
-formatting rules below. Instead, we adopt the formatting rules enforced by
-the `gofmt`_ tool.
-
-Go code should strive to be idiomatic. Two good sets of guidelines for what
-this means are `Effective Go`_ and `Go Code Review Comments`_.
-
-.. _gofmt:
-  https://golang.org/cmd/gofmt/
-
-.. _Effective Go:
-  https://golang.org/doc/effective_go.html
-
-.. _Go Code Review Comments:
-  https://github.com/golang/go/wiki/CodeReviewComments
 
 Mechanical Source Issues
 ========================
@@ -1019,6 +1006,24 @@ Or better yet (in this case) as:
 
 The idea is to reduce indentation and the amount of code you have to keep track
 of when reading the code.
+
+Note: this advice does not apply to a ``constexpr if`` statement. The
+substatement of the ``else`` clause may be a discarded statement, so removing
+the ``else`` can cause unexpected template instantiations. Thus, the following
+example is correct:
+
+.. code-block:: c++
+
+  template<typename T>
+  static constexpr bool VarTempl = true;
+
+  template<typename T>
+  int func() {
+    if constexpr (VarTempl<T>)
+      return 1;
+    else
+      static_assert(!VarTempl<T>);
+  }
 
 Turn Predicate Loops into Predicate Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

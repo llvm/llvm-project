@@ -222,7 +222,7 @@
 ; PIC-DIS-NEXT:        global.get      1
 ; PIC-DIS-NEXT:        [[PTR]].add
 ; DIS-NEXT:            i32.const       0
-; DIS-NEXT:            i32.const       10000
+; DIS-NEXT:            [[PTR]].const   10000
 ; DIS-NEXT:            memory.fill     0
 
 ; NOPIC-DIS-NEXT:      [[PTR]].const   11064

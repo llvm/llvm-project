@@ -58,6 +58,7 @@ module LLVM_BinaryFormat {
     requires cplusplus
     umbrella "BinaryFormat" module * { export * }
     textual header "BinaryFormat/Dwarf.def"
+    textual header "BinaryFormat/DXContainerConstants.def"
     textual header "BinaryFormat/DynamicTags.def"
     textual header "BinaryFormat/MachO.def"
     textual header "BinaryFormat/MinidumpConstants.def"
@@ -83,6 +84,7 @@ module LLVM_BinaryFormat {
     textual header "BinaryFormat/ELFRelocs/SystemZ.def"
     textual header "BinaryFormat/ELFRelocs/VE.def"
     textual header "BinaryFormat/ELFRelocs/x86_64.def"
+    textual header "BinaryFormat/ELFRelocs/Xtensa.def"
     textual header "BinaryFormat/WasmRelocs.def"
     textual header "BinaryFormat/MsgPack.def"
 }
@@ -285,6 +287,7 @@ module LLVM_intrinsic_gen {
   module IR_PatternMatch { header "IR/PatternMatch.h" export * }
   module IR_SafepointIRVerifier { header "IR/SafepointIRVerifier.h" export * }
   module IR_Statepoint { header "IR/Statepoint.h" export * }
+  module IR_DebugInfo { header "IR/DebugInfo.h" export * }
 
   export *
 }
@@ -388,6 +391,16 @@ module LLVM_Transforms {
 
 extern module LLVM_Extern_Utils_DataTypes "module.extern.modulemap"
 
+// Build the module with the tablegen-generated files needed by the
+// TargetParser module before building the TargetParser module itself.
+module TargetParserGen {
+  module RISCVTargetParserDef {
+    header "TargetParser/RISCVTargetParser.h"
+    extern module LLVM_Extern_TargetParser_Gen "module.extern.modulemap"
+    export *
+  }
+}
+
 // A module covering ADT/ and Support/. These are intertwined and
 // codependent, and notionally form a single module.
 module LLVM_Utils {
@@ -410,14 +423,21 @@ module LLVM_Utils {
     // Exclude these; they are fundamentally non-modular.
     exclude header "Support/PluginLoader.h"
     exclude header "Support/Solaris/sys/regset.h"
+    textual header "Support/TargetOpcodes.def"
+
+  }
+
+  module TargetParser {
+    requires cplusplus
+
+    umbrella "TargetParser"
+    module * { export * }
 
     // These are intended for textual inclusion.
-    textual header "Support/AArch64TargetParser.def"
-    textual header "Support/ARMTargetParser.def"
-    textual header "Support/CSKYTargetParser.def"
-    textual header "Support/RISCVTargetParser.def"
-    textual header "Support/TargetOpcodes.def"
-    textual header "Support/X86TargetParser.def"
+    textual header "TargetParser/ARMTargetParser.def"
+    textual header "TargetParser/CSKYTargetParser.def"
+    textual header "TargetParser/X86TargetParser.def"
+    textual header "TargetParser/LoongArchTargetParser.def"
   }
 
   // This part of the module is usable from both C and C++ code.

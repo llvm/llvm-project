@@ -260,20 +260,19 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-NOBMI-NEXT:    testq %rdi, %rdi
 ; X64-NOBMI-NEXT:    je .LBB1_3
 ; X64-NOBMI-NEXT:  # %bb.1: # %for.body.preheader
-; X64-NOBMI-NEXT:    movq %rcx, %r8
-; X64-NOBMI-NEXT:    movq %rdx, %r9
+; X64-NOBMI-NEXT:    movq %rdx, %r8
 ; X64-NOBMI-NEXT:    xorl %r10d, %r10d
-; X64-NOBMI-NEXT:    xorl %ecx, %ecx
+; X64-NOBMI-NEXT:    xorl %r9d, %r9d
 ; X64-NOBMI-NEXT:    .p2align 4, 0x90
 ; X64-NOBMI-NEXT:  .LBB1_2: # %for.body
 ; X64-NOBMI-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NOBMI-NEXT:    movq %r8, %rax
-; X64-NOBMI-NEXT:    mulq (%r9,%rcx,8)
+; X64-NOBMI-NEXT:    movq %rcx, %rax
+; X64-NOBMI-NEXT:    mulq (%r8,%r9,8)
 ; X64-NOBMI-NEXT:    addq %r10, %rax
 ; X64-NOBMI-NEXT:    adcq $0, %rdx
-; X64-NOBMI-NEXT:    movq %rax, (%rsi,%rcx,8)
-; X64-NOBMI-NEXT:    incq %rcx
-; X64-NOBMI-NEXT:    cmpq %rcx, %rdi
+; X64-NOBMI-NEXT:    movq %rax, (%rsi,%r9,8)
+; X64-NOBMI-NEXT:    incq %r9
+; X64-NOBMI-NEXT:    cmpq %r9, %rdi
 ; X64-NOBMI-NEXT:    movq %rdx, %r10
 ; X64-NOBMI-NEXT:    jne .LBB1_2
 ; X64-NOBMI-NEXT:  .LBB1_3: # %for.end
@@ -285,21 +284,20 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-BMI-NEXT:    testq %rdi, %rdi
 ; X64-BMI-NEXT:    je .LBB1_3
 ; X64-BMI-NEXT:  # %bb.1: # %for.body.preheader
-; X64-BMI-NEXT:    movq %rcx, %r8
-; X64-BMI-NEXT:    movq %rdx, %r9
-; X64-BMI-NEXT:    xorl %r10d, %r10d
-; X64-BMI-NEXT:    xorl %ecx, %ecx
+; X64-BMI-NEXT:    movq %rdx, %rax
+; X64-BMI-NEXT:    xorl %r9d, %r9d
+; X64-BMI-NEXT:    xorl %r8d, %r8d
 ; X64-BMI-NEXT:    .p2align 4, 0x90
 ; X64-BMI-NEXT:  .LBB1_2: # %for.body
 ; X64-BMI-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-BMI-NEXT:    movq %r8, %rdx
-; X64-BMI-NEXT:    mulxq (%r9,%rcx,8), %rax, %rdx
-; X64-BMI-NEXT:    addq %r10, %rax
+; X64-BMI-NEXT:    movq %rcx, %rdx
+; X64-BMI-NEXT:    mulxq (%rax,%r8,8), %r10, %rdx
+; X64-BMI-NEXT:    addq %r9, %r10
 ; X64-BMI-NEXT:    adcq $0, %rdx
-; X64-BMI-NEXT:    movq %rax, (%rsi,%rcx,8)
-; X64-BMI-NEXT:    incq %rcx
-; X64-BMI-NEXT:    cmpq %rcx, %rdi
-; X64-BMI-NEXT:    movq %rdx, %r10
+; X64-BMI-NEXT:    movq %r10, (%rsi,%r8,8)
+; X64-BMI-NEXT:    incq %r8
+; X64-BMI-NEXT:    cmpq %r8, %rdi
+; X64-BMI-NEXT:    movq %rdx, %r9
 ; X64-BMI-NEXT:    jne .LBB1_2
 ; X64-BMI-NEXT:  .LBB1_3: # %for.end
 ; X64-BMI-NEXT:    xorl %eax, %eax

@@ -1939,6 +1939,164 @@ S11 s11;
 // expected-note@first.h:* {{but in 'FirstModule' found method 'run' with 2 template arguments}}
 #endif
 
+#if defined(FIRST)
+struct S12 {
+  template <int> void f(){};
+  template <> void f<1>(){};
+};
+#elif defined(SECOND)
+struct S12 {
+  template <int> void f(){};
+  template <> void f<2>(){};
+};
+#else
+S12 s12;
+// expected-error@second.h:* {{'TemplateArgument::S12' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with 2 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with 1 for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S13 {
+  template <int> void f(){};
+  template <> void f<10>(){};
+};
+#elif defined(SECOND)
+struct S13 {
+  template <int> void f(){};
+  template <> void f<10>(){};
+};
+#else
+S13 s13;
+#endif
+
+#if defined(FIRST)
+struct S14 {
+  template <bool, bool> void f(){};
+  template <> void f<true, false>(){};
+};
+#elif defined(SECOND)
+struct S14 {
+  template <bool, bool> void f(){};
+  template <> void f<false, true>(){};
+};
+#else
+S14 s14;
+// expected-error@second.h:* {{'TemplateArgument::S14' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with 0 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with 1 for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S15 {
+  template <bool, bool> void f(){};
+  template <> void f<true, true>(){};
+};
+#elif defined(SECOND)
+struct S15 {
+  template <bool, bool> void f(){};
+  template <> void f<true, true>(){};
+};
+#else
+S15 s15;
+#endif
+
+#if defined(FIRST)
+struct S16 {
+  template <int *> void f(){};
+  template <> void f<nullptr>(){};
+};
+#elif defined(SECOND)
+struct S16 {
+  template <int *> void f(){};
+  template <> void f<nullptr>(){};
+};
+#else
+S16 s16;
+#endif
+
+#if defined(FIRST)
+struct S17 {
+  static int x;
+  template <int *> void f(){};
+  template <> void f<&x>(){};
+};
+#elif defined(SECOND)
+struct S17 {
+  static int x;
+  template <int *> void f(){};
+  template <> void f<nullptr>(){};
+};
+#else
+S17 s17;
+// expected-error@second.h:* {{'TemplateArgument::S17' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with nullptr for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with 'x' for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S18 {
+  static int x;
+  template <int *> void f(){};
+  template <> void f<&x>(){};
+};
+#elif defined(SECOND)
+struct S18 {
+  static int x;
+  template <int *> void f(){};
+  template <> void f<&x>(){};
+};
+#else
+S18 s18;
+#endif
+
+#if defined(FIRST)
+struct S19 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<x + x>(){};
+};
+#elif defined(SECOND)
+struct S19 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<x + x>(){};
+};
+#else
+S19 s19;
+#endif
+
+#if defined(FIRST)
+struct S20 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<x + x>(){};
+};
+#elif defined(SECOND)
+struct S20 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<x>(){};
+};
+#else
+S20 s20;
+// expected-error@second.h:* {{'TemplateArgument::S20' has different definitions in different modules; first difference is definition in module 'SecondModule' found method 'f' with 18446744073709551615 for 1st template argument}}
+// expected-note@first.h:* {{but in 'FirstModule' found method 'f' with 36893488147419103230 for 1st template argument}}
+#endif
+
+#if defined(FIRST)
+struct S21 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<x + 0>(){};
+};
+#elif defined(SECOND)
+struct S21 {
+  static constexpr _BitInt(128) x = static_cast<_BitInt(128)>((unsigned long long)-1);
+  template <_BitInt(128)> void f(){};
+  template <> void f<(unsigned long long)-1>(){};
+};
+#else
+S21 s21;
+#endif
+
 #define DECLS                   \
   OneClass<int> a;              \
   OneInt<1> b;                  \

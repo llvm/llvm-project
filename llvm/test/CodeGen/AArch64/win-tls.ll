@@ -5,26 +5,26 @@
 @tlsVar64 = thread_local global i64 0
 
 define i32 @getVar() {
-  %1 = load i32, i32* @tlsVar
+  %1 = load i32, ptr @tlsVar
   ret i32 %1
 }
 
-define i32* @getPtr() {
-  ret i32* @tlsVar
+define ptr @getPtr() {
+  ret ptr @tlsVar
 }
 
 define void @setVar(i32 %val) {
-  store i32 %val, i32* @tlsVar
+  store i32 %val, ptr @tlsVar
   ret void
 }
 
 define i8 @getVar8() {
-  %1 = load i8, i8* @tlsVar8
+  %1 = load i8, ptr @tlsVar8
   ret i8 %1
 }
 
 define i64 @getVar64() {
-  %1 = load i64, i64* @tlsVar64
+  %1 = load i64, ptr @tlsVar64
   ret i64 %1
 }
 

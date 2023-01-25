@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
 ; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa -stats 2>&1
 ; RUN: FileCheck --input-file=%t --check-prefix=REMARKS %s
 
@@ -27,7 +27,7 @@
 ; REMARKS-NEXT: Name:            Interchanged
 ; REMARKS-NEXT: Function:        pr43326-triply-nested
 
-define void @pr43326-triply-nested([10 x [10 x i32]]* %e, [10 x [10 x i32]]* %f) {
+define void @pr43326-triply-nested(ptr %e, ptr %f) {
 entry:
   br label %for.outermost.header
 
@@ -54,10 +54,10 @@ for.middle.latch:                                ; preds = %for.innermost
 
 for.innermost:                                        ; preds = %for.middle.header, %for.innermost
   %indvars.innermost = phi i64 [ 0, %for.middle.header ], [ %indvars.innermost.next, %for.innermost ]
-  %arrayidx12 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* %e, i64 %indvars.innermost, i64 %indvars.middle, i64 %indvars.outermost
-  %0 = load i32, i32* %arrayidx12
-  %arrayidx18 = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* %f, i64 %indvars.innermost, i64 %indvars.middle, i64 %indvars.outermost
-  store i32 %0, i32* %arrayidx18
+  %arrayidx12 = getelementptr inbounds [10 x [10 x i32]], ptr %e, i64 %indvars.innermost, i64 %indvars.middle, i64 %indvars.outermost
+  %0 = load i32, ptr %arrayidx12
+  %arrayidx18 = getelementptr inbounds [10 x [10 x i32]], ptr %f, i64 %indvars.innermost, i64 %indvars.middle, i64 %indvars.outermost
+  store i32 %0, ptr %arrayidx18
   %indvars.innermost.next = add nuw nsw i64 %indvars.innermost, 1
   %exitcond.innermost = icmp ne i64 %indvars.innermost.next, 10
   br i1 %exitcond.innermost, label %for.innermost, label %for.middle.latch

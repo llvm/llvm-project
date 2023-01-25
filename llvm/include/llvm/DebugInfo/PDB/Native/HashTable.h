@@ -218,7 +218,7 @@ public:
   const_iterator find_as(const Key &K, TraitsT &Traits) const {
     uint32_t H = Traits.hashLookupKey(K) % capacity();
     uint32_t I = H;
-    Optional<uint32_t> FirstUnused;
+    std::optional<uint32_t> FirstUnused;
     do {
       if (isPresent(I)) {
         if (Traits.storageKeyToLookupKey(Buckets[I].first) == K)
@@ -248,7 +248,7 @@ public:
   /// from a real key to an internal key.
   template <typename Key, typename TraitsT>
   bool set_as(const Key &K, ValueT V, TraitsT &Traits) {
-    return set_as_internal(K, std::move(V), Traits, None);
+    return set_as_internal(K, std::move(V), Traits, std::nullopt);
   }
 
   template <typename Key, typename TraitsT>
@@ -271,7 +271,7 @@ private:
   /// from a real key to an internal key.
   template <typename Key, typename TraitsT>
   bool set_as_internal(const Key &K, ValueT V, TraitsT &Traits,
-                       Optional<uint32_t> InternalKey) {
+                       std::optional<uint32_t> InternalKey) {
     auto Entry = find_as(K, Traits);
     if (Entry != end()) {
       assert(isPresent(Entry.index()));

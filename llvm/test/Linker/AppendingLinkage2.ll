@@ -6,4 +6,4 @@
 ; RUN: llvm-link %t.1.bc %t.2.bc -S | FileCheck %s
 ; CHECK: [i32 7, i32 8]
 
-@X = appending global [1 x i32] [ i32 7 ]		; <[1 x i32]*> [#uses=0]
+@X = appending global [1 x i32] [ i32 7 ]		; <ptr> [#uses=0]

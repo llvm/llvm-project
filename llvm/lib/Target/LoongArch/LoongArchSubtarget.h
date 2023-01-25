@@ -31,6 +31,7 @@ class StringRef;
 
 class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   virtual void anchor();
+  bool HasLA32 = false;
   bool HasLA64 = false;
   bool HasBasicF = false;
   bool HasBasicD = false;
@@ -38,6 +39,9 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   bool HasExtLASX = false;
   bool HasExtLVZ = false;
   bool HasExtLBT = false;
+  bool HasLaGlobalWithPcrel = false;
+  bool HasLaGlobalWithAbs = false;
+  bool HasLaLocalWithAbs = false;
   unsigned GRLen = 32;
   MVT GRLenVT = MVT::i32;
   LoongArchABI::ABI TargetABI = LoongArchABI::ABI_Unknown;
@@ -45,6 +49,7 @@ class LoongArchSubtarget : public LoongArchGenSubtargetInfo {
   LoongArchInstrInfo InstrInfo;
   LoongArchRegisterInfo RegInfo;
   LoongArchTargetLowering TLInfo;
+  SelectionDAGTargetInfo TSInfo;
 
   /// Initializes using the passed in CPU and feature strings so that we can
   /// use initializer lists for subtarget initialization.
@@ -73,6 +78,9 @@ public:
   const LoongArchTargetLowering *getTargetLowering() const override {
     return &TLInfo;
   }
+  const SelectionDAGTargetInfo *getSelectionDAGInfo() const override {
+    return &TSInfo;
+  }
   bool is64Bit() const { return HasLA64; }
   bool hasBasicF() const { return HasBasicF; }
   bool hasBasicD() const { return HasBasicD; }
@@ -80,6 +88,9 @@ public:
   bool hasExtLASX() const { return HasExtLASX; }
   bool hasExtLVZ() const { return HasExtLVZ; }
   bool hasExtLBT() const { return HasExtLBT; }
+  bool hasLaGlobalWithPcrel() const { return HasLaGlobalWithPcrel; }
+  bool hasLaGlobalWithAbs() const { return HasLaGlobalWithAbs; }
+  bool hasLaLocalWithAbs() const { return HasLaLocalWithAbs; }
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }

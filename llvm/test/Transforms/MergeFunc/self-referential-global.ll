@@ -1,14 +1,14 @@
-; RUN: opt -mergefunc -disable-output < %s
+; RUN: opt -passes=mergefunc -disable-output < %s
 
 ; A linked list type and simple payload
-%LL = type { %S, %LL* }
-%S = type { void (%S*, i32)* }
+%LL = type { %S, ptr }
+%S = type { ptr }
 
 ; Table refers to itself via GEP
-@Table = internal global [3 x %LL] [%LL { %S { void (%S*, i32)* @B }, %LL* getelementptr inbounds ([3 x %LL], [3 x %LL]* @Table, i32 0, i32 0) }, %LL { %S { void (%S*, i32)* @A }, %LL* getelementptr inbounds ([3 x %LL], [3 x %LL]* @Table, i32 0, i32 0) }, %LL { %S { void (%S*, i32)* @A }, %LL* getelementptr inbounds ([3 x %LL], [3 x %LL]* @Table, i32 0, i32 0) }], align 16
+@Table = internal global [3 x %LL] [%LL { %S { ptr @B }, ptr @Table }, %LL { %S { ptr @A }, ptr @Table }, %LL { %S { ptr @A }, ptr @Table }], align 16
 
 ; The body of this is irrelevant; it is long so that mergefunc doesn't skip it as a small function.
-define internal void @A(%S* %self, i32 %a) {
+define internal void @A(ptr %self, i32 %a) {
   %1 = add i32 %a, 32
   %2 = add i32 %1, 32
   %3 = add i32 %2, 32
@@ -23,7 +23,7 @@ define internal void @A(%S* %self, i32 %a) {
   ret void
 }
 
-define internal void @B(%S* %self, i32 %a) {
+define internal void @B(ptr %self, i32 %a) {
   %1 = add i32 %a, 32
   %2 = add i32 %1, 32
   %3 = add i32 %2, 32

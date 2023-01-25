@@ -289,7 +289,7 @@ public:
                                            CodeGenFunction::VPtr Vptr) override;
 
   /// Don't initialize vptrs if dynamic class
-  /// is marked with with the 'novtable' attribute.
+  /// is marked with the 'novtable' attribute.
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return !VTableClass->hasAttr<MSNoVTableAttr>();
   }
@@ -458,7 +458,7 @@ public:
   friend struct MSRTTIBuilder;
 
   bool isImageRelative() const {
-    return CGM.getTarget().getPointerWidth(/*AddrSpace=*/0) == 64;
+    return CGM.getTarget().getPointerWidth(LangAS::Default) == 64;
   }
 
   // 5 routines for constructing the llvm types for MS RTTI structs.
@@ -1086,8 +1086,8 @@ bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
   return isDeletingDtor(GD);
 }
 
-static bool isTrivialForAArch64MSVC(const CXXRecordDecl *RD) {
-  // For AArch64, we use the C++14 definition of an aggregate, so we also
+static bool isTrivialForMSVC(const CXXRecordDecl *RD) {
+  // We use the C++14 definition of an aggregate, so we also
   // check for:
   //   No private or protected non static data members.
   //   No base classes
@@ -1115,15 +1115,7 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // Normally, the C++ concept of "is trivially copyable" is used to determine
-  // if a struct can be returned directly. However, as MSVC and the language
-  // have evolved, the definition of "trivially copyable" has changed, while the
-  // ABI must remain stable. AArch64 uses the C++14 concept of an "aggregate",
-  // while other ISAs use the older concept of "plain old data".
-  bool isTrivialForABI = RD->isPOD();
-  bool isAArch64 = CGM.getTarget().getTriple().isAArch64();
-  if (isAArch64)
-    isTrivialForABI = RD->canPassInRegisters() && isTrivialForAArch64MSVC(RD);
+  bool isTrivialForABI = RD->canPassInRegisters() && isTrivialForMSVC(RD);
 
   // MSVC always returns structs indirectly from C++ instance methods.
   bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
@@ -1137,7 +1129,7 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
     // On AArch64, use the `inreg` attribute if the object is considered to not
     // be trivially copyable, or if this is an instance method struct return.
-    FI.getReturnInfo().setInReg(isAArch64);
+    FI.getReturnInfo().setInReg(CGM.getTarget().getTriple().isAArch64());
 
     return true;
   }
@@ -1679,7 +1671,7 @@ void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
   CharUnits AddressPoint =
       getContext().getLangOpts().RTTIData
           ? getContext().toCharUnitsFromBits(
-                getContext().getTargetInfo().getPointerWidth(0))
+                getContext().getTargetInfo().getPointerWidth(LangAS::Default))
           : CharUnits::Zero();
 
   if (Info.PathToIntroducingObject.empty()) {
@@ -1952,7 +1944,9 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
     VFunc = CGF.EmitVTableTypeCheckedLoad(
         getObjectWithVPtr(), VTable, Ty,
-        ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
+        ML.Index *
+            CGM.getContext().getTargetInfo().getPointerWidth(LangAS::Default) /
+            8);
   } else {
     if (CGM.getCodeGenOpts().PrepareForLTO)
       CGF.EmitTypeMetadataCodeForVCall(getObjectWithVPtr(), VTable, Loc);
@@ -2083,6 +2077,8 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
   // Start defining the function.
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  ApplyDebugLocation AL(CGF, MD->getLocation());
   setCXXABIThisValue(CGF, loadIncomingCXXThis(CGF));
 
   // Load the vfptr and then callee from the vftable.  The callee should have
@@ -2127,7 +2123,7 @@ MicrosoftCXXABI::getAddrOfVBTable(const VPtrInfo &VBT, const CXXRecordDecl *RD,
   CharUnits Alignment =
       CGM.getContext().getTypeAlignInChars(CGM.getContext().IntTy);
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
-      Name, VBTableType, Linkage, Alignment.getQuantity());
+      Name, VBTableType, Linkage, Alignment.getAsAlign());
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   if (RD->hasAttr<DLLImportAttr>())
@@ -2347,6 +2343,10 @@ void MicrosoftCXXABI::registerGlobalDtor(CodeGenFunction &CGF, const VarDecl &D,
 
   if (D.getTLSKind())
     return emitGlobalDtorWithTLRegDtor(CGF, D, Dtor, Addr);
+
+  // HLSL doesn't support atexit.
+  if (CGM.getLangOpts().HLSL)
+    return CGM.AddCXXDtorEntry(Dtor, Addr);
 
   // The default behavior is to use atexit.
   CGF.registerGlobalDtorWithAtExit(D, Dtor, Addr);
@@ -4142,7 +4142,7 @@ MicrosoftCXXABI::getAddrOfCXXCtorClosure(const CXXConstructorDecl *CD,
   CodeGenFunction::RunCleanupsScope Cleanups(CGF);
 
   const auto *FPT = CD->getType()->castAs<FunctionProtoType>();
-  CGF.EmitCallArgs(Args, FPT, llvm::makeArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
+  CGF.EmitCallArgs(Args, FPT, llvm::ArrayRef(ArgVec), CD, IsCopy ? 1 : 0);
 
   // Insert any ABI-specific implicit constructor arguments.
   AddedStructorArgCounts ExtraArgs =
@@ -4350,10 +4350,10 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
   llvm::ArrayType *AT = llvm::ArrayType::get(CTType, NumEntries);
   llvm::StructType *CTAType = getCatchableTypeArrayType(NumEntries);
   llvm::Constant *Fields[] = {
-      llvm::ConstantInt::get(CGM.IntTy, NumEntries),    // NumEntries
+      llvm::ConstantInt::get(CGM.IntTy, NumEntries), // NumEntries
       llvm::ConstantArray::get(
-          AT, llvm::makeArrayRef(CatchableTypes.begin(),
-                                 CatchableTypes.end())) // CatchableTypes
+          AT, llvm::ArrayRef(CatchableTypes.begin(),
+                             CatchableTypes.end())) // CatchableTypes
   };
   SmallString<256> MangledName;
   {
@@ -4470,10 +4470,45 @@ MicrosoftCXXABI::LoadVTablePtr(CodeGenFunction &CGF, Address This,
 }
 
 bool MicrosoftCXXABI::isPermittedToBeHomogeneousAggregate(
-    const CXXRecordDecl *CXXRD) const {
-  // MSVC Windows on Arm64 considers a type not HFA if it is not an
-  // aggregate according to the C++14 spec. This is not consistent with the
-  // AAPCS64, but is defacto spec on that platform.
-  return !CGM.getTarget().getTriple().isAArch64() ||
-         isTrivialForAArch64MSVC(CXXRD);
+    const CXXRecordDecl *RD) const {
+  // All aggregates are permitted to be HFA on non-ARM platforms, which mostly
+  // affects vectorcall on x64/x86.
+  if (!CGM.getTarget().getTriple().isAArch64())
+    return true;
+  // MSVC Windows on Arm64 has its own rules for determining if a type is HFA
+  // that are inconsistent with the AAPCS64 ABI. The following are our best
+  // determination of those rules so far, based on observation of MSVC's
+  // behavior.
+  if (RD->isEmpty())
+    return false;
+  if (RD->isPolymorphic())
+    return false;
+  if (RD->hasNonTrivialCopyAssignment())
+    return false;
+  if (RD->hasNonTrivialDestructor())
+    return false;
+  if (RD->hasNonTrivialDefaultConstructor())
+    return false;
+  // These two are somewhat redundant given the caller
+  // (ABIInfo::isHomogeneousAggregate) checks the bases and fields, but that
+  // caller doesn't consider empty bases/fields to be non-homogenous, but it
+  // looks like Microsoft's AArch64 ABI does care about these empty types &
+  // anything containing/derived from one is non-homogeneous.
+  // Instead we could add another CXXABI entry point to query this property and
+  // have ABIInfo::isHomogeneousAggregate use that property.
+  // I don't think any other of the features listed above could be true of a
+  // base/field while not true of the outer struct. For example, if you have a
+  // base/field that has an non-trivial copy assignment/dtor/default ctor, then
+  // the outer struct's corresponding operation must be non-trivial.
+  for (const CXXBaseSpecifier &B : RD->bases()) {
+    if (const CXXRecordDecl *FRD = B.getType()->getAsCXXRecordDecl()) {
+      if (!isPermittedToBeHomogeneousAggregate(FRD))
+        return false;
+    }
+  }
+  // empty fields seem to be caught by the ABIInfo::isHomogeneousAggregate
+  // checking for padding - but maybe there are ways to end up with an empty
+  // field without padding? Not that I know of, so don't check fields here &
+  // rely on the padding check.
+  return true;
 }

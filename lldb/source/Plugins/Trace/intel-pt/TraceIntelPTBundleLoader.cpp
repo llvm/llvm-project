@@ -10,12 +10,13 @@
 
 #include "../common/ThreadPostMortemTrace.h"
 #include "TraceIntelPT.h"
+#include "TraceIntelPTConstants.h"
 #include "TraceIntelPTJSONStructs.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -30,18 +31,18 @@ FileSpec TraceIntelPTBundleLoader::NormalizePath(const std::string &path) {
 }
 
 Error TraceIntelPTBundleLoader::ParseModule(Target &target,
-                                                 const JSONModule &module) {
+                                            const JSONModule &module) {
   auto do_parse = [&]() -> Error {
     FileSpec system_file_spec(module.system_path);
 
-    FileSpec local_file_spec(module.file.hasValue() ? *module.file
-                                                    : module.system_path);
+    FileSpec local_file_spec(module.file.has_value() ? *module.file
+                                                     : module.system_path);
 
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = local_file_spec;
     module_spec.GetPlatformFileSpec() = system_file_spec;
 
-    if (module.uuid.hasValue())
+    if (module.uuid.has_value())
       module_spec.GetUUID().SetFromStringRef(*module.uuid);
 
     Status error;
@@ -64,7 +65,7 @@ Error TraceIntelPTBundleLoader::ParseModule(Target &target,
 }
 
 Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
-                                                     const json::Value &value) {
+                                                const json::Value &value) {
   std::string err;
   raw_string_ostream os(err);
   root.printErrorContext(value, os);
@@ -75,10 +76,10 @@ Error TraceIntelPTBundleLoader::CreateJSONError(json::Path::Root &root,
 
 ThreadPostMortemTraceSP
 TraceIntelPTBundleLoader::ParseThread(Process &process,
-                                           const JSONThread &thread) {
+                                      const JSONThread &thread) {
   lldb::tid_t tid = static_cast<lldb::tid_t>(thread.tid);
 
-  Optional<FileSpec> trace_file;
+  std::optional<FileSpec> trace_file;
   if (thread.ipt_trace)
     trace_file = FileSpec(*thread.ipt_trace);
 
@@ -89,11 +90,11 @@ TraceIntelPTBundleLoader::ParseThread(Process &process,
 }
 
 Expected<TraceIntelPTBundleLoader::ParsedProcess>
-TraceIntelPTBundleLoader::ParseProcess(const JSONProcess &process) {
+TraceIntelPTBundleLoader::CreateEmptyProcess(lldb::pid_t pid,
+                                             llvm::StringRef triple) {
   TargetSP target_sp;
   Status error = m_debugger.GetTargetList().CreateTarget(
-      m_debugger, /*user_exe_path*/ StringRef(), process.triple.value_or(""),
-      eLoadDependentsNo,
+      m_debugger, /*user_exe_path*/ StringRef(), triple, eLoadDependentsNo,
       /*platform_options*/ nullptr, target_sp);
 
   if (!target_sp)
@@ -107,17 +108,81 @@ TraceIntelPTBundleLoader::ParseProcess(const JSONProcess &process) {
       /*crash_file*/ nullptr,
       /*can_connect*/ false);
 
-  process_sp->SetID(static_cast<lldb::pid_t>(process.pid));
+  process_sp->SetID(static_cast<lldb::pid_t>(pid));
+
+  return parsed_process;
+}
+
+Expected<TraceIntelPTBundleLoader::ParsedProcess>
+TraceIntelPTBundleLoader::ParseProcess(const JSONProcess &process) {
+  Expected<ParsedProcess> parsed_process =
+      CreateEmptyProcess(process.pid, process.triple.value_or(""));
+
+  if (!parsed_process)
+    return parsed_process.takeError();
+
+  ProcessSP process_sp = parsed_process->target_sp->GetProcessSP();
 
   for (const JSONThread &thread : process.threads)
-    parsed_process.threads.push_back(ParseThread(*process_sp, thread));
+    parsed_process->threads.push_back(ParseThread(*process_sp, thread));
 
   for (const JSONModule &module : process.modules)
-    if (Error err = ParseModule(*target_sp, module))
+    if (Error err = ParseModule(*parsed_process->target_sp, module))
       return std::move(err);
 
   if (!process.threads.empty())
     process_sp->GetThreadList().SetSelectedThreadByIndexID(0);
+
+  // We invoke DidAttach to create a correct stopped state for the process and
+  // its threads.
+  ArchSpec process_arch;
+  process_sp->DidAttach(process_arch);
+
+  return parsed_process;
+}
+
+Expected<TraceIntelPTBundleLoader::ParsedProcess>
+TraceIntelPTBundleLoader::ParseKernel(
+    const JSONTraceBundleDescription &bundle_description) {
+  Expected<ParsedProcess> parsed_process =
+      CreateEmptyProcess(kDefaultKernelProcessID, "");
+
+  if (!parsed_process)
+    return parsed_process.takeError();
+
+  ProcessSP process_sp = parsed_process->target_sp->GetProcessSP();
+
+  // Add cpus as fake threads
+  for (const JSONCpu &cpu : *bundle_description.cpus) {
+    ThreadPostMortemTraceSP thread_sp = std::make_shared<ThreadPostMortemTrace>(
+        *process_sp, static_cast<lldb::tid_t>(cpu.id), FileSpec(cpu.ipt_trace));
+    thread_sp->SetName(formatv("kernel_cpu_{0}", cpu.id).str().c_str());
+    process_sp->GetThreadList().AddThread(thread_sp);
+    parsed_process->threads.push_back(thread_sp);
+  }
+
+  // Add kernel image
+  FileSpec file_spec(bundle_description.kernel->file);
+  ModuleSpec module_spec;
+  module_spec.GetFileSpec() = file_spec;
+
+  Status error;
+  ModuleSP module_sp =
+      parsed_process->target_sp->GetOrCreateModule(module_spec, false, &error);
+
+  if (error.Fail())
+    return error.ToError();
+
+  lldb::addr_t load_address =
+      bundle_description.kernel->load_address
+          ? bundle_description.kernel->load_address->value
+          : kDefaultKernelLoadAddress;
+
+  bool load_addr_changed = false;
+  module_sp->SetLoadAddress(*parsed_process->target_sp, load_address, false,
+                            load_addr_changed);
+
+  process_sp->GetThreadList().SetSelectedThreadByIndexID(0);
 
   // We invoke DidAttach to create a correct stopped state for the process and
   // its threads.
@@ -139,11 +204,21 @@ TraceIntelPTBundleLoader::LoadBundle(
     return std::move(err);
   };
 
-  for (const JSONProcess &process : bundle_description.processes) {
-    if (Expected<ParsedProcess> parsed_process = ParseProcess(process))
-      parsed_processes.push_back(std::move(*parsed_process));
+  if (bundle_description.processes) {
+    for (const JSONProcess &process : *bundle_description.processes) {
+      if (Expected<ParsedProcess> parsed_process = ParseProcess(process))
+        parsed_processes.push_back(std::move(*parsed_process));
+      else
+        return HandleError(parsed_process.takeError());
+    }
+  }
+
+  if (bundle_description.kernel) {
+    if (Expected<ParsedProcess> kernel_process =
+            ParseKernel(bundle_description))
+      parsed_processes.push_back(std::move(*kernel_process));
     else
-      return HandleError(parsed_process.takeError());
+      return HandleError(kernel_process.takeError());
   }
 
   return parsed_processes;
@@ -162,11 +237,13 @@ StringRef TraceIntelPTBundleLoader::GetSchema() {
     "model": integer,
     "stepping": integer
   },
-  "processes": [
+  "processes?": [
     {
       "pid": integer,
       "triple"?: string,
           // Optional clang/llvm target triple.
+          // This must be provided if the trace will be created not using the
+          // CLI or on a machine other than where the target was traced.
       "threads": [
           // A list of known threads for the given process. When context switch
           // data is provided, LLDB will automatically create threads for the
@@ -213,22 +290,36 @@ StringRef TraceIntelPTBundleLoader::GetSchema() {
     "timeMult": integer,
     "timeShift": integer,
     "timeZero": integer | string decimal | hex string,
+  },
+  "kernel"?: {
+    "loadAddress"?: integer | string decimal | hex string,
+        // Kernel's image load address. Defaults to 0xffffffff81000000, which
+        // is a load address of x86 architecture if KASLR is not enabled.
+    "file": string,
+        // Path to the kernel image.
   }
 }
 
 Notes:
 
-- All paths are either absolute or relative to folder containing the bundle description file.
+- All paths are either absolute or relative to folder containing the bundle
+  description file.
 - "cpus" is provided if and only if processes[].threads[].iptTrace is not provided.
 - "tscPerfZeroConversion" must be provided if "cpus" is provided.
- })";
+- If "kernel" is provided, then the "processes" section must be empty or not
+  passed at all, and the "cpus" section must be provided. This configuration
+  indicates that the kernel was traced and user processes weren't. Besides
+  that, the kernel is treated as a single process with one thread per CPU
+  core. This doesn't handle actual kernel threads, but instead treats
+  all the instructions executed by the kernel on each core as an
+  individual thread.})";
   }
   return schema;
 }
 
 Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
     JSONTraceBundleDescription &bundle_description) {
-  if (!bundle_description.cpus)
+  if (!bundle_description.cpus || !bundle_description.processes)
     return Error::success();
 
   if (!bundle_description.tsc_perf_zero_conversion)
@@ -239,7 +330,7 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
   DenseMap<lldb::pid_t, JSONProcess *> indexed_processes;
   DenseMap<JSONProcess *, DenseSet<tid_t>> indexed_threads;
 
-  for (JSONProcess &process : bundle_description.processes) {
+  for (JSONProcess &process : *bundle_description.processes) {
     indexed_processes[process.pid] = &process;
     for (JSONThread &thread : process.threads)
       indexed_threads[&process].insert(thread.tid);
@@ -260,8 +351,8 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
         FileSpec(cpu.context_switch_trace),
         [&](ArrayRef<uint8_t> data) -> Error {
           Expected<std::vector<ThreadContinuousExecution>> executions =
-              DecodePerfContextSwitchTrace(data, cpu.id,
-                                           *bundle_description.tsc_perf_zero_conversion);
+              DecodePerfContextSwitchTrace(
+                  data, cpu.id, *bundle_description.tsc_perf_zero_conversion);
           if (!executions)
             return executions.takeError();
           for (const ThreadContinuousExecution &execution : *executions)
@@ -275,7 +366,8 @@ Error TraceIntelPTBundleLoader::AugmentThreadsFromContextSwitches(
 }
 
 Expected<TraceSP> TraceIntelPTBundleLoader::CreateTraceIntelPTInstance(
-    JSONTraceBundleDescription &bundle_description, std::vector<ParsedProcess> &parsed_processes) {
+    JSONTraceBundleDescription &bundle_description,
+    std::vector<ParsedProcess> &parsed_processes) {
   std::vector<ThreadPostMortemTraceSP> threads;
   std::vector<ProcessSP> processes;
   for (const ParsedProcess &parsed_process : parsed_processes) {
@@ -284,8 +376,12 @@ Expected<TraceSP> TraceIntelPTBundleLoader::CreateTraceIntelPTInstance(
                    parsed_process.threads.end());
   }
 
+  TraceIntelPT::TraceMode trace_mode = bundle_description.kernel
+                                           ? TraceIntelPT::TraceMode::KernelMode
+                                           : TraceIntelPT::TraceMode::UserMode;
+
   TraceSP trace_instance = TraceIntelPT::CreateInstanceForPostmortemTrace(
-      bundle_description, processes, threads);
+      bundle_description, processes, threads, trace_mode);
   for (const ParsedProcess &parsed_process : parsed_processes)
     parsed_process.target_sp->SetTrace(trace_instance);
 
@@ -294,15 +390,17 @@ Expected<TraceSP> TraceIntelPTBundleLoader::CreateTraceIntelPTInstance(
 
 void TraceIntelPTBundleLoader::NormalizeAllPaths(
     JSONTraceBundleDescription &bundle_description) {
-  for (JSONProcess &process : bundle_description.processes) {
-    for (JSONModule &module : process.modules) {
-      module.system_path = NormalizePath(module.system_path).GetPath();
-      if (module.file)
-        module.file = NormalizePath(*module.file).GetPath();
-    }
-    for (JSONThread &thread : process.threads) {
-      if (thread.ipt_trace)
-        thread.ipt_trace = NormalizePath(*thread.ipt_trace).GetPath();
+  if (bundle_description.processes) {
+    for (JSONProcess &process : *bundle_description.processes) {
+      for (JSONModule &module : process.modules) {
+        module.system_path = NormalizePath(module.system_path).GetPath();
+        if (module.file)
+          module.file = NormalizePath(*module.file).GetPath();
+      }
+      for (JSONThread &thread : process.threads) {
+        if (thread.ipt_trace)
+          thread.ipt_trace = NormalizePath(*thread.ipt_trace).GetPath();
+      }
     }
   }
   if (bundle_description.cpus) {
@@ -311,6 +409,10 @@ void TraceIntelPTBundleLoader::NormalizeAllPaths(
           NormalizePath(cpu.context_switch_trace).GetPath();
       cpu.ipt_trace = NormalizePath(cpu.ipt_trace).GetPath();
     }
+  }
+  if (bundle_description.kernel) {
+    bundle_description.kernel->file =
+        NormalizePath(bundle_description.kernel->file).GetPath();
   }
 }
 

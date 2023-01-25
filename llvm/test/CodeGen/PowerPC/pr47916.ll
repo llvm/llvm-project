@@ -14,8 +14,8 @@ define dso_local void @_Z1jjPiPj() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-NEXT:    blr
 entry:
-  %wide.load42 = load <2 x i32>, <2 x i32>* undef, align 4
+  %wide.load42 = load <2 x i32>, ptr undef, align 4
   %interleaved.vec49 = shufflevector <2 x i32> %wide.load42, <2 x i32> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-  store <4 x i32> %interleaved.vec49, <4 x i32>* undef, align 4
+  store <4 x i32> %interleaved.vec49, ptr undef, align 4
   ret void
 }

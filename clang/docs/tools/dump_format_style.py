@@ -98,12 +98,10 @@ class Option(object):
     self.version = version
 
   def __str__(self):
+    s = ".. _%s:\n\n**%s** (``%s``) " % (self.name, self.name, to_yaml_type(self.type))
     if self.version:
-      s = '**%s** (``%s``) :versionbadge:`clang-format %s`\n%s' % (self.name, to_yaml_type(self.type), self.version,
-                                 doxygen2rst(indent(self.comment, 2)))
-    else:
-      s = '**%s** (``%s``)\n%s' % (self.name, to_yaml_type(self.type),
-                                 doxygen2rst(indent(self.comment, 2)))
+      s += ':versionbadge:`clang-format %s` ' % self.version
+    s += ':ref:`¶ <%s>`\n%s' % (self.name, doxygen2rst(indent(self.comment, 2)))
     if self.enum and self.enum.values:
       s += indent('\n\nPossible values:\n\n%s\n' % self.enum, 2)
     if self.nested_struct:

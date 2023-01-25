@@ -6,7 +6,7 @@
 declare i32 @foo()
 
 ; Check addition of 1.
-define zeroext i1 @f1(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f1(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f1:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, 1
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -16,12 +16,12 @@ define zeroext i1 @f1(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the ALHSIK range.
-define zeroext i1 @f2(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f2(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f2:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, 32767
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -31,12 +31,12 @@ define zeroext i1 @f2(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 32767)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next value up, which must use ALFI instead.
-define zeroext i1 @f3(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f3(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f3:
 ; CHECK: alfi %r3, 32768
 ; CHECK-DAG: st %r3, 0(%r4)
@@ -46,12 +46,12 @@ define zeroext i1 @f3(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 32768)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the negative ALHSIK range.
-define zeroext i1 @f4(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f4(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f4:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, -1
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -61,12 +61,12 @@ define zeroext i1 @f4(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 -1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the low end of the ALHSIK range.
-define zeroext i1 @f5(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f5(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f5:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, -32768
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -76,12 +76,12 @@ define zeroext i1 @f5(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 -32768)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next value down, which must use ALFI instead.
-define zeroext i1 @f6(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f6(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f6:
 ; CHECK: alfi %r3, 4294934527
 ; CHECK-DAG: st %r3, 0(%r4)
@@ -91,12 +91,12 @@ define zeroext i1 @f6(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 -32769)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check using the overflow result for a branch.
-define void @f7(i32 %dummy, i32 %a, i32 *%res) {
+define void @f7(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f7:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, 1
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -105,7 +105,7 @@ define void @f7(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %call, label %exit
 
 call:
@@ -117,7 +117,7 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f8(i32 %dummy, i32 %a, i32 *%res) {
+define void @f8(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f8:
 ; CHECK: alhsik [[REG1:%r[0-5]]], %r3, 1
 ; CHECK-DAG: st [[REG1]], 0(%r4)
@@ -126,7 +126,7 @@ define void @f8(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %exit, label %call
 
 call:

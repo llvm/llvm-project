@@ -1,5 +1,5 @@
 ; Make sure we don't crash in LICM.
-; RUN: opt %s -licm -opt-bisect-limit=1
+; RUN: opt %s -passes=licm -opt-bisect-limit=1
 
 define void @patatino() {
 for.cond1:

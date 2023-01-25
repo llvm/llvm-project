@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LINUX
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WINDOWS
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LINUX
+// RUN: %clang_cc1 -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WINDOWS
 
 #ifdef _WIN64
 #define ATTR(X) __declspec(X)
@@ -8,31 +8,31 @@
 #endif // _MSC_VER
 
 // Each version should have an IFunc and an alias.
-// LINUX: @SingleVersion = weak_odr alias void (), void ()* @SingleVersion.ifunc
-// LINUX: @TwoVersions = weak_odr alias void (), void ()* @TwoVersions.ifunc
-// LINUX: @OrderDispatchUsageSpecific = weak_odr alias void (), void ()* @OrderDispatchUsageSpecific.ifunc
-// LINUX: @TwoVersionsSameAttr = weak_odr alias void (), void ()* @TwoVersionsSameAttr.ifunc
-// LINUX: @ThreeVersionsSameAttr = weak_odr alias void (), void ()* @ThreeVersionsSameAttr.ifunc
-// LINUX: @OrderSpecificUsageDispatch = weak_odr alias void (), void ()* @OrderSpecificUsageDispatch.ifunc
-// LINUX: @NoSpecifics = weak_odr alias void (), void ()* @NoSpecifics.ifunc
-// LINUX: @HasGeneric = weak_odr alias void (), void ()* @HasGeneric.ifunc
-// LINUX: @HasParams = weak_odr alias void (i32, double), void (i32, double)* @HasParams.ifunc
-// LINUX: @HasParamsAndReturn = weak_odr alias i32 (i32, double), i32 (i32, double)* @HasParamsAndReturn.ifunc
-// LINUX: @GenericAndPentium = weak_odr alias i32 (i32, double), i32 (i32, double)* @GenericAndPentium.ifunc
-// LINUX: @DispatchFirst = weak_odr alias i32 (), i32 ()* @DispatchFirst.ifunc
+// LINUX: @SingleVersion = weak_odr alias void (), ptr @SingleVersion.ifunc
+// LINUX: @TwoVersions = weak_odr alias void (), ptr @TwoVersions.ifunc
+// LINUX: @OrderDispatchUsageSpecific = weak_odr alias void (), ptr @OrderDispatchUsageSpecific.ifunc
+// LINUX: @TwoVersionsSameAttr = weak_odr alias void (), ptr @TwoVersionsSameAttr.ifunc
+// LINUX: @ThreeVersionsSameAttr = weak_odr alias void (), ptr @ThreeVersionsSameAttr.ifunc
+// LINUX: @OrderSpecificUsageDispatch = weak_odr alias void (), ptr @OrderSpecificUsageDispatch.ifunc
+// LINUX: @NoSpecifics = weak_odr alias void (), ptr @NoSpecifics.ifunc
+// LINUX: @HasGeneric = weak_odr alias void (), ptr @HasGeneric.ifunc
+// LINUX: @HasParams = weak_odr alias void (i32, double), ptr @HasParams.ifunc
+// LINUX: @HasParamsAndReturn = weak_odr alias i32 (i32, double), ptr @HasParamsAndReturn.ifunc
+// LINUX: @GenericAndPentium = weak_odr alias i32 (i32, double), ptr @GenericAndPentium.ifunc
+// LINUX: @DispatchFirst = weak_odr alias i32 (), ptr @DispatchFirst.ifunc
 
-// LINUX: @SingleVersion.ifunc = weak_odr ifunc void (), void ()* ()* @SingleVersion.resolver
-// LINUX: @TwoVersions.ifunc = weak_odr ifunc void (), void ()* ()* @TwoVersions.resolver
-// LINUX: @OrderDispatchUsageSpecific.ifunc = weak_odr ifunc void (), void ()* ()* @OrderDispatchUsageSpecific.resolver
-// LINUX: @TwoVersionsSameAttr.ifunc = weak_odr ifunc void (), void ()* ()* @TwoVersionsSameAttr.resolver
-// LINUX: @ThreeVersionsSameAttr.ifunc = weak_odr ifunc void (), void ()* ()* @ThreeVersionsSameAttr.resolver
-// LINUX: @OrderSpecificUsageDispatch.ifunc = weak_odr ifunc void (), void ()* ()* @OrderSpecificUsageDispatch.resolver
-// LINUX: @NoSpecifics.ifunc = weak_odr ifunc void (), void ()* ()* @NoSpecifics.resolver
-// LINUX: @HasGeneric.ifunc = weak_odr ifunc void (), void ()* ()* @HasGeneric.resolver
-// LINUX: @HasParams.ifunc = weak_odr ifunc void (i32, double), void (i32, double)* ()* @HasParams.resolver
-// LINUX: @HasParamsAndReturn.ifunc = weak_odr ifunc i32 (i32, double), i32 (i32, double)* ()* @HasParamsAndReturn.resolver
-// LINUX: @GenericAndPentium.ifunc = weak_odr ifunc i32 (i32, double), i32 (i32, double)* ()* @GenericAndPentium.resolver
-// LINUX: @DispatchFirst.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @DispatchFirst.resolver
+// LINUX: @SingleVersion.ifunc = weak_odr ifunc void (), ptr @SingleVersion.resolver
+// LINUX: @TwoVersions.ifunc = weak_odr ifunc void (), ptr @TwoVersions.resolver
+// LINUX: @OrderDispatchUsageSpecific.ifunc = weak_odr ifunc void (), ptr @OrderDispatchUsageSpecific.resolver
+// LINUX: @TwoVersionsSameAttr.ifunc = weak_odr ifunc void (), ptr @TwoVersionsSameAttr.resolver
+// LINUX: @ThreeVersionsSameAttr.ifunc = weak_odr ifunc void (), ptr @ThreeVersionsSameAttr.resolver
+// LINUX: @OrderSpecificUsageDispatch.ifunc = weak_odr ifunc void (), ptr @OrderSpecificUsageDispatch.resolver
+// LINUX: @NoSpecifics.ifunc = weak_odr ifunc void (), ptr @NoSpecifics.resolver
+// LINUX: @HasGeneric.ifunc = weak_odr ifunc void (), ptr @HasGeneric.resolver
+// LINUX: @HasParams.ifunc = weak_odr ifunc void (i32, double), ptr @HasParams.resolver
+// LINUX: @HasParamsAndReturn.ifunc = weak_odr ifunc i32 (i32, double), ptr @HasParamsAndReturn.resolver
+// LINUX: @GenericAndPentium.ifunc = weak_odr ifunc i32 (i32, double), ptr @GenericAndPentium.resolver
+// LINUX: @DispatchFirst.ifunc = weak_odr ifunc i32 (), ptr @DispatchFirst.resolver
 
 ATTR(cpu_specific(ivybridge))
 void SingleVersion(void){}
@@ -41,9 +41,9 @@ void SingleVersion(void){}
 
 ATTR(cpu_dispatch(ivybridge))
 void SingleVersion(void);
-// LINUX: define weak_odr void ()* @SingleVersion.resolver()
+// LINUX: define weak_odr ptr @SingleVersion.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @SingleVersion.S
+// LINUX: ret ptr @SingleVersion.S
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -65,10 +65,10 @@ void TwoVersions(void);
 
 ATTR(cpu_dispatch(ivybridge, knl))
 void TwoVersions(void);
-// LINUX: define weak_odr void ()* @TwoVersions.resolver()
+// LINUX: define weak_odr ptr @TwoVersions.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @TwoVersions.Z
-// LINUX: ret void ()* @TwoVersions.S
+// LINUX: ret ptr @TwoVersions.Z
+// LINUX: ret ptr @TwoVersions.S
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -106,9 +106,9 @@ void CpuSpecificNoDispatch(void) {}
 
 ATTR(cpu_dispatch(knl))
 void OrderDispatchUsageSpecific(void);
-// LINUX: define weak_odr void ()* @OrderDispatchUsageSpecific.resolver()
+// LINUX: define weak_odr ptr @OrderDispatchUsageSpecific.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @OrderDispatchUsageSpecific.Z
+// LINUX: ret ptr @OrderDispatchUsageSpecific.Z
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -154,10 +154,10 @@ void usages(void) {
 // has an extra config to emit!
 ATTR(cpu_dispatch(ivybridge, knl, atom))
 void TwoVersionsSameAttr(void);
-// LINUX: define weak_odr void ()* @TwoVersionsSameAttr.resolver()
-// LINUX: ret void ()* @TwoVersionsSameAttr.Z
-// LINUX: ret void ()* @TwoVersionsSameAttr.S
-// LINUX: ret void ()* @TwoVersionsSameAttr.O
+// LINUX: define weak_odr ptr @TwoVersionsSameAttr.resolver()
+// LINUX: ret ptr @TwoVersionsSameAttr.Z
+// LINUX: ret ptr @TwoVersionsSameAttr.S
+// LINUX: ret ptr @TwoVersionsSameAttr.O
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -173,11 +173,11 @@ void TwoVersionsSameAttr(void);
 
 ATTR(cpu_dispatch(atom, ivybridge, knl))
 void ThreeVersionsSameAttr(void){}
-// LINUX: define weak_odr void ()* @ThreeVersionsSameAttr.resolver()
+// LINUX: define weak_odr ptr @ThreeVersionsSameAttr.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @ThreeVersionsSameAttr.Z
-// LINUX: ret void ()* @ThreeVersionsSameAttr.S
-// LINUX: ret void ()* @ThreeVersionsSameAttr.O
+// LINUX: ret ptr @ThreeVersionsSameAttr.Z
+// LINUX: ret ptr @ThreeVersionsSameAttr.S
+// LINUX: ret ptr @ThreeVersionsSameAttr.O
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -194,8 +194,8 @@ void ThreeVersionsSameAttr(void){}
 
 ATTR(cpu_dispatch(knl))
 void OrderSpecificUsageDispatch(void);
-// LINUX: define weak_odr void ()* @OrderSpecificUsageDispatch.resolver()
-// LINUX: ret void ()* @OrderSpecificUsageDispatch.Z
+// LINUX: define weak_odr ptr @OrderSpecificUsageDispatch.resolver()
+// LINUX: ret ptr @OrderSpecificUsageDispatch.Z
 
 // WINDOWS: define weak_odr dso_local void @OrderSpecificUsageDispatch() comdat
 // WINDOWS: call void @__cpu_indicator_init
@@ -205,11 +205,11 @@ void OrderSpecificUsageDispatch(void);
 // No Cpu Specific options.
 ATTR(cpu_dispatch(atom, ivybridge, knl))
 void NoSpecifics(void);
-// LINUX: define weak_odr void ()* @NoSpecifics.resolver()
+// LINUX: define weak_odr ptr @NoSpecifics.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @NoSpecifics.Z
-// LINUX: ret void ()* @NoSpecifics.S
-// LINUX: ret void ()* @NoSpecifics.O
+// LINUX: ret ptr @NoSpecifics.Z
+// LINUX: ret ptr @NoSpecifics.S
+// LINUX: ret ptr @NoSpecifics.O
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
@@ -226,12 +226,12 @@ void NoSpecifics(void);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 void HasGeneric(void);
-// LINUX: define weak_odr void ()* @HasGeneric.resolver()
+// LINUX: define weak_odr ptr @HasGeneric.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void ()* @HasGeneric.Z
-// LINUX: ret void ()* @HasGeneric.S
-// LINUX: ret void ()* @HasGeneric.O
-// LINUX: ret void ()* @HasGeneric.A
+// LINUX: ret ptr @HasGeneric.Z
+// LINUX: ret ptr @HasGeneric.S
+// LINUX: ret ptr @HasGeneric.O
+// LINUX: ret ptr @HasGeneric.A
 // LINUX-NOT: call void @llvm.trap
 
 // WINDOWS: define weak_odr dso_local void @HasGeneric() comdat
@@ -248,12 +248,12 @@ void HasGeneric(void);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 void HasParams(int i, double d);
-// LINUX: define weak_odr void (i32, double)* @HasParams.resolver()
+// LINUX: define weak_odr ptr @HasParams.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret void (i32, double)* @HasParams.Z
-// LINUX: ret void (i32, double)* @HasParams.S
-// LINUX: ret void (i32, double)* @HasParams.O
-// LINUX: ret void (i32, double)* @HasParams.A
+// LINUX: ret ptr @HasParams.Z
+// LINUX: ret ptr @HasParams.S
+// LINUX: ret ptr @HasParams.O
+// LINUX: ret ptr @HasParams.A
 // LINUX-NOT: call void @llvm.trap
 
 // WINDOWS: define weak_odr dso_local void @HasParams(i32 %0, double %1) comdat
@@ -270,12 +270,12 @@ void HasParams(int i, double d);
 
 ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 int HasParamsAndReturn(int i, double d);
-// LINUX: define weak_odr i32 (i32, double)* @HasParamsAndReturn.resolver()
+// LINUX: define weak_odr ptr @HasParamsAndReturn.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.Z
-// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.S
-// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.O
-// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.A
+// LINUX: ret ptr @HasParamsAndReturn.Z
+// LINUX: ret ptr @HasParamsAndReturn.S
+// LINUX: ret ptr @HasParamsAndReturn.O
+// LINUX: ret ptr @HasParamsAndReturn.A
 // LINUX-NOT: call void @llvm.trap
 
 // WINDOWS: define weak_odr dso_local i32 @HasParamsAndReturn(i32 %0, double %1) comdat
@@ -292,11 +292,11 @@ int HasParamsAndReturn(int i, double d);
 
 ATTR(cpu_dispatch(atom, generic, pentium))
 int GenericAndPentium(int i, double d);
-// LINUX: define weak_odr i32 (i32, double)* @GenericAndPentium.resolver()
+// LINUX: define weak_odr ptr @GenericAndPentium.resolver()
 // LINUX: call void @__cpu_indicator_init
-// LINUX: ret i32 (i32, double)* @GenericAndPentium.O
-// LINUX: ret i32 (i32, double)* @GenericAndPentium.B
-// LINUX-NOT: ret i32 (i32, double)* @GenericAndPentium.A
+// LINUX: ret ptr @GenericAndPentium.O
+// LINUX: ret ptr @GenericAndPentium.B
+// LINUX-NOT: ret ptr @GenericAndPentium.A
 // LINUX-NOT: call void @llvm.trap
 
 // WINDOWS: define weak_odr dso_local i32 @GenericAndPentium(i32 %0, double %1) comdat
@@ -310,9 +310,9 @@ int GenericAndPentium(int i, double d);
 
 ATTR(cpu_dispatch(atom, pentium))
 int DispatchFirst(void);
-// LINUX: define weak_odr i32 ()* @DispatchFirst.resolver
-// LINUX: ret i32 ()* @DispatchFirst.O
-// LINUX: ret i32 ()* @DispatchFirst.B
+// LINUX: define weak_odr ptr @DispatchFirst.resolver
+// LINUX: ret ptr @DispatchFirst.O
+// LINUX: ret ptr @DispatchFirst.B
 
 // WINDOWS: define weak_odr dso_local i32 @DispatchFirst() comdat
 // WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.O()

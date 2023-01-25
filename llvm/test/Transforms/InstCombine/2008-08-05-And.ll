@@ -2,12 +2,12 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; PR2629
 
-define void @f(i8* %x) nounwind  {
+define void @f(ptr %x) nounwind  {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[L1:%.*]] = load i8, i8* [[X:%.*]], align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[L1]], -9
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[L1]], -13
@@ -23,8 +23,7 @@ entry:
   br label %bb
 
 bb:
-  %g1 = getelementptr i8, i8* %x, i32 0
-  %l1 = load i8, i8* %g1, align 1
+  %l1 = load i8, ptr %x, align 1
   %s1 = sub i8 %l1, 6
   %c1 = icmp ugt i8 %s1, 2
   %s2 = sub i8 %l1, 10
@@ -39,12 +38,12 @@ incompatible:
   ret void
 }
 
-define void @f_logical(i8* %x) nounwind  {
+define void @f_logical(ptr %x) nounwind  {
 ; CHECK-LABEL: @f_logical(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
-; CHECK-NEXT:    [[L1:%.*]] = load i8, i8* [[X:%.*]], align 1
+; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[L1]], -9
 ; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[TMP0]], -3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[L1]], -13
@@ -60,8 +59,7 @@ entry:
   br label %bb
 
 bb:
-  %g1 = getelementptr i8, i8* %x, i32 0
-  %l1 = load i8, i8* %g1, align 1
+  %l1 = load i8, ptr %x, align 1
   %s1 = sub i8 %l1, 6
   %c1 = icmp ugt i8 %s1, 2
   %s2 = sub i8 %l1, 10

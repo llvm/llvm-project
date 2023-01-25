@@ -3,7 +3,7 @@ class foo {
     [this]() {
 
     }();
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:4:1 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):1 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
     // CHECK-CC1: const_func
     // CHECK-CC1: mut_func
   }
@@ -12,7 +12,7 @@ class foo {
     [this]() {
 
     }();
-    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:13:1 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):1 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
     // CHECK-CC2-NOT: mut_func
     // CHECK-CC2: const_func
   };

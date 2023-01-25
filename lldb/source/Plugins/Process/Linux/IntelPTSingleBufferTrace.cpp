@@ -7,17 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelPTSingleBufferTrace.h"
-
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include <sstream>
-
 #include <linux/perf_event.h>
+#include <sstream>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -26,19 +22,19 @@ using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
 
-const char *kOSEventIntelPTTypeFile =
+const char kOSEventIntelPTTypeFile[] =
     "/sys/bus/event_source/devices/intel_pt/type";
 
-const char *kPSBPeriodCapFile =
+const char kPSBPeriodCapFile[] =
     "/sys/bus/event_source/devices/intel_pt/caps/psb_cyc";
 
-const char *kPSBPeriodValidValuesFile =
+const char kPSBPeriodValidValuesFile[] =
     "/sys/bus/event_source/devices/intel_pt/caps/psb_periods";
 
-const char *kPSBPeriodBitOffsetFile =
+const char kPSBPeriodBitOffsetFile[] =
     "/sys/bus/event_source/devices/intel_pt/format/psb_period";
 
-const char *kTSCBitOffsetFile =
+const char kTSCBitOffsetFile[] =
     "/sys/bus/event_source/devices/intel_pt/format/tsc";
 
 enum IntelPTConfigFileType {
@@ -147,7 +143,8 @@ static Error CheckPsbPeriod(size_t psb_period) {
 
 #ifdef PERF_ATTR_SIZE_VER5
 static Expected<uint64_t>
-GeneratePerfEventConfigValue(bool enable_tsc, Optional<uint64_t> psb_period) {
+GeneratePerfEventConfigValue(bool enable_tsc,
+                             std::optional<uint64_t> psb_period) {
   uint64_t config = 0;
   // tsc is always supported
   if (enable_tsc) {
@@ -178,7 +175,7 @@ GeneratePerfEventConfigValue(bool enable_tsc, Optional<uint64_t> psb_period) {
 ///   or an \a llvm::Error otherwise.
 static Expected<perf_event_attr>
 CreateIntelPTPerfEventConfiguration(bool enable_tsc,
-                                    llvm::Optional<uint64_t> psb_period) {
+                                    std::optional<uint64_t> psb_period) {
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
@@ -231,9 +228,11 @@ Expected<std::vector<uint8_t>> IntelPTSingleBufferTrace::GetIptTrace() {
   return m_perf_event.GetReadOnlyAuxBuffer();
 }
 
-Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
-    const TraceIntelPTStartRequest &request, Optional<lldb::tid_t> tid,
-    Optional<cpu_id_t> cpu_id, bool disabled, Optional<int> cgroup_fd) {
+Expected<IntelPTSingleBufferTrace>
+IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
+                                std::optional<lldb::tid_t> tid,
+                                std::optional<cpu_id_t> cpu_id, bool disabled,
+                                std::optional<int> cgroup_fd) {
 #ifndef PERF_ATTR_SIZE_VER5
   return createStringError(inconvertibleErrorCode(),
                            "Intel PT Linux perf event not supported");
@@ -255,7 +254,8 @@ Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
       (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
-      request.enable_tsc, request.psb_period.map([](int value) {
+      request.enable_tsc,
+      llvm::transformOptional(request.psb_period, [](int value) {
         return static_cast<uint64_t>(value);
       }));
   if (!attr)

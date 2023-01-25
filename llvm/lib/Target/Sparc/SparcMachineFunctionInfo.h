@@ -34,9 +34,9 @@ namespace llvm {
     SparcMachineFunctionInfo()
       : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
         IsLeafProc(false) {}
-    explicit SparcMachineFunctionInfo(MachineFunction &MF)
-      : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
-        IsLeafProc(false) {}
+    SparcMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
+        : GlobalBaseReg(0), VarArgsFrameOffset(0), SRetReturnReg(0),
+          IsLeafProc(false) {}
 
     MachineFunctionInfo *
     clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,

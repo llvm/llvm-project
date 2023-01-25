@@ -35,7 +35,10 @@ struct c_double_complex_t;
 
 namespace Fortran::runtime {
 class Descriptor;
+namespace typeInfo {
+class DerivedType;
 }
+} // namespace Fortran::runtime
 
 namespace fir::runtime {
 
@@ -280,6 +283,20 @@ constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<void>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::NoneType::get(context);
@@ -387,6 +404,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
   fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<decltype(X)>,  \
                                   FirAsSequence(X)>
 #define mkRTKey(X) FirmkKey(RTNAME(X))
+#define EXPAND_AND_QUOTE_KEY(S) ExpandAndQuoteKey(RTNAME(S))
 
 /// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.

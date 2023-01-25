@@ -96,7 +96,7 @@ exit:
 @b = global i32 0, align 4
 define void @test6(i32 %a) {
 bb:
-  %add = add i32 %a, ptrtoint (i32* @b to i32)
+  %add = add i32 %a, ptrtoint (ptr @b to i32)
   ret void
 }
 
@@ -196,8 +196,8 @@ exit:
 
 @limit = external global i32
 ; CHECK-LABEL: @test11(
-define i32 @test11(i32* %p, i32 %i) {
-  %limit = load i32, i32* %p, !range !{i32 0, i32 2147483647}
+define i32 @test11(ptr %p, i32 %i) {
+  %limit = load i32, ptr %p, !range !{i32 0, i32 2147483647}
   %within.1 = icmp ugt i32 %limit, %i
   %i.plus.7 = add i32 %i, 7
   %within.2 = icmp ugt i32 %limit, %i.plus.7
@@ -311,7 +311,7 @@ exit:
 ; because the loop exit condition is SLT, we can supplement the iv add
 ; (iv.next def) with an nsw.
 ; CHECK-LABEL: @test16(
-define i32 @test16(i32* %n, i32* %a) {
+define i32 @test16(ptr %n, ptr %a) {
 preheader:
   br label %loop
 
@@ -319,11 +319,11 @@ loop:
 ; CHECK: %iv.next = add nsw i32 %iv, 1
   %iv = phi i32 [ 0, %preheader ], [ %iv.next, %loop ]
   %acc = phi i32 [ 0, %preheader ], [ %acc.curr, %loop ]
-  %x = load atomic i32, i32* %a unordered, align 8
+  %x = load atomic i32, ptr %a unordered, align 8
   fence acquire
   %acc.curr = add i32 %acc, %x
   %iv.next = add i32 %iv, 1
-  %nval = load atomic i32, i32* %n unordered, align 8
+  %nval = load atomic i32, ptr %n unordered, align 8
   %cmp = icmp slt i32 %iv.next, %nval
   br i1 %cmp, label %loop, label %exit
 

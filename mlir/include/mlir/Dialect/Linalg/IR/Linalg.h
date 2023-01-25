@@ -20,10 +20,12 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/CopyOpInterface.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include <optional>
 
 namespace mlir {
 namespace linalg {
@@ -62,21 +64,13 @@ SmallVector<AffineExpr, 4> makeAffineDimExprs(unsigned num, unsigned &startIdx,
 
 /// Returns `maybeMap.get()` if `maybeMap` is set, otherwise returns the
 /// symbol-less identity map of `rank`.
-AffineMap extractOrIdentityMap(Optional<AffineMap> maybeMap, unsigned rank,
+AffineMap extractOrIdentityMap(std::optional<AffineMap> maybeMap, unsigned rank,
                                MLIRContext *context);
 
 /// Return the vector that is the concatenation of `a` and `b`.
 SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
                                   ArrayRef<AffineExpr> b);
 
-/// Return the dims that are `iteratorTypeName` loops in the LinalgOp `op`.
-/// Assumes `op` is a LinalgOp.
-void getDimsOfType(Operation *op, StringRef iteratorTypeName,
-                   SmallVectorImpl<unsigned> &res);
-
-namespace detail {
-LogicalResult verifyStructuredOpInterface(Operation *op);
-} // namespace detail
 } // namespace linalg
 } // namespace mlir
 

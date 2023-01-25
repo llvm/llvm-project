@@ -5,42 +5,37 @@
 ; pointers into constant arrays of types larger than char and fractional
 ; offsets.
 
-declare i32 @memcmp(i8*, i8*, i64)
+declare i32 @memcmp(ptr, ptr, i64)
 
 @i32a = constant [2 x i16] [i16 4386, i16 13124]
 @i32b = constant [2 x i16] [i16 4386, i16 13124]
 
 
-define void @fold_memcmp_i32a_i32b_pIb(i32 %I, i32* %pcmp)
+define void @fold_memcmp_i32a_i32b_pIb(i32 %I, ptr %pcmp)
 ; CHECK-LABEL: @fold_memcmp_i32a_i32b_pIb(
-; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 0, i32* [[PST_1_1_2]], align 4
-; CHECK-NEXT:    [[PST_1_1_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 0, i32* [[PST_1_1_3]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
+; CHECK-NEXT:    [[PST_1_1_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[PST_1_1_2]], align 4
+; CHECK-NEXT:    [[PST_1_1_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 0, ptr [[PST_1_1_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 {
-  %pi32a = getelementptr [2 x i16], [2 x i16]* @i32a, i32 0, i32 0
-  %pi32b = getelementptr [2 x i16], [2 x i16]* @i32b, i32 0, i32 0
 
-  %pi8a = bitcast i16* %pi32a to i8*
-  %pi8b = bitcast i16* %pi32b to i8*
 
-  %pi8ap1 = getelementptr i8, i8* %pi8a, i32 1
-  %pi8bp1 = getelementptr i8, i8* %pi8b, i32 1
+  %pi8ap1 = getelementptr i8, ptr @i32a, i32 1
+  %pi8bp1 = getelementptr i8, ptr @i32b, i32 1
 
-  %pst_1_1_1 = getelementptr i32, i32* %pcmp, i32 0
-  %cmp_1_1_1 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8ap1, i64 1)
-  store i32 %cmp_1_1_1, i32* %pst_1_1_1
+  %cmp_1_1_1 = call i32 @memcmp(ptr %pi8ap1, ptr %pi8ap1, i64 1)
+  store i32 %cmp_1_1_1, ptr %pcmp
 
-  %pst_1_1_2 = getelementptr i32, i32* %pcmp, i32 1
-  %cmp_1_1_2 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8ap1, i64 2)
-  store i32 %cmp_1_1_2, i32* %pst_1_1_2
+  %pst_1_1_2 = getelementptr i32, ptr %pcmp, i32 1
+  %cmp_1_1_2 = call i32 @memcmp(ptr %pi8ap1, ptr %pi8ap1, i64 2)
+  store i32 %cmp_1_1_2, ptr %pst_1_1_2
 
-  %pst_1_1_3 = getelementptr i32, i32* %pcmp, i32 2
-  %cmp_1_1_3 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8ap1, i64 3)
-  store i32 %cmp_1_1_3, i32* %pst_1_1_3
+  %pst_1_1_3 = getelementptr i32, ptr %pcmp, i32 2
+  %cmp_1_1_3 = call i32 @memcmp(ptr %pi8ap1, ptr %pi8ap1, i64 3)
+  store i32 %cmp_1_1_3, ptr %pst_1_1_3
 
   ret void
 }
@@ -52,93 +47,86 @@ define void @fold_memcmp_i32a_i32b_pIb(i32 %I, i32* %pcmp)
 @a = constant [1 x %struct.A] [%struct.A { [4 x i8] [i8 1, i8 2, i8 3, i8 4] }]
 @b = constant [1 x %struct.B] [%struct.B { [2 x i8] [i8 1, i8 2], [2 x i8] [i8 3, i8 4]}]
 
-define void @fold_memcmp_A_B_pIb(i32 %I, i32* %pcmp) {
+define void @fold_memcmp_A_B_pIb(i32 %I, ptr %pcmp) {
 ; CHECK-LABEL: @fold_memcmp_A_B_pIb(
-; CHECK-NEXT:    store i32 0, i32* [[PCMP:%.*]], align 4
-; CHECK-NEXT:    [[PST_0_0_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 1
-; CHECK-NEXT:    store i32 0, i32* [[PST_0_0_2]], align 4
-; CHECK-NEXT:    [[PST_0_0_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 2
-; CHECK-NEXT:    store i32 0, i32* [[PST_0_0_3]], align 4
-; CHECK-NEXT:    [[PST_0_0_4:%.*]] = getelementptr i32, i32* [[PCMP]], i64 3
-; CHECK-NEXT:    store i32 0, i32* [[PST_0_0_4]], align 4
-; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 -1, i32* [[PST_0_1_1]], align 4
-; CHECK-NEXT:    [[PST_0_1_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 -1, i32* [[PST_0_1_2]], align 4
-; CHECK-NEXT:    [[PST_0_1_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; CHECK-NEXT:    store i32 -1, i32* [[PST_0_1_3]], align 4
-; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i32, i32* [[PCMP]], i64 4
-; CHECK-NEXT:    store i32 1, i32* [[PST_1_0_1]], align 4
-; CHECK-NEXT:    [[PST_1_0_2:%.*]] = getelementptr i32, i32* [[PCMP]], i64 5
-; CHECK-NEXT:    store i32 1, i32* [[PST_1_0_2]], align 4
-; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i32, i32* [[PCMP]], i64 6
-; CHECK-NEXT:    store i32 1, i32* [[PST_1_0_3]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[PCMP:%.*]], align 4
+; CHECK-NEXT:    [[PST_0_0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 1
+; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_2]], align 4
+; CHECK-NEXT:    [[PST_0_0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 2
+; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_3]], align 4
+; CHECK-NEXT:    [[PST_0_0_4:%.*]] = getelementptr i32, ptr [[PCMP]], i64 3
+; CHECK-NEXT:    store i32 0, ptr [[PST_0_0_4]], align 4
+; CHECK-NEXT:    [[PST_0_1_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_1]], align 4
+; CHECK-NEXT:    [[PST_0_1_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_2]], align 4
+; CHECK-NEXT:    [[PST_0_1_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    store i32 -1, ptr [[PST_0_1_3]], align 4
+; CHECK-NEXT:    [[PST_1_0_1:%.*]] = getelementptr i32, ptr [[PCMP]], i64 4
+; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_1]], align 4
+; CHECK-NEXT:    [[PST_1_0_2:%.*]] = getelementptr i32, ptr [[PCMP]], i64 5
+; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_2]], align 4
+; CHECK-NEXT:    [[PST_1_0_3:%.*]] = getelementptr i32, ptr [[PCMP]], i64 6
+; CHECK-NEXT:    store i32 1, ptr [[PST_1_0_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %pa = getelementptr [1 x %struct.A], [1 x %struct.A]* @a, i64 0, i64 0
-  %pb = getelementptr [1 x %struct.B], [1 x %struct.B]* @b, i64 0, i64 0
 
-  %pi8a = bitcast %struct.A* %pa to i8*
-  %pi8b = bitcast %struct.B* %pb to i8*
 
-  %pi8ap0 = getelementptr i8, i8* %pi8a, i32 0
-  %pi8bp0 = getelementptr i8, i8* %pi8b, i32 0
 
   ; Fold memcmp(&a, &b, 1) to 0;
-  %pst_0_0_1 = getelementptr i32, i32* %pcmp, i32 0
-  %cmp_0_0_1 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp0, i64 1)
-  store i32 %cmp_0_0_1, i32* %pst_0_0_1
+  %cmp_0_0_1 = call i32 @memcmp(ptr @a, ptr @b, i64 1)
+  store i32 %cmp_0_0_1, ptr %pcmp
 
   ; Fold memcmp(&a, &b, 2) to 0;
-  %pst_0_0_2 = getelementptr i32, i32* %pcmp, i32 1
-  %cmp_0_0_2 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp0, i64 2)
-  store i32 %cmp_0_0_2, i32* %pst_0_0_2
+  %pst_0_0_2 = getelementptr i32, ptr %pcmp, i32 1
+  %cmp_0_0_2 = call i32 @memcmp(ptr @a, ptr @b, i64 2)
+  store i32 %cmp_0_0_2, ptr %pst_0_0_2
 
   ; Fold memcmp(&a, &b, 3) to 0;
-  %pst_0_0_3 = getelementptr i32, i32* %pcmp, i32 2
-  %cmp_0_0_3 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp0, i64 3)
-  store i32 %cmp_0_0_3, i32* %pst_0_0_3
+  %pst_0_0_3 = getelementptr i32, ptr %pcmp, i32 2
+  %cmp_0_0_3 = call i32 @memcmp(ptr @a, ptr @b, i64 3)
+  store i32 %cmp_0_0_3, ptr %pst_0_0_3
 
   ; Fold memcmp(&a, &b, 4) to 0;
-  %pst_0_0_4 = getelementptr i32, i32* %pcmp, i32 3
-  %cmp_0_0_4 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp0, i64 4)
-  store i32 %cmp_0_0_4, i32* %pst_0_0_4
+  %pst_0_0_4 = getelementptr i32, ptr %pcmp, i32 3
+  %cmp_0_0_4 = call i32 @memcmp(ptr @a, ptr @b, i64 4)
+  store i32 %cmp_0_0_4, ptr %pst_0_0_4
 
 
-  %pi8bp1 = getelementptr i8, i8* %pi8b, i32 1
+  %pi8bp1 = getelementptr i8, ptr @b, i32 1
 
   ; Fold memcmp(&a, (char*)&b + 1, 1) to -1;
-  %pst_0_1_1 = getelementptr i32, i32* %pcmp, i32 4
-  %cmp_0_1_1 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp1, i64 1)
-  store i32 %cmp_0_1_1, i32* %pst_0_1_1
+  %pst_0_1_1 = getelementptr i32, ptr %pcmp, i32 4
+  %cmp_0_1_1 = call i32 @memcmp(ptr @a, ptr %pi8bp1, i64 1)
+  store i32 %cmp_0_1_1, ptr %pst_0_1_1
 
   ; Fold memcmp(&a, (char*)&b + 1, 2) to -1;
-  %pst_0_1_2 = getelementptr i32, i32* %pcmp, i32 5
-  %cmp_0_1_2 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp1, i64 2)
-  store i32 %cmp_0_1_2, i32* %pst_0_1_2
+  %pst_0_1_2 = getelementptr i32, ptr %pcmp, i32 5
+  %cmp_0_1_2 = call i32 @memcmp(ptr @a, ptr %pi8bp1, i64 2)
+  store i32 %cmp_0_1_2, ptr %pst_0_1_2
 
   ; Fold memcmp(&a, (char*)&b + 1, 3) to -1;
-  %pst_0_1_3 = getelementptr i32, i32* %pcmp, i32 6
-  %cmp_0_1_3 = call i32 @memcmp(i8* %pi8ap0, i8* %pi8bp1, i64 3)
-  store i32 %cmp_0_1_3, i32* %pst_0_1_3
+  %pst_0_1_3 = getelementptr i32, ptr %pcmp, i32 6
+  %cmp_0_1_3 = call i32 @memcmp(ptr @a, ptr %pi8bp1, i64 3)
+  store i32 %cmp_0_1_3, ptr %pst_0_1_3
 
 
-  %pi8ap1 = getelementptr i8, i8* %pi8a, i32 1
+  %pi8ap1 = getelementptr i8, ptr @a, i32 1
 
   ; Fold memcmp((char*)&a + 1, &b, 1) to +1;
-  %pst_1_0_1 = getelementptr i32, i32* %pcmp, i32 4
-  %cmp_1_0_1 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8bp0, i64 1)
-  store i32 %cmp_1_0_1, i32* %pst_1_0_1
+  %pst_1_0_1 = getelementptr i32, ptr %pcmp, i32 4
+  %cmp_1_0_1 = call i32 @memcmp(ptr %pi8ap1, ptr @b, i64 1)
+  store i32 %cmp_1_0_1, ptr %pst_1_0_1
 
   ; Fold memcmp((char*)&a + 1, &b, 2) to +1;
-  %pst_1_0_2 = getelementptr i32, i32* %pcmp, i32 5
-  %cmp_1_0_2 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8bp0, i64 2)
-  store i32 %cmp_1_0_2, i32* %pst_1_0_2
+  %pst_1_0_2 = getelementptr i32, ptr %pcmp, i32 5
+  %cmp_1_0_2 = call i32 @memcmp(ptr %pi8ap1, ptr @b, i64 2)
+  store i32 %cmp_1_0_2, ptr %pst_1_0_2
 
   ; Fold memcmp((char*)&a + 1, &b, 3) to +1;
-  %pst_1_0_3 = getelementptr i32, i32* %pcmp, i32 6
-  %cmp_1_0_3 = call i32 @memcmp(i8* %pi8ap1, i8* %pi8bp0, i64 3)
-  store i32 %cmp_1_0_3, i32* %pst_1_0_3
+  %pst_1_0_3 = getelementptr i32, ptr %pcmp, i32 6
+  %cmp_1_0_3 = call i32 @memcmp(ptr %pi8ap1, ptr @b, i64 3)
+  store i32 %cmp_1_0_3, ptr %pst_1_0_3
 
   ret void
 }

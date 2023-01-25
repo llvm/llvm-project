@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=avr | FileCheck %s
 
 ; CHECK: .globl __do_clear_bss
-@zeroed = internal constant [3 x i8] zeroinitializer
-
+@zeroed = internal global [3 x i8] zeroinitializer
+@common = common global i8 0

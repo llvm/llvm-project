@@ -15,7 +15,7 @@ foreach (lib ${clang_libs})
   endif()
   if (BUILD_SHARED_LIBS)
     # If we are building static libraries, then we don't need to add the static
-    # libraries as a depedency, because we are already linking against the
+    # libraries as a dependency, because we are already linking against the
     # individual object files.
     list(APPEND _DEPS $<TARGET_PROPERTY:${lib},INTERFACE_LINK_LIBRARIES>)
   endif()

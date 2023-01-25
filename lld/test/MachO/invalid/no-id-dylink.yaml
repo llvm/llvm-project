@@ -3,7 +3,7 @@
 # RUN: yaml2obj %s -o %t/libnoid.dylib
 # RUN: echo ".globl _main; .text; _main: ret" | llvm-mc -filetype=obj -triple=x86_64-apple-darwin -o %t/no-id-dylink.o
 # RUN: not %lld -o %t/no-id-dylink -L%t -lnoid %t/no-id-dylink.o 2>&1 | FileCheck %s
-# CHECK: error: dylib {{.*}}libnoid.dylib missing LC_ID_DYLIB load command
+# CHECK: error: {{.*}}libnoid.dylib: dylib missing LC_ID_DYLIB load command
 
 ## This YAML file was originally generated from linking the following source
 ## input with ld64 and passing the resulting binary through obj2yaml:

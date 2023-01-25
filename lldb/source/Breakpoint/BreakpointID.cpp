@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointID.h"
@@ -37,7 +38,7 @@ bool BreakpointID::IsValidIDExpression(llvm::StringRef str) {
 }
 
 llvm::ArrayRef<llvm::StringRef> BreakpointID::GetRangeSpecifiers() {
-  return llvm::makeArrayRef(g_range_specifiers);
+  return llvm::ArrayRef(g_range_specifiers);
 }
 
 void BreakpointID::GetDescription(Stream *s, lldb::DescriptionLevel level) {
@@ -62,27 +63,27 @@ void BreakpointID::GetCanonicalReference(Stream *s, break_id_t bp_id,
     s->Printf("%i.%i", bp_id, loc_id);
 }
 
-llvm::Optional<BreakpointID>
+std::optional<BreakpointID>
 BreakpointID::ParseCanonicalReference(llvm::StringRef input) {
   break_id_t bp_id;
   break_id_t loc_id = LLDB_INVALID_BREAK_ID;
 
   if (input.empty())
-    return llvm::None;
+    return std::nullopt;
 
   // If it doesn't start with an integer, it's not valid.
   if (input.consumeInteger(0, bp_id))
-    return llvm::None;
+    return std::nullopt;
 
   // period is optional, but if it exists, it must be followed by a number.
   if (input.consume_front(".")) {
     if (input.consumeInteger(0, loc_id))
-      return llvm::None;
+      return std::nullopt;
   }
 
   // And at the end, the entire string must have been consumed.
   if (!input.empty())
-    return llvm::None;
+    return std::nullopt;
 
   return BreakpointID(bp_id, loc_id);
 }

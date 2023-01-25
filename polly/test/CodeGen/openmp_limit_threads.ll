@@ -14,18 +14,18 @@
 ;          A[i + j * 1024] = 0;
 ;    }
 
-; AUTO: call void @GOMP_parallel_loop_runtime_start(void (i8*)* @storePosition_polly_subfn, i8* %polly.par.userContext{{[0-9]*}}, i32 0, i64 0, i64 1024, i64 1)
-; ONE: call void @GOMP_parallel_loop_runtime_start(void (i8*)* @storePosition_polly_subfn, i8* %polly.par.userContext{{[0-9]*}}, i32 1, i64 0, i64 1024, i64 1)
-; FOUR: call void @GOMP_parallel_loop_runtime_start(void (i8*)* @storePosition_polly_subfn, i8* %polly.par.userContext{{[0-9]*}}, i32 4, i64 0, i64 1024, i64 1)
+; AUTO: call void @GOMP_parallel_loop_runtime_start(ptr @storePosition_polly_subfn, ptr %polly.par.userContext{{[0-9]*}}, i32 0, i64 0, i64 1024, i64 1)
+; ONE: call void @GOMP_parallel_loop_runtime_start(ptr @storePosition_polly_subfn, ptr %polly.par.userContext{{[0-9]*}}, i32 1, i64 0, i64 1024, i64 1)
+; FOUR: call void @GOMP_parallel_loop_runtime_start(ptr @storePosition_polly_subfn, ptr %polly.par.userContext{{[0-9]*}}, i32 4, i64 0, i64 1024, i64 1)
 
 ; In automatic mode, no threads are pushed explicitly.
 ; LIBOMP-AUTO-NOT: call void @__kmpc_push_num_threads
-; LIBOMP-ONE: call void @__kmpc_push_num_threads(%struct.ident_t* @.loc.dummy{{[.0-9]*}}, i32 %{{[0-9]+}}, i32 1)
-; LIBOMP-FOUR: call void @__kmpc_push_num_threads(%struct.ident_t* @.loc.dummy{{[.0-9]*}}, i32 %{{[0-9]+}}, i32 4)
+; LIBOMP-ONE: call void @__kmpc_push_num_threads(ptr @.loc.dummy{{[.0-9]*}}, i32 %{{[0-9]+}}, i32 1)
+; LIBOMP-FOUR: call void @__kmpc_push_num_threads(ptr @.loc.dummy{{[.0-9]*}}, i32 %{{[0-9]+}}, i32 4)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @storePosition(i32* %A) {
+define void @storePosition(ptr %A) {
 entry:
   br label %for.cond
 
@@ -45,8 +45,8 @@ for.cond1:                                        ; preds = %for.inc, %for.body
 for.body3:                                        ; preds = %for.cond1
   %tmp = shl nsw i64 %indvars.iv, 10
   %tmp6 = add nsw i64 %indvars.iv3, %tmp
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %tmp6
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %tmp6
+  store i32 0, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body3

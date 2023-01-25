@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/LoongArchFixupKinds.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
@@ -21,13 +23,6 @@ public:
   LoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 
   ~LoongArchELFObjectWriter() override;
-
-  // Return true if the given relocation must be with a symbol rather than
-  // section plus offset.
-  bool needsRelocateWithSymbol(const MCSymbol &Sym,
-                               unsigned Type) const override {
-    return true;
-  }
 
 protected:
   unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -52,9 +47,42 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return Kind - FirstLiteralRelocationKind;
 
   switch (Kind) {
-  // TODO: Implement this when we defined fixup kind.
   default:
+    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_LARCH_NONE;
+  case FK_Data_1:
+    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    return ELF::R_LARCH_NONE;
+  case FK_Data_2:
+    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    return ELF::R_LARCH_NONE;
+  case FK_Data_4:
+    return IsPCRel ? ELF::R_LARCH_32_PCREL : ELF::R_LARCH_32;
+  case FK_Data_8:
+    return ELF::R_LARCH_64;
+  case LoongArch::fixup_loongarch_b16:
+    return ELF::R_LARCH_B16;
+  case LoongArch::fixup_loongarch_b21:
+    return ELF::R_LARCH_B21;
+  case LoongArch::fixup_loongarch_b26:
+    return ELF::R_LARCH_B26;
+  case LoongArch::fixup_loongarch_abs_hi20:
+    return ELF::R_LARCH_ABS_HI20;
+  case LoongArch::fixup_loongarch_abs_lo12:
+    return ELF::R_LARCH_ABS_LO12;
+  case LoongArch::fixup_loongarch_abs64_lo20:
+    return ELF::R_LARCH_ABS64_LO20;
+  case LoongArch::fixup_loongarch_abs64_hi12:
+    return ELF::R_LARCH_ABS64_HI12;
+  case LoongArch::fixup_loongarch_tls_le_hi20:
+    return ELF::R_LARCH_TLS_LE_HI20;
+  case LoongArch::fixup_loongarch_tls_le_lo12:
+    return ELF::R_LARCH_TLS_LE_LO12;
+  case LoongArch::fixup_loongarch_tls_le64_lo20:
+    return ELF::R_LARCH_TLS_LE64_LO20;
+  case LoongArch::fixup_loongarch_tls_le64_hi12:
+    return ELF::R_LARCH_TLS_LE64_HI12;
+    // TODO: Handle more fixup-kinds.
   }
 }
 

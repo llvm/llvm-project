@@ -16,6 +16,9 @@
 //  library may be generalized and moved to ASTMatchers.
 //
 //===----------------------------------------------------------------------===//
+//
+// FIXME: Rename to ASTMatchSwitch.h and update documentation when all usages of
+// `MatchSwitch` are updated to `ASTMatchSwitch<Stmt>`
 
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_MATCHSWITCH_H_
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_MATCHSWITCH_H_
@@ -28,6 +31,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -44,23 +48,45 @@ template <typename LatticeT> struct TransferState {
   Environment &Env;
 };
 
-/// Matches against `Stmt` and, based on its structure, dispatches to an
-/// appropriate handler.
+/// A read-only version of TransferState.
+template <typename LatticeT> struct TransferStateForDiagnostics {
+  TransferStateForDiagnostics(const LatticeT &Lattice, const Environment &Env)
+      : Lattice(Lattice), Env(Env) {}
+
+  /// Current lattice element.
+  const LatticeT &Lattice;
+  const Environment &Env;
+};
+
+template <typename T>
+using MatchSwitchMatcher = ast_matchers::internal::Matcher<T>;
+
+template <typename T, typename State, typename Result = void>
+using MatchSwitchAction = std::function<Result(
+    const T *, const ast_matchers::MatchFinder::MatchResult &, State &)>;
+
+template <typename BaseT, typename State, typename Result = void>
+using ASTMatchSwitch =
+    std::function<Result(const BaseT &, ASTContext &, State &)>;
+
+// FIXME: Remove this alias when all usages of `MatchSwitch` are updated to
+// `ASTMatchSwitch<Stmt>`.
 template <typename State, typename Result = void>
-using MatchSwitch = std::function<Result(const Stmt &, ASTContext &, State &)>;
+using MatchSwitch = ASTMatchSwitch<Stmt, State, Result>;
 
 /// Collects cases of a "match switch": a collection of matchers paired with
-/// callbacks, which together define a switch that can be applied to a
-/// `Stmt`. This structure can simplify the definition of `transfer` functions
-/// that rely on pattern-matching.
+/// callbacks, which together define a switch that can be applied to a node
+/// whose type derives from `BaseT`. This structure can simplify the definition
+/// of `transfer` functions that rely on pattern-matching.
 ///
 /// For example, consider an analysis that handles particular function calls. It
-/// can define the `MatchSwitch` once, in the constructor of the analysis, and
-/// then reuse it each time that `transfer` is called, with a fresh state value.
+/// can define the `ASTMatchSwitch` once, in the constructor of the analysis,
+/// and then reuse it each time that `transfer` is called, with a fresh state
+/// value.
 ///
 /// \code
-/// MatchSwitch<TransferState<MyLattice> BuildSwitch() {
-///   return MatchSwitchBuilder<TransferState<MyLattice>>()
+/// ASTMatchSwitch<Stmt, TransferState<MyLattice> BuildSwitch() {
+///   return ASTMatchSwitchBuilder<TransferState<MyLattice>>()
 ///     .CaseOf(callExpr(callee(functionDecl(hasName("foo")))), TransferFooCall)
 ///     .CaseOf(callExpr(argumentCountIs(2),
 ///                      callee(functionDecl(hasName("bar")))),
@@ -68,35 +94,35 @@ using MatchSwitch = std::function<Result(const Stmt &, ASTContext &, State &)>;
 ///     .Build();
 /// }
 /// \endcode
-template <typename State, typename Result = void> class MatchSwitchBuilder {
+template <typename BaseT, typename State, typename Result = void>
+class ASTMatchSwitchBuilder {
 public:
   /// Registers an action that will be triggered by the match of a pattern
   /// against the input statement.
   ///
   /// Requirements:
   ///
-  ///  `Node` should be a subclass of `Stmt`.
-  template <typename Node>
-  MatchSwitchBuilder &&
-  CaseOf(ast_matchers::internal::Matcher<Stmt> M,
-         std::function<Result(const Node *,
-                              const ast_matchers::MatchFinder::MatchResult &,
-                              State &)>
-             A) && {
+  ///  `NodeT` should be derived from `BaseT`.
+  template <typename NodeT>
+  ASTMatchSwitchBuilder &&CaseOf(MatchSwitchMatcher<BaseT> M,
+                                 MatchSwitchAction<NodeT, State, Result> A) && {
+    static_assert(std::is_base_of<BaseT, NodeT>::value,
+                  "NodeT must be derived from BaseT.");
     Matchers.push_back(std::move(M));
     Actions.push_back(
-        [A = std::move(A)](const Stmt *Stmt,
+        [A = std::move(A)](const BaseT *Node,
                            const ast_matchers::MatchFinder::MatchResult &R,
-                           State &S) { return A(cast<Node>(Stmt), R, S); });
+                           State &S) { return A(cast<NodeT>(Node), R, S); });
     return std::move(*this);
   }
 
-  MatchSwitch<State, Result> Build() && {
+  ASTMatchSwitch<BaseT, State, Result> Build() && {
     return [Matcher = BuildMatcher(), Actions = std::move(Actions)](
-               const Stmt &Stmt, ASTContext &Context, State &S) -> Result {
-      auto Results = ast_matchers::matchDynamic(Matcher, Stmt, Context);
-      if (Results.empty())
+               const BaseT &Node, ASTContext &Context, State &S) -> Result {
+      auto Results = ast_matchers::matchDynamic(Matcher, Node, Context);
+      if (Results.empty()) {
         return Result();
+      }
       // Look through the map for the first binding of the form "TagN..." use
       // that to select the action.
       for (const auto &Element : Results[0].getMap()) {
@@ -105,7 +131,7 @@ public:
         if (ID.consume_front("Tag") && !ID.getAsInteger(10, Index) &&
             Index < Actions.size()) {
           return Actions[Index](
-              &Stmt,
+              &Node,
               ast_matchers::MatchFinder::MatchResult(Results[0], &Context), S);
         }
       }
@@ -137,15 +163,19 @@ private:
     // The matcher type on the cases ensures that `Expr` kind is compatible with
     // all of the matchers.
     return DynTypedMatcher::constructVariadic(
-        DynTypedMatcher::VO_AnyOf, ASTNodeKind::getFromNodeKind<Stmt>(),
+        DynTypedMatcher::VO_AnyOf, ASTNodeKind::getFromNodeKind<BaseT>(),
         std::move(Matchers));
   }
 
   std::vector<ast_matchers::internal::DynTypedMatcher> Matchers;
-  std::vector<std::function<Result(
-      const Stmt *, const ast_matchers::MatchFinder::MatchResult &, State &)>>
-      Actions;
+  std::vector<MatchSwitchAction<BaseT, State, Result>> Actions;
 };
+
+// FIXME: Remove this alias when all usages of `MatchSwitchBuilder` are updated
+// to `ASTMatchSwitchBuilder<Stmt>`.
+template <typename State, typename Result = void>
+using MatchSwitchBuilder = ASTMatchSwitchBuilder<Stmt, State, Result>;
+
 } // namespace dataflow
 } // namespace clang
 #endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_MATCHSWITCH_H_

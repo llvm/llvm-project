@@ -54,6 +54,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 namespace llvm {
 class Module;
@@ -127,7 +128,7 @@ struct IRInstructionData
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
   /// to a less than form.  It is None otherwise.
-  Optional<CmpInst::Predicate> RevisedPredicate;
+  std::optional<CmpInst::Predicate> RevisedPredicate;
 
   /// This is only relevant if we are wrapping a CallInst. If we are requiring
   /// that the function calls have matching names as well as types, and the
@@ -137,7 +138,7 @@ struct IRInstructionData
   /// function call type.  The value held here is used to create the hash of the
   /// instruction, and check to make sure two instructions are close to one
   /// another.
-  Optional<std::string> CalleeName;
+  std::optional<std::string> CalleeName;
 
   /// This structure holds the distances of how far "ahead of" or "behind" the
   /// target blocks of a branch, or the incoming blocks of a phi nodes are.
@@ -887,23 +888,23 @@ public:
   /// Finds the positive number associated with \p V if it has been mapped.
   /// \param [in] V - the Value to find.
   /// \returns The positive number corresponding to the value.
-  /// \returns None if not present.
-  Optional<unsigned> getGVN(Value *V) {
+  /// \returns std::nullopt if not present.
+  std::optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
-      return None;
+      return std::nullopt;
     return VNIt->second;
   }
 
   /// Finds the Value associate with \p Num if it exists.
   /// \param [in] Num - the number to find.
   /// \returns The Value associated with the number.
-  /// \returns None if not present.
-  Optional<Value *> fromGVN(unsigned Num) {
+  /// \returns std::nullopt if not present.
+  std::optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
-      return None;
+      return std::nullopt;
     assert(VNIt->second != nullptr && "Found value is a nullptr!");
     return VNIt->second;
   }
@@ -912,12 +913,12 @@ public:
   /// candidate.
   ///
   /// \param N - The global value number to find the canonical number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
-  Optional<unsigned> getCanonicalNum(unsigned N) {
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> getCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
-      return None;
+      return std::nullopt;
     return NCIt->second;
   }
 
@@ -925,12 +926,12 @@ public:
   /// candidate.
   ///
   /// \param N - The canonical number to find the global vlaue number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
-  Optional<unsigned> fromCanonicalNum(unsigned N) {
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> fromCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())
-      return None;
+      return std::nullopt;
     return CNIt->second;
   }
 
@@ -1047,7 +1048,7 @@ public:
 
   // \returns The groups of similarity ranges found in the most recently passed
   // set of modules.
-  Optional<SimilarityGroupList> &getSimilarity() {
+  std::optional<SimilarityGroupList> &getSimilarity() {
     return SimilarityCandidates;
   }
 
@@ -1084,8 +1085,8 @@ private:
   bool EnableMustTailCalls = false;
 
   /// The SimilarityGroups found with the most recent run of \ref
-  /// findSimilarity. None if there is no recent run.
-  Optional<SimilarityGroupList> SimilarityCandidates;
+  /// findSimilarity. std::nullopt if there is no recent run.
+  std::optional<SimilarityGroupList> SimilarityCandidates;
 };
 
 } // end namespace IRSimilarity

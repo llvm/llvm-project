@@ -27,9 +27,9 @@ define void @func() {
 ; CHECK-NEXT:    ld %s15, 24(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
 
-  %1 = load i1, i1* @src, align 4
+  %1 = load i1, ptr @src, align 4
   %2 = select i1 %1, i32 100, i32 0
-  store i32 %2, i32* @dst, align 4
+  store i32 %2, ptr @dst, align 4
   ret void
 }
 
@@ -67,11 +67,11 @@ define i32 @main() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
-  store i1 true, i1* @src, align 4
+  store i1 true, ptr @src, align 4
   tail call void @func()
-  %1 = load i32, i32* @dst, align 4
-  %2 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str, i64 0, i64 0), i32 %1)
+  %1 = load i32, ptr @dst, align 4
+  %2 = tail call i32 (ptr, ...) @printf(ptr @.str, i32 %1)
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)

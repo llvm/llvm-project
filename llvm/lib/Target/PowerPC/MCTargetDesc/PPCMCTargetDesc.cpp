@@ -196,7 +196,7 @@ public:
   void emitTCEntry(const MCSymbol &S,
                    MCSymbolRefExpr::VariantKind Kind) override {
     // Creates a R_PPC64_TOC relocation
-    Streamer.emitValueToAlignment(8);
+    Streamer.emitValueToAlignment(Align(8));
     Streamer.emitSymbolValue(&S, 8);
   }
 
@@ -289,7 +289,7 @@ private:
     case 16:
     case 32:
     case 64:
-      return (int)Log2(Offset) << (int)ELF::STO_PPC64_LOCAL_BIT;
+      return Log2_32(Offset) << ELF::STO_PPC64_LOCAL_BIT;
     }
   }
 };
@@ -325,7 +325,7 @@ public:
                    MCSymbolRefExpr::VariantKind Kind) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
-    Streamer.emitValueToAlignment(PointerSize);
+    Streamer.emitValueToAlignment(Align(PointerSize));
     Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
                        PointerSize);
   }
@@ -350,6 +350,10 @@ static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  MCInstPrinter *InstPrint,
                                                  bool isVerboseAsm) {
   return new PPCTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new PPCTargetStreamer(S);
 }
 
 static MCTargetStreamer *
@@ -431,6 +435,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
 
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createAsmTargetStreamer);
+
+    // Register the null target streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
 
     // Register the MCInstPrinter.
     TargetRegistry::RegisterMCInstPrinter(*T, createPPCMCInstPrinter);

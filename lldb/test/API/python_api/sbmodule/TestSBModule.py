@@ -47,8 +47,8 @@ class SBModuleAPICase(TestBase):
         process = target.AttachToProcessWithID(self.dbg.GetListener(),
                                                self.background_pid, error)
         self.assertTrue(error.Success() and process,  PROCESS_IS_VALID)
-        main_module = target.GetModuleAtIndex(0)
-        self.assertEqual(main_module.GetFileSpec().GetFilename(), "a.out")
+        main_module = target.FindModule(lldb.SBFileSpec("a.out"))
+        self.assertTrue(main_module is not None)
         self.assertFalse(main_module.IsFileBacked(),
                          "The module should not be backed by a file on disk.")
 

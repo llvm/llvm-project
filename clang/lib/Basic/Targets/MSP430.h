@@ -52,7 +52,7 @@ public:
 
   ArrayRef<Builtin::Info> getTargetBuiltins() const override {
     // FIXME: Implement.
-    return None;
+    return std::nullopt;
   }
 
   bool allowsLargerPreferedTypeAlignment() const override { return false; }
@@ -71,7 +71,7 @@ public:
         {{"r2"}, "sr"},
         {{"r3"}, "cg"},
     };
-    return llvm::makeArrayRef(GCCRegAliases);
+    return llvm::ArrayRef(GCCRegAliases);
   }
 
   bool validateAsmConstraint(const char *&Name,

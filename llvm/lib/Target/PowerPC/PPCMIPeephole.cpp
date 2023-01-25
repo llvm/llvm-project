@@ -73,12 +73,12 @@ ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
 static cl::opt<bool>
     EnableSExtElimination("ppc-eliminate-signext",
                           cl::desc("enable elimination of sign-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableZExtElimination("ppc-eliminate-zeroext",
                           cl::desc("enable elimination of zero-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTrapOptimization("ppc-opt-conditional-trap",
@@ -164,7 +164,7 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
     return nullptr;
 
   Register Reg = Op->getReg();
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return nullptr;
 
   return MRI->getVRegDef(Reg);
@@ -172,8 +172,10 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
 
 // This function returns number of known zero bits in output of MI
 // starting from the most significant bit.
-static unsigned
-getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
+static unsigned getKnownLeadingZeroCount(const unsigned Reg,
+                                         const PPCInstrInfo *TII,
+                                         const MachineRegisterInfo *MRI) {
+  MachineInstr *MI = MRI->getVRegDef(Reg);
   unsigned Opcode = MI->getOpcode();
   if (Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
       Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec)
@@ -217,7 +219,7 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
       Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8)
     return 56;
 
-  if (TII->isZeroExtended(*MI))
+  if (TII->isZeroExtended(Reg, MRI))
     return 32;
 
   return 0;
@@ -291,7 +293,7 @@ static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
     for (unsigned PHIOp = 1, NumOps = VisitedPHI->getNumOperands();
          PHIOp != NumOps; PHIOp += 2) {
       Register RegOp = VisitedPHI->getOperand(PHIOp).getReg();
-      if (!Register::isVirtualRegister(RegOp))
+      if (!RegOp.isVirtual())
         return false;
       MachineInstr *Instr = MRI->getVRegDef(RegOp);
       // While collecting the PHI nodes, we check if they can be converted (i.e.
@@ -299,8 +301,7 @@ static bool collectUnprimedAccPHIs(MachineRegisterInfo *MRI,
       unsigned Opcode = Instr->getOpcode();
       if (Opcode == PPC::COPY) {
         Register Reg = Instr->getOperand(1).getReg();
-        if (!Register::isVirtualRegister(Reg) ||
-            MRI->getRegClass(Reg) != &PPC::ACCRCRegClass)
+        if (!Reg.isVirtual() || MRI->getRegClass(Reg) != &PPC::ACCRCRegClass)
           return false;
       } else if (Opcode != PPC::IMPLICIT_DEF && Opcode != PPC::PHI)
         return false;
@@ -378,6 +379,10 @@ static void convertUnprimedAccPHIs(const PPCInstrInfo *TII,
     for (auto RegMBB : PHIOps)
       NewPHI.add(RegMBB.first).add(RegMBB.second);
     ChangedPHIMap[PHI] = NewPHI.getInstr();
+    LLVM_DEBUG(dbgs() << "Converting PHI: ");
+    LLVM_DEBUG(PHI->dump());
+    LLVM_DEBUG(dbgs() << "To: ");
+    LLVM_DEBUG(NewPHI.getInstr()->dump());
   }
 }
 
@@ -423,6 +428,8 @@ bool PPCMIPeephole::simplifyCode() {
       // If the previous instruction was marked for elimination,
       // remove it now.
       if (ToErase) {
+        LLVM_DEBUG(dbgs() << "Deleting instruction: ");
+        LLVM_DEBUG(ToErase->dump());
         ToErase->eraseFromParent();
         ToErase = nullptr;
       }
@@ -446,8 +453,7 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::COPY: {
         Register Src = MI.getOperand(1).getReg();
         Register Dst = MI.getOperand(0).getReg();
-        if (!Register::isVirtualRegister(Src) ||
-            !Register::isVirtualRegister(Dst))
+        if (!Src.isVirtual() || !Dst.isVirtual())
           break;
         if (MRI->getRegClass(Src) != &PPC::UACCRCRegClass ||
             MRI->getRegClass(Dst) != &PPC::ACCRCRegClass)
@@ -525,7 +531,7 @@ bool PPCMIPeephole::simplifyCode() {
         Register TrueReg2 =
           TRI->lookThruCopyLike(MI.getOperand(2).getReg(), MRI);
 
-        if (!(TrueReg1 == TrueReg2 && Register::isVirtualRegister(TrueReg1)))
+        if (!(TrueReg1 == TrueReg2 && TrueReg1.isVirtual()))
           break;
 
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg1);
@@ -544,7 +550,7 @@ bool PPCMIPeephole::simplifyCode() {
             return false;
           Register FeedReg1 =
             TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
-          if (Register::isVirtualRegister(FeedReg1)) {
+          if (FeedReg1.isVirtual()) {
             MachineInstr *LoadMI = MRI->getVRegDef(FeedReg1);
             if (LoadMI && LoadMI->getOpcode() == PPC::LXVDSX)
               return true;
@@ -577,8 +583,7 @@ bool PPCMIPeephole::simplifyCode() {
             Register FeedReg1 = TRI->lookThruCopyLike(DefReg1, MRI);
             Register FeedReg2 = TRI->lookThruCopyLike(DefReg2, MRI);
 
-            if (!(FeedReg1 == FeedReg2 &&
-                  Register::isVirtualRegister(FeedReg1)))
+            if (!(FeedReg1 == FeedReg2 && FeedReg1.isVirtual()))
               break;
           }
 
@@ -646,7 +651,7 @@ bool PPCMIPeephole::simplifyCode() {
         unsigned OpNo = MyOpcode == PPC::XXSPLTW ? 1 : 2;
         Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(OpNo).getReg(), MRI);
-        if (!Register::isVirtualRegister(TrueReg))
+        if (!TrueReg.isVirtual())
           break;
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
         if (!DefMI)
@@ -656,7 +661,7 @@ bool PPCMIPeephole::simplifyCode() {
           if (DefOpcode != PPC::XVCVSPSXWS && DefOpcode != PPC::XVCVSPUXWS)
             return false;
           Register ConvReg = DefMI->getOperand(1).getReg();
-          if (!Register::isVirtualRegister(ConvReg))
+          if (!ConvReg.isVirtual())
             return false;
           MachineInstr *Splt = MRI->getVRegDef(ConvReg);
           return Splt && (Splt->getOpcode() == PPC::LXVWSX ||
@@ -710,7 +715,7 @@ bool PPCMIPeephole::simplifyCode() {
         // If this is a DP->SP conversion fed by an FRSP, the FRSP is redundant.
         Register TrueReg =
           TRI->lookThruCopyLike(MI.getOperand(1).getReg(), MRI);
-        if (!Register::isVirtualRegister(TrueReg))
+        if (!TrueReg.isVirtual())
           break;
         MachineInstr *DefMI = MRI->getVRegDef(TrueReg);
 
@@ -721,8 +726,7 @@ bool PPCMIPeephole::simplifyCode() {
             TRI->lookThruCopyLike(DefMI->getOperand(1).getReg(), MRI);
           Register DefsReg2 =
             TRI->lookThruCopyLike(DefMI->getOperand(2).getReg(), MRI);
-          if (!Register::isVirtualRegister(DefsReg1) ||
-              !Register::isVirtualRegister(DefsReg2))
+          if (!DefsReg1.isVirtual() || !DefsReg2.isVirtual())
             break;
           MachineInstr *P1 = MRI->getVRegDef(DefsReg1);
           MachineInstr *P2 = MRI->getVRegDef(DefsReg2);
@@ -772,32 +776,32 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSH8_32_64: {
         if (!EnableSExtElimination) break;
         Register NarrowReg = MI.getOperand(1).getReg();
-        if (!Register::isVirtualRegister(NarrowReg))
+        if (!NarrowReg.isVirtual())
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LHZ ||
-            SrcMI->getOpcode() == PPC::LHZX) {
+        if (SrcOpcode == PPC::LHZ || SrcOpcode == PPC::LHZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSH8;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LHZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LHAX8;
-              else         return PPC::LHA8;
-            else
-              if (isXForm) return PPC::LHAX;
-              else         return PPC::LHA;
-          };
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LHA;
+          bool SourceIsXForm = SrcOpcode == PPC::LHZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSH8 ||
+            MI.getOpcode() == PPC::EXTSH8_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LHAX8;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LHAX;
+          else if (MIIs64Bit)
+            Opc = PPC::LHA8;
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -816,32 +820,52 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSW_32_64: {
         if (!EnableSExtElimination) break;
         Register NarrowReg = MI.getOperand(1).getReg();
-        if (!Register::isVirtualRegister(NarrowReg))
+        if (!NarrowReg.isVirtual())
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LWZ ||
-            SrcMI->getOpcode() == PPC::LWZX) {
+        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSW || Opcode == PPC::EXTSW_32_64;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LWZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LWAX;
-              else         return PPC::LWA;
-            else
-              if (isXForm) return PPC::LWAX_32;
-              else         return PPC::LWA_32;
-          };
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+
+          // The transformation from a zero-extending load to a sign-extending
+          // load is only legal when the displacement is a multiple of 4.
+          // If the displacement is not at least 4 byte aligned, don't perform
+          // the transformation.
+          bool IsWordAligned = false;
+          if (SrcMI->getOperand(1).isGlobal()) {
+            const GlobalObject *GO =
+                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
+            if (GO && GO->getAlign() && *GO->getAlign() >= 4)
+              IsWordAligned = true;
+          } else if (SrcMI->getOperand(1).isImm()) {
+            int64_t Value = SrcMI->getOperand(1).getImm();
+            if (Value % 4 == 0)
+              IsWordAligned = true;
+          }
+
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LWA_32;
+          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
+            MI.getOpcode() == PPC::EXTSW_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LWAX;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LWAX_32;
+          else if (MIIs64Bit)
+            Opc = PPC::LWA;
+
+          if (!IsWordAligned && (Opc == PPC::LWA || Opc == PPC::LWA_32))
+            break;
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -853,7 +877,7 @@ bool PPCMIPeephole::simplifyCode() {
           Simplified = true;
           NumEliminatedSExt++;
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
-                   TII->isSignExtended(*SrcMI)) {
+                   TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
           // sign-extended.
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
@@ -885,7 +909,7 @@ bool PPCMIPeephole::simplifyCode() {
           break;
 
         Register SrcReg = MI.getOperand(1).getReg();
-        if (!Register::isVirtualRegister(SrcReg))
+        if (!SrcReg.isVirtual())
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
@@ -901,11 +925,14 @@ bool PPCMIPeephole::simplifyCode() {
         SrcMI = SubRegMI;
         if (SubRegMI->getOpcode() == PPC::COPY) {
           Register CopyReg = SubRegMI->getOperand(1).getReg();
-          if (Register::isVirtualRegister(CopyReg))
+          if (CopyReg.isVirtual())
             SrcMI = MRI->getVRegDef(CopyReg);
         }
+        if (!SrcMI->getOperand(0).isReg())
+          break;
 
-        unsigned KnownZeroCount = getKnownLeadingZeroCount(SrcMI, TII);
+        unsigned KnownZeroCount =
+            getKnownLeadingZeroCount(SrcMI->getOperand(0).getReg(), TII, MRI);
         if (MI.getOperand(3).getImm() <= KnownZeroCount) {
           LLVM_DEBUG(dbgs() << "Removing redundant zero-extension\n");
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
@@ -1212,7 +1239,7 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
         (*BII).getOperand(1).isReg()) {
       // We optimize only if the condition code is used only by one BCC.
       Register CndReg = (*BII).getOperand(1).getReg();
-      if (!Register::isVirtualRegister(CndReg) || !MRI->hasOneNonDBGUse(CndReg))
+      if (!CndReg.isVirtual() || !MRI->hasOneNonDBGUse(CndReg))
         return false;
 
       MachineInstr *CMPI = MRI->getVRegDef(CndReg);
@@ -1222,7 +1249,7 @@ static bool eligibleForCompareElimination(MachineBasicBlock &MBB,
 
       // We skip this BB if a physical register is used in comparison.
       for (MachineOperand &MO : CMPI->operands())
-        if (MO.isReg() && !Register::isVirtualRegister(MO.getReg()))
+        if (MO.isReg() && !MO.getReg().isVirtual())
           return false;
 
       return true;
@@ -1379,7 +1406,7 @@ bool PPCMIPeephole::eliminateRedundantCompare() {
     bool IsPartiallyRedundant = (MBBtoMoveCmp != nullptr);
 
     // We cannot optimize an unsupported compare opcode or
-    // a mix of 32-bit and 64-bit comaprisons
+    // a mix of 32-bit and 64-bit comparisons
     if (!isSupportedCmpOp(CMPI1->getOpcode()) ||
         !isSupportedCmpOp(CMPI2->getOpcode()) ||
         is64bitCmpOp(CMPI1->getOpcode()) != is64bitCmpOp(CMPI2->getOpcode()))
@@ -1596,7 +1623,7 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  if (!Register::isVirtualRegister(SrcReg))
+  if (!SrcReg.isVirtual())
     return false;
 
   MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
@@ -1684,7 +1711,7 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  if (!Register::isVirtualRegister(SrcReg))
+  if (!SrcReg.isVirtual())
     return false;
 
   MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
@@ -1700,7 +1727,7 @@ bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
   assert(SrcMI->getNumOperands() == 2 && "EXTSW should have 2 operands");
   assert(SrcMI->getOperand(1).isReg() &&
          "EXTSW's second operand should be a register");
-  if (!Register::isVirtualRegister(SrcMI->getOperand(1).getReg()))
+  if (!SrcMI->getOperand(1).getReg().isVirtual())
     return false;
 
   LLVM_DEBUG(dbgs() << "Combining pair: ");

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-darwin -mcpu skx < %s | FileCheck %s
-; This test compliments the .c test under clang/test/CodeGen/. We check 
+; This test complements the .c test under clang/test/CodeGen/. We check 
 ; if the inline asm constraints are respected in the generated code.
 
 ; Function Attrs: nounwind

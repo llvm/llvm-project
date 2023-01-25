@@ -120,11 +120,27 @@ struct SimpleValue {
         case Intrinsic::experimental_constrained_fcmp:
         case Intrinsic::experimental_constrained_fcmps: {
           auto *CFP = cast<ConstrainedFPIntrinsic>(CI);
-          return CFP->isDefaultFPEnvironment();
+          if (CFP->getExceptionBehavior() &&
+              CFP->getExceptionBehavior() == fp::ebStrict)
+            return false;
+          // Since we CSE across function calls we must not allow
+          // the rounding mode to change.
+          if (CFP->getRoundingMode() &&
+              CFP->getRoundingMode() == RoundingMode::Dynamic)
+            return false;
+          return true;
         }
         }
       }
-      return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy();
+      return CI->doesNotAccessMemory() && !CI->getType()->isVoidTy() &&
+             // FIXME: Currently the calls which may access the thread id may
+             // be considered as not accessing the memory. But this is
+             // problematic for coroutines, since coroutines may resume in a
+             // different thread. So we disable the optimization here for the
+             // correctness. However, it may block many other correct
+             // optimizations. Revert this one when we detect the memory
+             // accessing kind more precisely.
+             !CI->getFunction()->isPresplitCoroutine();
     }
     return isa<CastInst>(Inst) || isa<UnaryOperator>(Inst) ||
            isa<BinaryOperator>(Inst) || isa<GetElementPtrInst>(Inst) ||
@@ -455,7 +471,15 @@ struct CallValue {
       return false;
 
     CallInst *CI = dyn_cast<CallInst>(Inst);
-    if (!CI || !CI->onlyReadsMemory())
+    if (!CI || !CI->onlyReadsMemory() ||
+        // FIXME: Currently the calls which may access the thread id may
+        // be considered as not accessing the memory. But this is
+        // problematic for coroutines, since coroutines may resume in a
+        // different thread. So we disable the optimization here for the
+        // correctness. However, it may block many other correct
+        // optimizations. Revert this one when we detect the memory
+        // accessing kind more precisely.
+        CI->getFunction()->isPresplitCoroutine())
       return false;
     return true;
   }
@@ -840,7 +864,7 @@ private:
     // TODO: We could insert relevant casts on type mismatch here.
     if (auto *LI = dyn_cast<LoadInst>(Inst))
       return LI->getType() == ExpectedType ? LI : nullptr;
-    else if (auto *SI = dyn_cast<StoreInst>(Inst)) {
+    if (auto *SI = dyn_cast<StoreInst>(Inst)) {
       Value *V = SI->getValueOperand();
       return V->getType() == ExpectedType ? V : nullptr;
     }
@@ -853,11 +877,14 @@ private:
 
   Value *getOrCreateResultNonTargetMemIntrinsic(IntrinsicInst *II,
                                                 Type *ExpectedType) const {
+    // TODO: We could insert relevant casts on type mismatch here.
     switch (II->getIntrinsicID()) {
     case Intrinsic::masked_load:
-      return II;
-    case Intrinsic::masked_store:
-      return II->getOperand(0);
+      return II->getType() == ExpectedType ? II : nullptr;
+    case Intrinsic::masked_store: {
+      Value *V = II->getOperand(0);
+      return V->getType() == ExpectedType ? V : nullptr;
+    }
     }
     return nullptr;
   }
@@ -881,8 +908,8 @@ private:
       auto *Vec1 = dyn_cast<ConstantVector>(Mask1);
       if (!Vec0 || !Vec1)
         return false;
-      assert(Vec0->getType() == Vec1->getType() &&
-             "Masks should have the same type");
+      if (Vec0->getType() != Vec1->getType())
+        return false;
       for (int i = 0, e = Vec0->getNumOperands(); i != e; ++i) {
         Constant *Elem0 = Vec0->getOperand(i);
         Constant *Elem1 = Vec1->getOperand(i);
@@ -1106,7 +1133,7 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
 
     Value *LHS, *RHS;
     if (MatchBinOp(Curr, PropagateOpcode, LHS, RHS))
-      for (auto &Op : { LHS, RHS })
+      for (auto *Op : { LHS, RHS })
         if (Instruction *OPI = dyn_cast<Instruction>(Op))
           if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)
             WorkList.push_back(OPI);
@@ -1234,7 +1261,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
   // See if any instructions in the block can be eliminated.  If so, do it.  If
   // not, add them to AvailableValues.
-  for (Instruction &Inst : make_early_inc_range(BB->getInstList())) {
+  for (Instruction &Inst : make_early_inc_range(*BB)) {
     // Dead instructions should just be removed.
     if (isInstructionTriviallyDead(&Inst, &TLI)) {
       LLVM_DEBUG(dbgs() << "EarlyCSE DCE: " << Inst << '\n');
@@ -1374,6 +1401,13 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
+      if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
+        assert(CI->getExceptionBehavior() != fp::ebStrict &&
+               "Unexpected ebStrict from SimpleValue::canHandle()");
+        assert((!CI->getRoundingMode() ||
+                CI->getRoundingMode() != RoundingMode::Dynamic) &&
+               "Unexpected dynamic rounding from SimpleValue::canHandle()");
+      }
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(&Inst)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V

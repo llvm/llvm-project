@@ -39,58 +39,20 @@ additional allocations which do not originate from the main binary are pruned.
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:   Summary:
-CHECK-NEXT:     Version: 1
-CHECK-NEXT:     NumSegments: 9
+CHECK-NEXT:     Version: 2
+CHECK-NEXT:     NumSegments: {{[0-9]+}}
 CHECK-NEXT:     NumMibInfo: 2
 CHECK-NEXT:     NumAllocFunctions: 1
 CHECK-NEXT:     NumStackOffsets: 2
 CHECK-NEXT:   Segments:
 CHECK-NEXT:   -
 CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x200000
-CHECK-NEXT:     End: 0x298000
-CHECK-NEXT:     Offset: 0x0
+CHECK-NEXT:     Start: 0x{{[0-9]+}}
+CHECK-NEXT:     End: 0x{{[0-9]+}}
+CHECK-NEXT:     Offset: 0x{{[0-9]+}}
 CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7C7C000
-CHECK-NEXT:     End: 0x7FFFF7DC5000
-CHECK-NEXT:     Offset: 0x26000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7E1E000
-CHECK-NEXT:     End: 0x7FFFF7E30000
-CHECK-NEXT:     Offset: 0x3000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7E36000
-CHECK-NEXT:     End: 0x7FFFF7E38000
-CHECK-NEXT:     Offset: 0x1000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7E4A000
-CHECK-NEXT:     End: 0x7FFFF7EE5000
-CHECK-NEXT:     Offset: 0xF000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7F83000
-CHECK-NEXT:     End: 0x7FFFF7F87000
-CHECK-NEXT:     Offset: 0x3000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7F92000
-CHECK-NEXT:     End: 0x7FFFF7FA1000
-CHECK-NEXT:     Offset: 0x7000
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7FD0000
-CHECK-NEXT:     End: 0x7FFFF7FD2000
-CHECK-NEXT:     Offset: 0x0
-CHECK-NEXT:   -
-CHECK-NEXT:     BuildId: <None>
-CHECK-NEXT:     Start: 0x7FFFF7FD3000
-CHECK-NEXT:     End: 0x7FFFF7FF3000
-CHECK-NEXT:     Offset: 0x1000
-CHECK-NEXT:   Records:
+
+CHECK:   Records:
 CHECK-NEXT:   -
 CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
 CHECK-NEXT:     AllocSites:
@@ -110,24 +72,30 @@ CHECK-NEXT:         MaxAccessCount: 2
 CHECK-NEXT:         TotalSize: 10
 CHECK-NEXT:         MinSize: 10
 CHECK-NEXT:         MaxSize: 10
-CHECK-NEXT:         AllocTimestamp: 986
-CHECK-NEXT:         DeallocTimestamp: 986
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
 CHECK-NEXT:         TotalLifetime: 0
 CHECK-NEXT:         MinLifetime: 0
 CHECK-NEXT:         MaxLifetime: 0
-CHECK-NEXT:         AllocCpuId: 56
-CHECK-NEXT:         DeallocCpuId: 56
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
 CHECK-NEXT:         NumMigratedCpu: 0
 CHECK-NEXT:         NumLifetimeOverlaps: 0
 CHECK-NEXT:         NumSameAllocCpu: 0
 CHECK-NEXT:         NumSameDeallocCpu: 0
 CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 20
+CHECK-NEXT:         MinAccessDensity: 20
+CHECK-NEXT:         MaxAccessDensity: 20
+CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
+CHECK-NEXT:         MinLifetimeAccessDensity: 20000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 20000
 CHECK-NEXT:     -
 CHECK-NEXT:       Callstack:
 CHECK-NEXT:       -
 CHECK-NEXT:         Function: {{[0-9]+}}
 CHECK-NEXT:         SymbolName: main
-CHECK-NEXT:         LineOffset: 5
+CHECK-NEXT:         LineOffset: 4
 CHECK-NEXT:         Column: 15
 CHECK-NEXT:         Inline: 0
 CHECK-NEXT:       MemInfoBlock:
@@ -138,15 +106,21 @@ CHECK-NEXT:         MaxAccessCount: 2
 CHECK-NEXT:         TotalSize: 10
 CHECK-NEXT:         MinSize: 10
 CHECK-NEXT:         MaxSize: 10
-CHECK-NEXT:         AllocTimestamp: 987
-CHECK-NEXT:         DeallocTimestamp: 987
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
 CHECK-NEXT:         TotalLifetime: 0
 CHECK-NEXT:         MinLifetime: 0
 CHECK-NEXT:         MaxLifetime: 0
-CHECK-NEXT:         AllocCpuId: 56
-CHECK-NEXT:         DeallocCpuId: 56
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
 CHECK-NEXT:         NumMigratedCpu: 0
 CHECK-NEXT:         NumLifetimeOverlaps: 0
 CHECK-NEXT:         NumSameAllocCpu: 0
 CHECK-NEXT:         NumSameDeallocCpu: 0
 CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 20
+CHECK-NEXT:         MinAccessDensity: 20
+CHECK-NEXT:         MaxAccessDensity: 20
+CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
+CHECK-NEXT:         MinLifetimeAccessDensity: 20000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 20000

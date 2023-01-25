@@ -26,7 +26,7 @@ namespace dataflow {
 class ChromiumCheckModel : public DataflowModel {
 public:
   ChromiumCheckModel() = default;
-  bool transfer(const Stmt *Stmt, Environment &Env) override;
+  bool transfer(const CFGElement *Element, Environment &Env) override;
 
 private:
   /// Declarations for `::logging::CheckError::.*Check`, lazily initialized.

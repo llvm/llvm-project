@@ -59,6 +59,19 @@ FunctionType *InlineAsm::getFunctionType() const {
   return FTy;
 }
 
+void InlineAsm::collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const {
+  StringRef AsmStr(AsmString);
+  AsmStrs.clear();
+
+  // TODO: 1) Unify delimiter for inline asm, we also meet other delimiters
+  // for example "\0A", ";".
+  // 2) Enhance StringRef. Some of the special delimiter ("\0") can't be
+  // split in StringRef. Also empty StringRef can not call split (will stuck).
+  if (AsmStr.empty())
+    return;
+  AsmStr.split(AsmStrs, "\n\t", -1, false);
+}
+
 /// Parse - Analyze the specified string (e.g. "==&{eax}") and fill in the
 /// fields in this structure.  If the constraint string is not understood,
 /// return true, otherwise return false.
@@ -282,7 +295,7 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
         break;
       }
       ++NumIndirect;
-      LLVM_FALLTHROUGH; // We fall through for Indirect Outputs.
+      [[fallthrough]]; // We fall through for Indirect Outputs.
     case InlineAsm::isInput:
       if (NumClobbers)
         return makeStringError("input constraint occurs after clobber "

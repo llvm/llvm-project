@@ -44,7 +44,7 @@ class ModuleCacheTestcaseSimple(TestBase):
         """
         exe = self.getBuildArtifact("a.out")
 
-        # Create a module with no depedencies.
+        # Create a module with no dependencies.
         target = self.createTestTarget(load_dependent_modules=False)
 
         # Get the executable module and get the number of symbols to make

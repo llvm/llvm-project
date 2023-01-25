@@ -70,7 +70,7 @@ public:
 
   ArrayRef<SourceRange> getNameRanges() const {
     if (MultipleRanges)
-      return llvm::makeArrayRef(MultipleRanges.get(), NumRanges);
+      return llvm::ArrayRef(MultipleRanges.get(), NumRanges);
     return SingleRange;
   }
 

@@ -9,7 +9,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A, double* noalias nonnull %StartPtr) {
+define void @func(ptr noalias nonnull %A, ptr noalias nonnull %StartPtr) {
 entry:
   br label %outer.preheader
 
@@ -23,7 +23,7 @@ outer.for:
 
 
     reduction.preheader:
-      %Start = load double, double* %StartPtr
+      %Start = load double, ptr %StartPtr
       br label %reduction.for
 
     reduction.for:
@@ -45,8 +45,8 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %add, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %add, ptr %A_idx
       br label %outer.inc
 
 

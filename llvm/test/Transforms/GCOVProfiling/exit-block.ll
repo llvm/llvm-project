@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() #0 !dbg !4 {
 entry:
   tail call void (...) @f() #2, !dbg !14
-  %0 = load i32, i32* @A, align 4, !dbg !15
+  %0 = load i32, ptr @A, align 4, !dbg !15
   %tobool = icmp eq i32 %0, 0, !dbg !15
   br i1 %tobool, label %if.end, label %if.then, !dbg !15
 

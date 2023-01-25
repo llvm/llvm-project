@@ -26,6 +26,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <string>
 
 using namespace clang;
@@ -39,11 +40,11 @@ static cl::OptionCategory CommonRefactorOptions("Refactoring options");
 
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
                              cl::cat(cl::getGeneralCategory()),
-                             cl::sub(*cl::AllSubCommands));
+                             cl::sub(cl::SubCommand::getAll()));
 
 static cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s"),
                              cl::cat(cl::getGeneralCategory()),
-                             cl::sub(*cl::AllSubCommands));
+                             cl::sub(cl::SubCommand::getAll()));
 
 } // end namespace opts
 
@@ -147,14 +148,14 @@ std::unique_ptr<SourceSelectionArgument>
 SourceSelectionArgument::fromString(StringRef Value) {
   if (Value.startswith("test:")) {
     StringRef Filename = Value.drop_front(strlen("test:"));
-    Optional<TestSelectionRangesInFile> ParsedTestSelection =
+    std::optional<TestSelectionRangesInFile> ParsedTestSelection =
         findTestSelectionRanges(Filename);
     if (!ParsedTestSelection)
       return nullptr; // A parsing error was already reported.
     return std::make_unique<TestSourceSelectionArgument>(
         std::move(*ParsedTestSelection));
   }
-  Optional<ParsedSourceRange> Range = ParsedSourceRange::fromString(Value);
+  std::optional<ParsedSourceRange> Range = ParsedSourceRange::fromString(Value);
   if (Range)
     return std::make_unique<SourceRangeSelectionArgument>(std::move(*Range));
   llvm::errs() << "error: '-selection' option must be specified using "
@@ -194,13 +195,13 @@ public:
       : Options(Options) {}
 
   void visit(const RefactoringOption &Opt,
-             Optional<std::string> &Value) override {
+             std::optional<std::string> &Value) override {
     const cl::opt<std::string> &CLOpt = Options.getStringOption(Opt);
     if (!CLOpt.getValue().empty()) {
       Value = CLOpt.getValue();
       return;
     }
-    Value = None;
+    Value = std::nullopt;
     if (Opt.isRequired())
       MissingRequiredOptions.push_back(&Opt);
   }
@@ -224,7 +225,8 @@ public:
       RefactoringActionCommandLineOptions &Options)
       : Category(Category), Subcommand(Subcommand), Options(Options) {}
 
-  void visit(const RefactoringOption &Opt, Optional<std::string> &) override {
+  void visit(const RefactoringOption &Opt,
+             std::optional<std::string> &) override {
     if (Visited.insert(&Opt).second)
       Options.addStringOption(Opt, create<std::string>(Opt));
   }
@@ -316,7 +318,7 @@ public:
   ClangRefactorConsumer(AtomicChanges &Changes) : SourceChanges(&Changes) {}
 
   void handleError(llvm::Error Err) override {
-    Optional<PartialDiagnosticAt> Diag = DiagnosticError::take(Err);
+    std::optional<PartialDiagnosticAt> Diag = DiagnosticError::take(Err);
     if (!Diag) {
       llvm::errs() << llvm::toString(std::move(Err)) << "\n";
       return;

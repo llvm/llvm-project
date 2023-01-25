@@ -112,7 +112,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-unknown"
 
 ; Function Attrs: noinline nounwind uwtable
-define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, float %alpha, float %beta, [1024 x float]* %C, [1024 x float]* %A, [1024 x float]* %B) #0 {
+define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, float %alpha, float %beta, ptr %C, ptr %A, ptr %B) #0 {
 entry:
   br label %entry.split
 
@@ -129,15 +129,15 @@ for.cond4.preheader:                              ; preds = %for.inc17, %for.con
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x float], [1024 x float]* %A, i64 %indvars.iv41, i64 %indvars.iv
-  %tmp = load float, float* %arrayidx8, align 4
-  %arrayidx12 = getelementptr inbounds [1024 x float], [1024 x float]* %B, i64 %indvars.iv, i64 %indvars.iv38
-  %tmp1 = load float, float* %arrayidx12, align 4
+  %arrayidx8 = getelementptr inbounds [1024 x float], ptr %A, i64 %indvars.iv41, i64 %indvars.iv
+  %tmp = load float, ptr %arrayidx8, align 4
+  %arrayidx12 = getelementptr inbounds [1024 x float], ptr %B, i64 %indvars.iv, i64 %indvars.iv38
+  %tmp1 = load float, ptr %arrayidx12, align 4
   %mul = fmul float %tmp, %tmp1
-  %arrayidx16 = getelementptr inbounds [1024 x float], [1024 x float]* %C, i64 %indvars.iv41, i64 %indvars.iv38
-  %tmp2 = load float, float* %arrayidx16, align 4
+  %arrayidx16 = getelementptr inbounds [1024 x float], ptr %C, i64 %indvars.iv41, i64 %indvars.iv38
+  %tmp2 = load float, ptr %arrayidx16, align 4
   %add = fadd float %tmp2, %mul
-  store float %add, float* %arrayidx16, align 4
+  store float %add, ptr %arrayidx16, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 1024
   br i1 %exitcond, label %for.body6, label %for.inc17

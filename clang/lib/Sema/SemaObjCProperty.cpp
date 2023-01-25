@@ -1028,7 +1028,7 @@ static bool hasWrittenStorageAttribute(ObjCPropertyDecl *Prop,
 
   // Find the corresponding property in the primary class definition.
   auto OrigClass = Category->getClassInterface();
-  for (auto Found : OrigClass->lookup(Prop->getDeclName())) {
+  for (auto *Found : OrigClass->lookup(Prop->getDeclName())) {
     if (ObjCPropertyDecl *OrigProp = dyn_cast<ObjCPropertyDecl>(Found))
       return OrigProp->getPropertyAttributesAsWritten() & OwnershipMask;
   }
@@ -1822,9 +1822,8 @@ CollectImmediateProperties(ObjCContainerDecl *CDecl,
 static void CollectSuperClassPropertyImplementations(ObjCInterfaceDecl *CDecl,
                                     ObjCInterfaceDecl::PropertyMap &PropMap) {
   if (ObjCInterfaceDecl *SDecl = CDecl->getSuperClass()) {
-    ObjCInterfaceDecl::PropertyDeclOrder PO;
     while (SDecl) {
-      SDecl->collectPropertiesToImplement(PropMap, PO);
+      SDecl->collectPropertiesToImplement(PropMap);
       SDecl = SDecl->getSuperClass();
     }
   }
@@ -1889,15 +1888,14 @@ void Sema::DefaultSynthesizeProperties(Scope *S, ObjCImplDecl *IMPDecl,
                                        ObjCInterfaceDecl *IDecl,
                                        SourceLocation AtEnd) {
   ObjCInterfaceDecl::PropertyMap PropMap;
-  ObjCInterfaceDecl::PropertyDeclOrder PropertyOrder;
-  IDecl->collectPropertiesToImplement(PropMap, PropertyOrder);
+  IDecl->collectPropertiesToImplement(PropMap);
   if (PropMap.empty())
     return;
   ObjCInterfaceDecl::PropertyMap SuperPropMap;
   CollectSuperClassPropertyImplementations(IDecl, SuperPropMap);
 
-  for (unsigned i = 0, e = PropertyOrder.size(); i != e; i++) {
-    ObjCPropertyDecl *Prop = PropertyOrder[i];
+  for (const auto &PropEntry : PropMap) {
+    ObjCPropertyDecl *Prop = PropEntry.second;
     // Is there a matching property synthesize/dynamic?
     if (Prop->isInvalidDecl() ||
         Prop->isClassProperty() ||
@@ -2046,8 +2044,7 @@ void Sema::DiagnoseUnimplementedProperties(Scope *S, ObjCImplDecl* IMPDecl,
       // its primary class (and its super classes) if property is
       // declared in one of those containers.
       if ((IDecl = C->getClassInterface())) {
-        ObjCInterfaceDecl::PropertyDeclOrder PO;
-        IDecl->collectPropertiesToImplement(NoNeedToImplPropMap, PO);
+        IDecl->collectPropertiesToImplement(NoNeedToImplPropMap);
       }
     }
   if (IDecl)
@@ -2574,7 +2571,7 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
                                                   /*TInfo=*/nullptr,
                                                   SC_None,
                                                   nullptr);
-      SetterMethod->setMethodParams(Context, Argument, None);
+      SetterMethod->setMethodParams(Context, Argument, std::nullopt);
 
       AddPropertyAttrs(*this, SetterMethod, property);
 
@@ -2757,7 +2754,7 @@ void Sema::CheckObjCPropertyAttributes(Decl *PDecl,
 
   if (Attributes & ObjCPropertyAttribute::kind_weak) {
     // 'weak' and 'nonnull' are mutually exclusive.
-    if (auto nullability = PropertyTy->getNullability(Context)) {
+    if (auto nullability = PropertyTy->getNullability()) {
       if (*nullability == NullabilityKind::NonNull)
         Diag(Loc, diag::err_objc_property_attr_mutually_exclusive)
           << "nonnull" << "weak";

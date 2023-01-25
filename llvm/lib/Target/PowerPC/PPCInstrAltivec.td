@@ -1057,6 +1057,8 @@ def : Pat<(int_ppc_altivec_vnmsubfp v4f32:$A, v4f32:$B, v4f32:$C),
 
 def : Pat<(PPCvperm v16i8:$vA, v16i8:$vB, v16i8:$vC),
           (VPERM $vA, $vB, $vC)>;
+def : Pat<(PPCvperm v2f64:$vA, v2f64:$vB, v16i8:$vC),
+          (VPERM $vA, $vB, $vC)>;
 
 def : Pat<(PPCfre v4f32:$A), (VREFP $A)>;
 def : Pat<(PPCfrsqrte v4f32:$A), (VRSQRTEFP $A)>;
@@ -1448,12 +1450,12 @@ def VEXTRACTD  : VX1_VT5_UIM5_VB5<717, "vextractd" , []>;
 
 // Vector Extract Unsigned Byte/Halfword/Word Left/Right-Indexed
 let hasSideEffects = 0 in {
-def VEXTUBLX : VX1_RT5_RA5_VB5<1549, "vextublx", []>;
-def VEXTUBRX : VX1_RT5_RA5_VB5<1805, "vextubrx", []>;
-def VEXTUHLX : VX1_RT5_RA5_VB5<1613, "vextuhlx", []>;
-def VEXTUHRX : VX1_RT5_RA5_VB5<1869, "vextuhrx", []>;
-def VEXTUWLX : VX1_RT5_RA5_VB5<1677, "vextuwlx", []>;
-def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>;
+def VEXTUBLX : VX1_RT5_RA5_VB5<1549, "vextublx", []>, ZExt32To64;
+def VEXTUBRX : VX1_RT5_RA5_VB5<1805, "vextubrx", []>, ZExt32To64;
+def VEXTUHLX : VX1_RT5_RA5_VB5<1613, "vextuhlx", []>, ZExt32To64;
+def VEXTUHRX : VX1_RT5_RA5_VB5<1869, "vextuhrx", []>, ZExt32To64;
+def VEXTUWLX : VX1_RT5_RA5_VB5<1677, "vextuwlx", []>, ZExt32To64;
+def VEXTUWRX : VX1_RT5_RA5_VB5<1933, "vextuwrx", []>, ZExt32To64;
 }
 
 // Vector Insert Element Instructions

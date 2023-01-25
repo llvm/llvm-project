@@ -466,7 +466,10 @@ TEST(SelectionTest, CommonAncestor) {
       {"struct foo { [[int has^h<:32:>]]; };", "FieldDecl"},
       {"struct foo { [[op^erator int()]]; };", "CXXConversionDecl"},
       {"struct foo { [[^~foo()]]; };", "CXXDestructorDecl"},
-      // FIXME: The following to should be class itself instead.
+      {"struct foo { [[~^foo()]]; };", "CXXDestructorDecl"},
+      {"template <class T> struct foo { ~foo<[[^T]]>(){} };",
+       "TemplateTypeParmTypeLoc"},
+      {"struct foo {}; void bar(foo *f) { [[f->~^foo]](); }", "MemberExpr"},
       {"struct foo { [[fo^o(){}]] };", "CXXConstructorDecl"},
 
       {R"cpp(
@@ -527,6 +530,37 @@ TEST(SelectionTest, CommonAncestor) {
         /*error-ok*/
         void func() [[{^]])cpp",
        "CompoundStmt"},
+      {R"cpp(
+        void func() { [[__^func__]]; }
+        )cpp",
+       "PredefinedExpr"},
+
+      // using enum
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        using enum ns::[[^A]];
+        )cpp",
+       "EnumTypeLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; using B = A; };
+        using enum ns::[[^B]];
+        )cpp",
+       "TypedefTypeLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        using enum [[^ns::]]A;
+        )cpp",
+       "NestedNameSpecifierLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        [[using ^enum ns::A]];
+        )cpp",
+       "UsingEnumDecl"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        [[^using enum ns::A]];
+        )cpp",
+       "UsingEnumDecl"},
   };
 
   for (const Case &C : Cases) {
@@ -537,6 +571,7 @@ TEST(SelectionTest, CommonAncestor) {
     TU.Code = std::string(Test.code());
 
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++20");
 
     auto AST = TU.build();
     auto T = makeSelectionTree(C.Code, AST);
@@ -702,8 +737,24 @@ TEST(SelectionTest, MacroArgExpansion) {
   Test = Annotations(Case);
   AST = TestTU::withCode(Test.code()).build();
   T = makeSelectionTree(Case, AST);
-
   EXPECT_EQ("IntegerLiteral", T.commonAncestor()->kind());
+
+  // Reduced from private bug involving RETURN_IF_ERROR.
+  // Due to >>-splitting and a bug in isBeforeInTranslationUnit, the inner
+  // S<int> would claim way too many tokens.
+  Case = R"cpp(
+    #define ID(x) x
+    template <typename T> class S {};
+    ID(
+      ID(S<S<int>> x);
+      int ^y;
+    )
+  )cpp";
+  Test = Annotations(Case);
+  AST = TestTU::withCode(Test.code()).build();
+  T = makeSelectionTree(Case, AST);
+  // not TemplateSpecializationTypeLoc!
+  EXPECT_EQ("VarDecl", T.commonAncestor()->kind());
 }
 
 TEST(SelectionTest, Implicit) {
@@ -712,17 +763,23 @@ TEST(SelectionTest, Implicit) {
     int f(S);
     int x = f("^");
   )cpp";
-  auto AST = TestTU::withCode(Annotations(Test).code()).build();
+  auto TU = TestTU::withCode(Annotations(Test).code());
+  // C++14 AST contains some temporaries that C++17 elides.
+  TU.ExtraArgs.push_back("-std=c++17");
+  auto AST = TU.build();
   auto T = makeSelectionTree(Test, AST);
 
   const SelectionTree::Node *Str = T.commonAncestor();
   EXPECT_EQ("StringLiteral", nodeKind(Str)) << "Implicit selected?";
   EXPECT_EQ("ImplicitCastExpr", nodeKind(Str->Parent));
   EXPECT_EQ("CXXConstructExpr", nodeKind(Str->Parent->Parent));
-  EXPECT_EQ(Str, &Str->Parent->Parent->ignoreImplicit())
-      << "Didn't unwrap " << nodeKind(&Str->Parent->Parent->ignoreImplicit());
+  const SelectionTree::Node *ICE = Str->Parent->Parent->Parent;
+  EXPECT_EQ("ImplicitCastExpr", nodeKind(ICE));
+  EXPECT_EQ("CallExpr", nodeKind(ICE->Parent));
+  EXPECT_EQ(Str, &ICE->ignoreImplicit())
+      << "Didn't unwrap " << nodeKind(&ICE->ignoreImplicit());
 
-  EXPECT_EQ("CXXConstructExpr", nodeKind(&Str->outerImplicit()));
+  EXPECT_EQ(ICE, &Str->outerImplicit());
 }
 
 TEST(SelectionTest, CreateAll) {

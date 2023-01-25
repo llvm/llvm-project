@@ -1,6 +1,6 @@
-; RUN: opt < %s -inline -disable-output
+; RUN: opt < %s -passes=inline -disable-output
 
-define i32 @main() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @main() personality ptr @__gxx_personality_v0 {
 entry:
         invoke void @__main( )
                         to label %Call2Invoke unwind label %LongJmpBlkPre
@@ -10,7 +10,7 @@ Call2Invoke:            ; preds = %entry
 
 LongJmpBlkPre:          ; preds = %Call2Invoke, %entry
         %i.3 = phi i32 [ 0, %entry ]
-        %exn = landingpad {i8*, i32}
+        %exn = landingpad {ptr, i32}
                  cleanup
         br label %exit
 

@@ -1,4 +1,4 @@
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 target datalayout = "e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -7,19 +7,19 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: sub i64
 ; CHECK-NOT: sub i64
 
-define i64 @fun(i8* %out, i8* %end) {
-  %1 = icmp ult i8* %out, %end
+define i64 @fun(ptr %out, ptr %end) {
+  %1 = icmp ult ptr %out, %end
   br i1 %1, label %2, label %6
 
 ; <label>:2                                       ; preds = %0
-  %3 = ptrtoint i8* %end to i64
-  %4 = ptrtoint i8* %out to i64
+  %3 = ptrtoint ptr %end to i64
+  %4 = ptrtoint ptr %out to i64
   %5 = sub i64 %3, %4
   br label %10
 
 ; <label>:6                                       ; preds = %0
-  %7 = ptrtoint i8* %out to i64
-  %8 = ptrtoint i8* %end to i64
+  %7 = ptrtoint ptr %out to i64
+  %8 = ptrtoint ptr %end to i64
   %9 = sub i64 %8, %7
   br label %10
 

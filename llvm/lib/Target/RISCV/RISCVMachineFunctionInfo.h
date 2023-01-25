@@ -53,6 +53,8 @@ private:
   /// FrameIndex used for transferring values between 64-bit FPRs and a pair
   /// of 32-bit GPRs via the stack.
   int MoveF64FrameIndex = -1;
+  /// FrameIndex of the spill slot for the scratch register in BranchRelaxation.
+  int BranchRelaxationScratchFrameIndex = -1;
   /// Size of any opaque stack adjustment due to save/restore libcalls.
   unsigned LibCallStackSize = 0;
   /// Size of RVV stack.
@@ -63,9 +65,14 @@ private:
   uint64_t RVVPadding = 0;
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
+  /// Is there any vector argument or return?
+  bool IsVectorCall = false;
+
+  /// Registers that have been sign extended from i32.
+  SmallVector<Register, 8> SExt32Registers;
 
 public:
-  RISCVMachineFunctionInfo(const MachineFunction &MF) {}
+  RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
 
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -83,6 +90,13 @@ public:
       MoveF64FrameIndex =
           MF.getFrameInfo().CreateStackObject(8, Align(8), false);
     return MoveF64FrameIndex;
+  }
+
+  int getBranchRelaxationScratchFrameIndex() const {
+    return BranchRelaxationScratchFrameIndex;
+  }
+  void setBranchRelaxationScratchFrameIndex(int Index) {
+    BranchRelaxationScratchFrameIndex = Index;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
@@ -109,6 +123,12 @@ public:
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
+
+  void addSExt32Register(Register Reg);
+  bool isSExt32Register(Register Reg) const;
+
+  bool isVectorCall() const { return IsVectorCall; }
+  void setIsVectorCall() { IsVectorCall = true; }
 };
 
 } // end namespace llvm

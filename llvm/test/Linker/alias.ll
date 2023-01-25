@@ -14,24 +14,24 @@
 ; before using the IRMover.
 
 @foo = weak global i32 0
-; C1-DAG: @foo = alias i32, i32* @zed
-; C2-DAG: @foo = alias i32, i32* @zed
+; C1-DAG: @foo = alias i32, ptr @zed
+; C2-DAG: @foo = alias i32, ptr @zed
 
-@bar = alias i32, i32* @foo
-; C1-DAG: @bar = alias i32, i32* @foo
+@bar = alias i32, ptr @foo
+; C1-DAG: @bar = alias i32, ptr @foo
 
 ; C2-DAG: @foo.1 = internal global i32 0
-; C2-DAG: @bar = alias i32, i32* @foo.1
+; C2-DAG: @bar = alias i32, ptr @foo.1
 
 @foo2 = weak global i32 0
-; C1-DAG: @foo2 = alias i16, bitcast (i32* @zed to i16*)
-; C2-DAG: @foo2 = alias i16, bitcast (i32* @zed to i16*)
+; C1-DAG: @foo2 = alias i16, ptr @zed
+; C2-DAG: @foo2 = alias i16, ptr @zed
 
-@bar2 = alias i32, i32* @foo2
-; C1-DAG: @bar2 = alias i32, bitcast (i16* @foo2 to i32*)
+@bar2 = alias i32, ptr @foo2
+; C1-DAG: @bar2 = alias i32, ptr @foo2
 
 ; C2-DAG: @foo2.2 = internal global i32 0
-; C2-DAG: @bar2 = alias i32, i32* @foo2.2
+; C2-DAG: @bar2 = alias i32, ptr @foo2.2
 
 ; C1-DAG: @zed = global i32 42
 ; C2-DAG: @zed = global i32 42

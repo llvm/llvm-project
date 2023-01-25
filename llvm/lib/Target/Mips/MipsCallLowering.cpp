@@ -181,7 +181,7 @@ MipsIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
 
   Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
   Arg.Regs = { CopyLo.getReg(0), CopyHi.getReg(0) };
-  MIRBuilder.buildMerge(Arg.OrigRegs[0], {CopyLo, CopyHi});
+  MIRBuilder.buildMergeLikeInstr(Arg.OrigRegs[0], {CopyLo, CopyHi});
 
   markPhysRegUsed(VALo.getLocReg());
   markPhysRegUsed(VAHi.getLocReg());

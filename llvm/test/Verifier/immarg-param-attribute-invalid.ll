@@ -20,9 +20,9 @@ define void @call_llvm.test.immarg.intrinsic.i32(i32 %arg) {
   call void @llvm.test.immarg.intrinsic.i32(i32 %arg)
 
   ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 ptrtoint (i32* @gv to i32)
-  ; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (i32* @gv to i32))
-  call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (i32* @gv to i32))
+  ; CHECK-NEXT: i32 ptrtoint (ptr @gv to i32)
+  ; CHECK-NEXT: call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (ptr @gv to i32))
+  call void @llvm.test.immarg.intrinsic.i32(i32 ptrtoint (ptr @gv to i32))
   ret void
 }
 
@@ -79,7 +79,7 @@ define void @call_llvm.test.immarg.intrinsic.2ai32() {
 }
 
 ; CHECK: immarg attribute only applies to intrinsics
-; CHECK-NEXT: void (i32)* @not_an_intrinsic
+; CHECK-NEXT: ptr @not_an_intrinsic
 declare void @not_an_intrinsic(i32 immarg)
 
 declare void @llvm.test.intrinsic(i32)
@@ -101,7 +101,7 @@ define void @only_on_callsite() {
 }
 
 ; CHECK: immarg attribute only applies to intrinsics
-; CHECK: void (i32)* @on_function_definition
+; CHECK: ptr @on_function_definition
 define void @on_function_definition(i32 immarg %arg) {
   ret void
 }

@@ -44,6 +44,7 @@ struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
 class Defined;
+class AliasSymbol;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -158,6 +159,7 @@ public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
           bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
@@ -175,7 +177,7 @@ public:
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
-  std::vector<OptimizationHint> optimizationHints;
+  std::vector<AliasSymbol *> aliases;
 
 private:
   llvm::once_flag initDwarf;
@@ -186,12 +188,11 @@ private:
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
+  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
-  void parseOptimizationHints(ArrayRef<uint8_t> data);
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
   void registerEhFrames(Section &ehFrameSection);
@@ -268,6 +269,8 @@ private:
   void handleLDHideSymbol(StringRef name, StringRef originalName);
   void checkAppExtensionSafety(bool dylibIsAppExtensionSafe) const;
   void parseExportedSymbols(uint32_t offset, uint32_t size);
+  void loadReexport(StringRef path, DylibFile *umbrella,
+                    const llvm::MachO::InterfaceFile *currentTopLevelTapi);
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -312,7 +315,7 @@ private:
 extern llvm::SetVector<InputFile *> inputFiles;
 extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(StringRef path);
 
 void extract(InputFile &file, StringRef reason);
 
@@ -354,6 +357,7 @@ std::vector<const CommandType *> findCommands(const void *anyHdr,
   return detail::findCommands<CommandType>(anyHdr, 0, types...);
 }
 
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace macho
 
 std::string toString(const macho::InputFile *file);

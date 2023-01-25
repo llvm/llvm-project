@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -mcpu=prescott < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -mcpu=prescott < %s | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S128"
 target triple = "i386-unknown-freebsd11.0"
@@ -22,10 +22,10 @@ for.body.preheader:
 
 for.body:
   %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* @big, i32 0, i32 %i.07
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [0 x i32], ptr @big, i32 0, i32 %i.07
+  %0 = load i32, ptr %arrayidx, align 4
   %neg = xor i32 %0, -1
-  store i32 %neg, i32* %arrayidx, align 4
+  store i32 %neg, ptr %arrayidx, align 4
   %inc = add nsw i32 %i.07, 1
   %conv = sext i32 %inc to i64
   %cmp = icmp slt i64 %conv, %count

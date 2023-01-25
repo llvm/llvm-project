@@ -3,7 +3,7 @@
 
 ;; This used to cause a backend crash about not being able to
 ;; select ROTL. Make sure if generates the basic VSHL/VSHR.
-define <2 x i64> @testcase(<2 x i64>* %in) {
+define <2 x i64> @testcase(ptr %in) {
 ; CHECK-LABEL: testcase:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
@@ -11,7 +11,7 @@ define <2 x i64> @testcase(<2 x i64>* %in) {
 ; CHECK-NEXT:    vshl.i64 q8, q8, #56
 ; CHECK-NEXT:    vorr q0, q8, q9
 ; CHECK-NEXT:    bx lr
-  %1 = load <2 x i64>, <2 x i64>* %in
+  %1 = load <2 x i64>, ptr %in
   %2 = lshr <2 x i64> %1, <i64 8, i64 8>
   %3 = shl <2 x i64> %1, <i64 56, i64 56>
   %4 = or <2 x i64> %2, %3

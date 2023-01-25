@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-vectorize -enable-mem-access-versioning -force-vector-width=2 -force-vector-interleave=1 < %s -S | FileCheck %s
+; RUN: opt -passes=loop-vectorize -enable-mem-access-versioning -force-vector-width=2 -force-vector-interleave=1 < %s -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -9,9 +9,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; memchecks.
 
 ; CHECK-LABEL: test
-define void @test(i32*  %A, i64 %AStride,
-                  i32*  %B, i32 %BStride,
-                  i32*  %C, i64 %CStride, i32 %N) {
+define void @test(ptr  %A, i64 %AStride,
+                  ptr  %B, i32 %BStride,
+                  ptr  %C, i64 %CStride, i32 %N) {
 entry:
   %cmp13 = icmp eq i32 %N, 0
   br i1 %cmp13, label %for.end, label %for.body.preheader
@@ -34,15 +34,15 @@ for.body:
   %iv.trunc = trunc i64 %indvars.iv to i32
   %mul = mul i32 %iv.trunc, %BStride
   %mul64 = zext i32 %mul to i64
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %mul64
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %mul64
+  %0 = load i32, ptr %arrayidx, align 4
   %mul2 = mul nsw i64 %indvars.iv, %CStride
-  %arrayidx3 = getelementptr inbounds i32, i32* %C, i64 %mul2
-  %1 = load i32, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %C, i64 %mul2
+  %1 = load i32, ptr %arrayidx3, align 4
   %mul4 = mul nsw i32 %1, %0
   %mul3 = mul nsw i64 %indvars.iv, %AStride
-  %arrayidx7 = getelementptr inbounds i32, i32* %A, i64 %mul3
-  store i32 %mul4, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %A, i64 %mul3
+  store i32 %mul4, ptr %arrayidx7, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %N
@@ -62,7 +62,7 @@ for.end:
 ; CHECK-LABEL: fn1
 ; CHECK: load <2 x double>
 
-define void @fn1(double* noalias %x, double* noalias %c, double %a) {
+define void @fn1(ptr noalias %x, ptr noalias %c, double %a) {
 entry:
   %conv = fptosi double %a to i32
   %conv2 = add i32 %conv, 4
@@ -77,10 +77,10 @@ for.body:
   %0 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %0, %conv
   %idxprom = sext i32 %mul to i64
-  %arrayidx = getelementptr inbounds double, double* %x, i64 %idxprom
-  %1 = load double, double* %arrayidx, align 8
-  %arrayidx3 = getelementptr inbounds double, double* %c, i64 %indvars.iv
-  store double %1, double* %arrayidx3, align 8
+  %arrayidx = getelementptr inbounds double, ptr %x, i64 %idxprom
+  %1 = load double, ptr %arrayidx, align 8
+  %arrayidx3 = getelementptr inbounds double, ptr %c, i64 %indvars.iv
+  store double %1, ptr %arrayidx3, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %conv2

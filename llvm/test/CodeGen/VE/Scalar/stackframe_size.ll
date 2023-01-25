@@ -16,7 +16,7 @@ define signext i32 @test_frame0(i32 signext %0) {
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame8(i8* %0) {
+define ptr @test_frame8(ptr %0) {
 ; CHECK-LABEL: test_frame8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -37,14 +37,13 @@ define i8* @test_frame8(i8* %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [8 x i8], align 1
-  %3 = getelementptr inbounds [8 x i8], [8 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame16(i8* %0) {
+define ptr @test_frame16(ptr %0) {
 ; CHECK-LABEL: test_frame16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
@@ -65,14 +64,13 @@ define i8* @test_frame16(i8* %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [16 x i8], align 1
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame32(i8* %0) {
+define ptr @test_frame32(ptr %0) {
 ; CHECK-LABEL: test_frame32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -32, %s11
@@ -93,14 +91,13 @@ define i8* @test_frame32(i8* %0) {
 ; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [32 x i8], align 1
-  %3 = getelementptr inbounds [32 x i8], [32 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame64(i8* %0) {
+define ptr @test_frame64(ptr %0) {
 ; CHECK-LABEL: test_frame64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -64, %s11
@@ -121,14 +118,13 @@ define i8* @test_frame64(i8* %0) {
 ; CHECK-NEXT:    lea %s11, 64(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [64 x i8], align 1
-  %3 = getelementptr inbounds [64 x i8], [64 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame128(i8* %0) {
+define ptr @test_frame128(ptr %0) {
 ; CHECK-LABEL: test_frame128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s11, -128(, %s11)
@@ -149,14 +145,13 @@ define i8* @test_frame128(i8* %0) {
 ; CHECK-NEXT:    lea %s11, 128(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [128 x i8], align 1
-  %3 = getelementptr inbounds [128 x i8], [128 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame65536(i8* %0) {
+define ptr @test_frame65536(ptr %0) {
 ; CHECK-LABEL: test_frame65536:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s11, -65536(, %s11)
@@ -177,14 +172,13 @@ define i8* @test_frame65536(i8* %0) {
 ; CHECK-NEXT:    lea %s11, 65536(, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [65536 x i8], align 1
-  %3 = getelementptr inbounds [65536 x i8], [65536 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }
 
 ; Function Attrs: nounwind
-define i8* @test_frame4294967296(i8* %0) {
+define ptr @test_frame4294967296(ptr %0) {
 ; CHECK-LABEL: test_frame4294967296:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea %s13, 0
@@ -209,8 +203,7 @@ define i8* @test_frame4294967296(i8* %0) {
 ; CHECK-NEXT:    lea.sl %s11, 1(%s13, %s11)
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = alloca [4294967296 x i8], align 1
-  %3 = getelementptr inbounds [4294967296 x i8], [4294967296 x i8]* %2, i64 0, i64 0
-  %4 = load i8, i8* %0, align 1
-  store i8 %4, i8* %3, align 1
-  ret i8* %3
+  %3 = load i8, ptr %0, align 1
+  store i8 %3, ptr %2, align 1
+  ret ptr %2
 }

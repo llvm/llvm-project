@@ -43,19 +43,21 @@
 // RUN:   FileCheck -check-prefix=NOCC1 %s
 // NOCC1-NOT: "-stdlib++-isystem" "/tmp"
 
-// It should respect -nostdinc++
+// It should respect -nostdinc++.
 // RUN: %clang -target aarch64-linux-gnu -ccc-install-dir %t/bin \
 // RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdinc++ \
 // RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINCXX %s
 // RUN: %clang -target x86_64-apple-darwin -ccc-install-dir %t/bin \
 // RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdinc++ \
 // RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINCXX %s
+// NOSTDINCXX-NOT: "-internal-isystem" "/tmp/foo" "-internal-isystem" "/tmp/bar"
 
-// ... and -nostdinc and -nostdlibinc.
+// It should take effect even if -nostdinc or -nostdlibinc are specified; only
+// -nostdinc++ should suppress it.
 // RUN: %clang -target aarch64-linux-gnu -ccc-install-dir %t/bin \
 // RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdinc \
-// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck --check-prefix=NOSTDINCXX %s
-// RUN: %clang -target aarch64-linux-gnu -ccc-install-dir %t/bin \
+// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINC %s
+// RUN: %clang -target x86_64-apple-darwin -ccc-install-dir %t/bin \
 // RUN:   -stdlib++-isystem /tmp/foo -stdlib++-isystem /tmp/bar -nostdlibinc \
-// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck --check-prefix=NOSTDINCXX %s
-// NOSTDINCXX-NOT: "-internal-isystem" "/tmp/foo" "-internal-isystem" "/tmp/bar"
+// RUN:   -fsyntax-only %s -### 2>&1 | FileCheck -check-prefix=NOSTDINC %s
+// NOSTDINC: "-internal-isystem" "/tmp/foo" "-internal-isystem" "/tmp/bar"

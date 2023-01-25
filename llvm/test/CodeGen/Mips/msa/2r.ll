@@ -8,9 +8,9 @@
 
 define void @llvm_mips_nloc_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_nloc_b_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_nloc_b_ARG1
   %1 = tail call <16 x i8> @llvm.mips.nloc.b(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_nloc_b_RES
+  store <16 x i8> %1, ptr @llvm_mips_nloc_b_RES
   ret void
 }
 
@@ -29,9 +29,9 @@ declare <16 x i8> @llvm.mips.nloc.b(<16 x i8>) nounwind
 
 define void @llvm_mips_nloc_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_nloc_h_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_nloc_h_ARG1
   %1 = tail call <8 x i16> @llvm.mips.nloc.h(<8 x i16> %0)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_nloc_h_RES
+  store <8 x i16> %1, ptr @llvm_mips_nloc_h_RES
   ret void
 }
 
@@ -50,9 +50,9 @@ declare <8 x i16> @llvm.mips.nloc.h(<8 x i16>) nounwind
 
 define void @llvm_mips_nloc_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_nloc_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_nloc_w_ARG1
   %1 = tail call <4 x i32> @llvm.mips.nloc.w(<4 x i32> %0)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_nloc_w_RES
+  store <4 x i32> %1, ptr @llvm_mips_nloc_w_RES
   ret void
 }
 
@@ -71,9 +71,9 @@ declare <4 x i32> @llvm.mips.nloc.w(<4 x i32>) nounwind
 
 define void @llvm_mips_nloc_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_nloc_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_nloc_d_ARG1
   %1 = tail call <2 x i64> @llvm.mips.nloc.d(<2 x i64> %0)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_nloc_d_RES
+  store <2 x i64> %1, ptr @llvm_mips_nloc_d_RES
   ret void
 }
 
@@ -92,9 +92,9 @@ declare <2 x i64> @llvm.mips.nloc.d(<2 x i64>) nounwind
 
 define void @llvm_mips_nlzc_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_nlzc_b_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_nlzc_b_ARG1
   %1 = tail call <16 x i8> @llvm.mips.nlzc.b(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_nlzc_b_RES
+  store <16 x i8> %1, ptr @llvm_mips_nlzc_b_RES
   ret void
 }
 
@@ -113,9 +113,9 @@ declare <16 x i8> @llvm.mips.nlzc.b(<16 x i8>) nounwind
 
 define void @llvm_mips_nlzc_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_nlzc_h_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_nlzc_h_ARG1
   %1 = tail call <8 x i16> @llvm.mips.nlzc.h(<8 x i16> %0)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_nlzc_h_RES
+  store <8 x i16> %1, ptr @llvm_mips_nlzc_h_RES
   ret void
 }
 
@@ -134,9 +134,9 @@ declare <8 x i16> @llvm.mips.nlzc.h(<8 x i16>) nounwind
 
 define void @llvm_mips_nlzc_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_nlzc_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_nlzc_w_ARG1
   %1 = tail call <4 x i32> @llvm.mips.nlzc.w(<4 x i32> %0)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_nlzc_w_RES
+  store <4 x i32> %1, ptr @llvm_mips_nlzc_w_RES
   ret void
 }
 
@@ -155,9 +155,9 @@ declare <4 x i32> @llvm.mips.nlzc.w(<4 x i32>) nounwind
 
 define void @llvm_mips_nlzc_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_nlzc_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_nlzc_d_ARG1
   %1 = tail call <2 x i64> @llvm.mips.nlzc.d(<2 x i64> %0)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_nlzc_d_RES
+  store <2 x i64> %1, ptr @llvm_mips_nlzc_d_RES
   ret void
 }
 
@@ -176,9 +176,9 @@ declare <2 x i64> @llvm.mips.nlzc.d(<2 x i64>) nounwind
 
 define void @llvm_mips_pcnt_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_pcnt_b_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_pcnt_b_ARG1
   %1 = tail call <16 x i8> @llvm.mips.pcnt.b(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_pcnt_b_RES
+  store <16 x i8> %1, ptr @llvm_mips_pcnt_b_RES
   ret void
 }
 
@@ -197,9 +197,9 @@ declare <16 x i8> @llvm.mips.pcnt.b(<16 x i8>) nounwind
 
 define void @llvm_mips_pcnt_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_pcnt_h_ARG1
+  %0 = load <8 x i16>, ptr @llvm_mips_pcnt_h_ARG1
   %1 = tail call <8 x i16> @llvm.mips.pcnt.h(<8 x i16> %0)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_pcnt_h_RES
+  store <8 x i16> %1, ptr @llvm_mips_pcnt_h_RES
   ret void
 }
 
@@ -218,9 +218,9 @@ declare <8 x i16> @llvm.mips.pcnt.h(<8 x i16>) nounwind
 
 define void @llvm_mips_pcnt_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_pcnt_w_ARG1
+  %0 = load <4 x i32>, ptr @llvm_mips_pcnt_w_ARG1
   %1 = tail call <4 x i32> @llvm.mips.pcnt.w(<4 x i32> %0)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_pcnt_w_RES
+  store <4 x i32> %1, ptr @llvm_mips_pcnt_w_RES
   ret void
 }
 
@@ -239,9 +239,9 @@ declare <4 x i32> @llvm.mips.pcnt.w(<4 x i32>) nounwind
 
 define void @llvm_mips_pcnt_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_pcnt_d_ARG1
+  %0 = load <2 x i64>, ptr @llvm_mips_pcnt_d_ARG1
   %1 = tail call <2 x i64> @llvm.mips.pcnt.d(<2 x i64> %0)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_pcnt_d_RES
+  store <2 x i64> %1, ptr @llvm_mips_pcnt_d_RES
   ret void
 }
 

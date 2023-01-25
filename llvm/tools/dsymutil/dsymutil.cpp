@@ -63,11 +63,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {                                                                            \
@@ -79,9 +82,9 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class DsymutilOptTable : public opt::OptTable {
+class DsymutilOptTable : public opt::GenericOptTable {
 public:
-  DsymutilOptTable() : OptTable(InfoTable) {}
+  DsymutilOptTable() : opt::GenericOptTable(InfoTable) {}
 };
 } // namespace
 
@@ -206,26 +209,26 @@ static Error verifyOptions(const DsymutilOptions &Options) {
   return Error::success();
 }
 
-static Expected<DwarfLinkerAccelTableKind>
+static Expected<DsymutilAccelTableKind>
 getAccelTableKind(opt::InputArgList &Args) {
   if (opt::Arg *Accelerator = Args.getLastArg(OPT_accelerator)) {
     StringRef S = Accelerator->getValue();
     if (S == "Apple")
-      return DwarfLinkerAccelTableKind::Apple;
+      return DsymutilAccelTableKind::Apple;
     if (S == "Dwarf")
-      return DwarfLinkerAccelTableKind::Dwarf;
+      return DsymutilAccelTableKind::Dwarf;
     if (S == "Pub")
-      return DwarfLinkerAccelTableKind::Pub;
+      return DsymutilAccelTableKind::Pub;
     if (S == "Default")
-      return DwarfLinkerAccelTableKind::Default;
+      return DsymutilAccelTableKind::Default;
     if (S == "None")
-      return DwarfLinkerAccelTableKind::None;
+      return DsymutilAccelTableKind::None;
     return make_error<StringError>("invalid accelerator type specified: '" + S +
                                        "'. Supported values are 'Apple', "
                                        "'Dwarf', 'Pub', 'Default' and 'None'.",
                                    inconvertibleErrorCode());
   }
-  return DwarfLinkerAccelTableKind::Default;
+  return DsymutilAccelTableKind::Default;
 }
 
 static Expected<ReproducerMode> getReproducerMode(opt::InputArgList &Args) {
@@ -310,7 +313,7 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
     }
   }
 
-  if (Expected<DwarfLinkerAccelTableKind> AccelKind = getAccelTableKind(Args)) {
+  if (Expected<DsymutilAccelTableKind> AccelKind = getAccelTableKind(Args)) {
     Options.LinkOpts.TheAccelTableKind = *AccelKind;
   } else {
     return AccelKind.takeError();
@@ -485,12 +488,13 @@ static bool verifyOutput(StringRef OutputFile, StringRef Arch, bool Verbose) {
 
 namespace {
 struct OutputLocation {
-  OutputLocation(std::string DWARFFile, Optional<std::string> ResourceDir = {})
+  OutputLocation(std::string DWARFFile,
+                 std::optional<std::string> ResourceDir = {})
       : DWARFFile(DWARFFile), ResourceDir(ResourceDir) {}
   /// This method is a workaround for older compilers.
-  Optional<std::string> getResourceDir() const { return ResourceDir; }
+  std::optional<std::string> getResourceDir() const { return ResourceDir; }
   std::string DWARFFile;
-  Optional<std::string> ResourceDir;
+  std::optional<std::string> ResourceDir;
 };
 } // namespace
 
@@ -546,14 +550,14 @@ getOutputFileName(StringRef InputFile, const DsymutilOptions &Options) {
   return OutputLocation(std::string(Path.str()), ResourceDir);
 }
 
-int dsymutil_main(int argc, char **argv) {
+int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   // Parse arguments.
   DsymutilOptTable T;
   unsigned MAI;
   unsigned MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(argv + 1, argc - 1);
+  ArrayRef<const char *> ArgsArr = ArrayRef(argv + 1, argc - 1);
   opt::InputArgList Args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   void *P = (void *)(intptr_t)getOutputFileName;
@@ -798,7 +802,7 @@ int dsymutil_main(int argc, char **argv) {
           break;
         FileOffset += stat->getSize();
         if (FileOffset > UINT32_MAX) {
-          WithColor::error() << "the univesral binary has a slice with an "
+          WithColor::error() << "the universal binary has a slice with an "
               "offset exceeds 4GB and will produce an invalid Mach-O file.";
           return EXIT_FAILURE;
         }

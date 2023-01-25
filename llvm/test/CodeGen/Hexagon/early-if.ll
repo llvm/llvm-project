@@ -21,15 +21,15 @@ declare i64 @llvm.hexagon.A2.vaddws(i64, i64) nounwind readnone
 declare i64 @llvm.hexagon.A2.vsubws(i64, i64) nounwind readnone
 declare i32 @llvm.hexagon.A4.modwrapu(i32, i32) nounwind readnone
 
-define void @foo(i32 %n, i64* %ptr) #0 {
+define void @foo(i32 %n, ptr %ptr) #0 {
 entry:
   br label %while.body
 
 while.body:
   %count = phi i32 [ 0, %entry ], [ %next, %while.end ]
   %idx = phi i32 [ 0, %entry ], [ %15, %while.end ]
-  %0 = load i32, i32* @B1, align 4
-  %1 = load i32, i32* @B2, align 8
+  %0 = load i32, ptr @B1, align 4
+  %1 = load i32, ptr @B2, align 8
   %2 = and i32 %1, %0
   br label %while.body13
 
@@ -39,21 +39,21 @@ while.body13:                                     ; preds = %while.body, %if.end
   %m = phi i32 [ %6, %if.end ], [ %2, %while.body ]
   %5 = tail call i32 @llvm.hexagon.S2.cl0(i32 %m)
   %6 = tail call i32 @llvm.hexagon.S2.setbit.r(i32 %m, i32 %5)
-  %cgep85 = getelementptr [10 x %struct.2], [10 x %struct.2]* inttoptr (i32 -121502345 to [10 x %struct.2]*), i32 0, i32 %idx
-  %cgep90 = getelementptr %struct.2, %struct.2* %cgep85, i32 0, i32 12, i32 %5
-  %7 = load i32, i32* %cgep90, align 4
+  %cgep85 = getelementptr [10 x %struct.2], ptr inttoptr (i32 -121502345 to ptr), i32 0, i32 %idx
+  %cgep90 = getelementptr %struct.2, ptr %cgep85, i32 0, i32 12, i32 %5
+  %7 = load i32, ptr %cgep90, align 4
   %8 = tail call i64 @llvm.hexagon.M2.vmpy2s.s0(i32 %7, i32 %7)
-  %cgep91 = getelementptr %struct.2, %struct.2* %cgep85, i32 0, i32 13, i32 %5
-  %9 = load i32, i32* %cgep91, align 4
+  %cgep91 = getelementptr %struct.2, ptr %cgep85, i32 0, i32 13, i32 %5
+  %9 = load i32, ptr %cgep91, align 4
   %10 = tail call i64 @llvm.hexagon.M2.vmac2s.s0(i64 %8, i32 %9, i32 %9)
-  %11 = load i8, i8* @C1, align 1
+  %11 = load i8, ptr @C1, align 1
   %and24 = and i8 %11, 1
   %cmp = icmp eq i8 %and24, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %while.body13
   %12 = tail call i64 @llvm.hexagon.A2.vaddws(i64 %3, i64 %10)
-  store i64 %12, i64* %ptr, align 8
+  store i64 %12, ptr %ptr, align 8
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %while.body13
@@ -70,7 +70,7 @@ while.end:
   br i1 %cc, label %end, label %while.body
 
 end:
-  store i64 %10, i64* @A2, align 8
+  store i64 %10, ptr @A2, align 8
   ret void
 }
 

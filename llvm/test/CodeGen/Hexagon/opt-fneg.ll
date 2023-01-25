@@ -6,8 +6,8 @@ entry:
 ; CHECK-LABEL: foo:
 ; CHECK: r{{[0-9]+}} = togglebit(r{{[0-9]+}},#31)
   %x.addr = alloca float, align 4
-  store float %x, float* %x.addr, align 4
-  %0 = load float, float* %x.addr, align 4
+  store float %x, ptr %x.addr, align 4
+  %0 = load float, ptr %x.addr, align 4
   %sub = fsub float -0.000000e+00, %0
   ret float %sub
 }

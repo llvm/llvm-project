@@ -21,6 +21,7 @@
 #include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-runtime"
 
@@ -114,7 +115,7 @@ void Fortran::lower::genFailImageStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, llvm::None);
+  builder.create<fir::CallOp>(loc, callee, std::nullopt);
   genUnreachable(builder, loc);
 }
 
@@ -173,7 +174,7 @@ void Fortran::lower::genPauseStatement(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PauseStatement)>(loc, builder);
-  builder.create<fir::CallOp>(loc, callee, llvm::None);
+  builder.create<fir::CallOp>(loc, callee, std::nullopt);
 }
 
 mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
@@ -188,26 +189,55 @@ mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
+void Fortran::lower::genPointerAssociate(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::Value pointer,
+                                         mlir::Value target) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociate)>(loc, builder);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getFunctionType(), pointer, target);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+void Fortran::lower::genPointerAssociateRemapping(fir::FirOpBuilder &builder,
+                                                  mlir::Location loc,
+                                                  mlir::Value pointer,
+                                                  mlir::Value target,
+                                                  mlir::Value bounds) {
+  mlir::func::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(PointerAssociateRemapping)>(loc,
+                                                                       builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getFunctionType(), pointer, target, bounds, sourceFile,
+      sourceLine);
+  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
 mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
                                        mlir::Location loc) {
   mlir::func::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, func, llvm::None).getResult(0);
+  return builder.create<fir::CallOp>(loc, func, std::nullopt).getResult(0);
 }
 
 void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,
                                     mlir::Location loc,
-                                    llvm::Optional<fir::CharBoxValue> date,
-                                    llvm::Optional<fir::CharBoxValue> time,
-                                    llvm::Optional<fir::CharBoxValue> zone,
+                                    std::optional<fir::CharBoxValue> date,
+                                    std::optional<fir::CharBoxValue> time,
+                                    std::optional<fir::CharBoxValue> zone,
                                     mlir::Value values) {
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
   mlir::FunctionType funcTy = callee.getFunctionType();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Value zero;
-  auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
-                      mlir::Value &buffer, mlir::Value &len) {
+  auto splitArg = [&](std::optional<fir::CharBoxValue> arg, mlir::Value &buffer,
+                      mlir::Value &len) {
     if (arg) {
       buffer = arg->getBuffer();
       len = arg->getLen();
@@ -262,35 +292,51 @@ void Fortran::lower::genRandomNumber(fir::FirOpBuilder &builder,
 }
 
 void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
-                                   mlir::Location loc, int argIndex,
-                                   mlir::Value argBox) {
+                                   mlir::Location loc, mlir::Value size,
+                                   mlir::Value put, mlir::Value get) {
+  bool sizeIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(size.getDefiningOp());
+  bool putIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(put.getDefiningOp());
+  bool getIsPresent =
+      !mlir::isa_and_nonnull<fir::AbsentOp>(get.getDefiningOp());
   mlir::func::FuncOp func;
-  // argIndex is the nth (0-origin) argument in declaration order,
-  // or -1 if no argument is present.
-  switch (argIndex) {
-  case -1:
+  int staticArgCount = sizeIsPresent + putIsPresent + getIsPresent;
+  if (staticArgCount == 0) {
     func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedDefaultPut)>(loc,
                                                                        builder);
     builder.create<fir::CallOp>(loc, func);
     return;
-  case 0:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
-    break;
-  case 1:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
-    break;
-  case 2:
-    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
-    break;
-  default:
-    llvm::report_fatal_error("invalid RANDOM_SEED argument index");
   }
-  mlir::FunctionType funcTy = func.getFunctionType();
+  mlir::FunctionType funcTy;
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-  mlir::Value sourceLine =
-      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
-  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, funcTy, argBox, sourceFile, sourceLine);
+  mlir::Value sourceLine;
+  mlir::Value argBox;
+  llvm::SmallVector<mlir::Value> args;
+  if (staticArgCount > 1) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeed)>(loc, builder);
+    funcTy = func.getFunctionType();
+    sourceLine =
+        fir::factory::locationToLineNo(builder, loc, funcTy.getInput(4));
+    args = fir::runtime::createArguments(builder, loc, funcTy, size, put, get,
+                                         sourceFile, sourceLine);
+    builder.create<fir::CallOp>(loc, func, args);
+    return;
+  }
+  if (sizeIsPresent) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
+    argBox = size;
+  } else if (putIsPresent) {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
+    argBox = put;
+  } else {
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
+    argBox = get;
+  }
+  funcTy = func.getFunctionType();
+  sourceLine = fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
+  args = fir::runtime::createArguments(builder, loc, funcTy, argBox, sourceFile,
+                                       sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
 }
 

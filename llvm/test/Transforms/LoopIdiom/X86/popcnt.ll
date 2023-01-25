@@ -1,4 +1,4 @@
-; RUN: opt -loop-idiom < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 -S | FileCheck %s
+; RUN: opt -passes=loop-idiom < %s -mtriple=x86_64-apple-darwin -mcpu=corei7 -S | FileCheck %s
 
 target triple = "x86_64-apple-macosx10.8.0"
 
@@ -11,7 +11,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 ;    }
 ;    return c;
 ;}
-; 
+;
 ; CHECK: entry
 ; CHECK: llvm.ctpop.i64
 ; CHECK: ret
@@ -98,7 +98,7 @@ while.end:                                        ; preds = %while.body, %entry
   ret i32 %c.0.lcssa
 
 ; CHECK: entry
-; CHECK: ret 
+; CHECK: ret
 }
 
 define i32 @PopCntCrash2(i64 %a, i32 %b) nounwind uwtable readnone ssp {

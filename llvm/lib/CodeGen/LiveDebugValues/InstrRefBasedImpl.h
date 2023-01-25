@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include <optional>
 
 #include "LiveDebugValues.h"
 
@@ -30,6 +31,7 @@ class InstrRefLDVTest;
 namespace LiveDebugValues {
 
 class MLocTracker;
+class DbgOpIDMap;
 
 using namespace llvm;
 
@@ -168,6 +170,40 @@ public:
   static ValueIDNum TombstoneValue;
 };
 
+} // End namespace LiveDebugValues
+
+namespace llvm {
+using namespace LiveDebugValues;
+
+template <> struct DenseMapInfo<LocIdx> {
+  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
+  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
+
+  static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
+
+  static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
+};
+
+template <> struct DenseMapInfo<ValueIDNum> {
+  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
+  static inline ValueIDNum getTombstoneKey() {
+    return ValueIDNum::TombstoneValue;
+  }
+
+  static unsigned getHashValue(const ValueIDNum &Val) {
+    return hash_value(Val.asU64());
+  }
+
+  static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
+    return A == B;
+  }
+};
+
+} // end namespace llvm
+
+namespace LiveDebugValues {
+using namespace llvm;
+
 /// Type for a table of values in a block.
 using ValueTable = std::unique_ptr<ValueIDNum[]>;
 
@@ -199,41 +235,219 @@ public:
 /// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
-  DbgValueProperties(const DIExpression *DIExpr, bool Indirect)
-      : DIExpr(DIExpr), Indirect(Indirect) {}
+  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic)
+      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic) {}
 
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
     assert(MI.isDebugValue());
+    assert(MI.getDebugExpression()->getNumLocationOperands() == 0 ||
+           MI.isDebugValueList() || MI.isUndefDebugValue());
+    IsVariadic = MI.isDebugValueList();
     DIExpr = MI.getDebugExpression();
-    Indirect = MI.getOperand(1).isImm();
+    Indirect = MI.isDebugOffsetImm();
+  }
+
+  bool isJoinable(const DbgValueProperties &Other) const {
+    return DIExpression::isEqualExpression(DIExpr, Indirect, Other.DIExpr,
+                                           Other.Indirect);
   }
 
   bool operator==(const DbgValueProperties &Other) const {
-    return std::tie(DIExpr, Indirect) == std::tie(Other.DIExpr, Other.Indirect);
+    return std::tie(DIExpr, Indirect, IsVariadic) ==
+           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);
   }
 
   bool operator!=(const DbgValueProperties &Other) const {
     return !(*this == Other);
   }
 
+  unsigned getLocationOpCount() const {
+    return IsVariadic ? DIExpr->getNumLocationOperands() : 1;
+  }
+
   const DIExpression *DIExpr;
   bool Indirect;
+  bool IsVariadic;
 };
 
-/// Class recording the (high level) _value_ of a variable. Identifies either
-/// the value of the variable as a ValueIDNum, or a constant MachineOperand.
+/// TODO: Might pack better if we changed this to a Struct of Arrays, since
+/// MachineOperand is width 32, making this struct width 33. We could also
+/// potentially avoid storing the whole MachineOperand (sizeof=32), instead
+/// choosing to store just the contents portion (sizeof=8) and a Kind enum,
+/// since we already know it is some type of immediate value.
+/// Stores a single debug operand, which can either be a MachineOperand for
+/// directly storing immediate values, or a ValueIDNum representing some value
+/// computed at some point in the program. IsConst is used as a discriminator.
+struct DbgOp {
+  union {
+    ValueIDNum ID;
+    MachineOperand MO;
+  };
+  bool IsConst;
+
+  DbgOp() : ID(ValueIDNum::EmptyValue), IsConst(false) {}
+  DbgOp(ValueIDNum ID) : ID(ID), IsConst(false) {}
+  DbgOp(MachineOperand MO) : MO(MO), IsConst(true) {}
+
+  bool isUndef() const { return !IsConst && ID == ValueIDNum::EmptyValue; }
+
+#ifndef NDEBUG
+  void dump(const MLocTracker *MTrack) const;
+#endif
+};
+
+/// A DbgOp whose ID (if any) has resolved to an actual location, LocIdx. Used
+/// when working with concrete debug values, i.e. when joining MLocs and VLocs
+/// in the TransferTracker or emitting DBG_VALUE/DBG_VALUE_LIST instructions in
+/// the MLocTracker.
+struct ResolvedDbgOp {
+  union {
+    LocIdx Loc;
+    MachineOperand MO;
+  };
+  bool IsConst;
+
+  ResolvedDbgOp(LocIdx Loc) : Loc(Loc), IsConst(false) {}
+  ResolvedDbgOp(MachineOperand MO) : MO(MO), IsConst(true) {}
+
+  bool operator==(const ResolvedDbgOp &Other) const {
+    if (IsConst != Other.IsConst)
+      return false;
+    if (IsConst)
+      return MO.isIdenticalTo(Other.MO);
+    return Loc == Other.Loc;
+  }
+
+#ifndef NDEBUG
+  void dump(const MLocTracker *MTrack) const;
+#endif
+};
+
+/// An ID used in the DbgOpIDMap (below) to lookup a stored DbgOp. This is used
+/// in place of actual DbgOps inside of a DbgValue to reduce its size, as
+/// DbgValue is very frequently used and passed around, and the actual DbgOp is
+/// over 8x larger than this class, due to storing a MachineOperand. This ID
+/// should be equal for all equal DbgOps, and also encodes whether the mapped
+/// DbgOp is a constant, meaning that for simple equality or const-ness checks
+/// it is not necessary to lookup this ID.
+struct DbgOpID {
+  struct IsConstIndexPair {
+    uint32_t IsConst : 1;
+    uint32_t Index : 31;
+  };
+
+  union {
+    struct IsConstIndexPair ID;
+    uint32_t RawID;
+  };
+
+  DbgOpID() : RawID(UndefID.RawID) {
+    static_assert(sizeof(DbgOpID) == 4, "DbgOpID should fit within 4 bytes.");
+  }
+  DbgOpID(uint32_t RawID) : RawID(RawID) {}
+  DbgOpID(bool IsConst, uint32_t Index) : ID({IsConst, Index}) {}
+
+  static DbgOpID UndefID;
+
+  bool operator==(const DbgOpID &Other) const { return RawID == Other.RawID; }
+  bool operator!=(const DbgOpID &Other) const { return !(*this == Other); }
+
+  uint32_t asU32() const { return RawID; }
+
+  bool isUndef() const { return *this == UndefID; }
+  bool isConst() const { return ID.IsConst && !isUndef(); }
+  uint32_t getIndex() const { return ID.Index; }
+
+#ifndef NDEBUG
+  void dump(const MLocTracker *MTrack, const DbgOpIDMap *OpStore) const;
+#endif
+};
+
+/// Class storing the complete set of values that are observed by DbgValues
+/// within the current function. Allows 2-way lookup, with `find` returning the
+/// Op for a given ID and `insert` returning the ID for a given Op (creating one
+/// if none exists).
+class DbgOpIDMap {
+
+  SmallVector<ValueIDNum, 0> ValueOps;
+  SmallVector<MachineOperand, 0> ConstOps;
+
+  DenseMap<ValueIDNum, DbgOpID> ValueOpToID;
+  DenseMap<MachineOperand, DbgOpID> ConstOpToID;
+
+public:
+  /// If \p Op does not already exist in this map, it is inserted and the
+  /// corresponding DbgOpID is returned. If Op already exists in this map, then
+  /// no change is made and the existing ID for Op is returned.
+  /// Calling this with the undef DbgOp will always return DbgOpID::UndefID.
+  DbgOpID insert(DbgOp Op) {
+    if (Op.isUndef())
+      return DbgOpID::UndefID;
+    if (Op.IsConst)
+      return insertConstOp(Op.MO);
+    return insertValueOp(Op.ID);
+  }
+  /// Returns the DbgOp associated with \p ID. Should only be used for IDs
+  /// returned from calling `insert` from this map or DbgOpID::UndefID.
+  DbgOp find(DbgOpID ID) const {
+    if (ID == DbgOpID::UndefID)
+      return DbgOp();
+    if (ID.isConst())
+      return DbgOp(ConstOps[ID.getIndex()]);
+    return DbgOp(ValueOps[ID.getIndex()]);
+  }
+
+  void clear() {
+    ValueOps.clear();
+    ConstOps.clear();
+    ValueOpToID.clear();
+    ConstOpToID.clear();
+  }
+
+private:
+  DbgOpID insertConstOp(MachineOperand &MO) {
+    auto ExistingIt = ConstOpToID.find(MO);
+    if (ExistingIt != ConstOpToID.end())
+      return ExistingIt->second;
+    DbgOpID ID(true, ConstOps.size());
+    ConstOpToID.insert(std::make_pair(MO, ID));
+    ConstOps.push_back(MO);
+    return ID;
+  }
+  DbgOpID insertValueOp(ValueIDNum VID) {
+    auto ExistingIt = ValueOpToID.find(VID);
+    if (ExistingIt != ValueOpToID.end())
+      return ExistingIt->second;
+    DbgOpID ID(false, ValueOps.size());
+    ValueOpToID.insert(std::make_pair(VID, ID));
+    ValueOps.push_back(VID);
+    return ID;
+  }
+};
+
+// We set the maximum number of operands that we will handle to keep DbgValue
+// within a reasonable size (64 bytes), as we store and pass a lot of them
+// around.
+#define MAX_DBG_OPS 8
+
+/// Class recording the (high level) _value_ of a variable. Identifies the value
+/// of the variable as a list of ValueIDNums and constant MachineOperands, or as
+/// an empty list for undef debug values or VPHI values which we have not found
+/// valid locations for.
 /// This class also stores meta-information about how the value is qualified.
 /// Used to reason about variable values when performing the second
 /// (DebugVariable specific) dataflow analysis.
 class DbgValue {
+private:
+  /// If Kind is Def or VPHI, the set of IDs corresponding to the DbgOps that
+  /// are used. VPHIs set every ID to EmptyID when we have not found a valid
+  /// machine-value for every operand, and sets them to the corresponding
+  /// machine-values when we have found all of them.
+  DbgOpID DbgOps[MAX_DBG_OPS];
+  unsigned OpCount;
+
 public:
-  /// If Kind is Def, the value number that this value is based on. VPHIs set
-  /// this field to EmptyValue if there is no machine-value for this VPHI, or
-  /// the corresponding machine-value if there is one.
-  ValueIDNum ID;
-  /// If Kind is Const, the MachineOperand defining this value.
-  Optional<MachineOperand> MO;
   /// For a NoVal or VPHI DbgValue, which block it was generated in.
   int BlockNo;
 
@@ -242,8 +456,8 @@ public:
 
   typedef enum {
     Undef, // Represents a DBG_VALUE $noreg in the transfer function only.
-    Def,   // This value is defined by an inst, or is a PHI value.
-    Const, // A constant value contained in the MachineOperand field.
+    Def,   // This value is defined by some combination of constants,
+           // instructions, or PHI values.
     VPHI,  // Incoming values to BlockNo differ, those values must be joined by
            // a PHI in this block.
     NoVal, // Empty DbgValue indicating an unknown value. Used as initializer,
@@ -252,52 +466,113 @@ public:
   /// Discriminator for whether this is a constant or an in-program value.
   KindT Kind;
 
-  DbgValue(const ValueIDNum &Val, const DbgValueProperties &Prop, KindT Kind)
-      : ID(Val), MO(None), BlockNo(0), Properties(Prop), Kind(Kind) {
-    assert(Kind == Def);
+  DbgValue(ArrayRef<DbgOpID> DbgOps, const DbgValueProperties &Prop)
+      : OpCount(DbgOps.size()), BlockNo(0), Properties(Prop), Kind(Def) {
+    static_assert(sizeof(DbgValue) <= 64,
+                  "DbgValue should fit within 64 bytes.");
+    assert(DbgOps.size() == Prop.getLocationOpCount());
+    if (DbgOps.size() > MAX_DBG_OPS ||
+        any_of(DbgOps, [](DbgOpID ID) { return ID.isUndef(); })) {
+      Kind = Undef;
+      OpCount = 0;
+#define DEBUG_TYPE "LiveDebugValues"
+      if (DbgOps.size() > MAX_DBG_OPS) {
+        LLVM_DEBUG(dbgs() << "Found DbgValue with more than maximum allowed "
+                             "operands.\n");
+      }
+#undef DEBUG_TYPE
+    } else {
+      for (unsigned Idx = 0; Idx < DbgOps.size(); ++Idx)
+        this->DbgOps[Idx] = DbgOps[Idx];
+    }
   }
 
   DbgValue(unsigned BlockNo, const DbgValueProperties &Prop, KindT Kind)
-      : ID(ValueIDNum::EmptyValue), MO(None), BlockNo(BlockNo),
-        Properties(Prop), Kind(Kind) {
+      : OpCount(0), BlockNo(BlockNo), Properties(Prop), Kind(Kind) {
     assert(Kind == NoVal || Kind == VPHI);
   }
 
-  DbgValue(const MachineOperand &MO, const DbgValueProperties &Prop, KindT Kind)
-      : ID(ValueIDNum::EmptyValue), MO(MO), BlockNo(0), Properties(Prop),
-        Kind(Kind) {
-    assert(Kind == Const);
-  }
-
   DbgValue(const DbgValueProperties &Prop, KindT Kind)
-    : ID(ValueIDNum::EmptyValue), MO(None), BlockNo(0), Properties(Prop),
-      Kind(Kind) {
+      : OpCount(0), BlockNo(0), Properties(Prop), Kind(Kind) {
     assert(Kind == Undef &&
            "Empty DbgValue constructor must pass in Undef kind");
   }
 
 #ifndef NDEBUG
-  void dump(const MLocTracker *MTrack) const;
+  void dump(const MLocTracker *MTrack = nullptr,
+            const DbgOpIDMap *OpStore = nullptr) const;
 #endif
 
   bool operator==(const DbgValue &Other) const {
     if (std::tie(Kind, Properties) != std::tie(Other.Kind, Other.Properties))
       return false;
-    else if (Kind == Def && ID != Other.ID)
+    else if (Kind == Def && !equal(getDbgOpIDs(), Other.getDbgOpIDs()))
       return false;
     else if (Kind == NoVal && BlockNo != Other.BlockNo)
       return false;
-    else if (Kind == Const)
-      return MO->isIdenticalTo(*Other.MO);
     else if (Kind == VPHI && BlockNo != Other.BlockNo)
       return false;
-    else if (Kind == VPHI && ID != Other.ID)
+    else if (Kind == VPHI && !equal(getDbgOpIDs(), Other.getDbgOpIDs()))
       return false;
 
     return true;
   }
 
   bool operator!=(const DbgValue &Other) const { return !(*this == Other); }
+
+  // Returns an array of all the machine values used to calculate this variable
+  // value, or an empty list for an Undef or unjoined VPHI.
+  ArrayRef<DbgOpID> getDbgOpIDs() const { return {DbgOps, OpCount}; }
+
+  // Returns either DbgOps[Index] if this DbgValue has Debug Operands, or
+  // the ID for ValueIDNum::EmptyValue otherwise (i.e. if this is an Undef,
+  // NoVal, or an unjoined VPHI).
+  DbgOpID getDbgOpID(unsigned Index) const {
+    if (!OpCount)
+      return DbgOpID::UndefID;
+    assert(Index < OpCount);
+    return DbgOps[Index];
+  }
+  // Replaces this DbgValue's existing DbgOpIDs (if any) with the contents of
+  // \p NewIDs. The number of DbgOpIDs passed must be equal to the number of
+  // arguments expected by this DbgValue's properties (the return value of
+  // `getLocationOpCount()`).
+  void setDbgOpIDs(ArrayRef<DbgOpID> NewIDs) {
+    // We can go from no ops to some ops, but not from some ops to no ops.
+    assert(NewIDs.size() == getLocationOpCount() &&
+           "Incorrect number of Debug Operands for this DbgValue.");
+    OpCount = NewIDs.size();
+    for (unsigned Idx = 0; Idx < NewIDs.size(); ++Idx)
+      DbgOps[Idx] = NewIDs[Idx];
+  }
+
+  // The number of debug operands expected by this DbgValue's expression.
+  // getDbgOpIDs() should return an array of this length, unless this is an
+  // Undef or an unjoined VPHI.
+  unsigned getLocationOpCount() const {
+    return Properties.getLocationOpCount();
+  }
+
+  // Returns true if this or Other are unjoined PHIs, which do not have defined
+  // Loc Ops, or if the `n`th Loc Op for this has a different constness to the
+  // `n`th Loc Op for Other.
+  bool hasJoinableLocOps(const DbgValue &Other) const {
+    if (isUnjoinedPHI() || Other.isUnjoinedPHI())
+      return true;
+    for (unsigned Idx = 0; Idx < getLocationOpCount(); ++Idx) {
+      if (getDbgOpID(Idx).isConst() != Other.getDbgOpID(Idx).isConst())
+        return false;
+    }
+    return true;
+  }
+
+  bool isUnjoinedPHI() const { return Kind == VPHI && OpCount == 0; }
+
+  bool hasIdenticalValidLocOps(const DbgValue &Other) const {
+    if (!OpCount)
+      return false;
+    return equal(getDbgOpIDs(), Other.getDbgOpIDs());
+  }
 };
 
 class LocIdxToIndexFunctor {
@@ -620,9 +895,9 @@ public:
   void writeRegMask(const MachineOperand *MO, unsigned CurBB, unsigned InstID);
 
   /// Find LocIdx for SpillLoc \p L, creating a new one if it's not tracked.
-  /// Returns None when in scenarios where a spill slot could be tracked, but
-  /// we would likely run into resource limitations.
-  Optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
+  /// Returns std::nullopt when in scenarios where a spill slot could be
+  /// tracked, but we would likely run into resource limitations.
+  std::optional<SpillLocationNo> getOrTrackSpillLoc(SpillLoc L);
 
   // Get LocIdx of a spill ID.
   LocIdx getSpillMLoc(unsigned SpillID) {
@@ -667,10 +942,11 @@ public:
   LLVM_DUMP_METHOD void dump_mloc_map();
 #endif
 
-  /// Create a DBG_VALUE based on  machine location \p MLoc. Qualify it with the
+  /// Create a DBG_VALUE based on debug operands \p DbgOps. Qualify it with the
   /// information in \pProperties, for variable Var. Don't insert it anywhere,
   /// just return the builder for it.
-  MachineInstrBuilder emitLoc(Optional<LocIdx> MLoc, const DebugVariable &Var,
+  MachineInstrBuilder emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
+                              const DebugVariable &Var,
                               const DbgValueProperties &Properties);
 };
 
@@ -704,32 +980,16 @@ public:
 
 public:
   VLocTracker(const OverlapMap &O, const DIExpression *EmptyExpr)
-      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
+      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
-              Optional<ValueIDNum> ID) {
-    assert(MI.isDebugValue() || MI.isDebugRef());
+              const SmallVectorImpl<DbgOpID> &DebugOps) {
+    assert(MI.isDebugValueLike());
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
-    DbgValue Rec = (ID) ? DbgValue(*ID, Properties, DbgValue::Def)
-                        : DbgValue(Properties, DbgValue::Undef);
-
-    // Attempt insertion; overwrite if it's already mapped.
-    auto Result = Vars.insert(std::make_pair(Var, Rec));
-    if (!Result.second)
-      Result.first->second = Rec;
-    Scopes[Var] = MI.getDebugLoc().get();
-
-    considerOverlaps(Var, MI.getDebugLoc().get());
-  }
-
-  void defVar(const MachineInstr &MI, const MachineOperand &MO) {
-    // Only DBG_VALUEs can define constant-valued variables.
-    assert(MI.isDebugValue());
-    DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
-                      MI.getDebugLoc()->getInlinedAt());
-    DbgValueProperties Properties(MI);
-    DbgValue Rec = DbgValue(MO, Properties, DbgValue::Const);
+    DbgValue Rec = (DebugOps.size() > 0)
+                       ? DbgValue(DebugOps, Properties)
+                       : DbgValue(Properties, DbgValue::Undef);
 
     // Attempt insertion; overwrite if it's already mapped.
     auto Result = Vars.insert(std::make_pair(Var, Rec));
@@ -751,9 +1011,9 @@ public:
       // The "empty" fragment is stored as DebugVariable::DefaultFragment, so
       // that it overlaps with everything, however its cannonical representation
       // in a DebugVariable is as "None".
-      Optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
+      std::optional<DIExpression::FragmentInfo> OptFragmentInfo = FragmentInfo;
       if (DebugVariable::isDefaultFragment(FragmentInfo))
-        OptFragmentInfo = None;
+        OptFragmentInfo = std::nullopt;
 
       DebugVariable Overlapped(Var.getVariable(), OptFragmentInfo,
                                Var.getInlinedAt());
@@ -779,7 +1039,7 @@ public:
   friend class ::InstrRefLDVTest;
 
   using FragmentInfo = DIExpression::FragmentInfo;
-  using OptFragmentInfo = Optional<DIExpression::FragmentInfo>;
+  using OptFragmentInfo = std::optional<DIExpression::FragmentInfo>;
 
   // Helper while building OverlapMap, a map of all fragments seen for a given
   // DILocalVariable.
@@ -872,12 +1132,12 @@ private:
     uint64_t InstrNum;
     /// Block where DBG_PHI occurred.
     MachineBasicBlock *MBB;
-    /// The value number read by the DBG_PHI -- or None if it didn't refer to
-    /// a value.
-    Optional<ValueIDNum> ValueRead;
-    /// Register/Stack location the DBG_PHI reads -- or None if it referred to
-    /// something unexpected.
-    Optional<LocIdx> ReadLoc;
+    /// The value number read by the DBG_PHI -- or std::nullopt if it didn't
+    /// refer to a value.
+    std::optional<ValueIDNum> ValueRead;
+    /// Register/Stack location the DBG_PHI reads -- or std::nullopt if it
+    /// referred to something unexpected.
+    std::optional<LocIdx> ReadLoc;
 
     operator unsigned() const { return InstrNum; }
   };
@@ -896,7 +1156,10 @@ private:
   /// DBG_INSTR_REFs that call resolveDbgPHIs. These variable references solve
   /// a mini SSA problem caused by DBG_PHIs being cloned, this collection caches
   /// the result.
-  DenseMap<MachineInstr *, Optional<ValueIDNum>> SeenDbgPHIs;
+  DenseMap<std::pair<MachineInstr *, unsigned>, std::optional<ValueIDNum>>
+      SeenDbgPHIs;
+
+  DbgOpIDMap DbgOpStore;
 
   /// True if we need to examine call instructions for stack clobbers. We
   /// normally assume that they don't clobber SP, but stack probes on Windows
@@ -909,8 +1172,8 @@ private:
   StringRef StackProbeSymbolName;
 
   /// Tests whether this instruction is a spill to a stack slot.
-  Optional<SpillLocationNo> isSpillInstruction(const MachineInstr &MI,
-                                               MachineFunction *MF);
+  std::optional<SpillLocationNo> isSpillInstruction(const MachineInstr &MI,
+                                                    MachineFunction *MF);
 
   /// Decide if @MI is a spill instruction and return true if it is. We use 2
   /// criteria to make this decision:
@@ -923,13 +1186,22 @@ private:
 
   /// If a given instruction is identified as a spill, return the spill slot
   /// and set \p Reg to the spilled register.
-  Optional<SpillLocationNo> isRestoreInstruction(const MachineInstr &MI,
-                                          MachineFunction *MF, unsigned &Reg);
+  std::optional<SpillLocationNo> isRestoreInstruction(const MachineInstr &MI,
+                                                      MachineFunction *MF,
+                                                      unsigned &Reg);
 
   /// Given a spill instruction, extract the spill slot information, ensure it's
   /// tracked, and return the spill number.
-  Optional<SpillLocationNo>
+  std::optional<SpillLocationNo>
   extractSpillBaseRegAndOffset(const MachineInstr &MI);
+
+  /// For an instruction reference given by \p InstNo and \p OpNo in instruction
+  /// \p MI returns the Value pointed to by that instruction reference if any
+  /// exists, otherwise returns None.
+  std::optional<ValueIDNum> getValueForInstrRef(unsigned InstNo, unsigned OpNo,
+                                                MachineInstr &MI,
+                                                const ValueTable *MLiveOuts,
+                                                const ValueTable *MLiveIns);
 
   /// Observe a single instruction while stepping through a block.
   void process(MachineInstr &MI, const ValueTable *MLiveOuts,
@@ -972,17 +1244,18 @@ private:
   /// forming another mini-ssa problem to solve.
   /// \p Here the position of a DBG_INSTR_REF seeking a machine value number
   /// \p InstrNum Debug instruction number defined by DBG_PHI instructions.
-  /// \returns The machine value number at position Here, or None.
-  Optional<ValueIDNum> resolveDbgPHIs(MachineFunction &MF,
-                                      const ValueTable *MLiveOuts,
-                                      const ValueTable *MLiveIns,
-                                      MachineInstr &Here, uint64_t InstrNum);
+  /// \returns The machine value number at position Here, or std::nullopt.
+  std::optional<ValueIDNum> resolveDbgPHIs(MachineFunction &MF,
+                                           const ValueTable *MLiveOuts,
+                                           const ValueTable *MLiveIns,
+                                           MachineInstr &Here,
+                                           uint64_t InstrNum);
 
-  Optional<ValueIDNum> resolveDbgPHIsImpl(MachineFunction &MF,
-                                          const ValueTable *MLiveOuts,
-                                          const ValueTable *MLiveIns,
-                                          MachineInstr &Here,
-                                          uint64_t InstrNum);
+  std::optional<ValueIDNum> resolveDbgPHIsImpl(MachineFunction &MF,
+                                               const ValueTable *MLiveOuts,
+                                               const ValueTable *MLiveIns,
+                                               MachineInstr &Here,
+                                               uint64_t InstrNum);
 
   /// Step through the function, recording register definitions and movements
   /// in an MLocTracker. Convert the observations into a per-block transfer
@@ -1086,13 +1359,20 @@ private:
                 SmallPtrSet<const MachineBasicBlock *, 8> &BlocksToExplore,
                 DbgValue &LiveIn);
 
-  /// For the given block and live-outs feeding into it, try to find a
-  /// machine location where all the variable values join together.
-  /// \returns Value ID of a machine PHI if an appropriate one is available.
-  Optional<ValueIDNum>
-  pickVPHILoc(const MachineBasicBlock &MBB, const DebugVariable &Var,
+  /// For the given block and live-outs feeding into it, try to find
+  /// machine locations for each debug operand where all the values feeding
+  /// into that operand join together.
+  /// \returns true if a joined location was found for every value that needed
+  ///          to be joined.
+  bool
+  pickVPHILoc(SmallVectorImpl<DbgOpID> &OutValues, const MachineBasicBlock &MBB,
               const LiveIdxT &LiveOuts, FuncValueTable &MOutLocs,
               const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
+
+  std::optional<ValueIDNum> pickOperandPHILoc(
+      unsigned DbgOpIdx, const MachineBasicBlock &MBB, const LiveIdxT &LiveOuts,
+      FuncValueTable &MOutLocs,
+      const SmallVectorImpl<const MachineBasicBlock *> &BlockOrders);
 
   /// Take collections of DBG_VALUE instructions stored in TTracker, and
   /// install them into their output blocks. Preserves a stable order of
@@ -1138,6 +1418,7 @@ public:
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;
 
   bool isCalleeSaved(LocIdx L) const;
+  bool isCalleeSavedReg(Register R) const;
 
   bool hasFoldedStackStore(const MachineInstr &MI) {
     // Instruction must have a memory operand that's a stack slot, and isn't
@@ -1152,38 +1433,9 @@ public:
            && !MemOperand->getPseudoValue()->isAliased(MFI);
   }
 
-  Optional<LocIdx> findLocationForMemOperand(const MachineInstr &MI);
+  std::optional<LocIdx> findLocationForMemOperand(const MachineInstr &MI);
 };
 
 } // namespace LiveDebugValues
-
-namespace llvm {
-using namespace LiveDebugValues;
-
-template <> struct DenseMapInfo<LocIdx> {
-  static inline LocIdx getEmptyKey() { return LocIdx::MakeIllegalLoc(); }
-  static inline LocIdx getTombstoneKey() { return LocIdx::MakeTombstoneLoc(); }
-
-  static unsigned getHashValue(const LocIdx &Loc) { return Loc.asU64(); }
-
-  static bool isEqual(const LocIdx &A, const LocIdx &B) { return A == B; }
-};
-
-template <> struct DenseMapInfo<ValueIDNum> {
-  static inline ValueIDNum getEmptyKey() { return ValueIDNum::EmptyValue; }
-  static inline ValueIDNum getTombstoneKey() {
-    return ValueIDNum::TombstoneValue;
-  }
-
-  static unsigned getHashValue(const ValueIDNum &Val) {
-    return hash_value(Val.asU64());
-  }
-
-  static bool isEqual(const ValueIDNum &A, const ValueIDNum &B) {
-    return A == B;
-  }
-};
-
-} // end namespace llvm
 
 #endif /* LLVM_LIB_CODEGEN_LIVEDEBUGVALUES_INSTRREFBASEDLDV_H */

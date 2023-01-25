@@ -5,7 +5,7 @@
 // RUN: ld.lld %t.o %t1.so -o %t
 // RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOCSHARED %s
 // RUN: llvm-readelf -x .data %t | FileCheck --check-prefix=DATA %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
 
 // RELOCSHARED:       Relocations [
 // RELOCSHARED-NEXT:  Section ({{.*}}) .rela.dyn {

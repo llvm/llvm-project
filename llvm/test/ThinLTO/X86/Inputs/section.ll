@@ -4,7 +4,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; @reference_gv_with_section() can't be imported
 define i32 @reference_gv_with_section() {
-    %res = load i32, i32* @var_with_section
+    %res = load i32, ptr @var_with_section
     ret i32 %res
 }
 

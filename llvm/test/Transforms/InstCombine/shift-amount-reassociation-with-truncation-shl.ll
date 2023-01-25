@@ -202,14 +202,14 @@ define i16 @n11(i32 %x, i16 %y) {
 @Y16 = global i16 42
 define i16 @t01(i32 %x) {
 ; CHECK-LABEL: @t01(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], ptrtoint (i32* @Y32 to i32)
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], ptrtoint (ptr @Y32 to i32)
 ; CHECK-NEXT:    [[T1:%.*]] = trunc i32 [[T0]] to i16
-; CHECK-NEXT:    [[T2:%.*]] = shl i16 [[T1]], ptrtoint (i16* @Y16 to i16)
+; CHECK-NEXT:    [[T2:%.*]] = shl i16 [[T1]], ptrtoint (ptr @Y16 to i16)
 ; CHECK-NEXT:    ret i16 [[T2]]
 ;
-  %t0 = shl i32 %x, ptrtoint (i32* @Y32 to i32)
+  %t0 = shl i32 %x, ptrtoint (ptr @Y32 to i32)
   %t1 = trunc i32 %t0 to i16
-  %t2 = shl i16 %t1, ptrtoint (i16* @Y16 to i16)
+  %t2 = shl i16 %t1, ptrtoint (ptr @Y16 to i16)
   ret i16 %t2
 }
 

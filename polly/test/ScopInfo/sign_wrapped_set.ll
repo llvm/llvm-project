@@ -11,20 +11,20 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @test_case(i8* noalias nocapture readonly %src, i32 %srcHeight, i32 %srcStride) local_unnamed_addr {
+define void @test_case(ptr noalias nocapture readonly %src, i32 %srcHeight, i32 %srcStride) local_unnamed_addr {
 entry:
   %extended = zext i32 %srcStride to i64
   %sub = add i32 %srcHeight, -1
   br label %for.cond6.preheader.us
 
 for.cond6.preheader.us:                           ; preds = %for.cond6.preheader.us, %entry
-  %srcPtr.075.us.pn = phi i8* [ %srcPtr.075.us, %for.cond6.preheader.us ], [ %src, %entry ]
+  %srcPtr.075.us.pn = phi ptr [ %srcPtr.075.us, %for.cond6.preheader.us ], [ %src, %entry ]
   %y.072.us = phi i32 [ %inc37.us, %for.cond6.preheader.us ], [ 1, %entry ]
-  %srcPtr.075.us = getelementptr inbounds i8, i8* %srcPtr.075.us.pn, i64 %extended
+  %srcPtr.075.us = getelementptr inbounds i8, ptr %srcPtr.075.us.pn, i64 %extended
 
-  %0 = load i8, i8* %srcPtr.075.us, align 1, !tbaa !0
+  %0 = load i8, ptr %srcPtr.075.us, align 1, !tbaa !0
   %1 = add i8 %0, 1
-  store i8 %1, i8* %srcPtr.075.us, align 1, !tbaa !0
+  store i8 %1, ptr %srcPtr.075.us, align 1, !tbaa !0
 
   %inc37.us = add nuw i32 %y.072.us, 1
   %exitcond78 = icmp eq i32 %inc37.us, %sub

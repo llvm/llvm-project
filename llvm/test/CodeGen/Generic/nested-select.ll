@@ -4,7 +4,7 @@
 
 %typedef.tree = type opaque
 
-define i32 @ic_test(double %p.0.2.0.val, double %p.0.2.1.val, double %p.0.2.2.val, %typedef.tree* %t) {
+define i32 @ic_test(double %p.0.2.0.val, double %p.0.2.1.val, double %p.0.2.2.val, ptr %t) {
         %result.1.0 = zext i1 false to i32              ; <i32> [#uses=1]
         %tmp.55 = fcmp oge double 0.000000e+00, 1.000000e+00            ; <i1> [#uses=1]
         %tmp.66 = fdiv double 0.000000e+00, 0.000000e+00                ; <double> [#uses=1]

@@ -227,8 +227,7 @@ const llvm::StringRef CertErr33CCheckedFunctions = "::aligned_alloc;"
 
 } // namespace
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace cert {
 
 class CERTModule : public ClangTidyModule {
@@ -265,6 +264,8 @@ public:
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc50-cpp");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
         "cert-msc51-cpp");
+    CheckFactories.registerCheck<bugprone::SignalHandlerCheck>(
+        "cert-msc54-cpp");
     // OOP
     CheckFactories.registerCheck<performance::MoveConstructorInitCheck>(
         "cert-oop11-cpp");
@@ -339,5 +340,4 @@ static ClangTidyModuleRegistry::Add<cert::CERTModule>
 // and thus register the CERTModule.
 volatile int CERTModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

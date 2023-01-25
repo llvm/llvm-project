@@ -12,19 +12,19 @@ define void @testDouble(double %d) ssp {
 ; CHECK:  fcvtzu w{{[0-9]+}}, d{{[0-9]+}}
 entry:
   %d.addr = alloca double, align 8
-  store double %d, double* %d.addr, align 8
-  %0 = load double, double* %d.addr, align 8
-  %1 = load double, double* %d.addr, align 8
+  store double %d, ptr %d.addr, align 8
+  %0 = load double, ptr %d.addr, align 8
+  %1 = load double, ptr %d.addr, align 8
   %conv = fptoui double %1 to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i32 0, i32 0), double %0, i64 %conv)
-  %2 = load double, double* %d.addr, align 8
-  %3 = load double, double* %d.addr, align 8
+  %call = call i32 (ptr, ...) @printf(ptr @.str, double %0, i64 %conv)
+  %2 = load double, ptr %d.addr, align 8
+  %3 = load double, ptr %d.addr, align 8
   %conv1 = fptoui double %3 to i32
-  %call2 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str1, i32 0, i32 0), double %2, i32 %conv1)
+  %call2 = call i32 (ptr, ...) @printf(ptr @.str1, double %2, i32 %conv1)
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 define void @testFloat(float %f) ssp {
 ; CHECK-LABEL: testFloat:
@@ -32,28 +32,28 @@ define void @testFloat(float %f) ssp {
 ; CHECK:  fcvtzu w{{[0-9]+}}, s{{[0-9]+}}
 entry:
   %f.addr = alloca float, align 4
-  store float %f, float* %f.addr, align 4
-  %0 = load float, float* %f.addr, align 4
+  store float %f, ptr %f.addr, align 4
+  %0 = load float, ptr %f.addr, align 4
   %conv = fpext float %0 to double
-  %1 = load float, float* %f.addr, align 4
+  %1 = load float, ptr %f.addr, align 4
   %conv1 = fptoui float %1 to i64
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str2, i32 0, i32 0), double %conv, i64 %conv1)
-  %2 = load float, float* %f.addr, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str2, double %conv, i64 %conv1)
+  %2 = load float, ptr %f.addr, align 4
   %conv2 = fpext float %2 to double
-  %3 = load float, float* %f.addr, align 4
+  %3 = load float, ptr %f.addr, align 4
   %conv3 = fptoui float %3 to i32
-  %call4 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str3, i32 0, i32 0), double %conv2, i32 %conv3)
+  %call4 = call i32 (ptr, ...) @printf(ptr @.str3, double %conv2, i32 %conv3)
   ret void
 }
 
-define i32 @main(i32 %argc, i8** %argv) ssp {
+define i32 @main(i32 %argc, ptr %argv) ssp {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  store i32 0, i32* %retval
-  store i32 %argc, i32* %argc.addr, align 4
-  store i8** %argv, i8*** %argv.addr, align 8
+  %argv.addr = alloca ptr, align 8
+  store i32 0, ptr %retval
+  store i32 %argc, ptr %argc.addr, align 4
+  store ptr %argv, ptr %argv.addr, align 8
   call void @testDouble(double 1.159198e+01)
   call void @testFloat(float 0x40272F1800000000)
   ret i32 0

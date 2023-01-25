@@ -13,9 +13,7 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace fuchsia {
+namespace clang::tidy::fuchsia {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
@@ -122,6 +120,4 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-}  // namespace fuchsia
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::fuchsia

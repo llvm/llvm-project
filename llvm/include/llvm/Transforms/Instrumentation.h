@@ -28,7 +28,6 @@
 namespace llvm {
 
 class Triple;
-class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
@@ -123,10 +122,6 @@ struct InstrProfOptions {
   InstrProfOptions() = default;
 };
 
-// Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
-ModulePass *createDataFlowSanitizerLegacyPassPass(
-    const std::vector<std::string> &ABIListFiles = std::vector<std::string>());
-
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   enum Type {
@@ -150,6 +145,7 @@ struct SanitizerCoverageOptions {
   bool StackDepth = false;
   bool TraceLoads = false;
   bool TraceStores = false;
+  bool CollectControlFlow = false;
 
   SanitizerCoverageOptions() = default;
 };

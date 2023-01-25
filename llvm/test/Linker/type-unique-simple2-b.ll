@@ -10,20 +10,20 @@
 ; target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; target triple = "x86_64-apple-macosx10.9.0"
 
-%class.A = type { i32 (...)** }
+%class.A = type { ptr }
 
-@_ZTV1A = unnamed_addr constant [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast (void (%class.A*)* @_ZN1A6setFooEv to i8*), i8* bitcast (i32 (%class.A*)* @_ZN1A6getFooEv to i8*)]
-@_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
+@_ZTV1A = unnamed_addr constant [4 x ptr] [ptr null, ptr @_ZTI1A, ptr @_ZN1A6setFooEv, ptr @_ZN1A6getFooEv]
+@_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 @_ZTS1A = constant [3 x i8] c"1A\00"
-@_ZTI1A = unnamed_addr constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZTS1A, i32 0, i32 0) }
+@_ZTI1A = unnamed_addr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }
 
 ; Function Attrs: nounwind
-define void @_ZN1A6setFooEv(%class.A* %this) unnamed_addr #0 align 2 !dbg !26 {
+define void @_ZN1A6setFooEv(ptr %this) unnamed_addr #0 align 2 !dbg !26 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !32, metadata !DIExpression()), !dbg !34
-  %this1 = load %class.A*, %class.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !32, metadata !DIExpression()), !dbg !34
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !35
 }
 
@@ -31,12 +31,12 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-define i32 @_ZN1A6getFooEv(%class.A* %this) unnamed_addr #0 align 2 !dbg !28 {
+define i32 @_ZN1A6getFooEv(ptr %this) unnamed_addr #0 align 2 !dbg !28 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !36, metadata !DIExpression()), !dbg !37
-  %this1 = load %class.A*, %class.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !36, metadata !DIExpression()), !dbg !37
+  %this1 = load ptr, ptr %this.addr
   ret i32 1, !dbg !38
 }
 

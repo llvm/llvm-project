@@ -45,9 +45,11 @@ int main(int, char**) {
     test ( "A" );
     test ( "" );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test ( L"QBCDE" );
     test ( L"A" );
     test ( L"" );
+#endif
 
 #if TEST_STD_VER >= 11
     test ( u"QBCDE" );

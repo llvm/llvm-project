@@ -39,7 +39,7 @@
   declare i1 @llvm.loop.decrement.i64(i64) #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #1
+  declare void @llvm.stackprotector(ptr, ptr) #1
 
   attributes #0 = { noduplicate nounwind }
   attributes #1 = { nounwind }

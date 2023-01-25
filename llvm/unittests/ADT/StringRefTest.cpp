@@ -34,24 +34,18 @@ std::ostream &operator<<(std::ostream &OS,
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
-static_assert(
-    !std::is_assignable<StringRef&, std::string>::value,
-    "Assigning from prvalue std::string");
-static_assert(
-    !std::is_assignable<StringRef&, std::string &&>::value,
-    "Assigning from xvalue std::string");
-static_assert(
-    std::is_assignable<StringRef&, std::string &>::value,
-    "Assigning from lvalue std::string");
-static_assert(
-    std::is_assignable<StringRef&, const char *>::value,
-    "Assigning from prvalue C string");
-static_assert(
-    std::is_assignable<StringRef&, const char * &&>::value,
-    "Assigning from xvalue C string");
-static_assert(
-    std::is_assignable<StringRef&, const char * &>::value,
-    "Assigning from lvalue C string");
+static_assert(!std::is_assignable_v<StringRef &, std::string>,
+              "Assigning from prvalue std::string");
+static_assert(!std::is_assignable_v<StringRef &, std::string &&>,
+              "Assigning from xvalue std::string");
+static_assert(std::is_assignable_v<StringRef &, std::string &>,
+              "Assigning from lvalue std::string");
+static_assert(std::is_assignable_v<StringRef &, const char *>,
+              "Assigning from prvalue C string");
+static_assert(std::is_assignable_v<StringRef &, const char *&&>,
+              "Assigning from xvalue C string");
+static_assert(std::is_assignable_v<StringRef &, const char *&>,
+              "Assigning from lvalue C string");
 
 namespace {
 TEST(StringRefTest, Construction) {
@@ -59,16 +53,12 @@ TEST(StringRefTest, Construction) {
   EXPECT_EQ("hello", StringRef("hello"));
   EXPECT_EQ("hello", StringRef("hello world", 5));
   EXPECT_EQ("hello", StringRef(std::string("hello")));
-#if __cplusplus > 201402L
   EXPECT_EQ("hello", StringRef(std::string_view("hello")));
-#endif
 }
 
 TEST(StringRefTest, Conversion) {
   EXPECT_EQ("hello", std::string(StringRef("hello")));
-#if __cplusplus > 201402L
   EXPECT_EQ("hello", std::string_view(StringRef("hello")));
-#endif
 }
 
 TEST(StringRefTest, EmptyInitializerList) {
@@ -91,12 +81,12 @@ TEST(StringRefTest, StringOps) {
   EXPECT_EQ(p, StringRef(p, 0).data());
   EXPECT_TRUE(StringRef().empty());
   EXPECT_EQ((size_t) 5, StringRef("hello").size());
-  EXPECT_EQ(-1, StringRef("aab").compare("aad"));
+  EXPECT_GT( 0, StringRef("aab").compare("aad"));
   EXPECT_EQ( 0, StringRef("aab").compare("aab"));
-  EXPECT_EQ( 1, StringRef("aab").compare("aaa"));
-  EXPECT_EQ(-1, StringRef("aab").compare("aabb"));
-  EXPECT_EQ( 1, StringRef("aab").compare("aa"));
-  EXPECT_EQ( 1, StringRef("\xFF").compare("\1"));
+  EXPECT_LT( 0, StringRef("aab").compare("aaa"));
+  EXPECT_GT( 0, StringRef("aab").compare("aabb"));
+  EXPECT_LT( 0, StringRef("aab").compare("aa"));
+  EXPECT_LT( 0, StringRef("\xFF").compare("\1"));
 
   EXPECT_EQ(-1, StringRef("AaB").compare_insensitive("aAd"));
   EXPECT_EQ( 0, StringRef("AaB").compare_insensitive("aab"));
@@ -360,20 +350,20 @@ TEST(StringRefTest, Trim) {
 
 TEST(StringRefTest, StartsWith) {
   StringRef Str("hello");
-  EXPECT_TRUE(Str.startswith(""));
-  EXPECT_TRUE(Str.startswith("he"));
-  EXPECT_FALSE(Str.startswith("helloworld"));
-  EXPECT_FALSE(Str.startswith("hi"));
+  EXPECT_TRUE(Str.starts_with(""));
+  EXPECT_TRUE(Str.starts_with("he"));
+  EXPECT_FALSE(Str.starts_with("helloworld"));
+  EXPECT_FALSE(Str.starts_with("hi"));
 }
 
 TEST(StringRefTest, StartsWithInsensitive) {
   StringRef Str("heLLo");
-  EXPECT_TRUE(Str.startswith_insensitive(""));
-  EXPECT_TRUE(Str.startswith_insensitive("he"));
-  EXPECT_TRUE(Str.startswith_insensitive("hell"));
-  EXPECT_TRUE(Str.startswith_insensitive("HELlo"));
-  EXPECT_FALSE(Str.startswith_insensitive("helloworld"));
-  EXPECT_FALSE(Str.startswith_insensitive("hi"));
+  EXPECT_TRUE(Str.starts_with_insensitive(""));
+  EXPECT_TRUE(Str.starts_with_insensitive("he"));
+  EXPECT_TRUE(Str.starts_with_insensitive("hell"));
+  EXPECT_TRUE(Str.starts_with_insensitive("HELlo"));
+  EXPECT_FALSE(Str.starts_with_insensitive("helloworld"));
+  EXPECT_FALSE(Str.starts_with_insensitive("hi"));
 }
 
 TEST(StringRefTest, ConsumeFront) {
@@ -412,21 +402,21 @@ TEST(StringRefTest, ConsumeFrontInsensitive) {
 
 TEST(StringRefTest, EndsWith) {
   StringRef Str("hello");
-  EXPECT_TRUE(Str.endswith(""));
-  EXPECT_TRUE(Str.endswith("lo"));
-  EXPECT_FALSE(Str.endswith("helloworld"));
-  EXPECT_FALSE(Str.endswith("worldhello"));
-  EXPECT_FALSE(Str.endswith("so"));
+  EXPECT_TRUE(Str.ends_with(""));
+  EXPECT_TRUE(Str.ends_with("lo"));
+  EXPECT_FALSE(Str.ends_with("helloworld"));
+  EXPECT_FALSE(Str.ends_with("worldhello"));
+  EXPECT_FALSE(Str.ends_with("so"));
 }
 
 TEST(StringRefTest, EndsWithInsensitive) {
   StringRef Str("heLLo");
-  EXPECT_TRUE(Str.endswith_insensitive(""));
-  EXPECT_TRUE(Str.endswith_insensitive("lo"));
-  EXPECT_TRUE(Str.endswith_insensitive("LO"));
-  EXPECT_TRUE(Str.endswith_insensitive("ELlo"));
-  EXPECT_FALSE(Str.endswith_insensitive("helloworld"));
-  EXPECT_FALSE(Str.endswith_insensitive("hi"));
+  EXPECT_TRUE(Str.ends_with_insensitive(""));
+  EXPECT_TRUE(Str.ends_with_insensitive("lo"));
+  EXPECT_TRUE(Str.ends_with_insensitive("LO"));
+  EXPECT_TRUE(Str.ends_with_insensitive("ELlo"));
+  EXPECT_FALSE(Str.ends_with_insensitive("helloworld"));
+  EXPECT_FALSE(Str.ends_with_insensitive("hi"));
 }
 
 TEST(StringRefTest, ConsumeBack) {
@@ -668,7 +658,7 @@ TEST(StringRefTest, getAsInteger) {
   uint32_t U32;
   uint64_t U64;
 
-  for (size_t i = 0; i < array_lengthof(Unsigned); ++i) {
+  for (size_t i = 0; i < std::size(Unsigned); ++i) {
     bool U8Success = StringRef(Unsigned[i].Str).getAsInteger(0, U8);
     if (static_cast<uint8_t>(Unsigned[i].Expected) == Unsigned[i].Expected) {
       ASSERT_FALSE(U8Success);
@@ -700,7 +690,7 @@ TEST(StringRefTest, getAsInteger) {
   int32_t S32;
   int64_t S64;
 
-  for (size_t i = 0; i < array_lengthof(Signed); ++i) {
+  for (size_t i = 0; i < std::size(Signed); ++i) {
     bool S8Success = StringRef(Signed[i].Str).getAsInteger(0, S8);
     if (static_cast<int8_t>(Signed[i].Expected) == Signed[i].Expected) {
       ASSERT_FALSE(S8Success);
@@ -746,7 +736,7 @@ static const char* BadStrings[] = {
 
 TEST(StringRefTest, getAsUnsignedIntegerBadStrings) {
   unsigned long long U64;
-  for (size_t i = 0; i < array_lengthof(BadStrings); ++i) {
+  for (size_t i = 0; i < std::size(BadStrings); ++i) {
     bool IsBadNumber = StringRef(BadStrings[i]).getAsInteger(0, U64);
     ASSERT_TRUE(IsBadNumber);
   }
@@ -829,7 +819,7 @@ TEST(StringRefTest, consumeIntegerUnsigned) {
   uint32_t U32;
   uint64_t U64;
 
-  for (size_t i = 0; i < array_lengthof(ConsumeUnsigned); ++i) {
+  for (size_t i = 0; i < std::size(ConsumeUnsigned); ++i) {
     StringRef Str = ConsumeUnsigned[i].Str;
     bool U8Success = Str.consumeInteger(0, U8);
     if (static_cast<uint8_t>(ConsumeUnsigned[i].Expected) ==
@@ -877,7 +867,7 @@ TEST(StringRefTest, consumeIntegerSigned) {
   int32_t S32;
   int64_t S64;
 
-  for (size_t i = 0; i < array_lengthof(ConsumeSigned); ++i) {
+  for (size_t i = 0; i < std::size(ConsumeSigned); ++i) {
     StringRef Str = ConsumeSigned[i].Str;
     bool S8Success = Str.consumeInteger(0, S8);
     if (static_cast<int8_t>(ConsumeSigned[i].Expected) ==
@@ -954,7 +944,7 @@ static const char join_result3[] = "a::b::c";
 TEST(StringRefTest, joinStrings) {
   std::vector<StringRef> v1;
   std::vector<std::string> v2;
-  for (size_t i = 0; i < array_lengthof(join_input); ++i) {
+  for (size_t i = 0; i < std::size(join_input); ++i) {
     v1.push_back(join_input[i]);
     v2.push_back(join_input[i]);
   }
@@ -1148,7 +1138,6 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
 }
 
-static_assert(std::is_trivially_copyable<StringRef>::value,
-              "trivially copyable");
+static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");
 
 } // end anonymous namespace

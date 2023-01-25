@@ -12,10 +12,10 @@
 
 define void @sll() {
 entry:
-  %0 = load i16, i16* @s1, align 2
-  %1 = load i16, i16* @s2, align 2
+  %0 = load i16, ptr @s1, align 2
+  %1 = load i16, ptr @s2, align 2
   %shl = shl i16 %0, %1
-  store i16 %shl, i16* @s3, align 2
+  store i16 %shl, ptr @s3, align 2
 ; CHECK-LABEL:  sll:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK-DAG:    addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -32,9 +32,9 @@ entry:
 
 define void @slli() {
 entry:
-  %0 = load i16, i16* @s1, align 2
+  %0 = load i16, ptr @s1, align 2
   %shl = shl i16 %0, 5
-  store i16 %shl, i16* @s3, align 2
+  store i16 %shl, ptr @s3, align 2
 ; CHECK-LABEL:  slli:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK-DAG:    addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -49,10 +49,10 @@ entry:
 
 define void @srl() {
 entry:
-  %0 = load i16, i16* @us1, align 2
-  %1 = load i16, i16* @us2, align 2
+  %0 = load i16, ptr @us1, align 2
+  %1 = load i16, ptr @us2, align 2
   %shr = lshr i16 %0, %1
-  store i16 %shr, i16* @us3, align 2
+  store i16 %shr, ptr @us3, align 2
   ret void
 ; CHECK-LABEL:  srl:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
@@ -69,9 +69,9 @@ entry:
 
 define void @srli() {
 entry:
-  %0 = load i16, i16* @us1, align 2
+  %0 = load i16, ptr @us1, align 2
   %shr = lshr i16 %0, 4
-  store i16 %shr, i16* @us3, align 2
+  store i16 %shr, ptr @us3, align 2
 ; CHECK-LABEL:  srli:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK-DAG:    addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -86,10 +86,10 @@ entry:
 
 define void @sra() {
 entry:
-  %0 = load i16, i16* @s1, align 2
-  %1 = load i16, i16* @s2, align 2
+  %0 = load i16, ptr @s1, align 2
+  %1 = load i16, ptr @s2, align 2
   %shr = ashr i16 %0, %1
-  store i16 %shr, i16* @s3, align 2
+  store i16 %shr, ptr @s3, align 2
 ; CHECK-LABEL:  sra:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK-DAG:    addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)
@@ -106,9 +106,9 @@ entry:
 
 define void @srai() {
 entry:
-  %0 = load i16, i16* @s1, align 2
+  %0 = load i16, ptr @s1, align 2
   %shr = ashr i16 %0, 2
-  store i16 %shr, i16* @s3, align 2
+  store i16 %shr, ptr @s3, align 2
 ; CHECK-LABEL:  srai:
 ; CHECK:        lui     $[[REG_GPa:[0-9]+]], %hi(_gp_disp)
 ; CHECK-DAG:    addiu   $[[REG_GPb:[0-9]+]], $[[REG_GPa]], %lo(_gp_disp)

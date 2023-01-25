@@ -93,7 +93,7 @@ exit:
 }
 
 ; Test that exposed a bug in the PHI handling after D60846. No folding should happen here!
-define void @D60846_miscompile(i1* %p) {
+define void @D60846_miscompile(ptr %p) {
 ; CHECK-LABEL: @D60846_miscompile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -103,7 +103,7 @@ define void @D60846_miscompile(i1* %p) {
 ; CHECK-NEXT:    br i1 [[IS_ZERO]], label [[COMMON]], label [[NON_ZERO:%.*]]
 ; CHECK:       non_zero:
 ; CHECK-NEXT:    [[IS_ONE:%.*]] = icmp eq i16 [[I]], 1
-; CHECK-NEXT:    store i1 [[IS_ONE]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    store i1 [[IS_ONE]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    br label [[COMMON]]
 ; CHECK:       common:
 ; CHECK-NEXT:    [[I_INC]] = add i16 [[I]], 1
@@ -122,7 +122,7 @@ loop:                                             ; preds = %common, %entry
 
 non_zero:                                         ; preds = %loop
   %is_one = icmp eq i16 %i, 1
-  store i1 %is_one, i1* %p
+  store i1 %is_one, ptr %p
   br label %common
 
 common:                                           ; preds = %non_zero, %loop

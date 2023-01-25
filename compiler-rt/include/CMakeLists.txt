@@ -37,7 +37,7 @@ endif(COMPILER_RT_BUILD_XRAY)
 
 if (COMPILER_RT_BUILD_ORC)
   set(ORC_HEADERS
-    orc/c_api.h
+    orc_rt/c_api.h
     )
 endif(COMPILER_RT_BUILD_ORC)
 
@@ -83,6 +83,13 @@ install(FILES ${FUZZER_HEADERS}
   COMPONENT compiler-rt-headers
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
   DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/fuzzer)
+# Install memprof headers.
+if (COMPILER_RT_BUILD_MEMPROF)
+  install(FILES sanitizer/memprof_interface.h
+    COMPONENT compiler-rt-headers
+    PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/sanitizer)
+endif(COMPILER_RT_BUILD_MEMPROF)
 # Install xray headers.
 install(FILES ${XRAY_HEADERS}
   COMPONENT compiler-rt-headers

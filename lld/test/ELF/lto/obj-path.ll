@@ -1,26 +1,29 @@
 ; REQUIRES: x86
+;; Test --lto-obj-path= for regular LTO.
 
-; RUN: opt -module-summary %s -o %t1.o
-; RUN: opt -module-summary %p/Inputs/obj-path.ll -o %t2.o
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: opt 1.ll -o 1.bc
+; RUN: opt 2.ll -o 2.bc
 
-; Test to ensure that obj-path creates the ELF file.
-; RUN: rm -f %t4.o
-; RUN: ld.lld --plugin-opt=obj-path=%t4.o -shared %t1.o %t2.o -o %t3
-; RUN: llvm-nm %t3 | FileCheck %s
-; RUN: llvm-readobj -h %t4.o1 | FileCheck %s -check-prefix=ELF1
-; RUN: llvm-readobj -h %t4.o2 | FileCheck %s -check-prefix=ELF2
-; RUN: llvm-nm %t4.o1 2>&1 | FileCheck %s -check-prefix=NM1
-; RUN: llvm-nm %t4.o2 2>&1 | FileCheck %s -check-prefix=NM2
+; RUN: rm -f 4.o
+; RUN: ld.lld --lto-obj-path=4.o -shared 1.bc 2.bc -o 3
+; RUN: llvm-nm 3 | FileCheck %s --check-prefix=NM
+; RUN: llvm-objdump -d 4.o | FileCheck %s
+; RUN: ls 3* 4* | count 2
 
-; CHECK:      T f
-; CHECK-NEXT: T g
+; RUN: rm -f 3 4.o
+; RUN: ld.lld --thinlto-index-only=3.txt --lto-obj-path=4.o -shared 1.bc 2.bc -o 3
+; RUN: llvm-objdump -d 4.o | FileCheck %s
+; RUN: not ls 3
 
-; NM1: T f
-; ELF1: Format: elf64-x86-64
+; NM: T f
+; NM: T g
 
-; NM2: T g
-; ELF2: Format: elf64-x86-64
+; CHECK: file format elf64-x86-64
+; CHECK: <f>:
+; CHECK: <g>:
 
+;--- 1.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -29,5 +32,14 @@ declare void @g(...)
 define void @f() {
 entry:
   call void (...) @g()
+  ret void
+}
+
+;--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define void @g() {
+entry:
   ret void
 }

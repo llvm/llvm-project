@@ -313,7 +313,7 @@ bool ICF<ELFT>::constantEq(const InputSection *secA, ArrayRef<RelTy> ra,
 template <class ELFT>
 bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
   if (a->flags != b->flags || a->getSize() != b->getSize() ||
-      a->rawData != b->rawData)
+      a->content() != b->content())
     return false;
 
   // If two sections have different output sections, we cannot merge them.
@@ -460,7 +460,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // cannot be merged with the later computeIsPreemptible() pass which is used
   // by scanRelocations().
   if (config->hasDynSymTab)
-    for (Symbol *sym : symtab->symbols())
+    for (Symbol *sym : symtab.getSymbols())
       sym->isPreemptible = computeIsPreemptible(*sym);
 
   // Two text sections may have identical content and relocations but different
@@ -477,7 +477,7 @@ template <class ELFT> void ICF<ELFT>::run() {
         [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
   // Collect sections to merge.
-  for (InputSectionBase *sec : inputSections) {
+  for (InputSectionBase *sec : ctx.inputSections) {
     auto *s = dyn_cast<InputSection>(sec);
     if (s && s->eqClass[0] == 0) {
       if (isEligible(s))
@@ -492,7 +492,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {
     // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxHash64(s->rawData) | (1U << 31);
+    s->eqClass[0] = xxHash64(s->content()) | (1U << 31);
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to
@@ -558,9 +558,9 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : symtab->symbols())
+  for (Symbol *sym : symtab.getSymbols())
     fold(sym);
-  parallelForEach(ctx->objectFiles, [&](ELFFileBase *file) {
+  parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
   });

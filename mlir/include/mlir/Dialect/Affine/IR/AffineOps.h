@@ -15,7 +15,7 @@
 #define MLIR_DIALECT_AFFINE_IR_AFFINEOPS_H
 
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -25,7 +25,6 @@ namespace mlir {
 class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
-class RewriterBase;
 
 /// TODO: These should be renamed if they are on the mlir namespace.
 ///       Ideally, they should go in a mlir::affine:: namespace.
@@ -384,21 +383,20 @@ AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
 /// Constructs an AffineApplyOp that applies `map` to `operands` after composing
 /// the map with the maps of any other AffineApplyOp supplying the operands,
 /// then immediately attempts to fold it. If folding results in a constant
-/// value, erases all created ops. The `map` must be a single-result affine map.
-OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+/// value, no ops are actually created. The `map` must be a single-result affine
+/// map.
+OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineMap map,
                                            ArrayRef<OpFoldResult> operands);
 /// Variant of `makeComposedFoldedAffineApply` that applies to an expression.
-OpFoldResult makeComposedFoldedAffineApply(RewriterBase &b, Location loc,
+OpFoldResult makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                            AffineExpr expr,
                                            ArrayRef<OpFoldResult> operands);
 /// Variant of `makeComposedFoldedAffineApply` suitable for multi-result maps.
 /// Note that this may create as many affine.apply operations as the map has
 /// results given that affine.apply must be single-result.
-SmallVector<OpFoldResult>
-makeComposedFoldedMultiResultAffineApply(RewriterBase &b, Location loc,
-                                         AffineMap map,
-                                         ArrayRef<OpFoldResult> operands);
+SmallVector<OpFoldResult> makeComposedFoldedMultiResultAffineApply(
+    OpBuilder &b, Location loc, AffineMap map, ArrayRef<OpFoldResult> operands);
 
 /// Returns an AffineMinOp obtained by composing `map` and `operands` with
 /// AffineApplyOps supplying those operands.
@@ -407,15 +405,15 @@ Value makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
 
 /// Constructs an AffineMinOp that computes a minimum across the results of
 /// applying `map` to `operands`, then immediately attempts to fold it. If
-/// folding results in a constant value, erases all created ops.
-OpFoldResult makeComposedFoldedAffineMin(RewriterBase &b, Location loc,
+/// folding results in a constant value, no ops are actually created.
+OpFoldResult makeComposedFoldedAffineMin(OpBuilder &b, Location loc,
                                          AffineMap map,
                                          ArrayRef<OpFoldResult> operands);
 
 /// Constructs an AffineMinOp that computes a maximum across the results of
 /// applying `map` to `operands`, then immediately attempts to fold it. If
-/// folding results in a constant value, erases all created ops.
-OpFoldResult makeComposedFoldedAffineMax(RewriterBase &b, Location loc,
+/// folding results in a constant value, no ops are actually created.
+OpFoldResult makeComposedFoldedAffineMax(OpBuilder &b, Location loc,
                                          AffineMap map,
                                          ArrayRef<OpFoldResult> operands);
 
@@ -439,9 +437,9 @@ void fullyComposeAffineMapAndOperands(AffineMap *map,
 #include "mlir/Dialect/Affine/IR/AffineOps.h.inc"
 
 namespace mlir {
-/// Returns true if the provided value is the induction variable of a
+/// Returns true if the provided value is the induction variable of an
 /// AffineForOp.
-bool isForInductionVar(Value val);
+bool isAffineForInductionVar(Value val);
 
 /// Returns the loop parent of an induction variable. If the provided value is
 /// not an induction variable, then return nullptr.
@@ -451,6 +449,11 @@ AffineForOp getForInductionVarOwner(Value val);
 /// in the output argument `ivs`.
 void extractForInductionVars(ArrayRef<AffineForOp> forInsts,
                              SmallVectorImpl<Value> *ivs);
+
+/// Extracts the induction variables from a list of either AffineForOp or
+/// AffineParallelOp and places them in the output argument `ivs`.
+void extractInductionVars(ArrayRef<Operation *> affineOps,
+                          SmallVectorImpl<Value> &ivs);
 
 /// Builds a perfect nest of affine.for loops, i.e., each loop except the
 /// innermost one contains only another loop and a terminator. The loops iterate

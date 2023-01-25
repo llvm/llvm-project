@@ -15,8 +15,8 @@ define void @f1(i32 %a1, i32 %a2) minsize nounwind {
 ; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF
 ; CHECK-NEXT: stp w0, w1, [x8]
 ; CHECK-NEXT: ret
-  store i32 %a1, i32* @m1, align 4
-  store i32 %a2, i32* @n1, align 4
+  store i32 %a1, ptr @m1, align 4
+  store i32 %a2, ptr @n1, align 4
   ret void
 }
 
@@ -30,8 +30,8 @@ define void @f2(i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT: str w0, [x8, _m2@PAGEOFF]
 ; CHECK-NEXT: str w1, [x9, _n2@PAGEOFF]
 ; CHECK-NEXT: ret
-  store i32 %a1, i32* @m2, align 4
-  store i32 %a2, i32* @n2, align 4
+  store i32 %a1, ptr @m2, align 4
+  store i32 %a2, ptr @n2, align 4
   ret void
 }
 
@@ -48,8 +48,8 @@ define void @f3(i32 %a1, i32 %a2) minsize nounwind {
 ; CHECK-NEXT: add x8, x8, [[SET]]@PAGEOFF+8
 ; CHECK-NEXT: stp w0, w1, [x8]
 ; CHECK-NEXT: ret
-  store i32 %a1, i32* @m3, align 4
-  store i32 %a2, i32* @n3, align 4
+  store i32 %a1, ptr @m3, align 4
+  store i32 %a2, ptr @n3, align 4
   ret void
 }
 
@@ -62,8 +62,8 @@ define void @f4(i32 %a1, i32 %a2) nounwind {
 ; CHECK-NEXT: str w0, [x8, [[SET]]@PAGEOFF+8]
 ; CHECK-NEXT: str w1, [x9, _n4@PAGEOFF]
 ; CHECK-NEXT: ret
-  store i32 %a1, i32* @m3, align 4
-  store i32 %a2, i32* @n4, align 4
+  store i32 %a1, ptr @m3, align 4
+  store i32 %a2, ptr @n4, align 4
   ret void
 }
 

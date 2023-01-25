@@ -6,7 +6,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i1, dense<8> : ve
     // CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i32)
     %0 = llvm.mlir.constant(0 : i32) : i32
     // CHECK: llvm.getelementptr %[[ARG0]][%[[C0]], 1, %[[ARG1]]]
-    %1 = "llvm.getelementptr"(%arg0, %0, %arg1) {structIndices = dense<[-2147483648, 1, -2147483648]> : tensor<3xi32>} : (!llvm.ptr<struct<"my_struct", (struct<"sub_struct", (i32, i8)>, array<4 x i32>)>>, i32, i32) -> !llvm.ptr<i32>
+    %1 = "llvm.getelementptr"(%arg0, %0, %arg1) {rawConstantIndices = array<i32: -2147483648, 1, -2147483648>} : (!llvm.ptr<struct<"my_struct", (struct<"sub_struct", (i32, i8)>, array<4 x i32>)>>, i32, i32) -> !llvm.ptr<i32>
     llvm.return
   }
 }

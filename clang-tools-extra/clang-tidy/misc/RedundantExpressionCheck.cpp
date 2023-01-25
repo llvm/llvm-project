@@ -10,6 +10,7 @@
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
@@ -24,15 +25,14 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 namespace {
 using llvm::APSInt;
 
@@ -440,6 +440,8 @@ AST_MATCHER(Expr, isIntegerConstantExpr) {
   return Node.isIntegerConstantExpr(Finder->getASTContext());
 }
 
+AST_MATCHER(Expr, isRequiresExpr) { return isa<RequiresExpr>(Node); }
+
 AST_MATCHER(BinaryOperator, operandsAreEquivalent) {
   return areEquivalentExpr(Node.getLHS(), Node.getRHS());
 }
@@ -501,7 +503,8 @@ static bool retrieveIntegerConstantExpr(const MatchFinder::MatchResult &Result,
   ConstExpr = Result.Nodes.getNodeAs<Expr>(CstId);
   if (!ConstExpr)
     return false;
-  Optional<llvm::APSInt> R = ConstExpr->getIntegerConstantExpr(*Result.Context);
+  std::optional<llvm::APSInt> R =
+      ConstExpr->getIntegerConstantExpr(*Result.Context);
   if (!R)
     return false;
   Value = *R;
@@ -858,6 +861,7 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto BannedIntegerLiteral =
       integerLiteral(expandedByMacro(KnownBannedMacroNames));
+  const auto BannedAncestor = expr(isRequiresExpr());
 
   // Binary with equivalent operands, like (X != 2 && X != 2).
   Finder->addMatcher(
@@ -873,7 +877,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                    unless(hasType(realFloatingPointType())),
                    unless(hasEitherOperand(hasType(realFloatingPointType()))),
                    unless(hasLHS(AnyLiteralExpr)),
-                   unless(hasDescendant(BannedIntegerLiteral)))
+                   unless(hasDescendant(BannedIntegerLiteral)),
+                   unless(hasAncestor(BannedAncestor)))
                    .bind("binary")),
       this);
 
@@ -886,7 +891,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                      unless(isInTemplateInstantiation()),
                      unless(binaryOperatorIsInMacro()),
                      // TODO: if the banned macros are themselves duplicated
-                     unless(hasDescendant(BannedIntegerLiteral)))
+                     unless(hasDescendant(BannedIntegerLiteral)),
+                     unless(hasAncestor(BannedAncestor)))
           .bind("nested-duplicates"),
       this);
 
@@ -896,7 +902,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                conditionalOperator(expressionsAreEquivalent(),
                                    // Filter noisy false positives.
                                    unless(conditionalOperatorIsInMacro()),
-                                   unless(isInTemplateInstantiation()))
+                                   unless(isInTemplateInstantiation()),
+                                   unless(hasAncestor(BannedAncestor)))
                    .bind("cond")),
       this);
 
@@ -909,7 +916,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                                 ">=", "&&", "||", "="),
                    parametersAreEquivalent(),
                    // Filter noisy false positives.
-                   unless(isMacro()), unless(isInTemplateInstantiation()))
+                   unless(isMacro()), unless(isInTemplateInstantiation()),
+                   unless(hasAncestor(BannedAncestor)))
                    .bind("call")),
       this);
 
@@ -919,7 +927,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOverloadedOperatorName("|", "&", "||", "&&", "^"),
           nestedParametersAreEquivalent(), argumentCountIs(2),
           // Filter noisy false positives.
-          unless(isMacro()), unless(isInTemplateInstantiation()))
+          unless(isMacro()), unless(isInTemplateInstantiation()),
+          unless(hasAncestor(BannedAncestor)))
           .bind("nested-duplicates"),
       this);
 
@@ -936,7 +945,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                    binaryOperator(hasAnyOperatorName("|", "&")),
                                    integerLiteral())),
                                hasRHS(integerLiteral())))))
-                           .bind("logical-bitwise-confusion")))),
+                           .bind("logical-bitwise-confusion")),
+                   unless(hasAncestor(BannedAncestor)))),
       this);
 
   // Match expressions like: (X << 8) & 0xFF
@@ -949,7 +959,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                    hasRHS(ignoringParenImpCasts(
                                        integerLiteral().bind("shift-const"))))),
                                ignoringParenImpCasts(
-                                   integerLiteral().bind("and-const"))))
+                                   integerLiteral().bind("and-const"))),
+                   unless(hasAncestor(BannedAncestor)))
                    .bind("left-right-shift-confusion")),
       this);
 
@@ -967,7 +978,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
   // Match expressions like: x <op> 0xFF == 0xF00.
   Finder->addMatcher(
       traverse(TK_AsIs, binaryOperator(isComparisonOperator(),
-                                       hasOperands(BinOpCstLeft, CstRight))
+                                       hasOperands(BinOpCstLeft, CstRight),
+                                       unless(hasAncestor(BannedAncestor)))
                             .bind("binop-const-compare-to-const")),
       this);
 
@@ -977,7 +989,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
           TK_AsIs,
           binaryOperator(isComparisonOperator(),
                          anyOf(allOf(hasLHS(BinOpCstLeft), hasRHS(SymRight)),
-                               allOf(hasLHS(SymRight), hasRHS(BinOpCstLeft))))
+                               allOf(hasLHS(SymRight), hasRHS(BinOpCstLeft))),
+                         unless(hasAncestor(BannedAncestor)))
               .bind("binop-const-compare-to-sym")),
       this);
 
@@ -987,7 +1000,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                binaryOperator(isComparisonOperator(), hasLHS(BinOpCstLeft),
                               hasRHS(BinOpCstRight),
                               // Already reported as redundant.
-                              unless(operandsAreEquivalent()))
+                              unless(operandsAreEquivalent()),
+                              unless(hasAncestor(BannedAncestor)))
                    .bind("binop-const-compare-to-binop-const")),
       this);
 
@@ -1003,7 +1017,8 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                binaryOperator(hasAnyOperatorName("||", "&&"),
                               hasLHS(ComparisonLeft), hasRHS(ComparisonRight),
                               // Already reported as redundant.
-                              unless(operandsAreEquivalent()))
+                              unless(operandsAreEquivalent()),
+                              unless(hasAncestor(BannedAncestor)))
                    .bind("comparisons-of-symbol-and-const")),
       this);
 }
@@ -1293,7 +1308,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           "left-right-shift-confusion")) {
     const auto *ShiftingConst = Result.Nodes.getNodeAs<Expr>("shift-const");
     assert(ShiftingConst && "Expr* 'ShiftingConst' is nullptr!");
-    Optional<llvm::APSInt> ShiftingValue =
+    std::optional<llvm::APSInt> ShiftingValue =
         ShiftingConst->getIntegerConstantExpr(*Result.Context);
 
     if (!ShiftingValue)
@@ -1301,7 +1316,7 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
 
     const auto *AndConst = Result.Nodes.getNodeAs<Expr>("and-const");
     assert(AndConst && "Expr* 'AndCont' is nullptr!");
-    Optional<llvm::APSInt> AndValue =
+    std::optional<llvm::APSInt> AndValue =
         AndConst->getIntegerConstantExpr(*Result.Context);
     if (!AndValue)
       return;
@@ -1340,6 +1355,4 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
   checkRelationalExpr(Result);
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

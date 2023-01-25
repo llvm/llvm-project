@@ -16,8 +16,6 @@
 
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -87,7 +85,7 @@ class FastDivInsertionTask {
   QuotRemPair createDivRemPhiNodes(QuotRemWithBB &LHS, QuotRemWithBB &RHS,
                                    BasicBlock *PhiBB);
   Value *insertOperandRuntimeCheck(Value *Op1, Value *Op2);
-  Optional<QuotRemPair> insertFastDivAndRem();
+  std::optional<QuotRemPair> insertFastDivAndRem();
 
   bool isSignedOp() {
     return SlowDivOrRem->getOpcode() == Instruction::SDiv ||
@@ -161,7 +159,7 @@ Value *FastDivInsertionTask::getReplacement(DivCacheTy &Cache) {
 
   if (CacheI == Cache.end()) {
     // If previous instance does not exist, try to insert fast div.
-    Optional<QuotRemPair> OptResult = insertFastDivAndRem();
+    std::optional<QuotRemPair> OptResult = insertFastDivAndRem();
     // Bail out if insertFastDivAndRem has failed.
     if (!OptResult)
       return nullptr;
@@ -350,19 +348,19 @@ Value *FastDivInsertionTask::insertOperandRuntimeCheck(Value *Op1, Value *Op2) {
 
 /// Substitutes the div/rem instruction with code that checks the value of the
 /// operands and uses a shorter-faster div/rem instruction when possible.
-Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
+std::optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   Value *Dividend = SlowDivOrRem->getOperand(0);
   Value *Divisor = SlowDivOrRem->getOperand(1);
 
   VisitedSetTy SetL;
   ValueRange DividendRange = getValueRange(Dividend, SetL);
   if (DividendRange == VALRNG_LIKELY_LONG)
-    return None;
+    return std::nullopt;
 
   VisitedSetTy SetR;
   ValueRange DivisorRange = getValueRange(Divisor, SetR);
   if (DivisorRange == VALRNG_LIKELY_LONG)
-    return None;
+    return std::nullopt;
 
   bool DividendShort = (DividendRange == VALRNG_KNOWN_SHORT);
   bool DivisorShort = (DivisorRange == VALRNG_KNOWN_SHORT);
@@ -387,7 +385,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // If the divisor is not a constant, DAGCombiner will convert it to a
     // multiplication by a magic constant.  It isn't clear if it is worth
     // introducing control flow to get a narrower multiply.
-    return None;
+    return std::nullopt;
   }
 
   // After Constant Hoisting pass, long constants may be represented as
@@ -397,7 +395,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
   if (auto *BCI = dyn_cast<BitCastInst>(Divisor))
     if (BCI->getParent() == SlowDivOrRem->getParent() &&
         isa<ConstantInt>(BCI->getOperand(0)))
-      return None;
+      return std::nullopt;
 
   IRBuilder<> Builder(MainBB, MainBB->end());
   Builder.SetCurrentDebugLocation(SlowDivOrRem->getDebugLoc());
@@ -417,7 +415,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // Split the basic block before the div/rem.
     BasicBlock *SuccessorBB = MainBB->splitBasicBlock(SlowDivOrRem);
     // Remove the unconditional branch from MainBB to SuccessorBB.
-    MainBB->getInstList().back().eraseFromParent();
+    MainBB->back().eraseFromParent();
     QuotRemWithBB Long;
     Long.BB = MainBB;
     Long.Quotient = ConstantInt::get(getSlowType(), 0);
@@ -434,7 +432,7 @@ Optional<QuotRemPair> FastDivInsertionTask::insertFastDivAndRem() {
     // Split the basic block before the div/rem.
     BasicBlock *SuccessorBB = MainBB->splitBasicBlock(SlowDivOrRem);
     // Remove the unconditional branch from MainBB to SuccessorBB.
-    MainBB->getInstList().back().eraseFromParent();
+    MainBB->back().eraseFromParent();
     QuotRemWithBB Fast = createFastBB(SuccessorBB);
     QuotRemWithBB Slow = createSlowBB(SuccessorBB);
     QuotRemPair Result = createDivRemPhiNodes(Fast, Slow, SuccessorBB);

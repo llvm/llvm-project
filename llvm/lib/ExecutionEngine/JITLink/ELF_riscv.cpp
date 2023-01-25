@@ -82,14 +82,14 @@ public:
 private:
   Section &getGOTSection() const {
     if (!GOTSection)
-      GOTSection = &G.createSection("$__GOT", MemProt::Read);
+      GOTSection = &G.createSection("$__GOT", orc::MemProt::Read);
     return *GOTSection;
   }
 
   Section &getStubsSection() const {
     if (!StubsSection)
       StubsSection =
-          &G.createSection("$__STUBS", MemProt::Read | MemProt::Exec);
+          &G.createSection("$__STUBS", orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
   }
 
@@ -205,12 +205,13 @@ private:
         return makeTargetOutOfRangeError(G, B, E);
       if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
         return makeAlignmentError(FixupAddress, Value, 2, E);
-      uint32_t Imm31_25 =
-          extractBits(Value, 5, 6) << 25 | extractBits(Value, 12, 1) << 31;
-      uint32_t Imm11_7 =
-          extractBits(Value, 1, 4) << 8 | extractBits(Value, 11, 1) << 7;
+      uint32_t Imm12 = extractBits(Value, 12, 1) << 31;
+      uint32_t Imm10_5 = extractBits(Value, 5, 6) << 25;
+      uint32_t Imm4_1 = extractBits(Value, 1, 4) << 8;
+      uint32_t Imm11 = extractBits(Value, 11, 1) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0x1FFF07F) | Imm12 | Imm10_5 | Imm4_1 | Imm11;
       break;
     }
     case R_RISCV_JAL: {
@@ -224,27 +225,8 @@ private:
       uint32_t Imm11 = extractBits(Value, 11, 1) << 20;
       uint32_t Imm19_12 = extractBits(Value, 12, 8) << 12;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr = RawInstr | Imm20 | Imm10_1 | Imm11 | Imm19_12;
-      break;
-    }
-    case R_RISCV_HI20: {
-      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
-      int64_t Hi = Value + 0x800;
-      if (LLVM_UNLIKELY(!isInRangeForImm(Hi, 32)))
-        return makeTargetOutOfRangeError(G, B, E);
-      uint32_t RawInstr = *(little32_t *)FixupPtr;
       *(little32_t *)FixupPtr =
-          (RawInstr & 0xFFF) | (static_cast<uint32_t>(Hi & 0xFFFFF000));
-      break;
-    }
-    case R_RISCV_LO12_I: {
-      // FIXME: We assume that R_RISCV_HI20 is present in object code and pairs
-      // with current relocation R_RISCV_LO12_I. So here may need a check.
-      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
-      int32_t Lo = Value & 0xFFF;
-      uint32_t RawInstr = *(little32_t *)FixupPtr;
-      *(little32_t *)FixupPtr =
-          (RawInstr & 0xFFFFF) | (static_cast<uint32_t>(Lo & 0xFFF) << 20);
+          (RawInstr & 0xFFF) | Imm20 | Imm10_1 | Imm11 | Imm19_12;
       break;
     }
     case R_RISCV_CALL: {
@@ -261,6 +243,9 @@ private:
           RawInstrJalr | (static_cast<uint32_t>(Lo) << 20);
       break;
     }
+    // The relocations R_RISCV_CALL_PLT and R_RISCV_GOT_HI20 are handled by
+    // PerGraphGOTAndPLTStubsBuilder_ELF_riscv and are transformed into
+    // R_RISCV_CALL and R_RISCV_PCREL_HI20.
     case R_RISCV_PCREL_HI20: {
       int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
       int64_t Hi = Value + 0x800;
@@ -291,41 +276,47 @@ private:
       // pairs with current relocation R_RISCV_PCREL_LO12_S. So here may need a
       // check.
       auto RelHI20 = getRISCVPCRelHi20(E);
+      if (!RelHI20)
+        return RelHI20.takeError();
       int64_t Value = RelHI20->getTarget().getAddress() +
                       RelHI20->getAddend() - E.getTarget().getAddress();
       int64_t Lo = Value & 0xFFF;
-      uint32_t Imm31_25 = extractBits(Lo, 5, 7) << 25;
-      uint32_t Imm11_7 = extractBits(Lo, 0, 5) << 7;
+      uint32_t Imm11_5 = extractBits(Lo, 5, 7) << 25;
+      uint32_t Imm4_0 = extractBits(Lo, 0, 5) << 7;
       uint32_t RawInstr = *(little32_t *)FixupPtr;
 
-      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm31_25 | Imm11_7;
+      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm11_5 | Imm4_0;
       break;
     }
-    case R_RISCV_ADD64: {
-      int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read64le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
-                          .getValue();
-      *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
+    case R_RISCV_HI20: {
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      int64_t Hi = Value + 0x800;
+      if (LLVM_UNLIKELY(!isInRangeForImm(Hi, 32)))
+        return makeTargetOutOfRangeError(G, B, E);
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0xFFF) | (static_cast<uint32_t>(Hi & 0xFFFFF000));
       break;
     }
-    case R_RISCV_ADD32: {
-      int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read32le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
-                          .getValue();
-      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+    case R_RISCV_LO12_I: {
+      // FIXME: We assume that R_RISCV_HI20 is present in object code and pairs
+      // with current relocation R_RISCV_LO12_I. So here may need a check.
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      int32_t Lo = Value & 0xFFF;
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      *(little32_t *)FixupPtr =
+          (RawInstr & 0xFFFFF) | (static_cast<uint32_t>(Lo & 0xFFF) << 20);
       break;
     }
-    case R_RISCV_ADD16: {
-      int64_t Value = (E.getTarget().getAddress() +
-                       support::endian::read16le(reinterpret_cast<const void *>(
-                           FixupAddress.getValue())) +
-                       E.getAddend())
-                          .getValue();
-      *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
+    case R_RISCV_LO12_S: {
+      // FIXME: We assume that R_RISCV_HI20 is present in object code and pairs
+      // with current relocation R_RISCV_LO12_S. So here may need a check.
+      int64_t Value = (E.getTarget().getAddress() + E.getAddend()).getValue();
+      int64_t Lo = Value & 0xFFF;
+      uint32_t Imm11_5 = extractBits(Lo, 5, 7) << 25;
+      uint32_t Imm4_0 = extractBits(Lo, 0, 5) << 7;
+      uint32_t RawInstr = *(little32_t *)FixupPtr;
+      *(little32_t *)FixupPtr = (RawInstr & 0x1FFF07F) | Imm11_5 | Imm4_0;
       break;
     }
     case R_RISCV_ADD8: {
@@ -337,18 +328,38 @@ private:
       *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
-    case R_RISCV_SUB64: {
-      int64_t Value = support::endian::read64le(reinterpret_cast<const void *>(
-                          FixupAddress.getValue())) -
-                      E.getTarget().getAddress().getValue() - E.getAddend();
+    case R_RISCV_ADD16: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read16le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
+      *(little16_t *)FixupPtr = static_cast<uint16_t>(Value);
+      break;
+    }
+    case R_RISCV_ADD32: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read32le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
+      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_ADD64: {
+      int64_t Value = (E.getTarget().getAddress() +
+                       support::endian::read64le(reinterpret_cast<const void *>(
+                           FixupAddress.getValue())) +
+                       E.getAddend())
+                          .getValue();
       *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
       break;
     }
-    case R_RISCV_SUB32: {
-      int64_t Value = support::endian::read32le(reinterpret_cast<const void *>(
-                          FixupAddress.getValue())) -
-                      E.getTarget().getAddress().getValue() - E.getAddend();
-      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+    case R_RISCV_SUB8: {
+      int64_t Value =
+          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) -
+          E.getTarget().getAddress().getValue() - E.getAddend();
+      *FixupPtr = static_cast<uint8_t>(Value);
       break;
     }
     case R_RISCV_SUB16: {
@@ -358,11 +369,53 @@ private:
       *(little16_t *)FixupPtr = static_cast<uint32_t>(Value);
       break;
     }
-    case R_RISCV_SUB8: {
-      int64_t Value =
-          *(reinterpret_cast<const uint8_t *>(FixupAddress.getValue())) -
-          E.getTarget().getAddress().getValue() - E.getAddend();
-      *FixupPtr = static_cast<uint8_t>(Value);
+    case R_RISCV_SUB32: {
+      int64_t Value = support::endian::read32le(reinterpret_cast<const void *>(
+                          FixupAddress.getValue())) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
+      *(little32_t *)FixupPtr = static_cast<uint32_t>(Value);
+      break;
+    }
+    case R_RISCV_SUB64: {
+      int64_t Value = support::endian::read64le(reinterpret_cast<const void *>(
+                          FixupAddress.getValue())) -
+                      E.getTarget().getAddress().getValue() - E.getAddend();
+      *(little64_t *)FixupPtr = static_cast<uint64_t>(Value);
+      break;
+    }
+    case R_RISCV_RVC_BRANCH: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value >> 1, 8)))
+        return makeTargetOutOfRangeError(G, B, E);
+      if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
+        return makeAlignmentError(FixupAddress, Value, 2, E);
+      uint16_t Imm8 = extractBits(Value, 8, 1) << 12;
+      uint16_t Imm4_3 = extractBits(Value, 3, 2) << 10;
+      uint16_t Imm7_6 = extractBits(Value, 6, 2) << 5;
+      uint16_t Imm2_1 = extractBits(Value, 1, 2) << 3;
+      uint16_t Imm5 = extractBits(Value, 5, 1) << 2;
+      uint16_t RawInstr = *(little16_t *)FixupPtr;
+      *(little16_t *)FixupPtr =
+          (RawInstr & 0xE383) | Imm8 | Imm4_3 | Imm7_6 | Imm2_1 | Imm5;
+      break;
+    }
+    case R_RISCV_RVC_JUMP: {
+      int64_t Value = E.getTarget().getAddress() + E.getAddend() - FixupAddress;
+      if (LLVM_UNLIKELY(!isInRangeForImm(Value >> 1, 11)))
+        return makeTargetOutOfRangeError(G, B, E);
+      if (LLVM_UNLIKELY(!isAlignmentCorrect(Value, 2)))
+        return makeAlignmentError(FixupAddress, Value, 2, E);
+      uint16_t Imm11 = extractBits(Value, 11, 1) << 12;
+      uint16_t Imm4 = extractBits(Value, 4, 1) << 11;
+      uint16_t Imm9_8 = extractBits(Value, 8, 2) << 9;
+      uint16_t Imm10 = extractBits(Value, 10, 1) << 8;
+      uint16_t Imm6 = extractBits(Value, 6, 1) << 7;
+      uint16_t Imm7 = extractBits(Value, 7, 1) << 6;
+      uint16_t Imm3_1 = extractBits(Value, 1, 3) << 3;
+      uint16_t Imm5 = extractBits(Value, 5, 1) << 2;
+      uint16_t RawInstr = *(little16_t *)FixupPtr;
+      *(little16_t *)FixupPtr = (RawInstr & 0xE003) | Imm11 | Imm4 | Imm9_8 |
+                                Imm10 | Imm6 | Imm7 | Imm3_1 | Imm5;
       break;
     }
     case R_RISCV_SUB6: {
@@ -425,38 +478,44 @@ private:
       return EdgeKind_riscv::R_RISCV_BRANCH;
     case ELF::R_RISCV_JAL:
       return EdgeKind_riscv::R_RISCV_JAL;
-    case ELF::R_RISCV_HI20:
-      return EdgeKind_riscv::R_RISCV_HI20;
-    case ELF::R_RISCV_LO12_I:
-      return EdgeKind_riscv::R_RISCV_LO12_I;
     case ELF::R_RISCV_CALL:
       return EdgeKind_riscv::R_RISCV_CALL;
+    case ELF::R_RISCV_CALL_PLT:
+      return EdgeKind_riscv::R_RISCV_CALL_PLT;
+    case ELF::R_RISCV_GOT_HI20:
+      return EdgeKind_riscv::R_RISCV_GOT_HI20;
     case ELF::R_RISCV_PCREL_HI20:
       return EdgeKind_riscv::R_RISCV_PCREL_HI20;
     case ELF::R_RISCV_PCREL_LO12_I:
       return EdgeKind_riscv::R_RISCV_PCREL_LO12_I;
     case ELF::R_RISCV_PCREL_LO12_S:
       return EdgeKind_riscv::R_RISCV_PCREL_LO12_S;
-    case ELF::R_RISCV_GOT_HI20:
-      return EdgeKind_riscv::R_RISCV_GOT_HI20;
-    case ELF::R_RISCV_CALL_PLT:
-      return EdgeKind_riscv::R_RISCV_CALL_PLT;
-    case ELF::R_RISCV_ADD64:
-      return EdgeKind_riscv::R_RISCV_ADD64;
-    case ELF::R_RISCV_ADD32:
-      return EdgeKind_riscv::R_RISCV_ADD32;
-    case ELF::R_RISCV_ADD16:
-      return EdgeKind_riscv::R_RISCV_ADD16;
+    case ELF::R_RISCV_HI20:
+      return EdgeKind_riscv::R_RISCV_HI20;
+    case ELF::R_RISCV_LO12_I:
+      return EdgeKind_riscv::R_RISCV_LO12_I;
+    case ELF::R_RISCV_LO12_S:
+      return EdgeKind_riscv::R_RISCV_LO12_S;
     case ELF::R_RISCV_ADD8:
       return EdgeKind_riscv::R_RISCV_ADD8;
-    case ELF::R_RISCV_SUB64:
-      return EdgeKind_riscv::R_RISCV_SUB64;
-    case ELF::R_RISCV_SUB32:
-      return EdgeKind_riscv::R_RISCV_SUB32;
-    case ELF::R_RISCV_SUB16:
-      return EdgeKind_riscv::R_RISCV_SUB16;
+    case ELF::R_RISCV_ADD16:
+      return EdgeKind_riscv::R_RISCV_ADD16;
+    case ELF::R_RISCV_ADD32:
+      return EdgeKind_riscv::R_RISCV_ADD32;
+    case ELF::R_RISCV_ADD64:
+      return EdgeKind_riscv::R_RISCV_ADD64;
     case ELF::R_RISCV_SUB8:
       return EdgeKind_riscv::R_RISCV_SUB8;
+    case ELF::R_RISCV_SUB16:
+      return EdgeKind_riscv::R_RISCV_SUB16;
+    case ELF::R_RISCV_SUB32:
+      return EdgeKind_riscv::R_RISCV_SUB32;
+    case ELF::R_RISCV_SUB64:
+      return EdgeKind_riscv::R_RISCV_SUB64;
+    case ELF::R_RISCV_RVC_BRANCH:
+      return EdgeKind_riscv::R_RISCV_RVC_BRANCH;
+    case ELF::R_RISCV_RVC_JUMP:
+      return EdgeKind_riscv::R_RISCV_RVC_JUMP;
     case ELF::R_RISCV_SUB6:
       return EdgeKind_riscv::R_RISCV_SUB6;
     case ELF::R_RISCV_SET6:
@@ -482,8 +541,8 @@ private:
     using Base = ELFLinkGraphBuilder<ELFT>;
     using Self = ELFLinkGraphBuilder_riscv<ELFT>;
     for (const auto &RelSect : Base::Sections)
-      if (Error Err = Base::forEachRelocation(RelSect, this,
-                                              &Self::addSingleRelocation))
+      if (Error Err = Base::forEachRelaRelocation(RelSect, this,
+                                                  &Self::addSingleRelocation))
         return Err;
 
     return Error::success();

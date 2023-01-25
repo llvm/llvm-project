@@ -23,11 +23,11 @@ for.cond.cleanup:
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %0 to i32
-  %arrayidx2 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %indvars.iv
-  %1 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %indvars.iv
+  %1 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %1 to i32
   %sub = sub nsw i32 %conv, %conv3
   %ispos = icmp sgt i32 %sub, -1
@@ -59,12 +59,12 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %s.015 = phi i32 [ 0, %entry ], [ %add, %for.body ]
   %tmp1 = add nsw i64 %indvars.iv, 3
-  %arrayidx = getelementptr inbounds [1024 x i8], [1024 x i8]* @a, i64 0, i64 %tmp1
-  %tmp = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [1024 x i8], ptr @a, i64 0, i64 %tmp1
+  %tmp = load i8, ptr %arrayidx, align 1
   %conv = zext i8 %tmp to i32
   %tmp2 = add nsw i64 %indvars.iv, 2
-  %arrayidx2 = getelementptr inbounds [1024 x i8], [1024 x i8]* @b, i64 0, i64 %tmp2
-  %tmp3 = load i8, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds [1024 x i8], ptr @b, i64 0, i64 %tmp2
+  %tmp3 = load i8, ptr %arrayidx2, align 1
   %conv3 = zext i8 %tmp3 to i32
   %sub = sub nsw i32 %conv, %conv3
   %ispos = icmp sgt i32 %sub, -1
@@ -76,7 +76,7 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define i64 @bar(i64* nocapture %a) {
+define i64 @bar(ptr nocapture %a) {
 ; CHECK-LABEL: bar
 
 ; CHECK: Executing best plan with VF=2, UF=12
@@ -91,10 +91,10 @@ for.cond.cleanup:
 for.body:
   %i.012 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %s.011 = phi i64 [ 0, %entry ], [ %add2, %for.body ]
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 %i.012
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %i.012
+  %0 = load i64, ptr %arrayidx, align 8
   %add = add nsw i64 %0, %i.012
-  store i64 %add, i64* %arrayidx, align 8
+  store i64 %add, ptr %arrayidx, align 8
   %add2 = add nsw i64 %add, %s.011
   %inc = add nuw nsw i64 %i.012, 1
   %exitcond = icmp eq i64 %inc, 1024
@@ -114,12 +114,12 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [0 x i64], [0 x i64]* @d, i64 0, i64 %indvars.iv
-  %tmp = load i64, i64* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [0 x i32], [0 x i32]* @e, i64 0, i64 %tmp
-  %tmp1 = load i32, i32* %arrayidx1, align 4
-  %arrayidx3 = getelementptr inbounds [0 x i32], [0 x i32]* @c, i64 0, i64 %indvars.iv
-  store i32 %tmp1, i32* %arrayidx3, align 4
+  %arrayidx = getelementptr inbounds [0 x i64], ptr @d, i64 0, i64 %indvars.iv
+  %tmp = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [0 x i32], ptr @e, i64 0, i64 %tmp
+  %tmp1 = load i32, ptr %arrayidx1, align 4
+  %arrayidx3 = getelementptr inbounds [0 x i32], ptr @c, i64 0, i64 %indvars.iv
+  store i32 %tmp1, ptr %arrayidx3, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 10000
   br i1 %exitcond, label %for.end, label %for.body
@@ -128,7 +128,7 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-define float @float_(float* nocapture readonly %a, float* nocapture readonly %b, i32 %n) {
+define float @float_(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 ;CHECK-LABEL: float_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
@@ -148,10 +148,10 @@ preheader:
 for:
   %indvars.iv = phi i64 [ 0, %preheader ], [ %indvars.iv.next, %for ]
   %s.02 = phi float [ 0.0, %preheader ], [ %add4, %for ]
-  %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
-  %t1 = load float, float* %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds float, float* %b, i64 %indvars.iv
-  %t2 = load float, float* %arrayidx3, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
+  %t1 = load float, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %b, i64 %indvars.iv
+  %t2 = load float, ptr %arrayidx3, align 4
   %add = fadd fast float %t1, %s.02
   %add4 = fadd fast float %add, %t2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 32
@@ -168,7 +168,7 @@ for.end:
 }
 
 
-define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
+define void @double_(ptr nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK-LABEL: double_
 ;CHECK-PWR8: LV(REG): VF = 2
 ;CHECK-PWR8: LV(REG): Found max usage: 2 item
@@ -189,8 +189,8 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
 
 ; <label>:2                                       ; preds = %2, %0
   %indvars.iv = phi i64 [ %indvars.iv.next, %2 ], [ %1, %0 ]
-  %3 = getelementptr inbounds double, double* %A, i64 %indvars.iv
-  %4 = load double, double* %3, align 8
+  %3 = getelementptr inbounds double, ptr %A, i64 %indvars.iv
+  %4 = load double, ptr %3, align 8
   %5 = fadd double %4, 3.000000e+00
   %6 = fmul double %4, 2.000000e+00
   %7 = fadd double %5, %6
@@ -210,7 +210,7 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
   %21 = fadd double %20, %17
   %22 = fadd double %21, 3.000000e+00
   %23 = fmul double %4, %22
-  store double %23, double* %3, align 8
+  store double %23, ptr %3, align 8
   %indvars.iv.next = add i64 %indvars.iv, -1
   %24 = trunc i64 %indvars.iv to i32
   %25 = icmp eq i32 %24, 0
@@ -220,7 +220,7 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
   ret void
 }
 
-define ppc_fp128 @fp128_(ppc_fp128* nocapture %n, ppc_fp128 %d) nounwind readonly {
+define ppc_fp128 @fp128_(ptr nocapture %n, ppc_fp128 %d) nounwind readonly {
 ;CHECK-LABEL: fp128_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
@@ -232,8 +232,8 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %i.06 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %x.05 = phi ppc_fp128 [ %d, %entry ], [ %sub, %for.body ]
-  %arrayidx = getelementptr inbounds ppc_fp128, ppc_fp128* %n, i32 %i.06
-  %0 = load ppc_fp128, ppc_fp128* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds ppc_fp128, ptr %n, i32 %i.06
+  %0 = load ppc_fp128, ptr %arrayidx, align 8
   %sub = fsub fast ppc_fp128 %x.05, %0
   %inc = add nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, 2048
@@ -244,7 +244,7 @@ for.end:                                          ; preds = %for.body
 }
 
 
-define void @fp16_(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
+define void @fp16_(ptr nocapture readonly %pIn, ptr nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 ;CHECK-LABEL: fp16_
 ;CHECK: LV(REG): VF = 1
 ;CHECK: LV(REG): Found max usage: 2 item
@@ -259,19 +259,19 @@ entry:
   br i1 %cmp26, label %while.end, label %while.body
 
 while.body:                                       ; preds = %entry, %while.body
-  %pIn.addr.029 = phi half* [ %add.ptr, %while.body ], [ %pIn, %entry ]
-  %pOut.addr.028 = phi half* [ %add.ptr7, %while.body ], [ %pOut, %entry ]
+  %pIn.addr.029 = phi ptr [ %add.ptr, %while.body ], [ %pIn, %entry ]
+  %pOut.addr.028 = phi ptr [ %add.ptr7, %while.body ], [ %pOut, %entry ]
   %blkCnt.027 = phi i32 [ %dec, %while.body ], [ %shr, %entry ]
-  %1 = load half, half* %pIn.addr.029, align 2
-  %arrayidx2 = getelementptr inbounds half, half* %pIn.addr.029, i32 1
-  %2 = load half, half* %arrayidx2, align 2
+  %1 = load half, ptr %pIn.addr.029, align 2
+  %arrayidx2 = getelementptr inbounds half, ptr %pIn.addr.029, i32 1
+  %2 = load half, ptr %arrayidx2, align 2
   %mul3 = fmul half %1, %0
   %mul4 = fmul half %2, %0
-  store half %mul3, half* %pOut.addr.028, align 2
-  %arrayidx6 = getelementptr inbounds half, half* %pOut.addr.028, i32 1
-  store half %mul4, half* %arrayidx6, align 2
-  %add.ptr = getelementptr inbounds half, half* %pIn.addr.029, i32 2
-  %add.ptr7 = getelementptr inbounds half, half* %pOut.addr.028, i32 2
+  store half %mul3, ptr %pOut.addr.028, align 2
+  %arrayidx6 = getelementptr inbounds half, ptr %pOut.addr.028, i32 1
+  store half %mul4, ptr %arrayidx6, align 2
+  %add.ptr = getelementptr inbounds half, ptr %pIn.addr.029, i32 2
+  %add.ptr7 = getelementptr inbounds half, ptr %pOut.addr.028, i32 2
   %dec = add nsw i32 %blkCnt.027, -1
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.end, label %while.body

@@ -15,7 +15,7 @@ define void @test2() #1 {
 entry:
   br label %bb1
 bb1:
-  call void @address_taken(i64 ptrtoint (i8* blockaddress(@test2, %bb1) to i64), i32 512)
+  call void @address_taken(i64 ptrtoint (ptr blockaddress(@test2, %bb1) to i64), i32 512)
   ret void
 
 ; CHECK-LABEL: @test2

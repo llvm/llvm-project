@@ -4,12 +4,12 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define dso_local void @memset_unroll2(double* nocapture %array, i64 %size) {
+define dso_local void @memset_unroll2(ptr nocapture %array, i64 %size) {
 ; DEFAULT-LABEL: memset_unroll2:
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    fmov v0.2d, #2.00000000
 ; DEFAULT-NEXT:    add x8, x0, #64
-; DEFAULT-NEXT:    .p2align 4, 0x0, 8
+; DEFAULT-NEXT:    .p2align 4, , 8
 ; DEFAULT-NEXT:  .LBB0_1: // %vector.body
 ; DEFAULT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; DEFAULT-NEXT:    stur q0, [x8, #-64]
@@ -30,7 +30,7 @@ define dso_local void @memset_unroll2(double* nocapture %array, i64 %size) {
 ; ASCEND:       // %bb.0: // %entry
 ; ASCEND-NEXT:    fmov v0.2d, #2.00000000
 ; ASCEND-NEXT:    add x8, x0, #64
-; ASCEND-NEXT:    .p2align 4, 0x0, 8
+; ASCEND-NEXT:    .p2align 4, , 8
 ; ASCEND-NEXT:  .LBB0_1: // %vector.body
 ; ASCEND-NEXT:    // =>This Inner Loop Header: Depth=1
 ; ASCEND-NEXT:    stur q0, [x8, #-64]
@@ -52,33 +52,25 @@ entry:
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index16, %vector.body ]
   %niter = phi i64 [ %size, %entry ], [ %niter.nsub.3, %vector.body ]
-  %array0 = getelementptr inbounds double, double* %array, i64 %index
-  %array0.cast = bitcast double* %array0 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array0.cast, align 8
-  %array2 = getelementptr inbounds double, double* %array0, i64 2
-  %array2.cast = bitcast double* %array2 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array2.cast, align 8
+  %array0 = getelementptr inbounds double, ptr %array, i64 %index
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array0, align 8
+  %array2 = getelementptr inbounds double, ptr %array0, i64 2
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array2, align 8
   %index4 = or i64 %index, 4
-  %array4 = getelementptr inbounds double, double* %array, i64 %index4
-  %array4.cast = bitcast double* %array4 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array4.cast, align 8
-  %array6 = getelementptr inbounds double, double* %array4, i64 2
-  %array6.cast = bitcast double* %array6 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array6.cast, align 8
+  %array4 = getelementptr inbounds double, ptr %array, i64 %index4
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array4, align 8
+  %array6 = getelementptr inbounds double, ptr %array4, i64 2
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array6, align 8
   %index8 = or i64 %index, 8
-  %array8 = getelementptr inbounds double, double* %array, i64 %index8
-  %array8.cast = bitcast double* %array8 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array8.cast, align 8
-  %array10 = getelementptr inbounds double, double* %array8, i64 2
-  %array10.cast = bitcast double* %array10 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array10.cast, align 8
+  %array8 = getelementptr inbounds double, ptr %array, i64 %index8
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array8, align 8
+  %array10 = getelementptr inbounds double, ptr %array8, i64 2
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array10, align 8
   %index12 = or i64 %index, 12
-  %array12 = getelementptr inbounds double, double* %array, i64 %index12
-  %array12.cast = bitcast double* %array12 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array12.cast, align 8
-  %array14 = getelementptr inbounds double, double* %array12, i64 2
-  %array14.cast = bitcast double* %array14 to <2 x double>*
-  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, <2 x double>* %array14.cast, align 8
+  %array12 = getelementptr inbounds double, ptr %array, i64 %index12
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array12, align 8
+  %array14 = getelementptr inbounds double, ptr %array12, i64 2
+  store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr %array14, align 8
   %index16 = add i64 %index, 16
   %niter.nsub.3 = add i64 %niter, -4
   %niter.ncmp.3 = icmp eq i64 %niter.nsub.3, 0

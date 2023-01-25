@@ -15,7 +15,6 @@
 #include "index/MemIndex.h"
 #include "clang/AST/Attr.h"
 #include "clang/Index/IndexSymbol.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "gmock/gmock.h"
@@ -139,6 +138,33 @@ TEST(Hover, Structured) {
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
+      // Predefined variable
+      {R"cpp(
+          void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Value = "\"foo\"";
+         HI.Type = "const char[4]";
+       }},
+      // Predefined variable (dependent)
+      {R"cpp(
+          template<int> void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Type = "const char[]";
+       }},
       // Anon namespace and local scope.
       {R"cpp(
           namespace ns1 { namespace {
@@ -213,11 +239,11 @@ class Foo final {})cpp";
          HI.TemplateParameters = {
              {{"template <typename, bool...> class"},
               std::string("C"),
-              llvm::None},
-             {{"typename"}, llvm::None, std::string("char")},
-             {{"int"}, llvm::None, std::string("0")},
+              std::nullopt},
+             {{"typename"}, std::nullopt, std::string("char")},
+             {{"int"}, std::nullopt, std::string("0")},
              {{"bool"}, std::string("Q"), std::string("false")},
-             {{"class..."}, std::string("Ts"), llvm::None},
+             {{"class..."}, std::string("Ts"), std::nullopt},
          };
        }},
       // Function template
@@ -259,7 +285,7 @@ class Foo final {})cpp";
          HI.ReturnType = "Foo<bool, true, false>";
          HI.Type = "Foo<bool, true, false> (int, bool)";
          HI.Parameters = {
-             {{"int"}, llvm::None, llvm::None},
+             {{"int"}, std::nullopt, std::nullopt},
              {{"bool"}, std::string("T"), std::string("false")},
          };
        }},
@@ -280,8 +306,8 @@ class Foo final {})cpp";
          HI.Type = "(lambda) **";
          HI.ReturnType = "bool";
          HI.Parameters = {
-             {{"int"}, std::string("T"), llvm::None},
-             {{"bool"}, std::string("B"), llvm::None},
+             {{"int"}, std::string("T"), std::nullopt},
+             {{"bool"}, std::string("B"), std::nullopt},
          };
          return HI;
        }},
@@ -301,8 +327,8 @@ class Foo final {})cpp";
          HI.Type = {"decltype(lamb) &", "(lambda) &"};
          HI.ReturnType = "bool";
          HI.Parameters = {
-             {{"int"}, std::string("T"), llvm::None},
-             {{"bool"}, std::string("B"), llvm::None},
+             {{"int"}, std::string("T"), std::nullopt},
+             {{"bool"}, std::string("B"), std::nullopt},
          };
          return HI;
        }},
@@ -322,8 +348,8 @@ class Foo final {})cpp";
          HI.Type = "class (lambda)";
          HI.ReturnType = "bool";
          HI.Parameters = {
-             {{"int"}, std::string("T"), llvm::None},
-             {{"bool"}, std::string("B"), llvm::None},
+             {{"int"}, std::string("T"), std::nullopt},
+             {{"bool"}, std::string("B"), std::nullopt},
          };
          HI.Value = "false";
          return HI;
@@ -345,8 +371,8 @@ class Foo final {})cpp";
          HI.Type = "class (lambda)";
          HI.ReturnType = "bool";
          HI.Parameters = {
-             {{"int"}, std::string("T"), llvm::None},
-             {{"bool"}, std::string("B"), llvm::None},
+             {{"int"}, std::string("T"), std::nullopt},
+             {{"bool"}, std::string("B"), std::nullopt},
          };
          return HI;
        }},
@@ -478,15 +504,60 @@ class Foo final {})cpp";
          HI.Definition = "Foo<int>";
        }},
 
-      // macro
+      // empty macro
+      {R"cpp(
+        #define MACRO
+        [[MAC^RO]]
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO";
+       }},
+
+      // object-like macro
+      {R"cpp(
+        #define MACRO 41
+        int x = [[MAC^RO]];
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO 41\n\n"
+                         "// Expands to\n"
+                         "41";
+       }},
+
+      // function-like macro
       {R"cpp(
         // Best MACRO ever.
-        #define MACRO(x,y,z) void foo(x, y, z);
+        #define MACRO(x,y,z) void foo(x, y, z)
         [[MAC^RO]](int, double d, bool z = false);
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "MACRO", HI.Kind = index::SymbolKind::Macro,
-         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z)\n\n"
+                         "// Expands to\n"
+                         "void foo(int, double d, bool z = false)";
+       }},
+
+      // nested macro
+      {R"cpp(
+        #define STRINGIFY_AUX(s) #s
+        #define STRINGIFY(s) STRINGIFY_AUX(s)
+        #define DECL_STR(NAME, VALUE) const char *v_##NAME = STRINGIFY(VALUE)
+        #define FOO 41
+
+        [[DECL^_STR]](foo, FOO);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "DECL_STR";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define DECL_STR(NAME, VALUE) const char *v_##NAME = "
+                         "STRINGIFY(VALUE)\n\n"
+                         "// Expands to\n"
+                         "const char *v_foo = \"41\"";
        }},
 
       // constexprs
@@ -827,9 +898,41 @@ class Foo final {})cpp";
          HI.CalleeArgInfo.emplace();
          HI.CalleeArgInfo->Name = "arg_b";
          HI.CalleeArgInfo->Type = "int &";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Ref;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
+       }},
+      {// Literal passed to function call
+       R"cpp(
+          void fun(int arg_a, const int &arg_b) {};
+          void code() {
+            int a = 1;
+            fun(a, [[^2]]);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "literal";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_b";
+         HI.CalleeArgInfo->Type = "const int &";
+         HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, false};
+       }},
+      {// Expression passed to function call
+       R"cpp(
+          void fun(int arg_a, const int &arg_b) {};
+          void code() {
+            int a = 1;
+            fun(a, 1 [[^+]] 2);
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "expression";
+         HI.Kind = index::SymbolKind::Unknown;
+         HI.Type = "int";
+         HI.Value = "3";
+         HI.CalleeArgInfo.emplace();
+         HI.CalleeArgInfo->Name = "arg_b";
+         HI.CalleeArgInfo->Type = "const int &";
+         HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, false};
        }},
       {// Extra info for method call.
        R"cpp(
@@ -855,9 +958,7 @@ class Foo final {})cpp";
          HI.CalleeArgInfo->Name = "arg_a";
          HI.CalleeArgInfo->Type = "int";
          HI.CalleeArgInfo->Default = "3";
-         HI.CallPassType.emplace();
-         HI.CallPassType->PassBy = PassMode::Value;
-         HI.CallPassType->Converted = false;
+         HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
        }},
       {// Dont crash on invalid decl
        R"cpp(
@@ -916,7 +1017,7 @@ class Foo final {})cpp";
          HI.Type = {"m_int[Size]", "int[Size]"};
          HI.NamespaceScope = "";
          HI.Definition = "template <int Size> m_int arr[Size]";
-         HI.TemplateParameters = {{{"int"}, {"Size"}, llvm::None}};
+         HI.TemplateParameters = {{{"int"}, {"Size"}, std::nullopt}};
        }},
       {// Var template decl specialization
        R"cpp(
@@ -964,8 +1065,9 @@ class Foo final {})cpp";
          HI.Definition = "template <typename T> void foo(T arg)";
          HI.Type = "void (T)";
          HI.ReturnType = "void";
-         HI.Parameters = {{{"T"}, std::string("arg"), llvm::None}};
-         HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
+         HI.Parameters = {{{"T"}, std::string("arg"), std::nullopt}};
+         HI.TemplateParameters = {
+             {{"typename"}, std::string("T"), std::nullopt}};
        }},
       {// TypeAlias Template
        R"cpp(
@@ -979,7 +1081,8 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using alias = T";
          HI.Type = "T";
-         HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
+         HI.TemplateParameters = {
+             {{"typename"}, std::string("T"), std::nullopt}};
        }},
       {// TypeAlias Template
        R"cpp(
@@ -996,7 +1099,8 @@ class Foo final {})cpp";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using AA = A<T>";
          HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
-         HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
+         HI.TemplateParameters = {
+             {{"typename"}, std::string("T"), std::nullopt}};
        }},
       {// Constant array
        R"cpp(
@@ -1156,8 +1260,10 @@ void fun() {
   } Tests[] = {
       // Integer tests
       {"int_by_value([[^int_x]]);", PassMode::Value, false},
+      {"int_by_value([[^123]]);", PassMode::Value, false},
       {"int_by_ref([[^int_x]]);", PassMode::Ref, false},
       {"int_by_const_ref([[^int_x]]);", PassMode::ConstRef, false},
+      {"int_by_const_ref([[^123]]);", PassMode::ConstRef, false},
       {"int_by_value([[^int_ref]]);", PassMode::Value, false},
       {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
       {"int_by_const_ref([[^int_ref]]);", PassMode::ConstRef, false},
@@ -1175,6 +1281,8 @@ void fun() {
       {"float_by_value([[^int_x]]);", PassMode::Value, true},
       {"float_by_value([[^int_ref]]);", PassMode::Value, true},
       {"float_by_value([[^int_const_ref]]);", PassMode::Value, true},
+      {"float_by_value([[^123.0f]]);", PassMode::Value, false},
+      {"float_by_value([[^123]]);", PassMode::Value, true},
       {"custom_by_value([[^int_x]]);", PassMode::Ref, true},
       {"custom_by_value([[^float_x]]);", PassMode::Value, true},
       {"custom_by_value([[^base]]);", PassMode::ConstRef, true},
@@ -1228,7 +1336,6 @@ TEST(Hover, NoHover) {
       "auto x = ^42.0i;",
       "auto x = ^42;",
       "auto x = ^nullptr;",
-      "auto x = ^\"asdf\";",
   };
 
   for (const auto &Test : Tests) {
@@ -1253,6 +1360,12 @@ TEST(Hover, All) {
          HI.Name = "expression";
          HI.Type = "char";
          HI.Value = "65 (0x41)";
+       }},
+      {"auto s = ^[[\"Hello, world!\"]]; // string literal",
+       [](HoverInfo &HI) {
+         HI.Name = "string-literal";
+         HI.Size = 14;
+         HI.Type = "const char[14]";
        }},
       {
           R"cpp(// Local variable
@@ -1348,7 +1461,7 @@ TEST(Hover, All) {
             HI.Documentation = "Function definition via pointer";
             HI.ReturnType = "void";
             HI.Parameters = {
-                {{"int"}, llvm::None, llvm::None},
+                {{"int"}, std::nullopt, std::nullopt},
             };
           }},
       {
@@ -1367,7 +1480,7 @@ TEST(Hover, All) {
             HI.Documentation = "Function declaration via call";
             HI.ReturnType = "int";
             HI.Parameters = {
-                {{"int"}, llvm::None, llvm::None},
+                {{"int"}, std::nullopt, std::nullopt},
             };
           }},
       {
@@ -1559,6 +1672,38 @@ TEST(Hover, All) {
             HI.Definition = "int foo";
           }},
       {
+          R"cpp(// Function definition via using declaration
+            namespace ns { 
+              void foo(); 
+            }
+            int main() {
+              using ns::foo;
+              ^[[foo]]();
+            }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Function;
+            HI.NamespaceScope = "ns::";
+            HI.Type = "void ()";
+            HI.Definition = "void foo()";
+            HI.Documentation = "";
+            HI.ReturnType = "void";
+            HI.Parameters = std::vector<HoverInfo::Param>{};
+          }},
+      {
+          R"cpp( // using declaration and two possible function declarations
+            namespace ns { void foo(int); void foo(char); }
+            using ns::foo;
+            template <typename T> void bar() { [[f^oo]](T{}); }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Using;
+            HI.NamespaceScope = "";
+            HI.Definition = "using ns::foo";
+          }},
+      {
           R"cpp(// Macro
             #define MACRO 0
             int main() { return ^[[MACRO]]; }
@@ -1566,7 +1711,9 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
-            HI.Definition = "#define MACRO 0";
+            HI.Definition = "#define MACRO 0\n\n"
+                            "// Expands to\n"
+                            "0";
           }},
       {
           R"cpp(// Macro
@@ -1577,6 +1724,8 @@ TEST(Hover, All) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition = "#define MACRO 0";
+            // NOTE MACRO doesn't have expansion since it technically isn't
+            // expanded here
           }},
       {
           R"cpp(// Macro
@@ -1590,7 +1739,10 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; })cpp";
+  { return 0; }
+
+// Expands to
+{ return 0; })cpp";
           }},
       {
           R"cpp(// Forward class declaration
@@ -1643,6 +1795,25 @@ TEST(Hover, All) {
               ONE, TWO, THREE,
             };
             void foo() {
+              Hello hello = [[O^NE]];
+            }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "ONE";
+            HI.Kind = index::SymbolKind::EnumConstant;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Hello::";
+            HI.Type = "enum Hello";
+            HI.Definition = "ONE";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// C++20's using enum
+            enum class Hello {
+              ONE, TWO, THREE,
+            };
+            void foo() {
+              using enum Hello;
               Hello hello = [[O^NE]];
             }
           )cpp",
@@ -1861,7 +2032,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "class std::initializer_list<int>";
+            HI.Definition = "std::initializer_list<int>";
           }},
       {
           R"cpp(// User defined conversion to auto
@@ -2340,7 +2511,7 @@ TEST(Hover, All) {
             HI.Type = {"auto (decltype(a)) -> decltype(a)",
                        "auto (int) -> int"};
             HI.ReturnType = "int";
-            HI.Parameters = {{{"int"}, std::string("x"), llvm::None}};
+            HI.Parameters = {{{"int"}, std::string("x"), std::nullopt}};
           }},
       {
           R"cpp(// sizeof expr
@@ -2373,7 +2544,8 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Function;
             HI.Type = "void (const int &)";
             HI.ReturnType = "void";
-            HI.Parameters = {{{"const int &"}, llvm::None, std::string("T()")}};
+            HI.Parameters = {
+                {{"const int &"}, std::nullopt, std::string("T()")}};
             HI.Definition = "template <> void foo<int>(const int &)";
             HI.NamespaceScope = "";
           }},
@@ -2748,7 +2920,7 @@ TEST(Hover, Present) {
             HI.Kind = index::SymbolKind::Class;
             HI.Size = 10;
             HI.TemplateParameters = {
-                {{"typename"}, std::string("T"), llvm::None},
+                {{"typename"}, std::string("T"), std::nullopt},
                 {{"typename"}, std::string("C"), std::string("bool")},
             };
             HI.Documentation = "documentation";
@@ -2899,9 +3071,7 @@ private: union foo {})",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
           },
           R"(variable foo
 
@@ -2916,6 +3086,18 @@ int foo = 3)",
           [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Variable;
             HI.Name = "foo";
+            HI.CalleeArgInfo.emplace();
+            HI.CalleeArgInfo->Type = "int";
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, false};
+          },
+          R"(variable foo
+
+Passed by value)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.Name = "foo";
             HI.Definition = "int foo = 3";
             HI.LocalScope = "test::Bar::";
             HI.Value = "3";
@@ -2924,9 +3106,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Ref;
-            HI.CallPassType->Converted = false;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Ref, false};
           },
           R"(variable foo
 
@@ -2949,9 +3129,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = {"alias_int", "int"};
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::Value;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::Value, true};
           },
           R"(variable foo
 
@@ -2961,6 +3139,21 @@ Passed as arg_a (converted to alias_int)
 
 // In test::Bar
 int foo = 3)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Macro;
+            HI.Name = "PLUS_ONE";
+            HI.Definition = "#define PLUS_ONE(X) (X+1)\n\n"
+                            "// Expands to\n"
+                            "(1 + 1)";
+          },
+          R"(macro PLUS_ONE
+
+#define PLUS_ONE(X) (X+1)
+
+// Expands to
+(1 + 1))",
       },
       {
           [](HoverInfo &HI) {
@@ -2974,9 +3167,7 @@ int foo = 3)",
             HI.CalleeArgInfo->Name = "arg_a";
             HI.CalleeArgInfo->Type = "int";
             HI.CalleeArgInfo->Default = "7";
-            HI.CallPassType.emplace();
-            HI.CallPassType->PassBy = PassMode::ConstRef;
-            HI.CallPassType->Converted = true;
+            HI.CallPassType = HoverInfo::PassType{PassMode::ConstRef, true};
           },
           R"(variable foo
 
@@ -3205,6 +3396,48 @@ TEST(Hover, HideBigInitializers) {
 
   ASSERT_TRUE(H);
   EXPECT_EQ(H->Definition, "int arr[]");
+}
+
+#if defined(__aarch64__)
+// FIXME: AARCH64 sanitizer buildbots are broken after 72142fbac4.
+#define PREDEFINEMACROS_TEST(x) DISABLED_##x
+#else
+#define PREDEFINEMACROS_TEST(x) x
+#endif
+
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarEnumeralCastNoCrash)) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    enum Test : uintptr_t {};
+    unsigned global_var;
+    void foo() {
+      Test v^al = static_cast<Test>(reinterpret_cast<uintptr_t>(&global_var));
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
+}
+
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarIntCastNoCrash)) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    unsigned global_var;
+    void foo() {
+      uintptr_t a^ddress = reinterpret_cast<uintptr_t>(&global_var);
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
 }
 
 TEST(Hover, Typedefs) {

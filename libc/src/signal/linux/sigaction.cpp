@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __LLVM_LIBC_INTERNAL_SIGACTION
 #include "src/signal/sigaction.h"
-#include "src/errno/llvmlibc_errno.h"
-#include "src/signal/linux/signal.h"
+#include "src/signal/linux/signal_utils.h"
 
 #include "src/__support/common.h"
+
+#include <errno.h>
+#include <signal.h>
 
 namespace __llvm_libc {
 
@@ -20,36 +21,29 @@ namespace __llvm_libc {
 
 extern "C" void __restore_rt();
 
-template <typename T, typename V>
-static void copy_sigaction(T &dest, const V &source) {
-  dest.sa_handler = source.sa_handler;
-  dest.sa_mask = source.sa_mask;
-  dest.sa_flags = source.sa_flags;
-  dest.sa_restorer = source.sa_restorer;
-}
-
 LLVM_LIBC_FUNCTION(int, sigaction,
-                   (int signal, const struct __sigaction *__restrict libc_new,
-                    struct __sigaction *__restrict libc_old)) {
-  struct sigaction kernel_new;
+                   (int signal, const struct sigaction *__restrict libc_new,
+                    struct sigaction *__restrict libc_old)) {
+  KernelSigaction kernel_new;
   if (libc_new) {
-    copy_sigaction(kernel_new, *libc_new);
+    kernel_new = *libc_new;
     if (!(kernel_new.sa_flags & SA_RESTORER)) {
       kernel_new.sa_flags |= SA_RESTORER;
       kernel_new.sa_restorer = __restore_rt;
     }
   }
 
-  struct sigaction kernel_old;
-  int ret = syscall(SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
-                    libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
+  KernelSigaction kernel_old;
+  int ret = __llvm_libc::syscall_impl(
+      SYS_rt_sigaction, signal, libc_new ? &kernel_new : nullptr,
+      libc_old ? &kernel_old : nullptr, sizeof(sigset_t));
   if (ret) {
-    llvmlibc_errno = -ret;
+    errno = -ret;
     return -1;
   }
 
   if (libc_old)
-    copy_sigaction(*libc_old, kernel_old);
+    *libc_old = kernel_old;
   return 0;
 }
 

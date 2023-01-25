@@ -165,22 +165,22 @@ struct F {
 // FIXME: This rule creates problems for reordering of declarations; is this
 // really the right model?
 struct G;
-bool operator==(const G&, const G&);
-bool operator!=(const G&, const G&);
-std::strong_ordering operator<=>(const G&, const G&);
-bool operator<(const G&, const G&);
-bool operator<=(const G&, const G&);
-bool operator>(const G&, const G&);
-bool operator>=(const G&, const G&);
+bool operator==(const G&, const G&); // expected-note {{previous declaration}}
+bool operator!=(const G&, const G&); // expected-note {{previous declaration}}
+std::strong_ordering operator<=>(const G&, const G&); // expected-note {{previous declaration}}
+bool operator<(const G&, const G&); // expected-note {{previous declaration}}
+bool operator<=(const G&, const G&); // expected-note {{previous declaration}}
+bool operator>(const G&, const G&); // expected-note {{previous declaration}}
+bool operator>=(const G&, const G&); // expected-note {{previous declaration}}
 struct G {
-  friend bool operator==(const G&, const G&) = default;
-  friend bool operator!=(const G&, const G&) = default;
+  friend bool operator==(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator!=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
 
-  friend std::strong_ordering operator<=>(const G&, const G&) = default;
-  friend bool operator<(const G&, const G&) = default;
-  friend bool operator<=(const G&, const G&) = default;
-  friend bool operator>(const G&, const G&) = default;
-  friend bool operator>=(const G&, const G&) = default;
+  friend std::strong_ordering operator<=>(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator<(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator<=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator>(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
+  friend bool operator>=(const G&, const G&) = default; // expected-error {{because it was already declared outside}}
 };
 bool operator==(const G&, const G&);
 bool operator!=(const G&, const G&);

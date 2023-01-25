@@ -5,15 +5,15 @@ target triple = "hexagon"
 ; CHECK-LABEL: danny:
 ; CHECK-DAG: loop0
 ; CHECK-DAG: call trap
-define void @danny(i32* %p, i32 %n, i32 %k) #0 {
+define void @danny(ptr %p, i32 %n, i32 %k) #0 {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry
   %t0 = phi i32 [ 0, %entry ], [ %t1, %for.cont ]
   %t1 = add i32 %t0, 1
-  %t2 = getelementptr i32, i32* %p, i32 %t0
-  store i32 %t1, i32* %t2, align 4
+  %t2 = getelementptr i32, ptr %p, i32 %t0
+  store i32 %t1, ptr %t2, align 4
   %c = icmp sgt i32 %t1, %k
   br i1 %c, label %noret, label %for.cont
 
@@ -32,15 +32,15 @@ noret:
 ; CHECK-LABEL: sammy:
 ; CHECK-DAG: loop0
 ; CHECK-DAG: callr
-define void @sammy(i32* %p, i32 %n, i32 %k, void (...)* %f) #0 {
+define void @sammy(ptr %p, i32 %n, i32 %k, ptr %f) #0 {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %entry
   %t0 = phi i32 [ 0, %entry ], [ %t1, %for.cont ]
   %t1 = add i32 %t0, 1
-  %t2 = getelementptr i32, i32* %p, i32 %t0
-  store i32 %t1, i32* %t2, align 4
+  %t2 = getelementptr i32, ptr %p, i32 %t0
+  store i32 %t1, ptr %t2, align 4
   %c = icmp sgt i32 %t1, %k
   br i1 %c, label %noret, label %for.cont
 

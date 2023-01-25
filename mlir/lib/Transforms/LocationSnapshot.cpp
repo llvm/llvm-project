@@ -7,12 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/LocationSnapshot.h"
-#include "PassDetail.h"
+
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include <optional>
+
+namespace mlir {
+#define GEN_PASS_DEF_LOCATIONSNAPSHOT
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -30,7 +37,7 @@ static void generateLocationsFromIR(raw_ostream &os, StringRef fileName,
   op->print(os, state);
 
   Builder builder(op->getContext());
-  Optional<StringAttr> tagIdentifier;
+  std::optional<StringAttr> tagIdentifier;
   if (!tag.empty())
     tagIdentifier = builder.getStringAttr(tag);
 
@@ -123,7 +130,7 @@ LogicalResult mlir::generateLocationsFromIR(StringRef fileName, StringRef tag,
 
 namespace {
 struct LocationSnapshotPass
-    : public LocationSnapshotBase<LocationSnapshotPass> {
+    : public impl::LocationSnapshotBase<LocationSnapshotPass> {
   LocationSnapshotPass() = default;
   LocationSnapshotPass(OpPrintingFlags flags, StringRef fileName, StringRef tag)
       : flags(flags) {

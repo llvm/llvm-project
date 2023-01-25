@@ -18,7 +18,7 @@
 define void @_Z3runv() nounwind uwtable !dbg !5 {
 entry:
   %x = alloca i32, align 32
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !9, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !9, metadata !DIExpression()), !dbg !12
   ret void, !dbg !13
 }
 

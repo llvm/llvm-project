@@ -1,6 +1,6 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -enable-vplan-native-path -debug -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -enable-vplan-native-path -debug -disable-output %s 2>&1 | FileCheck %s
 
 @arr2 = external global [8 x i64], align 16
 @arr = external global [8 x [8 x i64]], align 16
@@ -47,15 +47,15 @@ entry:
 
 outer.header:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
-  %gep.1 = getelementptr inbounds [8 x i64], [8 x i64]* @arr2, i64 0, i64 %outer.iv
-  store i64 %outer.iv, i64* %gep.1, align 4
+  %gep.1 = getelementptr inbounds [8 x i64], ptr @arr2, i64 0, i64 %outer.iv
+  store i64 %outer.iv, ptr %gep.1, align 4
   %add = add nsw i64 %outer.iv, %n
   br label %inner
 
 inner:
   %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
-  %gep.2 = getelementptr inbounds [8 x [8 x i64]], [8 x [8 x i64]]* @arr, i64 0, i64 %inner.iv, i64 %outer.iv
-  store i64 %add, i64* %gep.2, align 4
+  %gep.2 = getelementptr inbounds [8 x [8 x i64]], ptr @arr, i64 0, i64 %inner.iv, i64 %outer.iv
+  store i64 %add, ptr %gep.2, align 4
   %inner.iv.next = add nuw nsw i64 %inner.iv, 1
   %inner.ec = icmp eq i64 %inner.iv.next, 8
   br i1 %inner.ec, label %outer.latch, label %inner

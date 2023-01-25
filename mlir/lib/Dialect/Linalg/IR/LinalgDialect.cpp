@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -44,12 +44,11 @@ struct LinalgInlinerInterface : public DialectInlinerInterface {
   // We don't have any special restrictions on what can be inlined into
   // destination regions (e.g. while/conditional bodies). Always allow it.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     return true;
   }
   // Operations in Linalg dialect are always legal to inline.
-  bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
     return true;
   }
   // Handle the given inlined terminator by replacing it with a new operation
@@ -96,8 +95,7 @@ void addNamedOpBuilderImpl(
 template <typename... OpTypes>
 void addNamedOpBuilders(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
-  (void)std::initializer_list<int>{0,
-                                   (addNamedOpBuilderImpl<OpTypes>(map), 0)...};
+  (addNamedOpBuilderImpl<OpTypes>(map), ...);
 }
 
 void mlir::linalg::LinalgDialect::initialize() {

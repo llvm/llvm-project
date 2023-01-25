@@ -10,7 +10,7 @@
 #define MLIR_SUPPORT_LOGICALRESULT_H
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Optional.h"
+#include <optional>
 
 namespace mlir {
 
@@ -23,7 +23,7 @@ namespace mlir {
 /// this class, it generally shouldn't be used as the result of functions that
 /// very frequently have the result ignored. This class is intended to be used
 /// in conjunction with the utility functions below.
-struct LLVM_NODISCARD LogicalResult {
+struct [[nodiscard]] LogicalResult {
 public:
   /// If isSuccess is true a `success` result is generated, otherwise a
   /// 'failure' result is generated.
@@ -34,14 +34,14 @@ public:
   /// If isFailure is true a `failure` result is generated, otherwise a
   /// 'success' result is generated.
   static LogicalResult failure(bool isFailure = true) {
-    return success(!isFailure);
+    return LogicalResult(!isFailure);
   }
 
   /// Returns true if the provided LogicalResult corresponds to a success value.
   bool succeeded() const { return isSuccess; }
 
   /// Returns true if the provided LogicalResult corresponds to a failure value.
-  bool failed() const { return !succeeded(); }
+  bool failed() const { return !isSuccess; }
 
 private:
   LogicalResult(bool isSuccess) : isSuccess(isSuccess) {}
@@ -75,7 +75,7 @@ inline bool failed(LogicalResult result) { return result.failed(); }
 /// value of type `T`. This allows for integrating with LogicalResult, while
 /// also providing a value on the success path.
 template <typename T>
-class LLVM_NODISCARD FailureOr : public Optional<T> {
+class [[nodiscard]] FailureOr : public std::optional<T> {
 public:
   /// Allow constructing from a LogicalResult. The result *must* be a failure.
   /// Success results should use a proper instance of type `T`.
@@ -84,20 +84,28 @@ public:
            "success should be constructed with an instance of 'T'");
   }
   FailureOr() : FailureOr(failure()) {}
-  FailureOr(T &&y) : Optional<T>(std::forward<T>(y)) {}
-  FailureOr(const T &y) : Optional<T>(y) {}
+  FailureOr(T &&y) : std::optional<T>(std::forward<T>(y)) {}
+  FailureOr(const T &y) : std::optional<T>(y) {}
   template <typename U,
             std::enable_if_t<std::is_constructible<T, U>::value> * = nullptr>
   FailureOr(const FailureOr<U> &other)
-      : Optional<T>(failed(other) ? Optional<T>() : Optional<T>(*other)) {}
+      : std::optional<T>(failed(other) ? std::optional<T>()
+                                       : std::optional<T>(*other)) {}
 
   operator LogicalResult() const { return success(this->has_value()); }
 
 private:
   /// Hide the bool conversion as it easily creates confusion.
-  using Optional<T>::operator bool;
-  using Optional<T>::has_value;
+  using std::optional<T>::operator bool;
+  using std::optional<T>::has_value;
 };
+
+/// Wrap a value on the success path in a FailureOr of the same value type.
+template <typename T,
+          typename = std::enable_if_t<!std::is_convertible_v<T, bool>>>
+inline auto success(T &&t) {
+  return FailureOr<std::decay_t<T>>(std::forward<T>(t));
+}
 
 /// This class represents success/failure for parsing-like operations that find
 /// it important to chain together failable operations with `||`.  This is an
@@ -110,7 +118,7 @@ private:
 /// swallowed up in boilerplate without this, so we provide this for narrow
 /// cases where it is important.
 ///
-class LLVM_NODISCARD ParseResult : public LogicalResult {
+class [[nodiscard]] ParseResult : public LogicalResult {
 public:
   ParseResult(LogicalResult result = success()) : LogicalResult(result) {}
 

@@ -52,6 +52,8 @@ const char *TraceCursor::EventKindToString(lldb::TraceEvent event_kind) {
     return "CPU core changed";
   case lldb::eTraceEventHWClockTick:
     return "HW clock tick";
+  case lldb::eTraceEventSyncPoint:
+    return "trace synchronization point";
   }
   llvm_unreachable("Fully covered switch above");
 }

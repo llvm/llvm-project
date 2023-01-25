@@ -5,19 +5,19 @@
 
   @b = common dso_local local_unnamed_addr global i32 0, align 4
   @d = common dso_local local_unnamed_addr global i32 0, align 4
-  @e = common dso_local local_unnamed_addr global i32* null, align 8
+  @e = common dso_local local_unnamed_addr global ptr null, align 8
   @c = common dso_local local_unnamed_addr global i32 0, align 4
   @a = common dso_local local_unnamed_addr global [1 x i32] zeroinitializer, align 4
 
   ; Function Attrs: norecurse nounwind
   define dso_local signext i32 @copycrunset() local_unnamed_addr #0 {
   entry:
-    %0 = load i32, i32* @b, align 4
+    %0 = load i32, ptr @b, align 4
     %tobool3 = icmp eq i32 %0, 0
     br i1 %tobool3, label %while.end, label %while.body.preheader
 
   while.body.preheader:                             ; preds = %entry
-    %.pre = load i32, i32* @d, align 4
+    %.pre = load i32, ptr @d, align 4
     %tobool1 = icmp eq i32 %.pre, 0
     br label %while.body
 
@@ -25,18 +25,18 @@
     br i1 %tobool1, label %land.end, label %land.rhs
 
   land.rhs:                                         ; preds = %while.body
-    %1 = load i32*, i32** @e, align 8
-    %2 = load i32, i32* %1, align 4
+    %1 = load ptr, ptr @e, align 8
+    %2 = load i32, ptr %1, align 4
     %idxprom = sext i32 %2 to i64
-    %arrayidx = getelementptr inbounds [1 x i32], [1 x i32]* @a, i64 0, i64 %idxprom
-    %3 = load i32, i32* %arrayidx, align 4
+    %arrayidx = getelementptr inbounds [1 x i32], ptr @a, i64 0, i64 %idxprom
+    %3 = load i32, ptr %arrayidx, align 4
     %tobool2 = icmp ne i32 %3, 0
     br label %land.end
 
   land.end:                                         ; preds = %land.rhs, %while.body
     %4 = phi i1 [ false, %while.body ], [ %tobool2, %land.rhs ]
     %land.ext = zext i1 %4 to i32
-    store i32 %land.ext, i32* @c, align 4
+    store i32 %land.ext, ptr @c, align 4
     br label %while.body
 
   while.end:                                        ; preds = %entry

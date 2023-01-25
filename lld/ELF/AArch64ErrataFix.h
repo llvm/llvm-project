@@ -13,13 +13,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class Defined;
 class InputSection;
 class InputSectionDescription;
-class OutputSection;
 class Patch843419Section;
 
 class AArch64Err843419Patcher {
@@ -44,7 +42,6 @@ private:
   bool initialized = false;
 };
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

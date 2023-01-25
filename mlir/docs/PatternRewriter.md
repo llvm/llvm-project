@@ -357,7 +357,7 @@ Example output is shown below:
 ```
 //===-------------------------------------------===//
 Processing operation : 'cf.cond_br'(0x60f000001120) {
-  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = dense<[1, 0, 0]> : vector<3xi32>} : (i1) -> ()
+  "cf.cond_br"(%arg0)[^bb2, ^bb2] {operand_segment_sizes = array<i32: 1, 0, 0>} : (i1) -> ()
 
   * Pattern SimplifyConstCondBranchPred : 'cf.cond_br -> ()' {
   } -> failure : pattern failed to match

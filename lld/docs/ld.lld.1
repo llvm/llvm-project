@@ -130,16 +130,22 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
-.Ar value
+.Cm value
 may be
-.Cm none
-or
-.Cm zlib .
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+No compression.
+.It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level, but if you want to compress it more,
+compresses well at that level. If you want to compress it more,
 you can specify
 .Fl O2
 to set the compression level to 6.
+.It Cm zstd
+The compression level is 5.
+.El
+.Pp
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
@@ -346,12 +352,15 @@ Do not set the text data sections to be writable, page align sections.
 Disable target-specific relaxations. For x86-64 this disables R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
-.It Fl -no-undefined-version
-Report version scripts that refer undefined symbols.
+.It Fl -undefined-version
+Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
+.It Fl -no-warnings , Fl w
+Suppress warnings and cancel
+.Cm --fatal-warnings.
 .It Fl -no-whole-archive
 Restores the default behavior of loading archive members.
 .It Fl -no-pie , Fl -no-pic-executable
@@ -631,10 +640,10 @@ Creates a separate output section for every orphan input section.
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
-.It Fl v
+.It Fl v , Fl V
 Display the version number and proceed with linking if object files are
 specified.
-.It Fl V , Fl -version
+.It Fl -version
 Display the version number and exit.
 .It Fl -verbose
 Verbose mode.

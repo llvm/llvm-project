@@ -6,12 +6,15 @@ add_flang_library(FIRBuilder
   Complex.cpp
   DoLoopHelper.cpp
   FIRBuilder.cpp
+  HLFIRTools.cpp
   LowLevelIntrinsics.cpp
   MutableBox.cpp
+  Runtime/Allocatable.cpp
   Runtime/Assign.cpp
   Runtime/Character.cpp
   Runtime/Command.cpp
   Runtime/Derived.cpp
+  Runtime/EnvironmentDefaults.cpp
   Runtime/Inquiry.cpp
   Runtime/Numeric.cpp
   Runtime/Ragged.cpp
@@ -22,10 +25,12 @@ add_flang_library(FIRBuilder
   DEPENDS
   FIRDialect
   FIRSupport
+  HLFIRDialect
   ${dialect_libs}
 
   LINK_LIBS
   FIRDialect
   FIRSupport
+  HLFIRDialect
   ${dialect_libs}
 )

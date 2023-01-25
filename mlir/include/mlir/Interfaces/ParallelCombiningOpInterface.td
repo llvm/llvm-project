@@ -17,14 +17,10 @@ include "mlir/IR/OpBase.td"
 
 def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
   let description = [{
-    A parallel combining op is an op with a region, that is not isolated from
-    above and yields values to its parent op without itself returning an SSA
-    value. The yielded values are determined by subvalues produced by the ops 
-    contained in the region (the `yieldingOps`) and combined in any unspecified
-    order to produce the values yielded to the parent op.
+    A parallel combining op is an op with a region.
 
-    This is useful as a terminator to parallel operations that iterate over 
-    some set and return tensors while avoiding tight coupling between the 
+    This is useful as a terminator to parallel operations that iterate over
+    some set and return tensors while avoiding tight coupling between the
     iterating op, the combining op and the individual subtensor producing ops.
   }];
   let cppNamespace = "::mlir";
@@ -51,18 +47,6 @@ def ParallelCombiningOpInterface : OpInterface<"ParallelCombiningOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/[{
         return $_op.getYieldingOps();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
-        Return the contained ops that yield subvalues that this op combines to
-        yield to its parent.
-      }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::Type>",
-      /*methodName=*/"getYieldedTypes",
-      /*args=*/(ins),
-      /*methodBody=*/[{
-        return $_op.getYieldedTypes();
       }]
     >,
   ];

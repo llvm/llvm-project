@@ -294,7 +294,7 @@ void ScriptParser::addFile(StringRef s) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
-      driver->addFile(saver().save(path), /*withLOption=*/false);
+      ctx.driver.addFile(saver().save(path), /*withLOption=*/false);
     else
       setError("cannot find " + s + " inside " + config->sysroot);
     return;
@@ -302,17 +302,17 @@ void ScriptParser::addFile(StringRef s) {
 
   if (s.startswith("/")) {
     // Case 1: s is an absolute path. Just open it.
-    driver->addFile(s, /*withLOption=*/false);
+    ctx.driver.addFile(s, /*withLOption=*/false);
   } else if (s.startswith("=")) {
     // Case 2: relative to the sysroot.
     if (config->sysroot.empty())
-      driver->addFile(s.substr(1), /*withLOption=*/false);
+      ctx.driver.addFile(s.substr(1), /*withLOption=*/false);
     else
-      driver->addFile(saver().save(config->sysroot + "/" + s.substr(1)),
-                      /*withLOption=*/false);
+      ctx.driver.addFile(saver().save(config->sysroot + "/" + s.substr(1)),
+                         /*withLOption=*/false);
   } else if (s.startswith("-l")) {
     // Case 3: search in the list of library paths.
-    driver->addLibrary(s.substr(2));
+    ctx.driver.addLibrary(s.substr(2));
   } else {
     // Case 4: s is a relative path. Search in the directory of the script file.
     std::string filename = std::string(getCurrentMB().getBufferIdentifier());
@@ -321,17 +321,17 @@ void ScriptParser::addFile(StringRef s) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
       if (sys::fs::exists(path)) {
-        driver->addFile(path, /*withLOption=*/false);
+        ctx.driver.addFile(path, /*withLOption=*/false);
         return;
       }
     }
     // Then search in the current working directory.
     if (sys::fs::exists(s)) {
-      driver->addFile(s, /*withLOption=*/false);
+      ctx.driver.addFile(s, /*withLOption=*/false);
     } else {
       // Finally, search in the list of library paths.
-      if (Optional<std::string> path = findFromSearchPaths(s))
-        driver->addFile(saver().save(*path), /*withLOption=*/true);
+      if (std::optional<std::string> path = findFromSearchPaths(s))
+        ctx.driver.addFile(saver().save(*path), /*withLOption=*/true);
       else
         setError("unable to find " + s);
     }
@@ -379,8 +379,8 @@ void ScriptParser::readInclude() {
     return;
   }
 
-  if (Optional<std::string> path = searchScript(tok)) {
-    if (Optional<MemoryBufferRef> mb = readFile(*path))
+  if (std::optional<std::string> path = searchScript(tok)) {
+    if (std::optional<MemoryBufferRef> mb = readFile(*path))
       tokenize(*mb);
     return;
   }
@@ -1041,19 +1041,19 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef tok) {
   const StringRef op = peek();
   if (op.startswith("=")) {
     // Support = followed by an expression without whitespace.
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readSymbolAssignment(tok);
   } else if ((op.size() == 2 && op[1] == '=' && strchr("*/+-&|", op[0])) ||
              op == "<<=" || op == ">>=") {
     cmd = readSymbolAssignment(tok);
   } else if (tok == "PROVIDE") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, false);
   } else if (tok == "HIDDEN") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(false, true);
   } else if (tok == "PROVIDE_HIDDEN") {
-    SaveAndRestore<bool> saved(inExpr, true);
+    SaveAndRestore saved(inExpr, true);
     cmd = readProvideHidden(true, true);
   }
 
@@ -1221,33 +1221,33 @@ Expr ScriptParser::readConstant() {
 // Parses Tok as an integer. It recognizes hexadecimal (prefixed with
 // "0x" or suffixed with "H") and decimal numbers. Decimal numbers may
 // have "K" (Ki) or "M" (Mi) suffixes.
-static Optional<uint64_t> parseInt(StringRef tok) {
+static std::optional<uint64_t> parseInt(StringRef tok) {
   // Hexadecimal
   uint64_t val;
   if (tok.startswith_insensitive("0x")) {
     if (!to_integer(tok.substr(2), val, 16))
-      return None;
+      return std::nullopt;
     return val;
   }
   if (tok.endswith_insensitive("H")) {
     if (!to_integer(tok.drop_back(), val, 16))
-      return None;
+      return std::nullopt;
     return val;
   }
 
   // Decimal
   if (tok.endswith_insensitive("K")) {
     if (!to_integer(tok.drop_back(), val, 10))
-      return None;
+      return std::nullopt;
     return val * 1024;
   }
   if (tok.endswith_insensitive("M")) {
     if (!to_integer(tok.drop_back(), val, 10))
-      return None;
+      return std::nullopt;
     return val * 1024 * 1024;
   }
   if (!to_integer(tok, val, 10))
-    return None;
+    return std::nullopt;
   return val;
 }
 
@@ -1269,11 +1269,11 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
   return make<ByteCommand>(e, size, commandString);
 }
 
-static llvm::Optional<uint64_t> parseFlag(StringRef tok) {
-  if (llvm::Optional<uint64_t> asInt = parseInt(tok))
+static std::optional<uint64_t> parseFlag(StringRef tok) {
+  if (std::optional<uint64_t> asInt = parseInt(tok))
     return asInt;
 #define CASE_ENT(enum) #enum, ELF::enum
-  return StringSwitch<llvm::Optional<uint64_t>>(tok)
+  return StringSwitch<std::optional<uint64_t>>(tok)
       .Case(CASE_ENT(SHF_WRITE))
       .Case(CASE_ENT(SHF_ALLOC))
       .Case(CASE_ENT(SHF_EXECINSTR))
@@ -1287,7 +1287,7 @@ static llvm::Optional<uint64_t> parseFlag(StringRef tok) {
       .Case(CASE_ENT(SHF_COMPRESSED))
       .Case(CASE_ENT(SHF_EXCLUDE))
       .Case(CASE_ENT(SHF_ARM_PURECODE))
-      .Default(None);
+      .Default(std::nullopt);
 #undef CASE_ENT
 }
 
@@ -1308,7 +1308,7 @@ std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
    while (!errorCount()) {
     StringRef tok = unquote(next());
     bool without = tok.consume_front("!");
-    if (llvm::Optional<uint64_t> flag = parseFlag(tok)) {
+    if (std::optional<uint64_t> flag = parseFlag(tok)) {
       if (without)
         withoutFlags |= *flag;
       else
@@ -1408,7 +1408,7 @@ Expr ScriptParser::readPrimary() {
     OutputSection *osec = &script->getOrCreateOutputSection(name)->osec;
     return [=] {
       checkIfExists(*osec, location);
-      return osec->alignment;
+      return osec->addralign;
     };
   }
   if (tok == "ASSERT")
@@ -1449,7 +1449,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
     return [=] {
-      Symbol *b = symtab->find(name);
+      Symbol *b = symtab.find(name);
       return (b && b->isDefined()) ? 1 : 0;
     };
   }
@@ -1521,7 +1521,7 @@ Expr ScriptParser::readPrimary() {
     return [=] { return script->getSymbolValue(tok, location); };
 
   // Tok is a literal number.
-  if (Optional<uint64_t> val = parseInt(tok))
+  if (std::optional<uint64_t> val = parseInt(tok))
     return [=] { return *val; };
 
   // Tok is a symbol name.
@@ -1560,7 +1560,7 @@ SmallVector<StringRef, 0> ScriptParser::readOutputSectionPhdrs() {
 // name of a program header type or a constant (e.g. "0x3").
 unsigned ScriptParser::readPhdrType() {
   StringRef tok = next();
-  if (Optional<uint64_t> val = parseInt(tok))
+  if (std::optional<uint64_t> val = parseInt(tok))
     return *val;
 
   unsigned ret = StringSwitch<unsigned>(tok)

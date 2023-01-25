@@ -6,39 +6,35 @@
 target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7"
 target triple = "amdgcn-amd-amdhsa"
 
-declare void @use(i8*, i32**)
+declare void @use(ptr, ptr)
 
-define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(i32* %a) {
+define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(ptr %a) {
 ; CHECK-LABEL: @__omp_offloading_802_ea0109_main_l8(
 ; CHECK-NEXT:  .master:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca i32*, align 1
-; CHECK-NEXT:    [[DOTSUB:%.*]] = bitcast i32** [[TMP0]] to i8*
-; CHECK-NEXT:    call void @use(i8* [[DOTSUB]], i32** [[TMP0]])
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 1
+; CHECK-NEXT:    call void @use(ptr [[TMP0]], ptr [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 .master:
   %0 = alloca i8, i64 8, align 1
-  %a_on_stack = bitcast i8* %0 to i32**
-  store i32* undef, i32** %a_on_stack, align 8
-  call void @use(i8* %0, i32** %a_on_stack)
+  store ptr undef, ptr %0, align 8
+  call void @use(ptr %0, ptr %0)
   ret void
 }
 
 %struct.widget = type { [8 x i8] }
 
-define void @spam(i64* %arg1) {
+define void @spam(ptr %arg1) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [0 x [30 x %struct.widget]], align 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [0 x [30 x %struct.widget]], [0 x [30 x %struct.widget]]* [[ALLOCA1]], i64 0, i64 0, i64 0
-; CHECK-NEXT:    call void @zot(%struct.widget* [[GEP]])
+; CHECK-NEXT:    call void @zot(ptr [[ALLOCA1]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %alloca = alloca [30 x %struct.widget], i32 0, align 16
-  %gep = getelementptr inbounds [30 x %struct.widget], [30 x %struct.widget]* %alloca, i64 0, i64 0
-  call void @zot(%struct.widget* %gep)
+  call void @zot(ptr %alloca)
   ret void
 }
 
-declare hidden void @zot(%struct.widget*)
+declare hidden void @zot(ptr)

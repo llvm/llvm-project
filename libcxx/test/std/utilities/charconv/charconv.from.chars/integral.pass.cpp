@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: !stdlib=libc++ && c++11
-// UNSUPPORTED: !stdlib=libc++ && c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // <charconv>
 
-// from_chars_result from_chars(const char* first, const char* last,
-//                              Integral& value, int base = 10)
+// constexpr from_chars_result from_chars(const char* first, const char* last,
+//                                        Integral& value, int base = 10)
 
 #include <charconv>
 #include "test_macros.h"
@@ -22,7 +20,7 @@
 template <typename T>
 struct test_basics
 {
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         std::from_chars_result r;
         T x;
@@ -86,7 +84,7 @@ struct test_basics
 template <typename T>
 struct test_signed
 {
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         std::from_chars_result r;
         T x = 42;
@@ -137,10 +135,19 @@ struct test_signed
     }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX23 bool test()
 {
     run<test_basics>(integrals);
     run<test_signed>(all_signed);
+
+    return true;
+}
+
+int main(int, char**) {
+    test();
+#if TEST_STD_VER > 20
+    static_assert(test());
+#endif
 
     return 0;
 }

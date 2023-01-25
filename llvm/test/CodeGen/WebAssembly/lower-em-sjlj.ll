@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s -DPTR=i32
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -24,7 +24,7 @@ entry:
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
   unreachable
 ; CHECK: entry:
-; CHECK-NEXT: %[[MALLOCCALL:.*]] = tail call i8* @malloc(i32 40)
+; CHECK-NEXT: %[[MALLOCCALL:.*]] = tail call i8* @malloc([[PTR]] 40)
 ; CHECK-NEXT: %[[SETJMP_TABLE:.*]] = bitcast i8* %[[MALLOCCALL]] to i32*
 ; CHECK-NEXT: store i32 0, i32* %[[SETJMP_TABLE]]
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE:.*]] = add i32 4, 0
@@ -311,7 +311,6 @@ declare void @_longjmp(%struct.__jmp_buf_tag*, i32) #1
 declare i32 @__gxx_personality_v0(...)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare i8* @malloc(i32)
 declare void @free(i8*)
 
 ; JS glue functions and invoke wrappers declaration

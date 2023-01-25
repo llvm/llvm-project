@@ -1,10 +1,10 @@
-; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr9 -mattr=+vsx -slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P9
-; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx -slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P8
+; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr9 -mattr=+vsx -passes=slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P9
+; RUN: opt -S -mtriple=powerpc64-linux-gnu -mcpu=pwr8 -mattr=+vsx -passes=slp-vectorizer < %s | FileCheck %s --check-prefix=CHECK-P8
 
 %struct._pp = type { i16, i16, i16, i16 }
 
 ; Function Attrs: norecurse nounwind readonly
-define [5 x double] @foo(double %k, i64 %n, %struct._pp* nocapture readonly %p) local_unnamed_addr #0 {
+define [5 x double] @foo(double %k, i64 %n, ptr nocapture readonly %p) local_unnamed_addr #0 {
 entry:
   %cmp17 = icmp sgt i64 %n, 0
   br i1 %cmp17, label %for.body, label %for.cond.cleanup
@@ -20,13 +20,13 @@ for.body:                                         ; preds = %entry, %for.body
   %i.020 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
   %retval.sroa.4.019 = phi double [ %add10, %for.body ], [ 0.000000e+00, %entry ]
   %retval.sroa.0.018 = phi double [ %add, %for.body ], [ 0.000000e+00, %entry ]
-  %r1 = getelementptr inbounds %struct._pp, %struct._pp* %p, i64 %i.020, i32 2
-  %0 = load i16, i16* %r1, align 2
+  %r1 = getelementptr inbounds %struct._pp, ptr %p, i64 %i.020, i32 2
+  %0 = load i16, ptr %r1, align 2
   %conv2 = uitofp i16 %0 to double
   %mul = fmul double %conv2, %k
   %add = fadd double %retval.sroa.0.018, %mul
-  %g5 = getelementptr inbounds %struct._pp, %struct._pp* %p, i64 %i.020, i32 1
-  %1 = load i16, i16* %g5, align 2
+  %g5 = getelementptr inbounds %struct._pp, ptr %p, i64 %i.020, i32 1
+  %1 = load i16, ptr %g5, align 2
   %conv7 = uitofp i16 %1 to double
   %mul8 = fmul double %conv7, %k
   %add10 = fadd double %retval.sroa.4.019, %mul8

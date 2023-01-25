@@ -48,6 +48,7 @@ List of existing ones:
 * declare target
 * threadprivate
 * declare reduction
+* requires
 
 There is a parser node for each of these directives and
 the parser node saves information associated with the directive,

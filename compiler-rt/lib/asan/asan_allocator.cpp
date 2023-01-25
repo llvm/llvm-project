@@ -803,8 +803,8 @@ struct Allocator {
     sptr offset = 0;
     if (!m1 || AsanChunkView(m1).AddrIsAtLeft(addr, 1, &offset)) {
       // The address is in the chunk's left redzone, so maybe it is actually
-      // a right buffer overflow from the other chunk to the left.
-      // Search a bit to the left to see if there is another chunk.
+      // a right buffer overflow from the other chunk before.
+      // Search a bit before to see if there is another chunk.
       AsanChunk *m2 = nullptr;
       for (uptr l = 1; l < GetPageSizeCached(); l++) {
         m2 = GetAsanChunkByAddr(addr - l);
@@ -1094,6 +1094,8 @@ uptr PointsIntoChunk(void *p) {
 }
 
 uptr GetUserBegin(uptr chunk) {
+  // FIXME: All usecases provide chunk address, GetAsanChunkByAddrFastLocked is
+  // not needed.
   __asan::AsanChunk *m = __asan::instance.GetAsanChunkByAddrFastLocked(chunk);
   return m ? m->Beg() : 0;
 }
@@ -1151,33 +1153,6 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
     return kIgnoreObjectAlreadyIgnored;
   m->lsan_tag = __lsan::kIgnored;
   return kIgnoreObjectSuccess;
-}
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
-  // Look for the arg pointer of threads that have been created or are running.
-  // This is necessary to prevent false positive leaks due to the AsanThread
-  // holding the only live reference to a heap object.  This can happen because
-  // the `pthread_create()` interceptor doesn't wait for the child thread to
-  // start before returning and thus loosing the the only live reference to the
-  // heap object on the stack.
-
-  __asan::AsanThreadContext *atctx =
-      reinterpret_cast<__asan::AsanThreadContext *>(tctx);
-  __asan::AsanThread *asan_thread = atctx->thread;
-
-  // Note ThreadStatusRunning is required because there is a small window where
-  // the thread status switches to `ThreadStatusRunning` but the `arg` pointer
-  // still isn't on the stack yet.
-  if (atctx->status != ThreadStatusCreated &&
-      atctx->status != ThreadStatusRunning)
-    return;
-
-  uptr thread_arg = reinterpret_cast<uptr>(asan_thread->get_arg());
-  if (!thread_arg)
-    return;
-
-  auto ptrsVec = reinterpret_cast<InternalMmapVector<uptr> *>(ptrs);
-  ptrsVec->push_back(thread_arg);
 }
 
 }  // namespace __lsan

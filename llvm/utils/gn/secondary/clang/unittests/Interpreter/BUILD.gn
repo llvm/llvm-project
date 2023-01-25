@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ClangReplInterpreterTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
@@ -8,6 +8,7 @@ unittest("ClangReplInterpreterTests") {
     "//clang/lib/Frontend",
     "//clang/lib/Interpreter",
     "//llvm/lib/IR",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "IncrementalProcessingTest.cpp",

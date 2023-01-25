@@ -16,8 +16,8 @@
 target triple = "wasm32-unknown-unknown"
 
 ; Takes the address of the external foo() resulting in undefined external
-@bar = global i8* bitcast (i32 ()* @foo to i8*), align 4
-@llvm.used = appending global [1 x i8**] [i8** @bar], section "llvm.metadata"
+@bar = global ptr @foo, align 4
+@llvm.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"
 
 declare i32 @foo() #0
 

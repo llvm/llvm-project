@@ -30,32 +30,32 @@ define <2 x i8> @smax_smax_common_op_01(<2 x i1> %cond, <2 x i8> %x, <2 x i8> %y
   ret <2 x i8> %sel
 }
 
-define i5 @umin_umin_common_op_10(i1 %cond, i5 %x, i5 %y, i5 %z, i5* %p) {
+define i5 @umin_umin_common_op_10(i1 %cond, i5 %x, i5 %y, i5 %z, ptr %p) {
 ; CHECK-LABEL: @umin_umin_common_op_10(
 ; CHECK-NEXT:    [[M1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 [[Z:%.*]])
-; CHECK-NEXT:    store i5 [[M1]], i5* [[P:%.*]], align 1
+; CHECK-NEXT:    store i5 [[M1]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[MINMAXOP:%.*]] = select i1 [[COND:%.*]], i5 [[X]], i5 [[Y:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = call i5 @llvm.umin.i5(i5 [[MINMAXOP]], i5 [[Z]])
 ; CHECK-NEXT:    ret i5 [[SEL]]
 ;
   %m1 = call i5 @llvm.umin.i5(i5 %x, i5 %z)
-  store i5 %m1, i5* %p
+  store i5 %m1, ptr %p
   %m2 = call i5 @llvm.umin.i5(i5 %z, i5 %y)
   %sel = select i1 %cond, i5 %m1, i5 %m2
   ret i5 %sel
 }
 
-define <3 x i5> @umax_umax_common_op_11(i1 %cond, <3 x i5> %x, <3 x i5> %y, <3 x i5> %z, <3 x i5>* %p) {
+define <3 x i5> @umax_umax_common_op_11(i1 %cond, <3 x i5> %x, <3 x i5> %y, <3 x i5> %z, ptr %p) {
 ; CHECK-LABEL: @umax_umax_common_op_11(
 ; CHECK-NEXT:    [[M2:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[Y:%.*]], <3 x i5> [[Z:%.*]])
-; CHECK-NEXT:    store <3 x i5> [[M2]], <3 x i5>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <3 x i5> [[M2]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[MINMAXOP:%.*]] = select i1 [[COND:%.*]], <3 x i5> [[X:%.*]], <3 x i5> [[Y]]
 ; CHECK-NEXT:    [[SEL:%.*]] = call <3 x i5> @llvm.umax.v3i5(<3 x i5> [[MINMAXOP]], <3 x i5> [[Z]])
 ; CHECK-NEXT:    ret <3 x i5> [[SEL]]
 ;
   %m1 = call <3 x i5> @llvm.umax.v3i5(<3 x i5> %x, <3 x i5> %z)
   %m2 = call <3 x i5> @llvm.umax.v3i5(<3 x i5> %y, <3 x i5> %z)
-  store <3 x i5> %m2, <3 x i5>* %p
+  store <3 x i5> %m2, ptr %p
   %sel = select i1 %cond, <3 x i5> %m1, <3 x i5> %m2
   ret <3 x i5> %sel
 }
@@ -92,19 +92,19 @@ define i5 @smin_smin_no_common_op(i1 %cond, i5 %x, i5 %y, i5 %z, i5 %w) {
 
 ; negative test - too many uses
 
-define i5 @umin_umin_common_op_10_uses(i1 %cond, i5 %x, i5 %y, i5 %z, i5* %p1, i5* %p2) {
+define i5 @umin_umin_common_op_10_uses(i1 %cond, i5 %x, i5 %y, i5 %z, ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @umin_umin_common_op_10_uses(
 ; CHECK-NEXT:    [[M1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 [[Z:%.*]])
-; CHECK-NEXT:    store i5 [[M1]], i5* [[P1:%.*]], align 1
+; CHECK-NEXT:    store i5 [[M1]], ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[M2:%.*]] = call i5 @llvm.umin.i5(i5 [[Z]], i5 [[Y:%.*]])
-; CHECK-NEXT:    store i5 [[M2]], i5* [[P2:%.*]], align 1
+; CHECK-NEXT:    store i5 [[M2]], ptr [[P2:%.*]], align 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i5 [[M1]], i5 [[M2]]
 ; CHECK-NEXT:    ret i5 [[SEL]]
 ;
   %m1 = call i5 @llvm.umin.i5(i5 %x, i5 %z)
-  store i5 %m1, i5* %p1
+  store i5 %m1, ptr %p1
   %m2 = call i5 @llvm.umin.i5(i5 %z, i5 %y)
-  store i5 %m2, i5* %p2
+  store i5 %m2, ptr %p2
   %sel = select i1 %cond, i5 %m1, i5 %m2
   ret i5 %sel
 }

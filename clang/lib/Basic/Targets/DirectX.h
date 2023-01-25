@@ -40,7 +40,8 @@ static const unsigned DirectXAddrSpaceMap[] = {
     0, // sycl_private
     0, // ptr32_sptr
     0, // ptr32_uptr
-    0  // ptr64
+    0, // ptr64
+    3, // hlsl_groupshared
 };
 
 class LLVM_LIBRARY_VISIBILITY DirectXTargetInfo : public TargetInfo {
@@ -55,6 +56,8 @@ public:
     HasLegalHalfType = true;
     HasFloat16 = true;
     NoAsmVariants = true;
+    PlatformMinVersion = Triple.getOSVersion();
+    PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
     resetDataLayout("e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:"
                     "32-f64:64-n8:16:32:64");
     TheCXXABI.set(TargetCXXABI::Microsoft);
@@ -67,11 +70,15 @@ public:
     return Feature == "directx";
   }
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override { return None; }
+  ArrayRef<Builtin::Info> getTargetBuiltins() const override {
+    return std::nullopt;
+  }
 
   const char *getClobbers() const override { return ""; }
 
-  ArrayRef<const char *> getGCCRegNames() const override { return None; }
+  ArrayRef<const char *> getGCCRegNames() const override {
+    return std::nullopt;
+  }
 
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override {
@@ -79,7 +86,7 @@ public:
   }
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
-    return None;
+    return std::nullopt;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

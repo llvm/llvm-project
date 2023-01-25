@@ -9,12 +9,14 @@
 #include "Headers.h"
 
 #include "Compiler.h"
+#include "Matchers.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -22,6 +24,7 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -30,6 +33,7 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -115,7 +119,8 @@ protected:
     return Path.value_or("");
   }
 
-  llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) {
+  std::optional<TextEdit> insert(llvm::StringRef VerbatimHeader,
+                                 tooling::IncludeDirective Directive) {
     Clang = setupClang();
     PreprocessOnlyAction Action;
     EXPECT_TRUE(
@@ -124,7 +129,7 @@ protected:
     IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),
                              CDB.getCompileCommand(MainFile)->Directory,
                              &Clang->getPreprocessor().getHeaderSearchInfo());
-    auto Edit = Inserter.insert(VerbatimHeader);
+    auto Edit = Inserter.insert(VerbatimHeader, Directive);
     Action.EndSourceFile();
     return Edit;
   }
@@ -328,9 +333,13 @@ TEST_F(HeadersTest, DontInsertDuplicateResolved) {
 }
 
 TEST_F(HeadersTest, PreferInserted) {
-  auto Edit = insert("<y>");
-  EXPECT_TRUE(Edit);
-  EXPECT_TRUE(StringRef(Edit->newText).contains("<y>"));
+  auto Edit = insert("<y>", tooling::IncludeDirective::Include);
+  ASSERT_TRUE(Edit);
+  EXPECT_EQ(Edit->newText, "#include <y>\n");
+
+  Edit = insert("\"header.h\"", tooling::IncludeDirective::Import);
+  ASSERT_TRUE(Edit);
+  EXPECT_EQ(Edit->newText, "#import \"header.h\"\n");
 }
 
 TEST(Headers, NoHeaderSearchInfo) {
@@ -351,7 +360,7 @@ TEST(Headers, NoHeaderSearchInfo) {
   EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Verbatim), true);
 
   EXPECT_EQ(Inserter.calculateIncludePath(Inserting, "sub2/main2.cpp"),
-            llvm::None);
+            std::nullopt);
 }
 
 TEST_F(HeadersTest, PresumedLocations) {

@@ -151,19 +151,18 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
                          InstrAttr.getValueAsString() == "xray-never";
   if (NeverInstrument && !AlwaysInstrument)
     return false;
-  auto ThresholdAttr = F.getFnAttribute("xray-instruction-threshold");
   auto IgnoreLoopsAttr = F.getFnAttribute("xray-ignore-loops");
-  unsigned int XRayThreshold = 0;
-  if (!AlwaysInstrument) {
-    if (!ThresholdAttr.isStringAttribute())
-      return false; // XRay threshold attribute not found.
-    if (ThresholdAttr.getValueAsString().getAsInteger(10, XRayThreshold))
-      return false; // Invalid value for threshold.
 
+  uint64_t XRayThreshold = 0;
+  if (!AlwaysInstrument) {
     bool IgnoreLoops = IgnoreLoopsAttr.isValid();
+    XRayThreshold = F.getFnAttributeAsParsedInteger(
+        "xray-instruction-threshold", std::numeric_limits<uint64_t>::max());
+    if (XRayThreshold == std::numeric_limits<uint64_t>::max())
+      return false;
 
     // Count the number of MachineInstr`s in MachineFunction
-    int64_t MICount = 0;
+    uint64_t MICount = 0;
     for (const auto &MBB : MF)
       MICount += MBB.size();
 

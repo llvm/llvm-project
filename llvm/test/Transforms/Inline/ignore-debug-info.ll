@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -inline -inline-threshold=2 | FileCheck %s
-; RUN: opt < %s -S -strip-debug -inline -inline-threshold=2 | FileCheck %s
+; RUN: opt < %s -S -passes=inline -inline-threshold=2 | FileCheck %s
+; RUN: opt < %s -S -strip-debug -passes=inline -inline-threshold=2 | FileCheck %s
 ; RUN: opt < %s -S -passes='cgscc(inline)' -inline-threshold=2 | FileCheck %s
 ; RUN: opt < %s -S -strip-debug -passes='cgscc(inline)' -inline-threshold=2 | FileCheck %s
 ;

@@ -18,6 +18,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <functional>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::ifs;
@@ -203,7 +204,7 @@ Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   std::unique_ptr<IFSStubTriple> CopyStub(new IFSStubTriple(Stub));
   if (Stub.Target.Arch) {
     CopyStub->Target.ArchString =
-        std::string(ELF::convertEMachineToArchName(Stub.Target.Arch.value()));
+        std::string(ELF::convertEMachineToArchName(*Stub.Target.Arch));
   }
   IFSTarget Target = Stub.Target;
 
@@ -216,41 +217,40 @@ Error ifs::writeIFSToOutputStream(raw_ostream &OS, const IFSStub &Stub) {
   return Error::success();
 }
 
-Error ifs::overrideIFSTarget(IFSStub &Stub, Optional<IFSArch> OverrideArch,
-                             Optional<IFSEndiannessType> OverrideEndianness,
-                             Optional<IFSBitWidthType> OverrideBitWidth,
-                             Optional<std::string> OverrideTriple) {
+Error ifs::overrideIFSTarget(
+    IFSStub &Stub, std::optional<IFSArch> OverrideArch,
+    std::optional<IFSEndiannessType> OverrideEndianness,
+    std::optional<IFSBitWidthType> OverrideBitWidth,
+    std::optional<std::string> OverrideTriple) {
   std::error_code OverrideEC(1, std::generic_category());
   if (OverrideArch) {
-    if (Stub.Target.Arch && Stub.Target.Arch.value() != OverrideArch.value()) {
+    if (Stub.Target.Arch && *Stub.Target.Arch != *OverrideArch) {
       return make_error<StringError>(
           "Supplied Arch conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Arch = OverrideArch.value();
+    Stub.Target.Arch = *OverrideArch;
   }
   if (OverrideEndianness) {
     if (Stub.Target.Endianness &&
-        Stub.Target.Endianness.value() != OverrideEndianness.value()) {
+        *Stub.Target.Endianness != *OverrideEndianness) {
       return make_error<StringError>(
           "Supplied Endianness conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Endianness = OverrideEndianness.value();
+    Stub.Target.Endianness = *OverrideEndianness;
   }
   if (OverrideBitWidth) {
-    if (Stub.Target.BitWidth &&
-        Stub.Target.BitWidth.value() != OverrideBitWidth.value()) {
+    if (Stub.Target.BitWidth && *Stub.Target.BitWidth != *OverrideBitWidth) {
       return make_error<StringError>(
           "Supplied BitWidth conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.BitWidth = OverrideBitWidth.value();
+    Stub.Target.BitWidth = *OverrideBitWidth;
   }
   if (OverrideTriple) {
-    if (Stub.Target.Triple &&
-        Stub.Target.Triple.value() != OverrideTriple.value()) {
+    if (Stub.Target.Triple && *Stub.Target.Triple != *OverrideTriple) {
       return make_error<StringError>(
           "Supplied Triple conflicts with the text stub", OverrideEC);
     }
-    Stub.Target.Triple = OverrideTriple.value();
+    Stub.Target.Triple = *OverrideTriple;
   }
   return Error::success();
 }

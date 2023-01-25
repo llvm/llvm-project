@@ -15,6 +15,8 @@
 #define LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <vector>
@@ -30,6 +32,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class LLVMContext;
+class LoopInfo;
 class PostDominatorTree;
 class StructType;
 class TargetLibraryInfo;
@@ -41,6 +44,7 @@ struct AnalysisResultsForFn {
   std::unique_ptr<PredicateInfo> PredInfo;
   DominatorTree *DT;
   PostDominatorTree *PDT;
+  LoopInfo *LI;
 };
 
 /// Helper struct shared between Function Specialization and SCCP Solver.
@@ -48,7 +52,17 @@ struct ArgInfo {
   Argument *Formal; // The Formal argument being analysed.
   Constant *Actual; // A corresponding actual constant argument.
 
-  ArgInfo(Argument *F, Constant *A) : Formal(F), Actual(A){};
+  ArgInfo(Argument *F, Constant *A) : Formal(F), Actual(A) {}
+
+  bool operator==(const ArgInfo &Other) const {
+    return Formal == Other.Formal && Actual == Other.Actual;
+  }
+
+  bool operator!=(const ArgInfo &Other) const { return !(*this == Other); }
+
+  friend hash_code hash_value(const ArgInfo &A) {
+    return hash_combine(hash_value(A.Formal), hash_value(A.Actual));
+  }
 };
 
 class SCCPInstVisitor;
@@ -76,6 +90,8 @@ public:
   bool markBlockExecutable(BasicBlock *BB);
 
   const PredicateBase *getPredicateInfoFor(Instruction *I);
+
+  const LoopInfo &getLoopInfo(Function &F);
 
   DomTreeUpdater getDTU(Function &F);
 
@@ -111,6 +127,10 @@ public:
   /// method should be use to handle this.  If this returns true, the solver
   /// should be rerun.
   bool resolvedUndefsIn(Function &F);
+
+  void solveWhileResolvedUndefsIn(Module &M);
+
+  void solveWhileResolvedUndefsIn(SmallVectorImpl<Function *> &WorkList);
 
   bool isBlockExecutable(BasicBlock *BB) const;
 
@@ -169,6 +189,24 @@ public:
   void visitCall(CallInst &I);
 };
 
+//===----------------------------------------------------------------------===//
+//
+/// Helper functions used by the SCCP and IPSCCP passes.
+//
+bool isConstant(const ValueLatticeElement &LV);
+
+bool isOverdefined(const ValueLatticeElement &LV);
+
+bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
+                          SmallPtrSetImpl<Value *> &InsertedValues,
+                          Statistic &InstRemovedStat,
+                          Statistic &InstReplacedStat);
+
+bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V);
+
+bool removeNonFeasibleEdges(const llvm::SCCPSolver &Solver, BasicBlock *BB,
+                            DomTreeUpdater &DTU,
+                            BasicBlock *&NewUnreachableBB);
 } // namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_SCCPSOLVER_H

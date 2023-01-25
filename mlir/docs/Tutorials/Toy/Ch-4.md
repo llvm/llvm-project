@@ -73,7 +73,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// given region. For Toy this hook can simply return true, as all Toy
   /// operations are inlinable.
   bool isLegalToInline(Operation *, Region *, bool,
-                       BlockAndValueMapping &) const final {
+                       IRMapping &) const final {
     return true;
   }
 
@@ -81,7 +81,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
   /// region. The regions here are the bodies of the callable functions. For
   /// Toy, any function can be inlined, so we simply return true.
   bool isLegalToInline(Region *dest, Region *src, bool wouldBeCloned,
-                       BlockAndValueMapping &valueMapping) const final {
+                       IRMapping &valueMapping) const final {
     return true;
   }
 
@@ -222,7 +222,7 @@ casts between two different shapes.
 ```tablegen
 def CastOp : Toy_Op<"cast", [
     DeclareOpInterfaceMethods<CastOpInterface>,
-    NoSideEffect,
+    NoMemoryEffect,
     SameOperandsAndResultShape]
   > {
   let summary = "shape cast operation";

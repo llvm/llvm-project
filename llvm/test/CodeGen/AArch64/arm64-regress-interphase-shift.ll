@@ -8,10 +8,10 @@
 ; been reverted (see PR17975).
 ; XFAIL: *
 
-define void @foo(i64* nocapture %d) {
+define void @foo(ptr nocapture %d) {
 ; CHECK-LABEL: foo:
 ; CHECK: rorv
-  %tmp = load i64, i64* undef, align 8
+  %tmp = load i64, ptr undef, align 8
   %sub397 = sub i64 0, %tmp
   %and398 = and i64 %sub397, 4294967295
   %shr404 = lshr i64 %and398, 0
@@ -28,6 +28,6 @@ define void @foo(i64* nocapture %d) {
   %or438 = or i64 %shl434, %shr437
   %xor439 = xor i64 %or438, %xor428
   %sub441 = sub i64 %xor439, 0
-  store i64 %sub441, i64* %d, align 8
+  store i64 %sub441, ptr %d, align 8
   ret void
 }

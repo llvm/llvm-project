@@ -10,6 +10,7 @@
 #include "Config.h"
 #include "HeuristicResolver.h"
 #include "ParsedAST.h"
+#include "SourceCode.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
@@ -17,6 +18,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -141,8 +143,10 @@ void collectDesignators(const InitListExpr *Sem,
       Fields.next();       // Always advance to the next subobject name.
       Prefix.resize(Size); // Erase any designator we appended.
     });
-    if (llvm::isa<ImplicitValueInitExpr>(Init))
-      continue; // a "hole" for a subobject that was not explicitly initialized
+    // Skip for a broken initializer or if it is a "hole" in a subobject that
+    // was not explicitly initialized.
+    if (!Init || llvm::isa<ImplicitValueInitExpr>(Init))
+      continue;
 
     const auto *BraceElidedSubobject = llvm::dyn_cast<InitListExpr>(Init);
     if (BraceElidedSubobject &&
@@ -189,9 +193,9 @@ getDesignators(const InitListExpr *Syn) {
 class InlayHintVisitor : public RecursiveASTVisitor<InlayHintVisitor> {
 public:
   InlayHintVisitor(std::vector<InlayHint> &Results, ParsedAST &AST,
-                   const Config &Cfg, llvm::Optional<Range> RestrictRange)
-      : Results(Results), AST(AST.getASTContext()), Cfg(Cfg),
-        RestrictRange(std::move(RestrictRange)),
+                   const Config &Cfg, std::optional<Range> RestrictRange)
+      : Results(Results), AST(AST.getASTContext()), Tokens(AST.getTokens()),
+        Cfg(Cfg), RestrictRange(std::move(RestrictRange)),
         MainFileID(AST.getSourceManager().getMainFileID()),
         Resolver(AST.getHeuristicResolver()),
         TypeHintPolicy(this->AST.getPrintingPolicy()),
@@ -215,6 +219,13 @@ public:
     StructuredBindingPolicy.PrintCanonicalTypes = true;
   }
 
+  bool VisitTypeLoc(TypeLoc TL) {
+    if (const auto *DT = llvm::dyn_cast<DecltypeType>(TL.getType()))
+      if (QualType UT = DT->getUnderlyingType(); !UT->isDependentType())
+        addTypeHint(TL.getSourceRange(), UT, ": ");
+    return true;
+  }
+
   bool VisitCXXConstructExpr(CXXConstructExpr *E) {
     // Weed out constructor calls that don't look like a function call with
     // an argument list, by checking the validity of getParenOrBraceRange().
@@ -225,8 +236,7 @@ public:
       return true;
     }
 
-    processCall(E->getParenOrBraceRange().getBegin(), E->getConstructor(),
-                {E->getArgs(), E->getNumArgs()});
+    processCall(E->getConstructor(), {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -252,7 +262,7 @@ public:
     if (!Callee)
       return true;
 
-    processCall(E->getRParenLoc(), Callee, {E->getArgs(), E->getNumArgs()});
+    processCall(Callee, {E->getArgs(), E->getNumArgs()});
     return true;
   }
 
@@ -276,11 +286,11 @@ public:
     return true;
   }
 
-  void addReturnTypeHint(FunctionDecl *D, SourceLocation Loc) {
+  void addReturnTypeHint(FunctionDecl *D, SourceRange Range) {
     auto *AT = D->getReturnType()->getContainedAutoType();
     if (!AT || AT->getDeducedType().isNull())
       return;
-    addTypeHint(Loc, D->getReturnType(), /*Prefix=*/"-> ");
+    addTypeHint(Range, D->getReturnType(), /*Prefix=*/"-> ");
   }
 
   bool VisitVarDecl(VarDecl *D) {
@@ -373,19 +383,9 @@ public:
 private:
   using NameVec = SmallVector<StringRef, 8>;
 
-  // The purpose of Anchor is to deal with macros. It should be the call's
-  // opening or closing parenthesis or brace. (Always using the opening would
-  // make more sense but CallExpr only exposes the closing.) We heuristically
-  // assume that if this location does not come from a macro definition, then
-  // the entire argument list likely appears in the main file and can be hinted.
-  void processCall(SourceLocation Anchor, const FunctionDecl *Callee,
+  void processCall(const FunctionDecl *Callee,
                    llvm::ArrayRef<const Expr *> Args) {
     if (!Cfg.InlayHints.Parameters || Args.size() == 0 || !Callee)
-      return;
-
-    // If the anchor location comes from a macro defintion, there's nowhere to
-    // put hints.
-    if (!AST.getSourceManager().getTopMacroCallerLoc(Anchor).isFileID())
       return;
 
     // The parameter name of a move or copy constructor is not very interesting.
@@ -589,9 +589,8 @@ private:
   static const ParmVarDecl *getParamDefinition(const ParmVarDecl *P) {
     if (auto *Callee = dyn_cast<FunctionDecl>(P->getDeclContext())) {
       if (auto *Def = Callee->getDefinition()) {
-        auto I = std::distance(
-            Callee->param_begin(),
-            std::find(Callee->param_begin(), Callee->param_end(), P));
+        auto I = std::distance(Callee->param_begin(),
+                               llvm::find(Callee->parameters(), P));
         if (I < Callee->getNumParams()) {
           return Def->getParamDecl(I);
         }
@@ -635,28 +634,51 @@ private:
 #undef CHECK_KIND
     }
 
-    auto FileRange =
-        toHalfOpenFileRange(AST.getSourceManager(), AST.getLangOpts(), R);
-    if (!FileRange)
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
       return;
-    Range LSPRange{
-        sourceLocToPosition(AST.getSourceManager(), FileRange->getBegin()),
-        sourceLocToPosition(AST.getSourceManager(), FileRange->getEnd())};
-    Position LSPPos = Side == HintSide::Left ? LSPRange.start : LSPRange.end;
+    Position LSPPos = Side == HintSide::Left ? LSPRange->start : LSPRange->end;
     if (RestrictRange &&
         (LSPPos < RestrictRange->start || !(LSPPos < RestrictRange->end)))
-      return;
-    // The hint may be in a file other than the main file (for example, a header
-    // file that was included after the preamble), do not show in that case.
-    if (!AST.getSourceManager().isWrittenInMainFile(FileRange->getBegin()))
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
     Results.push_back(InlayHint{LSPPos, (Prefix + Label + Suffix).str(), Kind,
-                                PadLeft, PadRight, LSPRange});
+                                PadLeft, PadRight, *LSPRange});
+  }
+
+  // Get the range of the main file that *exactly* corresponds to R.
+  std::optional<Range> getHintRange(SourceRange R) {
+    const auto &SM = AST.getSourceManager();
+    auto Spelled = Tokens.spelledForExpanded(Tokens.expandedTokens(R));
+    // TokenBuffer will return null if e.g. R corresponds to only part of a
+    // macro expansion.
+    if (!Spelled || Spelled->empty())
+      return std::nullopt;
+    // Hint must be within the main file, not e.g. a non-preamble include.
+    if (SM.getFileID(Spelled->front().location()) != SM.getMainFileID() ||
+        SM.getFileID(Spelled->back().location()) != SM.getMainFileID())
+      return std::nullopt;
+    return Range{sourceLocToPosition(SM, Spelled->front().location()),
+                 sourceLocToPosition(SM, Spelled->back().endLocation())};
+  }
+
+  static bool shouldPrintCanonicalType(QualType QT) {
+    // The sugared type is more useful in some cases, and the canonical
+    // type in other cases. For now, prefer the sugared type unless
+    // we are printing `decltype(expr)`. This could be refined further
+    // (see https://github.com/clangd/clangd/issues/1298).
+    if (QT->isDecltypeType())
+      return true;
+    if (const AutoType *AT = QT->getContainedAutoType())
+      if (!AT->getDeducedType().isNull() &&
+          AT->getDeducedType()->isDecltypeType())
+        return true;
+    return false;
   }
 
   void addTypeHint(SourceRange R, QualType T, llvm::StringRef Prefix) {
+    TypeHintPolicy.PrintCanonicalTypes = shouldPrintCanonicalType(T);
     addTypeHint(R, T, Prefix, TypeHintPolicy);
   }
 
@@ -678,8 +700,9 @@ private:
 
   std::vector<InlayHint> &Results;
   ASTContext &AST;
+  const syntax::TokenBuffer &Tokens;
   const Config &Cfg;
-  llvm::Optional<Range> RestrictRange;
+  std::optional<Range> RestrictRange;
   FileID MainFileID;
   StringRef MainFileBuf;
   const HeuristicResolver *Resolver;
@@ -698,7 +721,7 @@ private:
 } // namespace
 
 std::vector<InlayHint> inlayHints(ParsedAST &AST,
-                                  llvm::Optional<Range> RestrictRange) {
+                                  std::optional<Range> RestrictRange) {
   std::vector<InlayHint> Results;
   const auto &Cfg = Config::current();
   if (!Cfg.InlayHints.Enabled)

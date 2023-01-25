@@ -14,7 +14,7 @@ entry:
   ret i32 %a
 }
 
-@helper = global i32 ()* null, align 4
+@helper = global ptr null, align 4
 
 define i32 @test_indirect() #0 {
 entry:
@@ -22,7 +22,7 @@ entry:
 ; ARM: mov pc
 ; THUMB-LABEL: test_indirect
 ; THUMB: bx
-  %0 = load i32 ()*, i32 ()** @helper, align 4
+  %0 = load ptr, ptr @helper, align 4
   %call = tail call i32 %0()
   ret i32 %call
 }

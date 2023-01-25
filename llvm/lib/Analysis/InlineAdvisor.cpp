@@ -61,7 +61,9 @@ static cl::opt<bool>
                         cl::desc("If true, annotate inline advisor remarks "
                                  "with LTO and pass information."));
 
+namespace llvm {
 extern cl::opt<InlinerFunctionImportStatsOpts> InlinerFunctionImportStats;
+}
 
 namespace {
 using namespace llvm::ore;
@@ -128,7 +130,7 @@ void DefaultInlineAdvice::recordInliningImpl() {
                                Advisor->getAnnotatedInlinePassName());
 }
 
-llvm::Optional<llvm::InlineCost> static getDefaultInlineAdvice(
+std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
     CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params) {
   Function &Caller = *CB.getCaller();
   ProfileSummaryInfo *PSI =
@@ -194,11 +196,18 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 }
 
 AnalysisKey InlineAdvisorAnalysis::Key;
+AnalysisKey PluginInlineAdvisorAnalysis::Key;
+bool PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(
     InlineParams Params, InliningAdvisorMode Mode,
     const ReplayInlinerSettings &ReplaySettings, InlineContext IC) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  if (PluginInlineAdvisorAnalysis::HasBeenRegistered) {
+    auto &DA = MAM.getResult<PluginInlineAdvisorAnalysis>(M);
+    Advisor.reset(DA.Factory(M, FAM, Params, IC));
+    return !!Advisor;
+  }
   switch (Mode) {
   case InliningAdvisorMode::Default:
     LLVM_DEBUG(dbgs() << "Using default inliner heuristic.\n");
@@ -212,12 +221,12 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
     }
     break;
   case InliningAdvisorMode::Development:
-#ifdef LLVM_HAVE_TF_API
+#ifdef LLVM_HAVE_TFLITE
     LLVM_DEBUG(dbgs() << "Using development-mode inliner policy.\n");
     Advisor =
         llvm::getDevelopmentModeAdvisor(M, MAM, [&FAM, Params](CallBase &CB) {
           auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
-          return OIC.hasValue();
+          return OIC.has_value();
         });
 #endif
     break;
@@ -362,9 +371,9 @@ void llvm::setInlineRemark(CallBase &CB, StringRef Message) {
 
 /// Return the cost only if the inliner should attempt to inline at the given
 /// CallSite. If we return the cost, we will emit an optimisation remark later
-/// using that cost, so we won't do so from this function. Return None if
-/// inlining should not be attempted.
-Optional<InlineCost>
+/// using that cost, so we won't do so from this function. Return std::nullopt
+/// if inlining should not be attempted.
+std::optional<InlineCost>
 llvm::shouldInline(CallBase &CB,
                    function_ref<InlineCost(CallBase &CB)> GetInlineCost,
                    OptimizationRemarkEmitter &ORE, bool EnableDeferral) {
@@ -400,7 +409,7 @@ llvm::shouldInline(CallBase &CB,
       });
     }
     setInlineRemark(CB, inlineCostStr(IC));
-    return None;
+    return std::nullopt;
   }
 
   int TotalSecondaryCost = 0;
@@ -417,7 +426,7 @@ llvm::shouldInline(CallBase &CB,
              << "' in other contexts";
     });
     setInlineRemark(CB, "deferred");
-    return None;
+    return std::nullopt;
   }
 
   LLVM_DEBUG(dbgs() << "    Inlining " << inlineCostStr(IC) << ", Call: " << CB
@@ -512,7 +521,7 @@ void llvm::emitInlinedIntoBasedOnCost(
 }
 
 InlineAdvisor::InlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
-                             Optional<InlineContext> IC)
+                             std::optional<InlineContext> IC)
     : M(M), FAM(FAM), IC(IC),
       AnnotatedInlinePassName((IC && AnnotateInlinePhase)
                                   ? llvm::AnnotateInlinePassName(*IC)

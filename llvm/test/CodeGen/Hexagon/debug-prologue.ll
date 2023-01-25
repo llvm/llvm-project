@@ -11,29 +11,29 @@ b0:
   %v0 = alloca i32, align 4
   %v1 = alloca i32, align 4
   %v2 = alloca i32, align 4
-  store i32 %a0, i32* %v1, align 4
-  call void @llvm.dbg.declare(metadata i32* %v1, metadata !9, metadata !DIExpression()), !dbg !10
-  call void @llvm.dbg.declare(metadata i32* %v2, metadata !11, metadata !DIExpression()), !dbg !12
-  %v3 = load i32, i32* %v1, align 4, !dbg !13
+  store i32 %a0, ptr %v1, align 4
+  call void @llvm.dbg.declare(metadata ptr %v1, metadata !9, metadata !DIExpression()), !dbg !10
+  call void @llvm.dbg.declare(metadata ptr %v2, metadata !11, metadata !DIExpression()), !dbg !12
+  %v3 = load i32, ptr %v1, align 4, !dbg !13
   %v4 = icmp sgt i32 %v3, 1, !dbg !15
   br i1 %v4, label %b1, label %b2, !dbg !16
 
 b1:                                               ; preds = %b0
-  %v5 = load i32, i32* %v1, align 4, !dbg !17
-  %v6 = load i32, i32* %v1, align 4, !dbg !18
+  %v5 = load i32, ptr %v1, align 4, !dbg !17
+  %v6 = load i32, ptr %v1, align 4, !dbg !18
   %v7 = sub nsw i32 %v6, 1, !dbg !19
   %v8 = call i32 @f0(i32 %v7), !dbg !20
   %v9 = mul nsw i32 %v5, %v8, !dbg !21
-  store i32 %v9, i32* %v0, align 4, !dbg !22
+  store i32 %v9, ptr %v0, align 4, !dbg !22
   br label %b3, !dbg !22
 
 b2:                                               ; preds = %b0
-  %v10 = load i32, i32* %v1, align 4, !dbg !23
-  store i32 %v10, i32* %v0, align 4, !dbg !24
+  %v10 = load i32, ptr %v1, align 4, !dbg !23
+  store i32 %v10, ptr %v0, align 4, !dbg !24
   br label %b3, !dbg !24
 
 b3:                                               ; preds = %b2, %b1
-  %v11 = load i32, i32* %v0, align 4, !dbg !25
+  %v11 = load i32, ptr %v0, align 4, !dbg !25
   ret i32 %v11, !dbg !25
 }
 

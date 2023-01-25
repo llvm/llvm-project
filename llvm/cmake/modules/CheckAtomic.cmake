@@ -82,6 +82,19 @@ elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CMAKE_CXX_COMPILER_ID MATCHES "XL")
   endif()
 endif()
 
+# Set variable LLVM_ATOMIC_LIB specifying flags for linking against libatomic.
+if(HAVE_CXX_ATOMICS_WITH_LIB OR HAVE_CXX_ATOMICS64_WITH_LIB)
+  # Use options --push-state, --as-needed and --pop-state if linker is known to support them.
+  # Use single option -Wl of compiler driver to avoid incorrect re-ordering of options by CMake.
+  if(LLVM_LINKER_IS_GNULD OR LLVM_LINKER_IS_GOLD OR LLVM_LINKER_IS_LLD OR LLVM_LINKER_IS_MOLD)
+    set(LLVM_ATOMIC_LIB "-Wl,--push-state,--as-needed,-latomic,--pop-state")
+  else()
+    set(LLVM_ATOMIC_LIB "-latomic")
+  endif()
+else()
+  set(LLVM_ATOMIC_LIB)
+endif()
+
 ## TODO: This define is only used for the legacy atomic operations in
 ## llvm's Atomic.h, which should be replaced.  Other code simply
 ## assumes C++11 <atomic> works.

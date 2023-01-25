@@ -83,11 +83,11 @@ if.end:                                           ; preds = %while.body.split, %
   br i1 %exitcond.not, label %while.end, label %while.body, !dbg !16, !llvm.loop !24
 
 while.end:                                        ; preds = %if.end
-  %call3 = tail call i32 (i8*, ...) @printf(i8* dereferenceable(1) getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i64 0, i64 0), i32 %phi.call), !dbg !27
+  %call3 = tail call i32 (ptr, ...) @printf(ptr dereferenceable(1) @.str, i32 %phi.call), !dbg !27
   ret i32 0, !dbg !28
 }
 
-declare i32 @printf(i8* nocapture noundef readonly, ...)
+declare i32 @printf(ptr nocapture noundef readonly, ...)
 
 attributes #0 = {"use-sample-profile"}
 

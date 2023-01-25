@@ -14,6 +14,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include <optional>
 using namespace clang;
 
 void LoopHintAttr::printPrettyPragma(raw_ostream &OS,
@@ -137,7 +138,7 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
   // Use fake syntax because it is for testing and debugging purpose only.
   if (getDevType() != DT_Any)
     OS << " device_type(" << ConvertDevTypeTyToStr(getDevType()) << ")";
-  if (getMapType() != MT_To)
+  if (getMapType() != MT_To && getMapType() != MT_Enter)
     OS << ' ' << ConvertMapTypeTyToStr(getMapType());
   if (Expr *E = getIndirectExpr()) {
     OS << " indirect(";
@@ -148,10 +149,10 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
   }
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr *>
+std::optional<OMPDeclareTargetDeclAttr *>
 OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   if (!VD->hasAttrs())
-    return llvm::None;
+    return std::nullopt;
   unsigned Level = 0;
   OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
   for (auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
@@ -162,31 +163,31 @@ OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
   }
   if (FoundAttr)
     return FoundAttr;
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::MapTypeTy>
 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
-    return ActiveAttr.value()->getMapType();
-  return llvm::None;
+    return (*ActiveAttr)->getMapType();
+  return std::nullopt;
 }
 
-llvm::Optional<OMPDeclareTargetDeclAttr::DevTypeTy>
+std::optional<OMPDeclareTargetDeclAttr::DevTypeTy>
 OMPDeclareTargetDeclAttr::getDeviceType(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
-    return ActiveAttr.value()->getDevType();
-  return llvm::None;
+    return (*ActiveAttr)->getDevType();
+  return std::nullopt;
 }
 
-llvm::Optional<SourceLocation>
+std::optional<SourceLocation>
 OMPDeclareTargetDeclAttr::getLocation(const ValueDecl *VD) {
-  llvm::Optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr = getActiveAttr(VD);
   if (ActiveAttr)
-    return ActiveAttr.value()->getRange().getBegin();
-  return llvm::None;
+    return (*ActiveAttr)->getRange().getBegin();
+  return std::nullopt;
 }
 
 namespace clang {
@@ -222,18 +223,18 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ")";
   }
 
-  auto PrintInteropTypes = [&OS](InteropType *Begin, InteropType *End) {
-    for (InteropType *I = Begin; I != End; ++I) {
+  auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
+    for (OMPInteropInfo *I = Begin; I != End; ++I) {
       if (I != Begin)
         OS << ", ";
       OS << "interop(";
-      OS << ConvertInteropTypeToStr(*I);
+      OS << getInteropTypeString(I);
       OS << ")";
     }
   };
   if (appendArgs_size()) {
     OS << " append_args(";
-    PrintInteropTypes(appendArgs_begin(), appendArgs_end());
+    PrintInteropInfo(appendArgs_begin(), appendArgs_end());
     OS << ")";
   }
 }

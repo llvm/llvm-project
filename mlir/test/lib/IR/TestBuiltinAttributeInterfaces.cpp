@@ -9,6 +9,7 @@
 #include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -19,10 +20,6 @@ using namespace test;
 template <typename T>
 static void printOneElement(InFlightDiagnostic &os, T value) {
   os << llvm::formatv("{0}", value).str();
-}
-template <>
-void printOneElement<int8_t>(InFlightDiagnostic &os, int8_t value) {
-  os << llvm::formatv("{0}", static_cast<int64_t>(value)).str();
 }
 
 namespace {
@@ -40,30 +37,6 @@ struct TestElementsAttrInterface
         auto elementsAttr = attr.getValue().dyn_cast<ElementsAttr>();
         if (!elementsAttr)
           continue;
-        if (auto concreteAttr =
-                attr.getValue().dyn_cast<DenseArrayBaseAttr>()) {
-          switch (concreteAttr.getElementType()) {
-          case DenseArrayBaseAttr::EltType::I8:
-            testElementsAttrIteration<int8_t>(op, elementsAttr, "int8_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I16:
-            testElementsAttrIteration<int16_t>(op, elementsAttr, "int16_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I32:
-            testElementsAttrIteration<int32_t>(op, elementsAttr, "int32_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I64:
-            testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");
-            break;
-          case DenseArrayBaseAttr::EltType::F32:
-            testElementsAttrIteration<float>(op, elementsAttr, "float");
-            break;
-          case DenseArrayBaseAttr::EltType::F64:
-            testElementsAttrIteration<double>(op, elementsAttr, "double");
-            break;
-          }
-          continue;
-        }
         testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");
         testElementsAttrIteration<uint64_t>(op, elementsAttr, "uint64_t");
         testElementsAttrIteration<APInt>(op, elementsAttr, "APInt");

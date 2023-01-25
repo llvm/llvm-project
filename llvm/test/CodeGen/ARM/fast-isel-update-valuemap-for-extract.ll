@@ -11,14 +11,13 @@ target triple = "thumbv7-apple-ios8.0.0"
 
 %struct.node = type opaque
 
-declare void @foo([4 x i32], %struct.node*)
+declare void @foo([4 x i32], ptr)
 
-define void @test([4 x i32] %xpic.coerce, %struct.node* %t) {
+define void @test([4 x i32] %xpic.coerce, ptr %t) {
 bb:
   %tmp29 = extractvalue [4 x i32] %xpic.coerce, 0
-  %tmp40 = bitcast %struct.node* %t to [8 x %struct.node*]*
-  %tmp41 = getelementptr inbounds [8 x %struct.node*], [8 x %struct.node*]* %tmp40, i32 0, i32 %tmp29
-  %tmp42 = load %struct.node*, %struct.node** %tmp41, align 4
-  call void @foo([4 x i32] %xpic.coerce, %struct.node* %tmp42)
+  %tmp41 = getelementptr inbounds [8 x ptr], ptr %t, i32 0, i32 %tmp29
+  %tmp42 = load ptr, ptr %tmp41, align 4
+  call void @foo([4 x i32] %xpic.coerce, ptr %tmp42)
   ret void
 }

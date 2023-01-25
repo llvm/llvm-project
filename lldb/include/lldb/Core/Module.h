@@ -29,6 +29,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
@@ -37,6 +38,7 @@
 #include <cstdint>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -85,6 +87,7 @@ struct ModuleFunctionSearchOptions {
 class Module : public std::enable_shared_from_this<Module>,
                public SymbolContextScope {
 public:
+  class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
   // handy because we might have Module objects that are in shared pointers
   // that aren't in the global module list (from ModuleList). If this is the
@@ -261,9 +264,10 @@ public:
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list);
 
-  void FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
-                                       lldb::SymbolType symbol_type,
-                                       SymbolContextList &sc_list);
+  void FindSymbolsMatchingRegExAndType(
+      const RegularExpression &regex, lldb::SymbolType symbol_type,
+      SymbolContextList &sc_list,
+      Mangled::NamePreference mangling_preference = Mangled::ePreferDemangled);
 
   /// Find a function symbols in the object file's symbol table.
   ///
@@ -292,6 +296,23 @@ public:
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
+
+  /// Find functions by lookup info.
+  ///
+  /// If the function is an inlined function, it will have a block,
+  /// representing the inlined function, and the function will be the
+  /// containing function.  If it is not inlined, then the block will be NULL.
+  ///
+  /// \param[in] lookup_info
+  ///     The lookup info of the function we are looking for.
+  ///
+  /// \param[out] sc_list
+  ///     A symbol context list that gets filled in with all of the
+  ///     matches.
+  void FindFunctions(const LookupInfo &lookup_info,
+                     const CompilerDeclContext &parent_decl_ctx,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find functions by name.
   ///
@@ -792,36 +813,53 @@ public:
 
   bool GetIsDynamicLinkEditor();
 
-  llvm::Expected<TypeSystem &>
+  llvm::Expected<lldb::TypeSystemSP>
   GetTypeSystemForLanguage(lldb::LanguageType language);
+
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
+  void ForEachTypeSystem(llvm::function_ref<bool(lldb::TypeSystemSP)> callback);
 
   // Special error functions that can do printf style formatting that will
   // prepend the message with something appropriate for this module (like the
   // architecture, path and object name (if any)). This centralizes code so
   // that everyone doesn't need to format their error and log messages on their
   // own and keeps the output a bit more consistent.
-  void LogMessage(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+  template <typename... Args>
+  void LogMessage(Log *log, const char *format, Args &&...args) {
+    LogMessage(log, llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void LogMessageVerboseBacktrace(Log *log, const char *format, ...)
-      __attribute__((format(printf, 3, 4)));
+  template <typename... Args>
+  void LogMessageVerboseBacktrace(Log *log, const char *format,
+                                  Args &&...args) {
+    LogMessageVerboseBacktrace(
+        log, llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void ReportWarning(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportWarning(const char *format, Args &&...args) {
+    ReportWarning(llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void ReportError(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportError(const char *format, Args &&...args) {
+    ReportError(llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
   // Only report an error once when the module is first detected to be modified
   // so we don't spam the console with many messages.
-  void ReportErrorIfModifyDetected(const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
+  template <typename... Args>
+  void ReportErrorIfModifyDetected(const char *format, Args &&...args) {
+    ReportErrorIfModifyDetected(
+        llvm::formatv(format, std::forward<Args>(args)...));
+  }
 
-  void ReportWarningOptimization(llvm::Optional<lldb::user_id_t> debugger_id);
+  void ReportWarningOptimization(std::optional<lldb::user_id_t> debugger_id);
 
   void
   ReportWarningUnsupportedLanguage(lldb::LanguageType language,
-                                   llvm::Optional<lldb::user_id_t> debugger_id);
+                                   std::optional<lldb::user_id_t> debugger_id);
 
   // Return true if the file backing this module has changed since the module
   // was originally created  since we saved the initial file modification time
@@ -870,7 +908,7 @@ public:
   /// \return
   ///     The newly remapped filespec that is may or may not exist if
   ///     \a path was successfully located.
-  llvm::Optional<std::string> RemapSourceFile(llvm::StringRef path) const;
+  std::optional<std::string> RemapSourceFile(llvm::StringRef path) const;
   bool RemapSourceFile(const char *, std::string &) const = delete;
 
   /// Update the ArchSpec to a more specific variant.
@@ -929,6 +967,12 @@ public:
     void SetNameTypeMask(lldb::FunctionNameType mask) {
       m_name_type_mask = mask;
     }
+
+    lldb::LanguageType GetLanguageType() const { return m_language; }
+
+    bool NameMatchesLookupInfo(
+        ConstString function_name,
+        lldb::LanguageType language_type = lldb::eLanguageTypeUnknown) const;
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
@@ -1023,9 +1067,9 @@ protected:
   lldb::ObjectFileSP m_objfile_sp; ///< A shared pointer to the object file
                                    /// parser for this module as it may or may
                                    /// not be shared with the SymbolFile
-  llvm::Optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
-                                              /// objects created for this
-                                              /// Module's functions
+  std::optional<UnwindTable> m_unwind_table; ///< Table of FuncUnwinders
+                                             /// objects created for this
+                                             /// Module's functions
   lldb::SymbolVendorUP
       m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
@@ -1124,6 +1168,13 @@ private:
 
   Module(const Module &) = delete;
   const Module &operator=(const Module &) = delete;
+
+  void LogMessage(Log *log, const llvm::formatv_object_base &payload);
+  void LogMessageVerboseBacktrace(Log *log,
+                                  const llvm::formatv_object_base &payload);
+  void ReportWarning(const llvm::formatv_object_base &payload);
+  void ReportError(const llvm::formatv_object_base &payload);
+  void ReportErrorIfModifyDetected(const llvm::formatv_object_base &payload);
 };
 
 } // namespace lldb_private

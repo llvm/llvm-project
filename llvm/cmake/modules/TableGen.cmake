@@ -2,6 +2,7 @@
 # while LLVM_TARGET_DEPENDS may contain additional file dependencies.
 # Extra parameters for `tblgen' may come after `ofn' parameter.
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
+include(LLVMDistributionSupport)
 
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
@@ -140,6 +141,8 @@ function(add_public_tablegen_target target)
 endfunction()
 
 macro(add_tablegen target project)
+  cmake_parse_arguments(ADD_TABLEGEN "" "DESTINATION;EXPORT" "" ${ARGN})
+
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
@@ -149,10 +152,17 @@ macro(add_tablegen target project)
     set(LLVM_ENABLE_OBJLIB ON)
   endif()
 
-  add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
+  add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
+    ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
-  set(${project}_TABLEGEN "${target}" CACHE
+  set(${project}_TABLEGEN_DEFAULT "${target}")
+  if (LLVM_NATIVE_TOOL_DIR)
+    if (EXISTS "${LLVM_NATIVE_TOOL_DIR}/${target}${LLVM_HOST_EXECUTABLE_SUFFIX}")
+      set(${project}_TABLEGEN_DEFAULT "${LLVM_NATIVE_TOOL_DIR}/${target}${LLVM_HOST_EXECUTABLE_SUFFIX}")
+    endif()
+  endif()
+  set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
 
   # Effective tblgen executable to be used:
@@ -186,22 +196,24 @@ macro(add_tablegen target project)
     endif()
   endif()
 
-  if ((${project} STREQUAL LLVM OR ${project} STREQUAL MLIR) AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
-    set(export_to_llvmexports)
-    if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
-        NOT LLVM_DISTRIBUTION_COMPONENTS)
-      set(export_to_llvmexports EXPORT LLVMExports)
+  if (ADD_TABLEGEN_DESTINATION AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND
+      (LLVM_BUILD_UTILS OR ${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS))
+    set(export_arg)
+    if(ADD_TABLEGEN_EXPORT)
+      get_target_export_arg(${target} ${ADD_TABLEGEN_EXPORT} export_arg)
     endif()
-
     install(TARGETS ${target}
-            ${export_to_llvmexports}
+            ${export_arg}
             COMPONENT ${target}
-            RUNTIME DESTINATION "${${project}_TOOLS_INSTALL_DIR}")
+            RUNTIME DESTINATION "${ADD_TABLEGEN_DESTINATION}")
     if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets("install-${target}"
                                DEPENDS ${target}
                                COMPONENT ${target})
     endif()
   endif()
-  set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${target})
+  if(ADD_TABLEGEN_EXPORT)
+    string(TOUPPER ${ADD_TABLEGEN_EXPORT} export_upper)
+    set_property(GLOBAL APPEND PROPERTY ${export_upper}_EXPORTS ${target})
+  endif()
 endmacro()

@@ -42,8 +42,8 @@ s_mov_b64 s[2:3], s[4:5]
 
 s_mov_b64 null, s[4:5]
 // GFX10: s_mov_b64 null, s[4:5] ; encoding: [0x04,0x04,0xfd,0xbe]
-// NOSICIVI: error: 'null' operand is not supported on this GPU
-// NOGFX9: error: 'null' operand is not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: 'null' operand is not supported on this GPU
+// NOGFX9: :[[@LINE-3]]:{{[0-9]+}}: error: 'null' operand is not supported on this GPU
 
 s_mov_b64 s[2:3], 0xffffffffffffffff
 // SICI: s_mov_b64 s[2:3], -1 ; encoding: [0xc1,0x04,0x82,0xbe]
@@ -62,7 +62,7 @@ s_mov_b64 s[0:1], 0x80000000
 
 s_mov_b64 s[102:103], -1
 // SICI: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
-// NOGFX89: error: register not available on this GPU
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: register not available on this GPU
 // GFX10: s_mov_b64 s[102:103], -1 ; encoding: [0xc1,0x04,0xe6,0xbe]
 
 s_cmov_b32 s1, 200
@@ -301,17 +301,17 @@ s_movreld_b64 s[2:3], s[4:5]
 s_cbranch_join s4
 // SICI: s_cbranch_join s4 ; encoding: [0x04,0x32,0x80,0xbe]
 // GFX89: s_cbranch_join s4 ; encoding: [0x04,0x2e,0x80,0xbe]
-// GFX10-ERR: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cbranch_join 1
-// NOSICI: error: invalid operand for instruction
-// NOGFX89: error: invalid operand for instruction
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_cbranch_join 100
-// NOSICI: error: invalid operand for instruction
-// NOGFX89: error: invalid operand for instruction
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX89: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_abs_i32 s1, s2
 // SICI: s_abs_i32 s1, s2 ; encoding: [0x02,0x34,0x81,0xbe]
@@ -320,55 +320,55 @@ s_abs_i32 s1, s2
 
 s_set_gpr_idx_idx s0
 // GFX89: s_set_gpr_idx_idx s0 ; encoding: [0x00,0x32,0x80,0xbe]
-// NOSICI: error: instruction not supported on this GPU
-// GFX10-ERR: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+// GFX10-ERR: :[[@LINE-3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
 s_andn1_saveexec_b64 s[100:101], s[2:3]
 // GFX9:     s_andn1_saveexec_b64 s[100:101], s[2:3] ; encoding: [0x02,0x33,0xe4,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn1_saveexec_b64 s[100:101], s[2:3] ; encoding: [0x02,0x37,0xe4,0xbe]
 
 s_andn1_saveexec_b64 s[10:11], s[4:5]
 // GFX9:     s_andn1_saveexec_b64 s[10:11], s[4:5] ; encoding: [0x04,0x33,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn1_saveexec_b64 s[10:11], s[4:5] ; encoding: [0x04,0x37,0x8a,0xbe]
 
 s_andn1_saveexec_b64 s[10:11], -1
 // GFX9:     s_andn1_saveexec_b64 s[10:11], -1 ; encoding: [0xc1,0x33,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn1_saveexec_b64 s[10:11], -1 ; encoding: [0xc1,0x37,0x8a,0xbe]
 
 s_andn1_saveexec_b64 s[10:11], 0xaf123456
 // GFX9:     s_andn1_saveexec_b64 s[10:11], 0xaf123456 ; encoding: [0xff,0x33,0x8a,0xbe,0x56,0x34,0x12,0xaf]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn1_saveexec_b64 s[10:11], 0xaf123456 ; encoding: [0xff,0x37,0x8a,0xbe,0x56,0x34,0x12,0xaf]
 
 s_andn1_wrexec_b64 s[10:11], s[2:3]
 // GFX9:     s_andn1_wrexec_b64 s[10:11], s[2:3] ; encoding: [0x02,0x35,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn1_wrexec_b64 s[10:11], s[2:3] ; encoding: [0x02,0x39,0x8a,0xbe]
 
 s_andn2_wrexec_b64 s[12:13], s[2:3]
 // GFX9:     s_andn2_wrexec_b64 s[12:13], s[2:3] ; encoding: [0x02,0x36,0x8c,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_andn2_wrexec_b64 s[12:13], s[2:3] ; encoding: [0x02,0x3a,0x8c,0xbe]
 
 s_orn1_saveexec_b64 s[10:11], 0
 // GFX9:     s_orn1_saveexec_b64 s[10:11], 0 ; encoding: [0x80,0x34,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_orn1_saveexec_b64 s[10:11], 0 ; encoding: [0x80,0x38,0x8a,0xbe]
 
 s_bitreplicate_b64_b32 s[10:11], s101
 // GFX9:     s_bitreplicate_b64_b32 s[10:11], s101 ; encoding: [0x65,0x37,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_bitreplicate_b64_b32 s[10:11], s101 ; encoding: [0x65,0x3b,0x8a,0xbe]
 
 s_bitreplicate_b64_b32 s[10:11], -1
 // GFX9:     s_bitreplicate_b64_b32 s[10:11], -1 ; encoding: [0xc1,0x37,0x8a,0xbe]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_bitreplicate_b64_b32 s[10:11], -1 ; encoding: [0xc1,0x3b,0x8a,0xbe]
 
 s_bitreplicate_b64_b32 s[10:11], 0x3f717273
 // GFX9:     s_bitreplicate_b64_b32 s[10:11], 0x3f717273 ; encoding: [0xff,0x37,0x8a,0xbe,0x73,0x72,0x71,0x3f]
-// NOSICIVI: error: instruction not supported on this GPU
+// NOSICIVI: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: s_bitreplicate_b64_b32 s[10:11], 0x3f717273 ; encoding: [0xff,0x3b,0x8a,0xbe,0x73,0x72,0x71,0x3f]

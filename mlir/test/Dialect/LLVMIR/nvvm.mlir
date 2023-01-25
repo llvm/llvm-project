@@ -78,6 +78,13 @@ func.func @nvvm_vote(%arg0 : i32, %arg1 : i1) -> i32 {
   llvm.return %0 : i32
 }
 
+// CHECK-LABEL: @llvm_nvvm_bar_warp_sync
+func.func @llvm_nvvm_bar_warp_sync(%mask : i32) {
+  // CHECK: nvvm.bar.warp.sync %{{.*}}
+  nvvm.bar.warp.sync %mask : i32
+  llvm.return
+}
+
 // CHECK-LABEL: @nvvm_mma_m8n8k4_row_col_f32_f32
 func.func @nvvm_mma_m8n8k4_row_col_f32_f32(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                %b0 : vector<2xf16>, %b1 : vector<2xf16>,
@@ -303,6 +310,29 @@ llvm.func @ld_matrix(%arg0: !llvm.ptr<i32, 3>) {
   %l4 = nvvm.ldmatrix %arg0 {num = 4 : i32, layout = #nvvm.mma_layout<row>} : (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
   llvm.return
 }
+
+// CHECK-LABEL: llvm.func @redux_sync
+llvm.func @redux_sync(%value : i32, %offset : i32) -> i32 {  
+  // CHECK: nvvm.redux.sync  add %{{.*}}
+  %r1 = nvvm.redux.sync add %value, %offset : i32 -> i32
+  // CHECK: nvvm.redux.sync  max %{{.*}}
+  %r2 = nvvm.redux.sync max %value, %offset : i32 -> i32
+  // CHECK: nvvm.redux.sync  min %{{.*}}
+  %r3 = nvvm.redux.sync min %value, %offset : i32 -> i32
+  // CHECK: nvvm.redux.sync  umax %{{.*}}
+  %r5 = nvvm.redux.sync umax %value, %offset : i32 -> i32
+  // CHECK: nvvm.redux.sync  umin %{{.*}}
+  %r6 = nvvm.redux.sync umin %value, %offset : i32 -> i32
+  // CHECK: nvvm.redux.sync  and %{{.*}}
+  %r7 = nvvm.redux.sync and %value, %offset : i32 -> i32  
+  // CHECK: nvvm.redux.sync  or %{{.*}}
+  %r8 = nvvm.redux.sync or %value, %offset : i32 -> i32  
+  // CHECK: nvvm.redux.sync  xor %{{.*}}
+  %r9 = nvvm.redux.sync xor %value, %offset : i32 -> i32
+  llvm.return %r1 : i32
+}
+
+
 // -----
 
 // expected-error@below {{attribute attached to unexpected op}}

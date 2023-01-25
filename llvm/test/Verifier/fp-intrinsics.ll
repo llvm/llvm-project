@@ -1,8 +1,8 @@
-; RUN: opt -verify -S < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
-; RUN: sed -e s/.T2:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
-; RUN: sed -e s/.T3:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
-; RUN: sed -e s/.T4:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
-; RUN: sed -e s/.T5:// %s | not opt -verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
+; RUN: opt -passes=verify -S < %s 2>&1 | FileCheck --check-prefix=CHECK1 %s
+; RUN: sed -e s/.T2:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK2 %s
+; RUN: sed -e s/.T3:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK3 %s
+; RUN: sed -e s/.T4:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK4 %s
+; RUN: sed -e s/.T5:// %s | not opt -passes=verify -disable-output 2>&1 | FileCheck --check-prefix=CHECK5 %s
 
 ; Common declarations used for all runs.
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
@@ -12,7 +12,7 @@ declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadat
 ; attached to the FP intrinsic.
 ; CHECK1: declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata) #[[ATTR:[0-9]+]]
 ; CHECK1: declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata) #[[ATTR]]
-; CHECK1: attributes #[[ATTR]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
+; CHECK1: attributes #[[ATTR]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; Note: FP exceptions aren't usually caught through normal unwind mechanisms,
 ;       but we may want to revisit this for asynchronous exception handling.
 define double @f1(double %a, double %b) #0 {

@@ -4,16 +4,22 @@ modernize-use-emplace
 =====================
 
 The check flags insertions to an STL-style container done by calling the
-``push_back`` method with an explicitly-constructed temporary of the container
-element type. In this case, the corresponding ``emplace_back`` method
-results in less verbose and potentially more efficient code.
-Right now the check doesn't support ``push_front`` and ``insert``.
-It also doesn't support ``insert`` functions for associative containers
-because replacing ``insert`` with ``emplace`` may result in
+``push_back``, ``push``, or ``push_front`` methods with an
+explicitly-constructed temporary of the container element type. In this case,
+the corresponding ``emplace`` equivalent methods result in less verbose and
+potentially more efficient code.  Right now the check doesn't support
+``insert``. It also doesn't support ``insert`` functions for associative
+containers because replacing ``insert`` with ``emplace`` may result in
 `speed regression <https://htmlpreview.github.io/?https://github.com/HowardHinnant/papers/blob/master/insert_vs_emplace.html>`_, but it might get support with some addition flag in the future.
 
-By default only ``std::vector``, ``std::deque``, ``std::list`` are considered.
-This list can be modified using the :option:`ContainersWithPushBack` option.
+The :option:`ContainersWithPushBack`, :option:`ContainersWithPush`, and
+:option:`ContainersWithPushFront` options are used to specify the container
+types that support the ``push_back``, ``push``, and ``push_front`` operations
+respectively. The default values for these options are as follows:
+
+* :option:`ContainersWithPushBack`: ``std::vector``, ``std::deque``, and ``std::list``.
+* :option:`ContainersWithPush`: ``std::stack``, ``std::queue``, and ``std::priority_queue``.
+* :option:`ContainersWithPushFront`: ``std::forward_list``, ``std::list``, and ``std::deque``.
 
 This check also reports when an ``emplace``-like method is improperly used,
 for example using ``emplace_back`` while also calling a constructor. This
@@ -115,6 +121,16 @@ Options
 
    Semicolon-separated list of class names of custom containers that support
    ``push_back``.
+
+.. option:: ContainersWithPush
+
+   Semicolon-separated list of class names of custom containers that support
+   ``push``.
+
+.. option:: ContainersWithPushFront
+
+   Semicolon-separated list of class names of custom containers that support
+   ``push_front``.
 
 .. option:: IgnoreImplicitConstructors
 

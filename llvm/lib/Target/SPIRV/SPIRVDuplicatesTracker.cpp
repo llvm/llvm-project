@@ -39,6 +39,7 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
   prebuildReg2Entry(GT, Reg2Entry);
   prebuildReg2Entry(FT, Reg2Entry);
   prebuildReg2Entry(AT, Reg2Entry);
+  prebuildReg2Entry(ST, Reg2Entry);
 
   for (auto &Op2E : Reg2Entry) {
     SPIRV::DTSortableEntry *E = Op2E.second;
@@ -70,6 +71,7 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
     }
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (MMI) {
     const Module *M = MMI->getModule();
     for (auto F = M->begin(), E = M->end(); F != E; ++F) {
@@ -92,4 +94,5 @@ void SPIRVGeneralDuplicatesTracker::buildDepsGraph(
       }
     }
   }
+#endif
 }

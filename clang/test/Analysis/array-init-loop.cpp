@@ -223,3 +223,110 @@ void move_ctor_init_non_pod() {
   clang_analyzer_eval(moved.arr[2].i == 5); // expected-warning{{TRUE}}
   clang_analyzer_eval(moved.arr[3].i == 6); // expected-warning{{TRUE}}
 }
+
+//Note: This is the only solution I could find to check the values without 
+// crashing clang. For more details on the crash see Issue #57135.
+void lambda_capture_multi_array() {
+  S3 arr[2][2] = {1,2,3,4};
+
+  {
+    int x = [arr] { return arr[0][0].i; }();
+    clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+  }
+
+  {
+    int x = [arr] { return arr[0][1].i; }();
+    clang_analyzer_eval(x == 2); // expected-warning{{TRUE}}
+  }
+
+  {
+    int x = [arr] { return arr[1][0].i; }();
+    clang_analyzer_eval(x == 3); // expected-warning{{TRUE}}
+  }
+
+  {
+    int x = [arr] { return arr[1][1].i; }();
+    clang_analyzer_eval(x == 4); // expected-warning{{TRUE}}
+  }
+}
+
+// This struct will force constructor inlining in MultiWrapper.
+struct UserDefinedCtor {
+  int i;
+  UserDefinedCtor() {}
+  UserDefinedCtor(const UserDefinedCtor &copy) {
+    int j = 1;
+    i = copy.i;
+  }
+};
+
+struct MultiWrapper {
+  UserDefinedCtor arr[2][2];
+};
+
+void copy_ctor_multi() {
+  MultiWrapper MW;
+
+  MW.arr[0][0].i = 0;
+  MW.arr[0][1].i = 1;
+  MW.arr[1][0].i = 2;
+  MW.arr[1][1].i = 3;
+
+  MultiWrapper MWCopy = MW;
+  
+  clang_analyzer_eval(MWCopy.arr[0][0].i == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWCopy.arr[0][1].i == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWCopy.arr[1][0].i == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWCopy.arr[1][1].i == 3); // expected-warning{{TRUE}}
+} 
+
+void move_ctor_multi() {
+  MultiWrapper MW;
+
+  MW.arr[0][0].i = 0;
+  MW.arr[0][1].i = 1;
+  MW.arr[1][0].i = 2;
+  MW.arr[1][1].i = 3;
+
+  MultiWrapper MWMove = (MultiWrapper &&) MW;
+  
+  clang_analyzer_eval(MWMove.arr[0][0].i == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWMove.arr[0][1].i == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWMove.arr[1][0].i == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(MWMove.arr[1][1].i == 3); // expected-warning{{TRUE}}
+} 
+
+void structured_binding_multi() {
+  S3 arr[2][2] = {1,2,3,4};
+
+  auto [a,b] = arr;
+
+  clang_analyzer_eval(a[0].i == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(a[1].i == 2); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b[0].i == 3); // expected-warning{{TRUE}}
+  clang_analyzer_eval(b[1].i == 4); // expected-warning{{TRUE}}
+}
+
+// This snippet used to crash
+namespace crash {
+
+struct S
+{
+  int x;
+  S() { x = 1; }
+};
+
+void no_crash() {
+  S arr[0];
+  int n = 1;
+
+  auto l = [arr, n] { return n; };
+
+  int x = l();
+  clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+
+  // FIXME: This should be 'Undefined'.
+  clang_analyzer_eval(arr[0].x); // expected-warning{{UNKNOWN}}
+}
+
+} // namespace crash

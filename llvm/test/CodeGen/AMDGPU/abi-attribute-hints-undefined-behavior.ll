@@ -17,13 +17,15 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-LABEL: parent_func_missing_inputs:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; FIXEDABI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
-; FIXEDABI-NEXT:    s_mov_b64 exec, s[16:17]
-; FIXEDABI-NEXT:    v_writelane_b32 v40, s33, 2
+; FIXEDABI-NEXT:    s_mov_b32 s16, s33
 ; FIXEDABI-NEXT:    s_mov_b32 s33, s32
+; FIXEDABI-NEXT:    s_or_saveexec_b64 s[18:19], -1
+; FIXEDABI-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; FIXEDABI-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; FIXEDABI-NEXT:    s_mov_b64 exec, s[18:19]
 ; FIXEDABI-NEXT:    s_addk_i32 s32, 0x400
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s30, 0
+; FIXEDABI-NEXT:    v_writelane_b32 v41, s16, 0
 ; FIXEDABI-NEXT:    v_writelane_b32 v40, s31, 1
 ; FIXEDABI-NEXT:    s_getpc_b64 s[16:17]
 ; FIXEDABI-NEXT:    s_add_u32 s16, s16, requires_all_inputs@rel32@lo+4
@@ -31,11 +33,13 @@ define void @parent_func_missing_inputs() #0 {
 ; FIXEDABI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIXEDABI-NEXT:    v_readlane_b32 s31, v40, 1
 ; FIXEDABI-NEXT:    v_readlane_b32 s30, v40, 0
+; FIXEDABI-NEXT:    v_readlane_b32 s4, v41, 0
+; FIXEDABI-NEXT:    s_or_saveexec_b64 s[6:7], -1
+; FIXEDABI-NEXT:    buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; FIXEDABI-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; FIXEDABI-NEXT:    s_mov_b64 exec, s[6:7]
 ; FIXEDABI-NEXT:    s_addk_i32 s32, 0xfc00
-; FIXEDABI-NEXT:    v_readlane_b32 s33, v40, 2
-; FIXEDABI-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; FIXEDABI-NEXT:    buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
-; FIXEDABI-NEXT:    s_mov_b64 exec, s[4:5]
+; FIXEDABI-NEXT:    s_mov_b32 s33, s4
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   call void @requires_all_inputs()
@@ -91,7 +95,7 @@ define amdgpu_kernel void @parent_kernel_missing_inputs() #0 {
 }
 
 ; Function is marked with amdgpu-no-workitem-id-* but uses them anyway
-define void @marked_func_use_workitem_id(i32 addrspace(1)* %ptr) #0 {
+define void @marked_func_use_workitem_id(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-SDAG-LABEL: marked_func_use_workitem_id:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -122,14 +126,14 @@ define void @marked_func_use_workitem_id(i32 addrspace(1)* %ptr) #0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
-  store volatile i32 %id.x, i32 addrspace(1)* %ptr
-  store volatile i32 %id.y, i32 addrspace(1)* %ptr
-  store volatile i32 %id.z, i32 addrspace(1)* %ptr
+  store volatile i32 %id.x, ptr addrspace(1) %ptr
+  store volatile i32 %id.y, ptr addrspace(1) %ptr
+  store volatile i32 %id.z, ptr addrspace(1) %ptr
   ret void
 }
 
 ; Function is marked with amdgpu-no-workitem-id-* but uses them anyway
-define amdgpu_kernel void @marked_kernel_use_workitem_id(i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_workitem_id(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_workitem_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -146,13 +150,13 @@ define amdgpu_kernel void @marked_kernel_use_workitem_id(i32 addrspace(1)* %ptr)
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
-  store volatile i32 %id.x, i32 addrspace(1)* %ptr
-  store volatile i32 %id.y, i32 addrspace(1)* %ptr
-  store volatile i32 %id.z, i32 addrspace(1)* %ptr
+  store volatile i32 %id.x, ptr addrspace(1) %ptr
+  store volatile i32 %id.y, ptr addrspace(1) %ptr
+  store volatile i32 %id.z, ptr addrspace(1) %ptr
   ret void
 }
 
-define void @marked_func_use_workgroup_id(i32 addrspace(1)* %ptr) #0 {
+define void @marked_func_use_workgroup_id(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_func_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -169,13 +173,13 @@ define void @marked_func_use_workgroup_id(i32 addrspace(1)* %ptr) #0 {
   %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
   %id.y = call i32 @llvm.amdgcn.workgroup.id.y()
   %id.z = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %id.x, i32 addrspace(1)* %ptr
-  store volatile i32 %id.y, i32 addrspace(1)* %ptr
-  store volatile i32 %id.z, i32 addrspace(1)* %ptr
+  store volatile i32 %id.x, ptr addrspace(1) %ptr
+  store volatile i32 %id.y, ptr addrspace(1) %ptr
+  store volatile i32 %id.z, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @marked_kernel_use_workgroup_id(i32 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_workgroup_id(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_workgroup_id:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
@@ -195,13 +199,13 @@ define amdgpu_kernel void @marked_kernel_use_workgroup_id(i32 addrspace(1)* %ptr
   %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
   %id.y = call i32 @llvm.amdgcn.workgroup.id.y()
   %id.z = call i32 @llvm.amdgcn.workgroup.id.z()
-  store volatile i32 %id.x, i32 addrspace(1)* %ptr
-  store volatile i32 %id.y, i32 addrspace(1)* %ptr
-  store volatile i32 %id.z, i32 addrspace(1)* %ptr
+  store volatile i32 %id.x, ptr addrspace(1) %ptr
+  store volatile i32 %id.y, ptr addrspace(1) %ptr
+  store volatile i32 %id.z, ptr addrspace(1) %ptr
   ret void
 }
 
-define void @marked_func_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
+define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_func_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -222,18 +226,18 @@ define void @marked_func_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
 ; FIXEDABI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
-  %queue.ptr = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+  %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %dispatch.ptr = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %dispatch.id = call i64 @llvm.amdgcn.dispatch.id()
-  %queue.load = load volatile i8, i8 addrspace(4)* %queue.ptr
-  %implicitarg.load = load volatile i8, i8 addrspace(4)* %implicitarg.ptr
-  %dispatch.load = load volatile i8, i8 addrspace(4)* %dispatch.ptr
-  store volatile i64 %dispatch.id, i64 addrspace(1)* %ptr
+  %queue.load = load volatile i8, ptr addrspace(4) %queue.ptr
+  %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
+  %dispatch.load = load volatile i8, ptr addrspace(4) %dispatch.ptr
+  store volatile i64 %dispatch.id, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) #0 {
+define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
@@ -246,14 +250,14 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(i64 addrspace(1)* %ptr) 
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm
-  %queue.ptr = call i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %dispatch.ptr = call i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+  %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %dispatch.ptr = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
   %dispatch.id = call i64 @llvm.amdgcn.dispatch.id()
-  %queue.load = load volatile i8, i8 addrspace(4)* %queue.ptr
-  %implicitarg.load = load volatile i8, i8 addrspace(4)* %implicitarg.ptr
-  %dispatch.load = load volatile i8, i8 addrspace(4)* %dispatch.ptr
-  store volatile i64 %dispatch.id, i64 addrspace(1)* %ptr
+  %queue.load = load volatile i8, ptr addrspace(4) %queue.ptr
+  %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
+  %dispatch.load = load volatile i8, ptr addrspace(4) %dispatch.ptr
+  store volatile i64 %dispatch.id, ptr addrspace(1) %ptr
   ret void
 }
 
@@ -264,24 +268,23 @@ define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
 ; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
 ; FIXEDABI-NEXT:    s_endpgm
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %implicitarg.load = load volatile i8, i8 addrspace(4)* %implicitarg.ptr
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
 ; On gfx8, the queue ptr is required for this addrspacecast.
-define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i32 addrspace(3)* %ptr.local) #0 {
+define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr addrspace(3) %ptr.local) #0 {
 ; FIXEDABI-SDAG-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-SDAG:       ; %bb.0:
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    s_load_dword s4, s[6:7], 0x44
-; FIXEDABI-SDAG-NEXT:    s_load_dword s5, s[6:7], 0x40
+; FIXEDABI-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s4
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v2, s5
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v3, 0, v2, vcc
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
-; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s5
+; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; FIXEDABI-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v0, vcc
 ; FIXEDABI-SDAG-NEXT:    v_mov_b32_e32 v0, 1
@@ -296,14 +299,13 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-GISEL-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[6:7], 0x44
-; FIXEDABI-GISEL-NEXT:    s_load_dword s5, s[6:7], 0x40
+; FIXEDABI-GISEL-NEXT:    s_load_dwordx2 s[4:5], s[6:7], 0x40
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v3, s4
-; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, s5
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v0, s5
+; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v3, 0, v0, vcc
+; FIXEDABI-GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v1
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v4, vcc
@@ -314,14 +316,14 @@ define void @addrspacecast_requires_queue_ptr(i32 addrspace(5)* %ptr.private, i3
 ; FIXEDABI-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; FIXEDABI-GISEL-NEXT:    s_setpc_b64 s[30:31]
-  %flat.private = addrspacecast i32 addrspace(5)* %ptr.private to i32*
-  %flat.local = addrspacecast i32 addrspace(3)* %ptr.local to i32*
-  store volatile i32 1, i32* %flat.private
-  store volatile i32 2, i32* %flat.local
+  %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
+  %flat.local = addrspacecast ptr addrspace(3) %ptr.local to ptr
+  store volatile i32 1, ptr %flat.private
+  store volatile i32 2, ptr %flat.local
   ret void
 }
 
-define void @is_shared_requires_queue_ptr(i8* %ptr) #0 {
+define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-LABEL: is_shared_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -332,13 +334,13 @@ define void @is_shared_requires_queue_ptr(i8* %ptr) #0 {
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v0
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
-  %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %ptr)
+  %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, i32 addrspace(1)* undef
+  store volatile i32 %zext, ptr addrspace(1) undef
   ret void
 }
 
-define void @is_private_requires_queue_ptr(i8* %ptr) #0 {
+define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-LABEL: is_private_requires_queue_ptr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -349,9 +351,9 @@ define void @is_private_requires_queue_ptr(i8* %ptr) #0 {
 ; FIXEDABI-NEXT:    flat_store_dword v[0:1], v0
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
-  %is.private = call i1 @llvm.amdgcn.is.private(i8* %ptr)
+  %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, i32 addrspace(1)* undef
+  store volatile i32 %zext, ptr addrspace(1) undef
   ret void
 }
 
@@ -380,12 +382,12 @@ declare i32 @llvm.amdgcn.workitem.id.z()
 declare i32 @llvm.amdgcn.workgroup.id.x()
 declare i32 @llvm.amdgcn.workgroup.id.y()
 declare i32 @llvm.amdgcn.workgroup.id.z()
-declare noalias i8 addrspace(4)* @llvm.amdgcn.queue.ptr()
-declare noalias i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+declare noalias ptr addrspace(4) @llvm.amdgcn.queue.ptr()
+declare noalias ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 declare i64 @llvm.amdgcn.dispatch.id()
-declare noalias i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-declare i1 @llvm.amdgcn.is.shared(i8*)
-declare i1 @llvm.amdgcn.is.private(i8*)
+declare noalias ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
+declare i1 @llvm.amdgcn.is.shared(ptr)
+declare i1 @llvm.amdgcn.is.private(ptr)
 declare void @llvm.trap()
 declare void @llvm.debugtrap()
 

@@ -724,6 +724,10 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
 
+  MaxDivRemBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+
+  MaxLargeFPConvertBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
 
@@ -868,6 +872,11 @@ void TargetLoweringBase::initActions() {
 
     // Named vector shuffles default to expand.
     setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
+
+    // VP_SREM/UREM default to expand.
+    // TODO: Expand all VP intrinsics.
+    setOperationAction(ISD::VP_SREM, VT, Expand);
+    setOperationAction(ISD::VP_UREM, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
@@ -950,7 +959,7 @@ TargetLoweringBase::getTypeConversion(LLVMContext &Context, EVT VT) const {
   // If this is a simple type, use the ComputeRegisterProp mechanism.
   if (VT.isSimple()) {
     MVT SVT = VT.getSimpleVT();
-    assert((unsigned)SVT.SimpleTy < array_lengthof(TransformToType));
+    assert((unsigned)SVT.SimpleTy < std::size(TransformToType));
     MVT NVT = TransformToType[SVT.SimpleTy];
     LegalizeTypeAction LA = ValueTypeActions.getTypeAction(SVT);
 
@@ -1342,6 +1351,15 @@ void TargetLoweringBase::computeRegisterProperties(
     ValueTypeActions.setTypeAction(MVT::f128, TypeSoftenFloat);
   }
 
+  // Decide how to handle f80. If the target does not have native f80 support,
+  // expand it to i96 and we will be generating soft float library calls.
+  if (!isTypeLegal(MVT::f80)) {
+    NumRegistersForVT[MVT::f80] = 3*NumRegistersForVT[MVT::i32];
+    RegisterTypeForVT[MVT::f80] = RegisterTypeForVT[MVT::i32];
+    TransformToType[MVT::f80] = MVT::i32;
+    ValueTypeActions.setTypeAction(MVT::f80, TypeSoftenFloat);
+  }
+
   // Decide how to handle f64. If the target does not have native f64 support,
   // expand it to i64 and we will be generating soft float library calls.
   if (!isTypeLegal(MVT::f64)) {
@@ -1385,7 +1403,7 @@ void TargetLoweringBase::computeRegisterProperties(
     NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::f32];
     RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::f32];
     TransformToType[MVT::bf16] = MVT::f32;
-    ValueTypeActions.setTypeAction(MVT::bf16, TypePromoteFloat);
+    ValueTypeActions.setTypeAction(MVT::bf16, TypeSoftPromoteHalf);
   }
 
   // Loop over all of the vector value types to see which need transformations.
@@ -1424,7 +1442,7 @@ void TargetLoweringBase::computeRegisterProperties(
       }
       if (IsLegalWiderType)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
 
     case TypeWidenVector:
@@ -1458,7 +1476,7 @@ void TargetLoweringBase::computeRegisterProperties(
           break;
         }
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case TypeSplitVector:
     case TypeScalarizeVector: {
@@ -1609,7 +1627,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context,
   if (EVT(DestVT).bitsLT(NewVT)) {  // Value is expanded, e.g. i64 -> i16.
     TypeSize NewVTSize = NewVT.getSizeInBits();
     // Convert sizes such as i33 to i64.
-    if (!isPowerOf2_32(NewVTSize.getKnownMinSize()))
+    if (!isPowerOf2_32(NewVTSize.getKnownMinValue()))
       NewVTSize = NewVTSize.coefficientNextPowerOf2();
     return NumVectorRegs*(NewVTSize/DestVT.getSizeInBits());
   }
@@ -1709,7 +1727,7 @@ uint64_t TargetLoweringBase::getByValTypeAlignment(Type *Ty,
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
-    Align Alignment, MachineMemOperand::Flags Flags, bool *Fast) const {
+    Align Alignment, MachineMemOperand::Flags Flags, unsigned *Fast) const {
   // Check if the specified alignment is sufficient based on the data layout.
   // TODO: While using the data layout works in practice, a better solution
   // would be to implement this check directly (make this a virtual function).
@@ -1719,7 +1737,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
   if (VT.isZeroSized() || Alignment >= DL.getABITypeAlign(Ty)) {
     // Assume that an access that meets the ABI-specified alignment is fast.
     if (Fast != nullptr)
-      *Fast = true;
+      *Fast = 1;
     return true;
   }
 
@@ -1729,7 +1747,7 @@ bool TargetLoweringBase::allowsMemoryAccessForAlignment(
 
 bool TargetLoweringBase::allowsMemoryAccessForAlignment(
     LLVMContext &Context, const DataLayout &DL, EVT VT,
-    const MachineMemOperand &MMO, bool *Fast) const {
+    const MachineMemOperand &MMO, unsigned *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, MMO.getAddrSpace(),
                                         MMO.getAlign(), MMO.getFlags(), Fast);
 }
@@ -1738,7 +1756,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             unsigned AddrSpace, Align Alignment,
                                             MachineMemOperand::Flags Flags,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   return allowsMemoryAccessForAlignment(Context, DL, VT, AddrSpace, Alignment,
                                         Flags, Fast);
 }
@@ -1746,7 +1764,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, EVT VT,
                                             const MachineMemOperand &MMO,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
 }
@@ -1754,7 +1772,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
 bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                                             const DataLayout &DL, LLT Ty,
                                             const MachineMemOperand &MMO,
-                                            bool *Fast) const {
+                                            unsigned *Fast) const {
   EVT VT = getApproximateEVTForLLT(Ty, DL, Context);
   return allowsMemoryAccess(Context, DL, VT, MMO.getAddrSpace(), MMO.getAlign(),
                             MMO.getFlags(), Fast);
@@ -1841,41 +1859,6 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   }
 
   llvm_unreachable("Unknown instruction type encountered!");
-}
-
-std::pair<InstructionCost, MVT>
-TargetLoweringBase::getTypeLegalizationCost(const DataLayout &DL,
-                                            Type *Ty) const {
-  LLVMContext &C = Ty->getContext();
-  EVT MTy = getValueType(DL, Ty);
-
-  InstructionCost Cost = 1;
-  // We keep legalizing the type until we find a legal kind. We assume that
-  // the only operation that costs anything is the split. After splitting
-  // we need to handle two types.
-  while (true) {
-    LegalizeKind LK = getTypeConversion(C, MTy);
-
-    if (LK.first == TypeScalarizeScalableVector) {
-      // Ensure we return a sensible simple VT here, since many callers of this
-      // function require it.
-      MVT VT = MTy.isSimple() ? MTy.getSimpleVT() : MVT::i64;
-      return std::make_pair(InstructionCost::getInvalid(), VT);
-    }
-
-    if (LK.first == TypeLegal)
-      return std::make_pair(Cost, MTy.getSimpleVT());
-
-    if (LK.first == TypeSplitVector || LK.first == TypeExpandInteger)
-      Cost *= 2;
-
-    // Do not loop with f128 type.
-    if (MTy == LK.second)
-      return std::make_pair(Cost, MTy.getSimpleVT());
-
-    // Keep legalizing the type.
-    MTy = LK.second;
-  }
 }
 
 Value *
@@ -2231,13 +2214,41 @@ int TargetLoweringBase::getDivRefinementSteps(EVT VT,
   return getOpRefinementSteps(false, VT, getRecipEstimateForFunc(MF));
 }
 
+bool TargetLoweringBase::isLoadBitCastBeneficial(
+    EVT LoadVT, EVT BitcastVT, const SelectionDAG &DAG,
+    const MachineMemOperand &MMO) const {
+  // Single-element vectors are scalarized, so we should generally avoid having
+  // any memory operations on such types, as they would get scalarized too.
+  if (LoadVT.isFixedLengthVector() && BitcastVT.isFixedLengthVector() &&
+      BitcastVT.getVectorNumElements() == 1)
+    return false;
+
+  // Don't do if we could do an indexed load on the original type, but not on
+  // the new one.
+  if (!LoadVT.isSimple() || !BitcastVT.isSimple())
+    return true;
+
+  MVT LoadMVT = LoadVT.getSimpleVT();
+
+  // Don't bother doing this if it's just going to be promoted again later, as
+  // doing so might interfere with other combines.
+  if (getOperationAction(ISD::LOAD, LoadMVT) == Promote &&
+      getTypeToPromoteTo(ISD::LOAD, LoadMVT) == BitcastVT.getSimpleVT())
+    return false;
+
+  unsigned Fast = 0;
+  return allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), BitcastVT,
+                            MMO, &Fast) &&
+         Fast;
+}
+
 void TargetLoweringBase::finalizeLowering(MachineFunction &MF) const {
   MF.getRegInfo().freezeReservedRegs(MF);
 }
 
-MachineMemOperand::Flags
-TargetLoweringBase::getLoadMemOperandFlags(const LoadInst &LI,
-                                           const DataLayout &DL) const {
+MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
+    const LoadInst &LI, const DataLayout &DL, AssumptionCache *AC,
+    const TargetLibraryInfo *LibInfo) const {
   MachineMemOperand::Flags Flags = MachineMemOperand::MOLoad;
   if (LI.isVolatile())
     Flags |= MachineMemOperand::MOVolatile;
@@ -2248,7 +2259,9 @@ TargetLoweringBase::getLoadMemOperandFlags(const LoadInst &LI,
   if (LI.hasMetadata(LLVMContext::MD_invariant_load))
     Flags |= MachineMemOperand::MOInvariant;
 
-  if (isDereferenceablePointer(LI.getPointerOperand(), LI.getType(), DL))
+  if (isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
+                                         LI.getAlign(), DL, &LI, AC,
+                                         /*DT=*/nullptr, LibInfo))
     Flags |= MachineMemOperand::MODereferenceable;
 
   Flags |= getTargetMMOFlags(LI);

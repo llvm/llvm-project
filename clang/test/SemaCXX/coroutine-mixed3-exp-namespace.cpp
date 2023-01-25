@@ -26,5 +26,5 @@ struct std::coroutine_traits<void> { using promise_type = promise_void; };
 
 void test() {
   co_return;
-  // expected-warning@-1{{support for std::experimental::coroutine_traits will be removed}}
+  // expected-warning@-1{{support for 'std::experimental::coroutine_traits' will be removed}}
 }

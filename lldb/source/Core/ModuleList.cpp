@@ -106,6 +106,12 @@ bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
       nullptr, ePropertyEnableExternalLookup, new_value);
 }
 
+bool ModuleListProperties::GetEnableBackgroundLookup() const {
+  const uint32_t idx = ePropertyEnableBackgroundLookup;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
   return m_collection_sp
       ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
@@ -425,9 +431,8 @@ void ModuleList::FindFunctions(ConstString name,
 
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctions(lookup_info.GetLookupName(),
-                               CompilerDeclContext(),
-                               lookup_info.GetNameTypeMask(), options, sc_list);
+      module_sp->FindFunctions(lookup_info, CompilerDeclContext(), options,
+                               sc_list);
     }
 
     const size_t new_size = sc_list.GetSize();
@@ -769,6 +774,10 @@ void ModuleList::FindSharedModules(const ModuleSpec &module_spec,
   GetSharedModuleList().FindModules(module_spec, matching_module_list);
 }
 
+lldb::ModuleSP ModuleList::FindSharedModule(const UUID &uuid) {
+  return GetSharedModuleList().FindModule(uuid);
+}
+
 size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
   return GetSharedModuleList().RemoveOrphans(mandatory);
 }
@@ -1058,9 +1067,23 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
 void ModuleList::ForEach(
     std::function<bool(const ModuleSP &module_sp)> const &callback) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (const auto &module : m_modules) {
+  for (const auto &module_sp : m_modules) {
+    assert(module_sp != nullptr);
     // If the callback returns false, then stop iterating and break out
-    if (!callback(module))
+    if (!callback(module_sp))
       break;
   }
+}
+
+bool ModuleList::AnyOf(
+    std::function<bool(lldb_private::Module &module_sp)> const &callback)
+    const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const auto &module_sp : m_modules) {
+    assert(module_sp != nullptr);
+    if (callback(*module_sp))
+      return true;
+  }
+
+  return false;
 }

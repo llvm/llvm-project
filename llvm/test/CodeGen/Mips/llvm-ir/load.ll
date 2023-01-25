@@ -181,7 +181,7 @@ define i8 @f1() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(a))>>
 entry:
-  %0 = load i8, i8 * @a
+  %0 = load i8, ptr @a
   ret i8 %0
 }
 
@@ -344,7 +344,7 @@ define i32 @f2() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(a))>>
 entry:
-  %0 = load i8, i8 * @a
+  %0 = load i8, ptr @a
   %1 = sext i8 %0 to i32
   ret i32 %1
 }
@@ -508,7 +508,7 @@ define i16 @f3() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(b))>>
 entry:
-  %0 = load i16, i16 * @b
+  %0 = load i16, ptr @b
   ret i16 %0
 }
 
@@ -671,7 +671,7 @@ define i32 @f4() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(b))>>
 entry:
-  %0 = load i16, i16 * @b
+  %0 = load i16, ptr @b
   %1 = sext i16 %0 to i32
   ret i32 %1
 }
@@ -835,7 +835,7 @@ define i32 @f5() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(c))>>
 entry:
-  %0 = load i32, i32 * @c
+  %0 = load i32, ptr @c
   ret i32 %0
 }
 
@@ -1019,7 +1019,7 @@ define i64 @f6() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Imm:0>>
 entry:
-  %0 = load i32, i32 * @c
+  %0 = load i32, ptr @c
   %1 = zext i32 %0 to i64
   ret i64 %1
 }
@@ -1207,7 +1207,7 @@ define i64 @f7() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Imm:31>>
 entry:
-  %0 = load i32, i32 * @c
+  %0 = load i32, ptr @c
   %1 = sext i32 %0 to i64
   ret i64 %1
 }
@@ -1371,7 +1371,7 @@ define float @f8() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(e))>>
 entry:
-  %0 = load float, float * @e
+  %0 = load float, ptr @e
   ret float %0
 }
 
@@ -1534,6 +1534,6 @@ define double @f9() {
 ; MIPS32R5FP643-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MIPS32R5FP643-NEXT:    # <MCOperand Expr:(%lo(f))>>
 entry:
-  %0 = load double, double * @f
+  %0 = load double, ptr @f
   ret double %0
 }

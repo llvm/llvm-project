@@ -33,7 +33,7 @@ class MmapWriteExecChecker : public Checker<check::PreCall> {
   static int ProtRead;
   mutable std::unique_ptr<BugType> BT;
 public:
-  MmapWriteExecChecker() : MmapFn("mmap", 6), MprotectFn("mprotect", 3) {}
+  MmapWriteExecChecker() : MmapFn({"mmap"}, 6), MprotectFn({"mprotect"}, 3) {}
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   int ProtExecOv;
   int ProtReadOv;

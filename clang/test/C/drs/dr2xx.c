@@ -448,9 +448,11 @@ void dr298(void) {
   /* FIXME: These uses of the constants need a pedantic warning in C89 mode;
    * we've picked a type that does not exist in C89.
    */
-  (void)_Generic(9223372036854775808,     /* expected-warning {{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}} */
+  (void)_Generic(9223372036854775808,     /* expected-warning {{integer literal is too large to be represented in a signed integer type, interpreting as unsigned}}
+                                             c89only-warning {{'long long' is an extension when C99 mode is not enabled}}
+                                           */
                  unsigned long long : 1); /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
-  (void)_Generic(9223372036854775807,
+  (void)_Generic(9223372036854775807,     /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
                  long long : 1);          /* c89only-warning {{'long long' is an extension when C99 mode is not enabled}} */
 }
 #endif /* __LLONG_WIDTH__ == 64 && __LONG_WIDTH__ < 64 */

@@ -82,6 +82,7 @@ add_llvm_target(HexagonCodeGen
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
 
   ADD_TO_COMPONENT

@@ -132,7 +132,7 @@ private:
 /// Should be used within the index build process.
 ///
 /// This function is exposed for testing only.
-std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath);
+llvm::SmallVector<llvm::StringRef, 5> generateProximityURIs(llvm::StringRef);
 
 } // namespace dex
 } // namespace clangd

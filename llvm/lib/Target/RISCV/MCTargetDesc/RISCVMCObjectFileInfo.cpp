@@ -19,5 +19,8 @@ using namespace llvm;
 
 unsigned RISCVMCObjectFileInfo::getTextSectionAlignment() const {
   const MCSubtargetInfo *STI = getContext().getSubtargetInfo();
-  return STI->hasFeature(RISCV::FeatureStdExtC) ? 2 : 4;
+  return (STI->hasFeature(RISCV::FeatureStdExtC) ||
+          STI->hasFeature(RISCV::FeatureExtZca))
+             ? 2
+             : 4;
 }

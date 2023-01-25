@@ -58,7 +58,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @_Z3foov() #0 !dbg !7 {
   %1 = alloca %class.deleted, align 1
-  call void @llvm.dbg.declare(metadata %class.deleted* %1, metadata !10, metadata !DIExpression()), !dbg !34
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !10, metadata !DIExpression()), !dbg !34
   ret void, !dbg !35
 }
 

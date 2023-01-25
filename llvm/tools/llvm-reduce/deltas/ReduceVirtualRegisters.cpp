@@ -13,6 +13,7 @@
 
 #include "ReduceVirtualRegisters.h"
 #include "Delta.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -41,6 +42,6 @@ static void dropRegisterHintsFromFunctions(Oracle &O,
 }
 
 void llvm::reduceVirtualRegisterHintsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing virtual register hints from functions...\n";
-  runDeltaPass(Test, dropRegisterHintsFromFunctions);
+  runDeltaPass(Test, dropRegisterHintsFromFunctions,
+               "Reducing virtual register hints from functions");
 }

@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars -loop-vectorize -force-vector-width=2  < %s | FileCheck %s
+; RUN: opt -S -passes='loop(indvars),loop-vectorize' -force-vector-width=2  < %s | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32-S128"
 
@@ -17,18 +17,18 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 ; CHECK-LABEL: @fn1(
 define void @fn1()  {
 entry:
-  store i64 0, i64* @a, align 8
+  store i64 0, ptr @a, align 8
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %inc1 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
-  store volatile i32 0, i32* @x, align 4
+  store volatile i32 0, ptr @x, align 4
   %inc = add nsw i64 %inc1, 1
   %cmp = icmp sgt i64 %inc1, -2
   br i1 %cmp, label %for.body, label %for.end
 
 for.end:                                          ; preds = %for.body
   %inc.lcssa = phi i64 [ %inc, %for.body ]
-  store i64 %inc.lcssa, i64* @a, align 8
+  store i64 %inc.lcssa, ptr @a, align 8
   ret void
 }

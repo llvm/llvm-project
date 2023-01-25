@@ -69,14 +69,6 @@ Triplet &Triplet::set_stride(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-bool Triplet::IsStrideOne() const {
-  if (auto stride{ToInt64(stride_.value())}) {
-    return stride == 1;
-  } else {
-    return false;
-  }
-}
-
 CoarrayRef::CoarrayRef(SymbolVector &&base, std::vector<Subscript> &&ss,
     std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, subscript_(std::move(ss)),
@@ -476,6 +468,23 @@ const Symbol &NamedEntity::GetLastSymbol() const {
                            [](const Component &c) -> const Symbol & {
                              return c.GetLastSymbol();
                            },
+                       },
+      u_);
+}
+
+const SymbolRef *NamedEntity::UnwrapSymbolRef() const {
+  return common::visit(
+      common::visitors{
+          [](const SymbolRef &s) { return &s; },
+          [](const Component &) -> const SymbolRef * { return nullptr; },
+      },
+      u_);
+}
+
+SymbolRef *NamedEntity::UnwrapSymbolRef() {
+  return common::visit(common::visitors{
+                           [](SymbolRef &s) { return &s; },
+                           [](Component &) -> SymbolRef * { return nullptr; },
                        },
       u_);
 }

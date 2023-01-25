@@ -1,0 +1,98 @@
+# RUN: llvm-mc -triple=aarch64 -mattr=+lse128 -disassemble %s | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64 -disassemble %s 2>&1 | FileCheck --check-prefix=NO-LSE128 %s
+
+[0x61,0x11,0x22,0x19]
+# CHECK: ldclrp x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x13,0x36,0x19]
+# CHECK: ldclrp x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x11,0xa2,0x19]
+# CHECK: ldclrpa x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x13,0xb6,0x19]
+# CHECK: ldclrpa x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x11,0xe2,0x19]
+# CHECK: ldclrpal x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x13,0xf6,0x19]
+# CHECK: ldclrpal x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x11,0x62,0x19]
+# CHECK: ldclrpl x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x13,0x76,0x19]
+# CHECK: ldclrpl x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x31,0x22,0x19]
+# CHECK: ldsetp x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x33,0x36,0x19]
+# CHECK: ldsetp x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x31,0xa2,0x19]
+# CHECK: ldsetpa x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x33,0xb6,0x19]
+# CHECK: ldsetpa x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x31,0xe2,0x19]
+# CHECK: ldsetpal x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x33,0xf6,0x19]
+# CHECK: ldsetpal x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x31,0x62,0x19]
+# CHECK: ldsetpl x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x33,0x76,0x19]
+# CHECK: ldsetpl x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x81,0x22,0x19]
+# CHECK: swpp x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x83,0x36,0x19]
+# CHECK: swpp x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x81,0xa2,0x19]
+# CHECK: swppa x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x83,0xb6,0x19]
+# CHECK: swppa x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x81,0xe2,0x19]
+# CHECK: swppal x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x83,0xf6,0x19]
+# CHECK: swppal x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0x61,0x81,0x62,0x19]
+# CHECK: swppl x1, x2, [x11]
+# NO-LSE128: warning: invalid instruction encoding
+
+[0xf5,0x83,0x76,0x19]
+# CHECK: swppl x21, x22, [sp]
+# NO-LSE128: warning: invalid instruction encoding

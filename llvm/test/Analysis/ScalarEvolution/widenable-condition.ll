@@ -23,7 +23,8 @@ define i32 @wc_max() {
 ; CHECK-NEXT:    --> (%cond_1 umin %widenable_cond3) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @wc_max
 ; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 1999
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1999
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1999
 ; CHECK-NEXT:  Loop %loop: Unpredictable predicated backedge-taken count.
 ;
 entry:
@@ -31,7 +32,7 @@ entry:
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
   %iv.next = add i32 %iv, 1
-  store i32 %iv, i32 *@G
+  store i32 %iv, ptr @G
   %cond_1 = icmp slt i32 %iv.next, 2000
   %widenable_cond3 = call i1 @llvm.experimental.widenable.condition()
   %exiplicit_guard_cond4 = and i1 %cond_1, %widenable_cond3

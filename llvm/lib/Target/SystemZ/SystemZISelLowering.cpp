@@ -25,6 +25,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include <cctype>
+#include <optional>
 
 using namespace llvm;
 
@@ -642,6 +643,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::VACOPY,  MVT::Other, Custom);
   setOperationAction(ISD::VAEND,   MVT::Other, Expand);
 
+  setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+
   // Codes for which we want to perform some z-specific combinations.
   setTargetDAGCombine({ISD::ZERO_EXTEND,
                        ISD::SIGN_EXTEND,
@@ -842,7 +845,7 @@ bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 }
 
 /// Returns true if stack probing through inline assembly is requested.
-bool SystemZTargetLowering::hasInlineStackProbe(MachineFunction &MF) const {
+bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
   // If the function specifically requests inline stack probes, emit them.
   if (MF.getFunction().hasFnAttribute("probe-stack"))
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
@@ -861,12 +864,12 @@ bool SystemZTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 }
 
 bool SystemZTargetLowering::allowsMisalignedMemoryAccesses(
-    EVT VT, unsigned, Align, MachineMemOperand::Flags, bool *Fast) const {
+    EVT VT, unsigned, Align, MachineMemOperand::Flags, unsigned *Fast) const {
   // Unaligned accesses should never be slower than the expanded version.
   // We check specifically for aligned accesses in the few cases where
   // they are required.
   if (Fast)
-    *Fast = true;
+    *Fast = 1;
   return true;
 }
 
@@ -1021,8 +1024,8 @@ EVT SystemZTargetLowering::getOptimalMemOpType(const MemOp &Op,
 bool SystemZTargetLowering::isTruncateFree(Type *FromType, Type *ToType) const {
   if (!FromType->isIntegerTy() || !ToType->isIntegerTy())
     return false;
-  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedSize();
-  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedSize();
+  unsigned FromBits = FromType->getPrimitiveSizeInBits().getFixedValue();
+  unsigned ToBits = ToType->getPrimitiveSizeInBits().getFixedValue();
   return FromBits > ToBits;
 }
 
@@ -1450,7 +1453,7 @@ static SDValue lowerGR128ToI128(SelectionDAG &DAG, SDValue In) {
 
 bool SystemZTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
-    unsigned NumParts, MVT PartVT, Optional<CallingConv::ID> CC) const {
+    unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   EVT ValueVT = Val.getValueType();
   assert((ValueVT != MVT::i128 ||
           ((NumParts == 1 && PartVT == MVT::Untyped) ||
@@ -1466,7 +1469,7 @@ bool SystemZTargetLowering::splitValueIntoRegisterParts(
 
 SDValue SystemZTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
-    MVT PartVT, EVT ValueVT, Optional<CallingConv::ID> CC) const {
+    MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   assert((ValueVT != MVT::i128 ||
           ((NumParts == 1 && PartVT == MVT::Untyped) ||
            (NumParts == 2 && PartVT == MVT::i64))) &&
@@ -1627,8 +1630,8 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
       }
       // Join the stores, which are independent of one another.
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other,
-                          makeArrayRef(&MemOps[NumFixedFPRs],
-                                       SystemZ::ELFNumArgFPRs-NumFixedFPRs));
+                          ArrayRef(&MemOps[NumFixedFPRs],
+                                   SystemZ::ELFNumArgFPRs - NumFixedFPRs));
     }
   }
 
@@ -1854,10 +1857,7 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
-  Chain = DAG.getCALLSEQ_END(Chain,
-                             DAG.getConstant(NumBytes, DL, PtrVT, true),
-                             DAG.getConstant(0, DL, PtrVT, true),
-                             Glue, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, Glue, DL);
   Glue = Chain.getValue(1);
 
   // Assign locations to each value returned by this call.
@@ -2491,8 +2491,8 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       C.Op1.getOpcode() == ISD::Constant &&
       cast<ConstantSDNode>(C.Op1)->getZExtValue() == 0) {
     auto *L = cast<LoadSDNode>(C.Op0.getOperand(0));
-    if (L->getMemoryVT().getStoreSizeInBits().getFixedSize() <=
-        C.Op0.getValueSizeInBits().getFixedSize()) {
+    if (L->getMemoryVT().getStoreSizeInBits().getFixedValue() <=
+        C.Op0.getValueSizeInBits().getFixedValue()) {
       unsigned Type = L->getExtensionType();
       if ((Type == ISD::ZEXTLOAD && C.ICmpType != SystemZICMP::SignedOnly) ||
           (Type == ISD::SEXTLOAD && C.ICmpType != SystemZICMP::UnsignedOnly)) {
@@ -3037,7 +3037,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     // Handle tests for order using (or (ogt y x) (oge x y)).
   case ISD::SETUO:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETO: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, getVectorComparison(ISD::SETOGT, Mode),
@@ -3054,7 +3054,7 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     // Handle <> tests using (or (ogt y x) (ogt x y)).
   case ISD::SETUEQ:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETONE: {
     assert(IsFP && "Unexpected integer comparison");
     SDValue LT = getVectorCmp(DAG, getVectorComparison(ISD::SETOGT, Mode),
@@ -3674,7 +3674,7 @@ SystemZTargetLowering::lowerDYNAMIC_STACKALLOC_XPLINK(SDValue Op,
   bool IsReturnValueUsed = false;
   EVT VT = Op.getValueType();
   SDValue AllocaCall =
-      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, makeArrayRef(NeededSpace),
+      makeExternalCall(Chain, DAG, "@@ALCAXP", VT, ArrayRef(NeededSpace),
                        CallingConv::C, IsSigned, DL, DoesNotReturn,
                        IsReturnValueUsed)
           .first;
@@ -4104,7 +4104,7 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
 
   // Skip known-zero high parts of the operand.
   int64_t OrigBitSize = VT.getSizeInBits();
-  int64_t BitSize = (int64_t)1 << Log2_32_Ceil(NumSignificantBits);
+  int64_t BitSize = llvm::bit_ceil(NumSignificantBits);
   BitSize = std::min(BitSize, OrigBitSize);
 
   // The POPCNT instruction counts the number of bits in each byte.
@@ -4148,7 +4148,7 @@ SDValue SystemZTargetLowering::lowerATOMIC_FENCE(SDValue Op,
   }
 
   // MEMBARRIER is a compiler barrier; it codegens to a no-op.
-  return DAG.getNode(SystemZISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
 // Op is an atomic load.  Lower it into a normal volatile load.
@@ -5808,6 +5808,8 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerShift(Op, DAG, SystemZISD::VSRA_BY_SCALAR);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
+  case ISD::GET_ROUNDING:
+    return lowerGET_ROUNDING(Op, DAG);
   default:
     llvm_unreachable("Unexpected node to lower");
   }
@@ -5946,7 +5948,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(STRCMP);
     OPCODE(SEARCH_STRING);
     OPCODE(IPM);
-    OPCODE(MEMBARRIER);
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
@@ -7041,6 +7042,8 @@ SDValue SystemZTargetLowering::combineGET_CCMASK(
   int CCMaskVal = CCMask->getZExtValue();
 
   SDValue Select = N->getOperand(0);
+  if (Select->getOpcode() == ISD::TRUNCATE)
+    Select = Select->getOperand(0);
   if (Select->getOpcode() != SystemZISD::SELECT_CCMASK)
     return SDValue();
 
@@ -7055,9 +7058,9 @@ SDValue SystemZTargetLowering::combineGET_CCMASK(
   auto *FalseVal = dyn_cast<ConstantSDNode>(Select->getOperand(1));
   if (!TrueVal || !FalseVal)
     return SDValue();
-  if (TrueVal->getZExtValue() != 0 && FalseVal->getZExtValue() == 0)
+  if (TrueVal->getZExtValue() == 1 && FalseVal->getZExtValue() == 0)
     ;
-  else if (TrueVal->getZExtValue() == 0 && FalseVal->getZExtValue() != 0)
+  else if (TrueVal->getZExtValue() == 0 && FalseVal->getZExtValue() == 1)
     SelectCCMaskVal ^= SelectCCValidVal;
   else
     return SDValue();
@@ -7320,7 +7323,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::s390_vupllh:
     case Intrinsic::s390_vupllf:
       IsLogical = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::s390_vuphb:  // VECTOR UNPACK HIGH
     case Intrinsic::s390_vuphh:
     case Intrinsic::s390_vuphf:
@@ -7442,19 +7445,15 @@ SystemZTargetLowering::ComputeNumSignBitsForTargetNode(
 }
 
 unsigned
-SystemZTargetLowering::getStackProbeSize(MachineFunction &MF) const {
+SystemZTargetLowering::getStackProbeSize(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   unsigned StackAlign = TFI->getStackAlignment();
   assert(StackAlign >=1 && isPowerOf2_32(StackAlign) &&
          "Unexpected stack alignment");
   // The default stack probe size is 4096 if the function has no
   // stack-probe-size attribute.
-  unsigned StackProbeSize = 4096;
-  const Function &Fn = MF.getFunction();
-  if (Fn.hasFnAttribute("stack-probe-size"))
-    Fn.getFnAttribute("stack-probe-size")
-        .getValueAsString()
-        .getAsInteger(0, StackProbeSize);
+  unsigned StackProbeSize =
+      MF.getFunction().getFnAttributeAsParsedInteger("stack-probe-size", 4096);
   // Round down to the stack alignment.
   StackProbeSize &= ~(StackAlign - 1);
   return StackProbeSize ? StackProbeSize : StackAlign;
@@ -7557,7 +7556,7 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
   // destination registers, and the registers that went into the PHI.
   DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
-  for (auto MI : Selects) {
+  for (auto *MI : Selects) {
     Register DestReg = MI->getOperand(0).getReg();
     Register TrueReg = MI->getOperand(1).getReg();
     Register FalseReg = MI->getOperand(2).getReg();
@@ -7603,35 +7602,32 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   SmallVector<MachineInstr*, 8> DbgValues;
   Selects.push_back(&MI);
   unsigned Count = 0;
-  for (MachineBasicBlock::iterator NextMIIt =
-         std::next(MachineBasicBlock::iterator(MI));
-       NextMIIt != MBB->end(); ++NextMIIt) {
-    if (isSelectPseudo(*NextMIIt)) {
-      assert(NextMIIt->getOperand(3).getImm() == CCValid &&
+  for (MachineInstr &NextMI : llvm::make_range(
+           std::next(MachineBasicBlock::iterator(MI)), MBB->end())) {
+    if (isSelectPseudo(NextMI)) {
+      assert(NextMI.getOperand(3).getImm() == CCValid &&
              "Bad CCValid operands since CC was not redefined.");
-      if (NextMIIt->getOperand(4).getImm() == CCMask ||
-          NextMIIt->getOperand(4).getImm() == (CCValid ^ CCMask)) {
-        Selects.push_back(&*NextMIIt);
+      if (NextMI.getOperand(4).getImm() == CCMask ||
+          NextMI.getOperand(4).getImm() == (CCValid ^ CCMask)) {
+        Selects.push_back(&NextMI);
         continue;
       }
       break;
     }
-    if (NextMIIt->definesRegister(SystemZ::CC) ||
-        NextMIIt->usesCustomInsertionHook())
+    if (NextMI.definesRegister(SystemZ::CC) || NextMI.usesCustomInsertionHook())
       break;
     bool User = false;
-    for (auto SelMI : Selects)
-      if (NextMIIt->readsVirtualRegister(SelMI->getOperand(0).getReg())) {
+    for (auto *SelMI : Selects)
+      if (NextMI.readsVirtualRegister(SelMI->getOperand(0).getReg())) {
         User = true;
         break;
       }
-    if (NextMIIt->isDebugInstr()) {
+    if (NextMI.isDebugInstr()) {
       if (User) {
-        assert(NextMIIt->isDebugValue() && "Unhandled debug opcode.");
-        DbgValues.push_back(&*NextMIIt);
+        assert(NextMI.isDebugValue() && "Unhandled debug opcode.");
+        DbgValues.push_back(&NextMI);
       }
-    }
-    else if (User || ++Count > 20)
+    } else if (User || ++Count > 20)
       break;
   }
 
@@ -7668,11 +7664,11 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   //  ...
   MBB = JoinMBB;
   createPHIsForSelects(Selects, StartMBB, FalseMBB, MBB);
-  for (auto SelMI : Selects)
+  for (auto *SelMI : Selects)
     SelMI->eraseFromParent();
 
   MachineBasicBlock::iterator InsertPos = MBB->getFirstNonPHI();
-  for (auto DbgMI : DbgValues)
+  for (auto *DbgMI : DbgValues)
     MBB->splice(InsertPos, StartMBB, DbgMI);
 
   return JoinMBB;
@@ -9042,4 +9038,44 @@ SystemZTargetLowering::getRepRegClassFor(MVT VT) const {
   if (VT == MVT::Untyped)
     return &SystemZ::ADDR128BitRegClass;
   return TargetLowering::getRepRegClassFor(VT);
+}
+
+SDValue SystemZTargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc dl(Op);
+  /*
+   The rounding method is in FPC Byte 3 bits 6-7, and has the following
+   settings:
+     00 Round to nearest
+     01 Round to 0
+     10 Round to +inf
+     11 Round to -inf
+
+  FLT_ROUNDS, on the other hand, expects the following:
+    -1 Undefined
+     0 Round to 0
+     1 Round to nearest
+     2 Round to +inf
+     3 Round to -inf
+  */
+
+  // Save FPC to register.
+  SDValue Chain = Op.getOperand(0);
+  SDValue EFPC(
+      DAG.getMachineNode(SystemZ::EFPC, dl, {MVT::i32, MVT::Other}, Chain), 0);
+  Chain = EFPC.getValue(1);
+
+  // Transform as necessary
+  SDValue CWD1 = DAG.getNode(ISD::AND, dl, MVT::i32, EFPC,
+                             DAG.getConstant(3, dl, MVT::i32));
+  // RetVal = (CWD1 ^ (CWD1 >> 1)) ^ 1
+  SDValue CWD2 = DAG.getNode(ISD::XOR, dl, MVT::i32, CWD1,
+                             DAG.getNode(ISD::SRL, dl, MVT::i32, CWD1,
+                                         DAG.getConstant(1, dl, MVT::i32)));
+
+  SDValue RetVal = DAG.getNode(ISD::XOR, dl, MVT::i32, CWD2,
+                               DAG.getConstant(1, dl, MVT::i32));
+  RetVal = DAG.getZExtOrTrunc(RetVal, dl, Op.getValueType());
+
+  return DAG.getMergeValues({RetVal, Chain}, dl);
 }

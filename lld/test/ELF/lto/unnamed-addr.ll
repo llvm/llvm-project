@@ -8,8 +8,8 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 @a = internal unnamed_addr constant i8 42
 
-define i8* @f() {
-  ret i8* @a
+define ptr @f() {
+  ret ptr @a
 }
 
 ; CHECK: @a = internal unnamed_addr constant i8 42

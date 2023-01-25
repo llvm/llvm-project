@@ -45,4 +45,4 @@ class DisassemblyMode:
         return "Toggles between a disassembly only mode and normal source mode\n"
 
 def __lldb_init_module(debugger, unused):
-    debugger.HandleCommand("command script add -c disassembly_mode.DisassemblyMode toggle-disassembly")
+    debugger.HandleCommand("command script add -o -c disassembly_mode.DisassemblyMode toggle-disassembly")

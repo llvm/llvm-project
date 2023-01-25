@@ -84,19 +84,18 @@ struct ConstantAnalysis : public DataFlowAnalysis {
           constant, constant->join(ConstantValue(value, op->getDialect())));
       return success();
     }
-    markAllPessimisticFixpoint(op->getResults());
+    setAllToUnknownConstants(op->getResults());
     for (Region &region : op->getRegions())
-      markAllPessimisticFixpoint(region.getArguments());
+      setAllToUnknownConstants(region.getArguments());
     return success();
   }
 
-  /// Mark the constant values of all given values as having reached a
-  /// pessimistic fixpoint.
-  void markAllPessimisticFixpoint(ValueRange values) {
+  /// Set all given values as not constants.
+  void setAllToUnknownConstants(ValueRange values) {
     for (Value value : values) {
-      auto *constantValue = getOrCreate<Lattice<ConstantValue>>(value);
-      propagateIfChanged(constantValue,
-                         constantValue->markPessimisticFixpoint());
+      auto *constant = getOrCreate<Lattice<ConstantValue>>(value);
+      propagateIfChanged(constant,
+                         constant->join(ConstantValue::getUnknownConstant()));
     }
   }
 };

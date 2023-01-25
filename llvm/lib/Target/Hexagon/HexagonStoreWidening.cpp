@@ -174,7 +174,7 @@ bool HexagonStoreWidening::instrAliased(InstrGroup &Stores,
 
   MemoryLocation L(MMO.getValue(), MMO.getSize(), MMO.getAAInfo());
 
-  for (auto SI : Stores) {
+  for (auto *SI : Stores) {
     const MachineMemOperand &SMO = getStoreTarget(SI);
     if (!SMO.getValue())
       return true;
@@ -490,7 +490,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
 
   // Create a set of all instructions in OG (for quick lookup).
   SmallPtrSet<MachineInstr*, 4> InstrSet;
-  for (auto I : OG)
+  for (auto *I : OG)
     InstrSet.insert(I);
 
   // Traverse the block, until we hit an instruction from OG.
@@ -514,7 +514,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
   else
     AtBBStart = true;
 
-  for (auto I : OG)
+  for (auto *I : OG)
     I->eraseFromParent();
 
   if (!AtBBStart)
@@ -522,7 +522,7 @@ bool HexagonStoreWidening::replaceStores(InstrGroup &OG, InstrGroup &NG) {
   else
     InsertAt = MBB->begin();
 
-  for (auto I : NG)
+  for (auto *I : NG)
     MBB->insert(InsertAt, I);
 
   return true;

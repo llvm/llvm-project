@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 void CloexecOpenCheck::registerMatchers(MatchFinder *Finder) {
   auto CharPointerType = hasType(pointerType(pointee(isAnyCharacter())));
@@ -38,6 +36,4 @@ void CloexecOpenCheck::check(const MatchFinder::MatchResult &Result) {
   insertMacroFlag(Result, /*MacroFlag=*/"O_CLOEXEC", ArgPos);
 }
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android

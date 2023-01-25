@@ -30,7 +30,7 @@ class PutenvWithAutoChecker : public Checker<check::PostCall> {
 private:
   BugType BT{this, "'putenv' function should not be called with auto variables",
              categories::SecurityError};
-  const CallDescription Putenv{"putenv", 1};
+  const CallDescription Putenv{{"putenv"}, 1};
 
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;

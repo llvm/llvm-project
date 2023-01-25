@@ -65,6 +65,8 @@
 #include <string_view>
 #include <vector>
 
+#include "test_macros.h"
+
 template <class CharT>
 struct data {
   /// The input to parse.
@@ -80,8 +82,8 @@ struct data {
 };
 
 /// The data for UTF-8.
-std::array<data<char>, 602> data_utf8 = {
-    {{"\U00000020\U00000020", {32, 32}, {1, 2}},
+std::array<data<char>, 602> data_utf8 = {{
+     {"\U00000020\U00000020", {32, 32}, {1, 2}},
      {"\U00000020\U00000308\U00000020", {32, 32}, {3, 4}},
      {"\U00000020\U0000000d", {32, 13}, {1, 2}},
      {"\U00000020\U00000308\U0000000d", {32, 13}, {3, 4}},
@@ -689,8 +691,9 @@ std::array<data<char>, 602> data_utf8 = {
 /// Note that most of the data for the UTF-16 and UTF-32 are identical. However
 /// since the size of the code units differ the breaks can contain different
 /// values.
-std::array<data<wchar_t>, 602> data_utf16 = {
-    {{L"\U00000020\U00000020", {32, 32}, {1, 2}},
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+std::array<data<wchar_t>, 602> data_utf16 = {{
+     {L"\U00000020\U00000020", {32, 32}, {1, 2}},
      {L"\U00000020\U00000308\U00000020", {32, 32}, {2, 3}},
      {L"\U00000020\U0000000d", {32, 13}, {1, 2}},
      {L"\U00000020\U00000308\U0000000d", {32, 13}, {2, 3}},
@@ -1298,8 +1301,8 @@ std::array<data<wchar_t>, 602> data_utf16 = {
 /// Note that most of the data for the UTF-16 and UTF-32 are identical. However
 /// since the size of the code units differ the breaks can contain different
 /// values.
-std::array<data<wchar_t>, 602> data_utf32 = {
-    {{L"\U00000020\U00000020", {32, 32}, {1, 2}},
+std::array<data<wchar_t>, 602> data_utf32 = {{
+     {L"\U00000020\U00000020", {32, 32}, {1, 2}},
      {L"\U00000020\U00000308\U00000020", {32, 32}, {2, 3}},
      {L"\U00000020\U0000000d", {32, 13}, {1, 2}},
      {L"\U00000020\U00000308\U0000000d", {32, 13}, {2, 3}},
@@ -1901,5 +1904,6 @@ std::array<data<wchar_t>, 602> data_utf32 = {
      {L"\U00000061\U0000200d\U0001f6d1", {97, 128721}, {2, 3}},
      {L"\U00002701\U0000200d\U00002701", {9985}, {3}},
      {L"\U00000061\U0000200d\U00002701", {97, 9985}, {2, 3}}}};
+#endif // TEST_HAS_NO_WIDE_CHARACTERS
 
 #endif // LIBCXX_TEST_STD_UTILITIES_FORMAT_FORMAT_STRING_FORMAT_STRING_STD_EXTENDED_GRAPHEME_CLUSTER_H

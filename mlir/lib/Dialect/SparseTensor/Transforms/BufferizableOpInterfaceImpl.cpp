@@ -94,6 +94,35 @@ struct NewOpInterface
   }
 };
 
+struct InsertOpInterface
+    : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
+                                                    sparse_tensor::InsertOp> {
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    // InsertOp writes to memory.
+    return true;
+  }
+
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    // InsertOp returns an alias of its operand.
+    assert(op->getNumResults() == 1);
+    return op->getResults();
+  }
+
+  BufferRelation bufferRelation(Operation *oo, OpResult opResult,
+                                const AnalysisState &state) const {
+    // InsertOp returns the same object (realloc should not invalidate
+    // aliases).
+    return BufferRelation::Equivalent;
+  }
+};
+
 } // namespace
 } // namespace sparse_tensor
 } // namespace mlir
@@ -105,5 +134,6 @@ void mlir::sparse_tensor::registerBufferizableOpInterfaceExternalModels(
         sparse_tensor::ConvertOp::attachInterface<ConvertOpInterface>(*ctx);
         sparse_tensor::LoadOp::attachInterface<LoadOpInterface>(*ctx);
         sparse_tensor::NewOp::attachInterface<NewOpInterface>(*ctx);
+        sparse_tensor::InsertOp::attachInterface<InsertOpInterface>(*ctx);
       });
 }

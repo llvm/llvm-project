@@ -26,10 +26,10 @@ define dso_local void @f2(i32 %k) local_unnamed_addr !dbg !11 {
 entry:
 ; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata !15, metadata !DIExpression()), !dbg !16
   call void @llvm.dbg.value(metadata i32 %k, metadata !15, metadata !DIExpression()), !dbg !16
-  %0 = load i32, i32* @s, align 4, !dbg !17
+  %0 = load i32, ptr @s, align 4, !dbg !17
   %inc = add nsw i32 %0, 1, !dbg !17
-  store i32 %inc, i32* @s, align 4, !dbg !17
-  call void @llvm.dbg.value(metadata i32* @s, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  store i32 %inc, ptr @s, align 4, !dbg !17
+  call void @llvm.dbg.value(metadata ptr @s, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
   ret void, !dbg !18
 }
 

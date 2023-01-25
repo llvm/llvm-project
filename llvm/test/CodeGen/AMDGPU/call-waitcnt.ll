@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; Load argument depends on waitcnt which should be skipped.
-define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s6, s[6:7], 0x0
@@ -20,13 +20,13 @@ define amdgpu_kernel void @call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 
 ; GCN-NEXT:    s_addc_u32 s9, s9, func@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GCN-NEXT:    s_endpgm
-  %vgpr = load volatile i32, i32 addrspace(3)* %ptr
+  %vgpr = load volatile i32, ptr addrspace(3) %ptr
   call void @func(i32 %vgpr)
   ret void
 }
 
 ; Memory waitcnt with no register dependence on the call
-define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_memory_no_dep(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_memory_no_dep:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx2 s[6:7], s[6:7], 0x0
@@ -45,13 +45,13 @@ define amdgpu_kernel void @call_memory_no_dep(i32 addrspace(1)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_addc_u32 s9, s9, func@rel32@hi+12
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[8:9]
 ; GCN-NEXT:    s_endpgm
-  store i32 0, i32 addrspace(1)* %ptr
+  store i32 0, ptr addrspace(1) %ptr
   call void @func(i32 0)
   ret void
 }
 
 ; Should not wait after the call before memory
-define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s8, s11
@@ -70,11 +70,11 @@ define amdgpu_kernel void @call_no_wait_after_call(i32 addrspace(1)* %ptr, i32) 
 ; GCN-NEXT:    global_store_dword v40, v40, s[34:35]
 ; GCN-NEXT:    s_endpgm
   call void @func(i32 0)
-  store i32 0, i32 addrspace(1)* %ptr
+  store i32 0, ptr addrspace(1) %ptr
   ret void
 }
 
-define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_no_wait_after_call_return_val(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_no_wait_after_call_return_val:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s8, s11
@@ -93,12 +93,12 @@ define amdgpu_kernel void @call_no_wait_after_call_return_val(i32 addrspace(1)* 
 ; GCN-NEXT:    global_store_dword v40, v0, s[34:35]
 ; GCN-NEXT:    s_endpgm
   %rv = call i32 @func.return(i32 0)
-  store i32 %rv, i32 addrspace(1)* %ptr
+  store i32 %rv, ptr addrspace(1) %ptr
   ret void
 }
 
 ; Need to wait for the address dependency
-define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
+define amdgpu_kernel void @call_got_load(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: call_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_add_u32 flat_scratch_lo, s8, s11
@@ -120,7 +120,7 @@ define amdgpu_kernel void @call_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 }
 
 ; Need to wait for the address dependency
-define void @tailcall_got_load(i32 addrspace(1)* %ptr, i32) #0 {
+define void @tailcall_got_load(ptr addrspace(1) %ptr, i32) #0 {
 ; GCN-LABEL: tailcall_got_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -136,7 +136,7 @@ define void @tailcall_got_load(i32 addrspace(1)* %ptr, i32) #0 {
 }
 
 ; No need to wait for the load.
-define void @tail_call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
+define void @tail_call_memory_arg_load(ptr addrspace(3) %ptr, i32) #0 {
 ; GCN-LABEL: tail_call_memory_arg_load:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -145,7 +145,7 @@ define void @tail_call_memory_arg_load(i32 addrspace(3)* %ptr, i32) #0 {
 ; GCN-NEXT:    s_add_u32 s4, s4, func@rel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, func@rel32@hi+12
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
-  %vgpr = load volatile i32, i32 addrspace(3)* %ptr
+  %vgpr = load volatile i32, ptr addrspace(3) %ptr
   tail call void @func(i32 %vgpr)
   ret void
 }

@@ -3,7 +3,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare void @foo()
 
-define i32 @main(i8* %A) nounwind uwtable {
+define i32 @main(ptr %A) nounwind uwtable {
 entry:
   br label %for.cond
 
@@ -28,8 +28,8 @@ for.body3:                                        ; preds = %for.cond1
   br i1 %cmp4, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body3
-  %arrayidx = getelementptr i8, i8* %A, i64 %indvar
-  store i8 5, i8* %arrayidx
+  %arrayidx = getelementptr i8, ptr %A, i64 %indvar
+  store i8 5, ptr %arrayidx
   br label %if.end
 
 if.end:                                           ; preds = %if.end.single_exit

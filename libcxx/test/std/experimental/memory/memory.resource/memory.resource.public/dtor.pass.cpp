@@ -21,6 +21,8 @@
 //  B) The destructor is implicitly marked noexcept.
 //  C) The destructor is marked virtual.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <cassert>

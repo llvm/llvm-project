@@ -214,8 +214,9 @@ void InstrumentationRuntimeMainThreadChecker::Activate() {
           .CreateBreakpoint(symbol_address, /*internal=*/true,
                             /*hardware=*/false)
           .get();
+  const bool sync = false;
   breakpoint->SetCallback(
-      InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit, this, true);
+      InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit, this, sync);
   breakpoint->SetBreakpointKind("main-thread-checker-report");
   SetBreakpointID(breakpoint->GetID());
 

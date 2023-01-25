@@ -10,7 +10,7 @@
 
 ; FIXME: FunctionLoweringInfo unhelpfully doesn't preserve an
 ; alignment less than the stack alignment.
-define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align4(i32 addrspace(1)* %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
+define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
 ; GCN-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align4:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0x8
@@ -27,14 +27,14 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; GCN-NEXT:    s_cmp_lg_u32 s6, 0
 ; GCN-NEXT:    s_cbranch_scc1 .LBB0_3
 ; GCN-NEXT:  ; %bb.2: ; %bb.1
-; GCN-NEXT:    s_load_dword s6, s[4:5], 0x10
-; GCN-NEXT:    s_add_u32 s7, s32, 0x1000
+; GCN-NEXT:    s_load_dword s7, s[4:5], 0x10
+; GCN-NEXT:    s_add_u32 s6, s32, 0x1000
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v2, s7
+; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_lshl_b32 s6, s6, 2
-; GCN-NEXT:    s_add_u32 s6, s7, s6
+; GCN-NEXT:    s_lshl_b32 s7, s7, 2
+; GCN-NEXT:    s_add_u32 s6, s6, s7
 ; GCN-NEXT:    buffer_store_dword v1, v2, s[0:3], 0 offen
 ; GCN-NEXT:    buffer_store_dword v3, v2, s[0:3], 0 offen offset:4
 ; GCN-NEXT:    v_mov_b32_e32 v2, s6
@@ -56,24 +56,23 @@ entry:
 
 bb.0:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %gep0 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep1 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 1
+  %gep1 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
   %cond1 = icmp eq i32 %arg.cond1, 0
   br i1 %cond1, label %bb.1, label %bb.2
 
 bb.1:
   ; Use the alloca outside of the defining block.
-  store i32 0, i32 addrspace(5)* %gep0
-  store i32 1, i32 addrspace(5)* %gep1
-  %gep2 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %in
-  %load = load i32, i32 addrspace(5)* %gep2
+  store i32 0, ptr addrspace(5) %alloca
+  store i32 1, ptr addrspace(5) %gep1
+  %gep2 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %in
+  %load = load i32, ptr addrspace(5) %gep2
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %load, %tid
-  store i32 %add, i32 addrspace(1)* %out
+  store i32 %add, ptr addrspace(1) %out
   br label %bb.2
 
 bb.2:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 ; DEFAULTSIZE: .amdhsa_private_segment_fixed_size 4112
@@ -82,7 +81,7 @@ bb.2:
 ; ASSUME1024: .amdhsa_private_segment_fixed_size 1040
 ; ASSUME1024: ; ScratchSize: 1040
 
-define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(i32 addrspace(1)* %out, i32 %arg.cond, i32 %in) {
+define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reached_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
 ; GCN-LABEL: kernel_non_entry_block_static_alloca_uniformly_reached_align64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0x8
@@ -123,19 +122,18 @@ entry:
 
 bb.0:
   %alloca = alloca [16 x i32], align 64, addrspace(5)
-  %gep0 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep1 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 1
-  store i32 0, i32 addrspace(5)* %gep0
-  store i32 1, i32 addrspace(5)* %gep1
-  %gep2 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %in
-  %load = load i32, i32 addrspace(5)* %gep2
+  %gep1 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
+  store i32 0, ptr addrspace(5) %alloca
+  store i32 1, ptr addrspace(5) %gep1
+  %gep2 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %in
+  %load = load i32, ptr addrspace(5) %gep2
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %load, %tid
-  store i32 %add, i32 addrspace(1)* %out
+  store i32 %add, ptr addrspace(1) %out
   br label %bb.1
 
 bb.1:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 
@@ -146,7 +144,7 @@ bb.1:
 ; ASSUME1024: ; ScratchSize: 1088
 
 
-define void @func_non_entry_block_static_alloca_align4(i32 addrspace(1)* %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
+define void @func_non_entry_block_static_alloca_align4(ptr addrspace(1) %out, i32 %arg.cond0, i32 %arg.cond1, i32 %in) {
 ; GCN-LABEL: func_non_entry_block_static_alloca_align4:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -189,28 +187,27 @@ entry:
 
 bb.0:
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %gep0 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep1 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 1
+  %gep1 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
   %cond1 = icmp eq i32 %arg.cond1, 0
   br i1 %cond1, label %bb.1, label %bb.2
 
 bb.1:
   ; Use the alloca outside of the defining block.
-  store i32 0, i32 addrspace(5)* %gep0
-  store i32 1, i32 addrspace(5)* %gep1
-  %gep2 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %in
-  %load = load i32, i32 addrspace(5)* %gep2
+  store i32 0, ptr addrspace(5) %alloca
+  store i32 1, ptr addrspace(5) %gep1
+  %gep2 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %in
+  %load = load i32, ptr addrspace(5) %gep2
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %load, %tid
-  store i32 %add, i32 addrspace(1)* %out
+  store i32 %add, ptr addrspace(1) %out
   br label %bb.2
 
 bb.2:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 
-define void @func_non_entry_block_static_alloca_align64(i32 addrspace(1)* %out, i32 %arg.cond, i32 %in) {
+define void @func_non_entry_block_static_alloca_align64(ptr addrspace(1) %out, i32 %arg.cond, i32 %in) {
 ; GCN-LABEL: func_non_entry_block_static_alloca_align64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -250,19 +247,18 @@ entry:
 
 bb.0:
   %alloca = alloca [16 x i32], align 64, addrspace(5)
-  %gep0 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep1 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 1
-  store i32 0, i32 addrspace(5)* %gep0
-  store i32 1, i32 addrspace(5)* %gep1
-  %gep2 = getelementptr [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 %in
-  %load = load i32, i32 addrspace(5)* %gep2
+  %gep1 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
+  store i32 0, ptr addrspace(5) %alloca
+  store i32 1, ptr addrspace(5) %gep1
+  %gep2 = getelementptr [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %in
+  %load = load i32, ptr addrspace(5) %gep2
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %add = add i32 %load, %tid
-  store i32 %add, i32 addrspace(1)* %out
+  store i32 %add, ptr addrspace(1) %out
   br label %bb.1
 
 bb.1:
-  store volatile i32 0, i32 addrspace(1)* undef
+  store volatile i32 0, ptr addrspace(1) undef
   ret void
 }
 

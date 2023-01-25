@@ -13,7 +13,9 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/GlobalIFunc.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include <utility> // for std::pair
@@ -25,6 +27,7 @@ template <typename T> class ArrayRef;
 class Module;
 class Function;
 class FunctionCallee;
+class GlobalIFunc;
 class GlobalValue;
 class Constant;
 class Value;
@@ -33,13 +36,17 @@ class Type;
 /// Append F to the list of global ctors of module M with the given Priority.
 /// This wraps the function in the appropriate structure and stores it along
 /// side other global constructors. For details see
-/// http://llvm.org/docs/LangRef.html#intg_global_ctors
+/// https://llvm.org/docs/LangRef.html#the-llvm-global-ctors-global-variable
 void appendToGlobalCtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
 
 /// Same as appendToGlobalCtors(), but for global dtors.
 void appendToGlobalDtors(Module &M, Function *F, int Priority,
                          Constant *Data = nullptr);
+
+/// Sets the KCFI type for the function. Used for compiler-generated functions
+/// that are indirectly called in instrumented code.
+void setKCFIType(Module &M, Function &F, StringRef MangledType);
 
 FunctionCallee declareSanitizerInitFunction(Module &M, StringRef InitName,
                                             ArrayRef<Type *> InitArgTypes);
@@ -80,6 +87,12 @@ void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 /// Adds global values to the llvm.compiler.used list.
 void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
+/// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
+/// ShouldRemove should return true for any initializer field that should not be
+/// included in the replacement global.
+void removeFromUsedLists(Module &M,
+                         function_ref<bool(Constant *)> ShouldRemove);
+
 /// Filter out potentially dead comdat functions where other entries keep the
 /// entire comdat group alive.
 ///
@@ -113,6 +126,21 @@ std::string getUniqueModuleId(Module *M);
 /// module using the same section name.
 void embedBufferInModule(Module &M, MemoryBufferRef Buf, StringRef SectionName,
                          Align Alignment = Align(1));
+
+/// Lower all calls to ifuncs by replacing uses with indirect calls loaded out
+/// of a global table initialized in a global constructor. This will introduce
+/// one constructor function and adds it to llvm.global_ctors. The constructor
+/// will call the resolver function once for each ifunc.
+///
+/// Leaves any unhandled constant initializer uses as-is.
+///
+/// If \p IFuncsToLower is empty, all ifuncs in the module will be lowered.
+/// If \p IFuncsToLower is non-empty, only the selected ifuncs will be lowered.
+///
+/// The processed ifuncs without remaining users will be removed from the
+/// module.
+bool lowerGlobalIFuncUsersAsGlobalCtor(
+    Module &M, ArrayRef<GlobalIFunc *> IFuncsToLower = {});
 
 class CallInst;
 namespace VFABI {

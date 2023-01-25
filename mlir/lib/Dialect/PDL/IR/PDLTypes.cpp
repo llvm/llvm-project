@@ -38,7 +38,7 @@ static Type parsePDLType(AsmParser &parser) {
   {
     Type genType;
     auto parseResult = generatedTypeParser(parser, &typeTag, genType);
-    if (parseResult.hasValue())
+    if (parseResult.has_value())
       return genType;
   }
 
@@ -57,6 +57,12 @@ static Type parsePDLType(AsmParser &parser) {
 
 bool PDLType::classof(Type type) {
   return llvm::isa<PDLDialect>(type.getDialect());
+}
+
+Type pdl::getRangeElementTypeOrSelf(Type type) {
+  if (auto rangeType = type.dyn_cast<RangeType>())
+    return rangeType.getElementType();
+  return type;
 }
 
 //===----------------------------------------------------------------------===//

@@ -31,7 +31,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -44,7 +44,7 @@ namespace __inplace_merge {
     __inplace_merge_impl(_Iter __first, _Iter __middle, _Sent __last, _Comp&& __comp, _Proj&& __proj) {
       auto __last_iter = ranges::next(__middle, __last);
       std::__inplace_merge<_RangeAlgPolicy>(
-          std::move(__first), std::move(__middle), __last_iter, ranges::__make_projected_comp(__comp, __proj));
+          std::move(__first), std::move(__middle), __last_iter, std::__make_projected(__comp, __proj));
       return __last_iter;
     }
 
@@ -80,6 +80,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_INPLACE_MERGE_H

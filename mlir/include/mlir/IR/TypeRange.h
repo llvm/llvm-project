@@ -36,7 +36,7 @@ class TypeRange : public llvm::detail::indexed_accessor_range_base<
                       Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = llvm::None);
+  TypeRange(ArrayRef<Type> types = std::nullopt);
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
@@ -44,9 +44,8 @@ public:
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRange(ValueRangeT(values.begin().getCurrent(),
                                          values.end().getCurrent()))) {}
-  template <typename Arg,
-            typename = typename std::enable_if_t<
-                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<Type>, Arg>::value>>
   TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
   TypeRange(std::initializer_list<Type> types)
       : TypeRange(ArrayRef<Type>(types)) {}
@@ -165,6 +164,23 @@ inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
   return lhs.size() == static_cast<size_t>(llvm::size(rhs)) &&
          std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
+
+//===----------------------------------------------------------------------===//
+// SubElementInterfaces
+//===----------------------------------------------------------------------===//
+
+/// Enable TypeRange to be introspected for sub-elements.
+template <>
+struct AttrTypeSubElementHandler<TypeRange> {
+  static void walk(TypeRange param, AttrTypeSubElementWalker &walker) {
+    walker.walkRange(param);
+  }
+  static TypeRange replace(TypeRange param,
+                           AttrSubElementReplacements &attrRepls,
+                           TypeSubElementReplacements &typeRepls) {
+    return typeRepls.take_front(param.size());
+  }
+};
 
 } // namespace mlir
 

@@ -28,7 +28,6 @@
 #include "SyntheticSections.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/raw_ostream.h"
 

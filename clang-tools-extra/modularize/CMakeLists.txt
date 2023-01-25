@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Support
+  TargetParser
   )
 
 add_clang_tool(modularize

@@ -13,6 +13,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -98,10 +99,11 @@ static void getBackwardSliceImpl(Operation *op,
       // TODO: determine whether we want to recurse backward into the other
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
-      assert(parentOp->getNumRegions() == 1 &&
-             parentOp->getRegion(0).getBlocks().size() == 1);
-      if (backwardSlice->count(parentOp) == 0)
+      if (parentOp && backwardSlice->count(parentOp) == 0) {
+        assert(parentOp->getNumRegions() == 1 &&
+               parentOp->getRegion(0).getBlocks().size() == 1);
         getBackwardSliceImpl(parentOp, backwardSlice, filter);
+      }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
@@ -161,8 +163,7 @@ namespace {
 /// We traverse all operations but only record the ones that appear in
 /// `toSort` for the final result.
 struct DFSState {
-  DFSState(const SetVector<Operation *> &set)
-      : toSort(set), topologicalCounts(), seen() {}
+  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
   const SetVector<Operation *> &toSort;
   SmallVector<Operation *, 16> topologicalCounts;
   DenseSet<Operation *> seen;
@@ -293,9 +294,8 @@ Value mlir::matchReduction(ArrayRef<BlockArgument> iterCarriedArgs,
   // terminator is found. Gather all the combiner ops along the way in
   // topological order.
   while (!combinerOp->mightHaveTrait<OpTrait::IsTerminator>()) {
-    if (!MemoryEffectOpInterface::hasNoEffect(combinerOp) ||
-        combinerOp->getNumResults() != 1 || !combinerOp->hasOneUse() ||
-        combinerOp->getParentOp() != redRegionOp)
+    if (!isMemoryEffectFree(combinerOp) || combinerOp->getNumResults() != 1 ||
+        !combinerOp->hasOneUse() || combinerOp->getParentOp() != redRegionOp)
       return nullptr;
 
     combinerOps.push_back(combinerOp);

@@ -11,7 +11,6 @@
 # Try to detect in the system several dependencies required by the different
 # components of libomptarget. These are the dependencies we have:
 #
-# libelf : required by some targets to handle the ELF files at runtime.
 # libffi : required to launch target kernels given function and argument
 #          pointers.
 # CUDA : required to control offloading to NVIDIA GPUs.
@@ -48,46 +47,6 @@ else()
   message(STATUS
     "Using LLVM include directories: ${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
 endif()
-
-################################################################################
-# Looking for libelf...
-################################################################################
-
-find_path (
-  LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR
-  NAMES
-    libelf.h
-  PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
-    ENV CPATH
-  PATH_SUFFIXES
-    libelf)
-
-find_library (
-  LIBOMPTARGET_DEP_LIBELF_LIBRARIES
-  NAMES
-    elf
-  PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
-set(LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS ${LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIR})
-find_package_handle_standard_args(
-  LIBOMPTARGET_DEP_LIBELF
-  DEFAULT_MSG
-  LIBOMPTARGET_DEP_LIBELF_LIBRARIES
-  LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS)
-
-mark_as_advanced(
-  LIBOMPTARGET_DEP_LIBELF_INCLUDE_DIRS
-  LIBOMPTARGET_DEP_LIBELF_LIBRARIES)
 
 ################################################################################
 # Looking for libffi...
@@ -147,15 +106,20 @@ if (CUDA_TOOLKIT_ROOT_DIR)
 endif()
 find_package(CUDA QUIET)
 
-# Try to get the highest Nvidia GPU architecture the system supports
-if (CUDA_FOUND)
-  cuda_select_nvcc_arch_flags(CUDA_ARCH_FLAGS)
-  string(REGEX MATCH "sm_([0-9]+)" CUDA_ARCH_MATCH_OUTPUT ${CUDA_ARCH_FLAGS})
-  if (NOT DEFINED CUDA_ARCH_MATCH_OUTPUT OR "${CMAKE_MATCH_1}" LESS 35)
-    libomptarget_warning_say("Setting Nvidia GPU architecture support for OpenMP target runtime library to sm_35 by default")
-    set(LIBOMPTARGET_DEP_CUDA_ARCH "35")
-  else()
-    set(LIBOMPTARGET_DEP_CUDA_ARCH "${CMAKE_MATCH_1}")
+# Identify any locally installed GPUs to use for testing.
+set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
+
+find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(LIBOMPTARGET_NVPTX_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_NVPTX_ARCH}
+                  OUTPUT_VARIABLE LIBOMPTARGET_NVPTX_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBOMPTARGET_NVPTX_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBOMPTARGET_FOUND_NVIDIA_GPU TRUE)
+    set(LIBOMPTARGET_DEP_CUDA_ARCH "${arch_string}")
   endif()
 endif()
 
@@ -194,6 +158,25 @@ find_package_handle_standard_args(
   LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
 
 mark_as_advanced(LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES)
+
+################################################################################
+# Looking for AMD GPUs...
+################################################################################
+
+find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(LIBOMPTARGET_AMDGPU_ARCH)
+  execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
+                  OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT
+                  OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(FIND "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" "\n" first_arch_string)
+  string(SUBSTRING "${LIBOMPTARGET_AMDGPU_ARCH_OUTPUT}" 0 ${first_arch_string}
+         arch_string)
+  if(arch_string)
+    set(LIBOMPTARGET_FOUND_AMDGPU_GPU TRUE)
+    set(LIBOMPTARGET_DEP_AMDGPU_ARCH "${arch_string}")
+  endif()
+endif()
+
 
 ################################################################################
 # Looking for VEO...

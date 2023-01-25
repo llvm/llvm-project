@@ -29,7 +29,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-define void @f([1000 x float]* %A, i32 %n, [1000 x float]* %B) {
+define void @f(ptr %A, i32 %n, ptr %B) {
 entry:
   br label %entry.split
 
@@ -50,13 +50,13 @@ for.body3.lr.ph:                                  ; preds = %for.cond1.preheader
 
 for.body3:                                        ; preds = %for.body3.lr.ph, %for.body3
   %indvars.iv = phi i64 [ 0, %for.body3.lr.ph ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx5 = getelementptr inbounds [1000 x float], [1000 x float]* %A, i64 %indvars.iv5, i64 %indvars.iv
-  %0 = load float, float* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds [1000 x float], ptr %A, i64 %indvars.iv5, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx5, align 4
   %conv = fpext float %0 to double
   %1 = tail call double @extern.fn(double %conv)
   %conv6 = fptrunc double %1 to float
-  %arrayidx10 = getelementptr inbounds [1000 x float], [1000 x float]* %B, i64 %indvars.iv5, i64 %indvars.iv
-  store float %conv6, float* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds [1000 x float], ptr %B, i64 %indvars.iv5, i64 %indvars.iv
+  store float %conv6, ptr %arrayidx10, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %wide.trip.count = zext i32 %n to i64
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count

@@ -18,8 +18,8 @@ bb2:		; preds = %fault_in_pages_writeable.exit
 	unreachable
 
 bb3:		; preds = %fault_in_pages_writeable.exit
-	%2 = tail call  i32 @__copy_to_user(i8* undef, i8* undef, i32 undef) nounwind		; <i32> [#uses=0]
+	%2 = tail call  i32 @__copy_to_user(ptr undef, ptr undef, i32 undef) nounwind		; <i32> [#uses=0]
 	unreachable
 }
 
-declare i32 @__copy_to_user(i8*, i8*, i32)
+declare i32 @__copy_to_user(ptr, ptr, i32)

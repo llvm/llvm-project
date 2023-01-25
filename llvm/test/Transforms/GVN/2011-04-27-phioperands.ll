@@ -1,4 +1,4 @@
-; RUN: opt -gvn -disable-output < %s
+; RUN: opt -passes=gvn -disable-output < %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-f128:128:128-n8:16:32:64"
 
@@ -27,7 +27,7 @@ doemit.exit76.i:
   br label %"<bb 53>.i"
 
 "<L98>.i":
-  store i8* getelementptr inbounds ([10 x i8], [10 x i8]* @nuls, i64 0, i64 0), i8** undef, align 8
+  store ptr @nuls, ptr undef, align 8
   br label %"<bb 53>.i"
 
 "<L99>.i":
@@ -50,7 +50,7 @@ doemit.exit76.i:
 
 "<bb 53>.i":
   %wascaret_2.i = phi i32 [ 0, %"<L39>.i" ], [ 0, %"<L29>.i" ], [ 0, %"<L28>.i" ], [ 0, %"<bb 35>.i" ], [ 0, %"<L99>.i" ], [ 0, %"<L98>.i" ], [ 0, %doemit.exit76.i ], [ 1, %doemit.exit51.i ], [ 0, %"<L24>.i" ]
-  %D.5496_84.i = load i8*, i8** undef, align 8
+  %D.5496_84.i = load ptr, ptr undef, align 8
   br i1 undef, label %"<bb 54>.i", label %"<bb 5>"
 
 "<bb 54>.i":

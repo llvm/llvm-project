@@ -358,7 +358,7 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
       ++I;
       auto Delim = std::find(I, Input.end(), '}');
       assert(Delim != Input.end());
-      llvm::Optional<llvm::sys::unicode::LooseMatchingResult> Res =
+      std::optional<llvm::sys::unicode::LooseMatchingResult> Res =
           llvm::sys::unicode::nameToCodepointLooseMatching(
               StringRef(I, std::distance(I, Delim)));
       assert(Res);
@@ -487,7 +487,7 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
   namespace u = llvm::sys::unicode;
 
-  llvm::Optional<u::LooseMatchingResult> Res =
+  std::optional<u::LooseMatchingResult> Res =
       u::nameToCodepointLooseMatching(Name);
   if (Res) {
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
@@ -515,8 +515,9 @@ static void DiagnoseInvalidUnicodeCharacterName(
 
     std::string Str;
     llvm::UTF32 V = Match.Value;
-    LLVM_ATTRIBUTE_UNUSED bool Converted =
+    bool Converted =
         llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&V, 1), Str);
+    (void)Converted;
     assert(Converted && "Found a match wich is not a unicode character");
 
     Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
@@ -545,15 +546,13 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
            diag::err_delimited_escape_missing_brace)
           << StringRef(&ThisTokBuf[-1], 1);
     }
-    ThisTokBuf++;
     return false;
   }
   ThisTokBuf++;
-  const char *ClosingBrace =
-      std::find_if_not(ThisTokBuf, ThisTokEnd, [](char C) {
-        return llvm::isAlnum(C) || llvm::isSpace(C) || C == '_' || C == '-';
-      });
-  bool Incomplete = ClosingBrace == ThisTokEnd || *ClosingBrace != '}';
+  const char *ClosingBrace = std::find_if(ThisTokBuf, ThisTokEnd, [](char C) {
+    return C == '}' || isVerticalWhitespace(C);
+  });
+  bool Incomplete = ClosingBrace == ThisTokEnd;
   bool Empty = ClosingBrace == ThisTokBuf;
   if (Incomplete || Empty) {
     if (Diags) {
@@ -567,8 +566,7 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
   }
   StringRef Name(ThisTokBuf, ClosingBrace - ThisTokBuf);
   ThisTokBuf = ClosingBrace + 1;
-  llvm::Optional<char32_t> Res =
-      llvm::sys::unicode::nameToCodepointStrict(Name);
+  std::optional<char32_t> Res = llvm::sys::unicode::nameToCodepointStrict(Name);
   if (!Res) {
     if (Diags)
       DiagnoseInvalidUnicodeCharacterName(Diags, Features, Loc, ThisTokBegin,
@@ -766,13 +764,13 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   switch (bytesToWrite) { // note: everything falls through.
   case 4:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 3:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 2:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 1:
     *--ResultBuf = (UTF8) (UcnVal | firstByteMark[bytesToWrite]);
   }
@@ -945,9 +943,13 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
       // CUDA host and device may have different _Float16 support, therefore
       // allows f16 literals to avoid false alarm.
+      // When we compile for OpenMP target offloading on NVPTX, f16 suffix
+      // should also be supported.
       // ToDo: more precise check for CUDA.
-      if ((Target.hasFloat16Type() || LangOpts.CUDA) && s + 2 < ThisTokEnd &&
-          s[1] == '1' && s[2] == '6') {
+      // TODO: AMDGPU might also support it in the future.
+      if ((Target.hasFloat16Type() || LangOpts.CUDA ||
+           (LangOpts.OpenMPIsDevice && Target.getTriple().isNVPTX())) &&
+          s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;
         continue;
@@ -1037,7 +1039,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           break;
         }
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'j':
     case 'J':
       if (isImaginary) break;   // Cannot be repeated.

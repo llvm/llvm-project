@@ -12,7 +12,7 @@
 
 int main(int argc, char *argv[]) {
   int *data = (int *)malloc(N * sizeof(int));
-#pragma omp target map(from: data[0:N])
+#pragma omp target map(from : data[0 : N])
   {
     double start = omp_get_wtime();
     for (int i = 0; i < N; ++i)
@@ -26,4 +26,3 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: duration: {{.+[1-9]+}}
-

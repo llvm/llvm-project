@@ -42,18 +42,18 @@ void unavail(short* sp) {
 // delayed process for 'deprecated'.
 // <rdar://problem/12241361> and <rdar://problem/15584219>
 enum DeprecatedEnum { DE_A, DE_B } __attribute__((deprecated)); // expected-note {{'DeprecatedEnum' has been explicitly marked deprecated here}}
-__attribute__((deprecated)) typedef enum DeprecatedEnum DeprecatedEnum;
 typedef enum DeprecatedEnum AnotherDeprecatedEnum; // expected-warning {{'DeprecatedEnum' is deprecated}}
 
+__attribute__((deprecated)) typedef enum DeprecatedEnum DeprecatedEnum;
 __attribute__((deprecated))
 DeprecatedEnum testDeprecated(DeprecatedEnum X) { return X; }
 
 
 enum UnavailableEnum { UE_A, UE_B } __attribute__((unavailable)); // expected-note {{'UnavailableEnum' has been explicitly marked unavailable here}}
-__attribute__((unavailable)) typedef enum UnavailableEnum UnavailableEnum;
 typedef enum UnavailableEnum AnotherUnavailableEnum; // expected-error {{'UnavailableEnum' is unavailable}}
+                                                     //
 
-
+__attribute__((unavailable)) typedef enum UnavailableEnum UnavailableEnum;
 __attribute__((unavailable))
 UnavailableEnum testUnavailable(UnavailableEnum X) { return X; }
 

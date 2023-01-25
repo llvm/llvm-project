@@ -8,7 +8,7 @@
 define void @test1(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackeb(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -17,7 +17,7 @@ entry:
 define void @test2(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackeh(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -26,7 +26,7 @@ entry:
 define void @test3(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackhub.sat(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -35,7 +35,7 @@ entry:
 define void @test4(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackhb.sat(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -44,7 +44,7 @@ entry:
 define void @test5(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackwuh.sat(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -53,7 +53,7 @@ entry:
 define void @test6(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackwh.sat(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -62,7 +62,7 @@ entry:
 define void @test7(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackob(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -71,7 +71,7 @@ entry:
 define void @test8(<16 x i32> %a, <16 x i32> %b) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vpackoh(<16 x i32> %a, <16 x i32> %b)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -80,7 +80,7 @@ entry:
 define void @test9(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <32 x i32> @llvm.hexagon.V6.vunpackub(<16 x i32> %a)
-  store <32 x i32> %0, <32 x i32>* @c, align 128
+  store <32 x i32> %0, ptr @c, align 128
   ret void
 }
 
@@ -89,7 +89,7 @@ entry:
 define void @test10(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <32 x i32> @llvm.hexagon.V6.vunpackuh(<16 x i32> %a)
-  store <32 x i32> %0, <32 x i32>* @c, align 128
+  store <32 x i32> %0, ptr @c, align 128
   ret void
 }
 
@@ -98,7 +98,7 @@ entry:
 define void @test11(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <32 x i32> @llvm.hexagon.V6.vunpackb(<16 x i32> %a)
-  store <32 x i32> %0, <32 x i32>* @c, align 128
+  store <32 x i32> %0, ptr @c, align 128
   ret void
 }
 
@@ -107,7 +107,7 @@ entry:
 define void @test12(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <32 x i32> @llvm.hexagon.V6.vunpackh(<16 x i32> %a)
-  store <32 x i32> %0, <32 x i32>* @c, align 128
+  store <32 x i32> %0, ptr @c, align 128
   ret void
 }
 
@@ -116,7 +116,7 @@ entry:
 define void @test13(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vdealh(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -125,7 +125,7 @@ entry:
 define void @test14(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vdealb(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -134,7 +134,7 @@ entry:
 define void @test15(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vshuffh(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 
@@ -143,7 +143,7 @@ entry:
 define void @test16(<16 x i32> %a) #0 {
 entry:
   %0 = tail call <16 x i32> @llvm.hexagon.V6.vshuffb(<16 x i32> %a)
-  store <16 x i32> %0, <16 x i32>* @d, align 64
+  store <16 x i32> %0, ptr @d, align 64
   ret void
 }
 

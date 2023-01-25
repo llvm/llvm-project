@@ -97,8 +97,17 @@ define <16 x i8> @swizzle_one_i8x16(<16 x i8> %src, <16 x i8> %mask) {
 ; CHECK-LABEL: swizzle_one_i8x16:
 ; CHECK:         .functype swizzle_one_i8x16 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    global.get $push5=, __stack_pointer
+; CHECK-NEXT:    i32.const $push6=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop5, $pop6
+; CHECK-NEXT:    local.tee $push7=, $2=, $pop8
+; CHECK-NEXT:    v128.store 0($pop7), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 0
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop1
+; CHECK-NEXT:    i32.or $push3=, $2, $pop2
+; CHECK-NEXT:    v128.load8_splat $push4=, 0($pop3)
+; CHECK-NEXT:    return $pop4
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0
@@ -109,8 +118,92 @@ define <16 x i8> @swizzle_all_i8x16(<16 x i8> %src, <16 x i8> %mask) {
 ; CHECK-LABEL: swizzle_all_i8x16:
 ; CHECK:         .functype swizzle_all_i8x16 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    global.get $push65=, __stack_pointer
+; CHECK-NEXT:    i32.const $push66=, 16
+; CHECK-NEXT:    i32.sub $push83=, $pop65, $pop66
+; CHECK-NEXT:    local.tee $push82=, $2=, $pop83
+; CHECK-NEXT:    v128.store 0($pop82), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push61=, $1, 15
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push62=, $pop61, $pop1
+; CHECK-NEXT:    i32.or $push63=, $2, $pop62
+; CHECK-NEXT:    i8x16.extract_lane_u $push57=, $1, 14
+; CHECK-NEXT:    i32.const $push81=, 15
+; CHECK-NEXT:    i32.and $push58=, $pop57, $pop81
+; CHECK-NEXT:    i32.or $push59=, $2, $pop58
+; CHECK-NEXT:    i8x16.extract_lane_u $push53=, $1, 13
+; CHECK-NEXT:    i32.const $push80=, 15
+; CHECK-NEXT:    i32.and $push54=, $pop53, $pop80
+; CHECK-NEXT:    i32.or $push55=, $2, $pop54
+; CHECK-NEXT:    i8x16.extract_lane_u $push49=, $1, 12
+; CHECK-NEXT:    i32.const $push79=, 15
+; CHECK-NEXT:    i32.and $push50=, $pop49, $pop79
+; CHECK-NEXT:    i32.or $push51=, $2, $pop50
+; CHECK-NEXT:    i8x16.extract_lane_u $push45=, $1, 11
+; CHECK-NEXT:    i32.const $push78=, 15
+; CHECK-NEXT:    i32.and $push46=, $pop45, $pop78
+; CHECK-NEXT:    i32.or $push47=, $2, $pop46
+; CHECK-NEXT:    i8x16.extract_lane_u $push41=, $1, 10
+; CHECK-NEXT:    i32.const $push77=, 15
+; CHECK-NEXT:    i32.and $push42=, $pop41, $pop77
+; CHECK-NEXT:    i32.or $push43=, $2, $pop42
+; CHECK-NEXT:    i8x16.extract_lane_u $push37=, $1, 9
+; CHECK-NEXT:    i32.const $push76=, 15
+; CHECK-NEXT:    i32.and $push38=, $pop37, $pop76
+; CHECK-NEXT:    i32.or $push39=, $2, $pop38
+; CHECK-NEXT:    i8x16.extract_lane_u $push33=, $1, 8
+; CHECK-NEXT:    i32.const $push75=, 15
+; CHECK-NEXT:    i32.and $push34=, $pop33, $pop75
+; CHECK-NEXT:    i32.or $push35=, $2, $pop34
+; CHECK-NEXT:    i8x16.extract_lane_u $push29=, $1, 7
+; CHECK-NEXT:    i32.const $push74=, 15
+; CHECK-NEXT:    i32.and $push30=, $pop29, $pop74
+; CHECK-NEXT:    i32.or $push31=, $2, $pop30
+; CHECK-NEXT:    i8x16.extract_lane_u $push25=, $1, 6
+; CHECK-NEXT:    i32.const $push73=, 15
+; CHECK-NEXT:    i32.and $push26=, $pop25, $pop73
+; CHECK-NEXT:    i32.or $push27=, $2, $pop26
+; CHECK-NEXT:    i8x16.extract_lane_u $push21=, $1, 5
+; CHECK-NEXT:    i32.const $push72=, 15
+; CHECK-NEXT:    i32.and $push22=, $pop21, $pop72
+; CHECK-NEXT:    i32.or $push23=, $2, $pop22
+; CHECK-NEXT:    i8x16.extract_lane_u $push17=, $1, 4
+; CHECK-NEXT:    i32.const $push71=, 15
+; CHECK-NEXT:    i32.and $push18=, $pop17, $pop71
+; CHECK-NEXT:    i32.or $push19=, $2, $pop18
+; CHECK-NEXT:    i8x16.extract_lane_u $push13=, $1, 3
+; CHECK-NEXT:    i32.const $push70=, 15
+; CHECK-NEXT:    i32.and $push14=, $pop13, $pop70
+; CHECK-NEXT:    i32.or $push15=, $2, $pop14
+; CHECK-NEXT:    i8x16.extract_lane_u $push9=, $1, 2
+; CHECK-NEXT:    i32.const $push69=, 15
+; CHECK-NEXT:    i32.and $push10=, $pop9, $pop69
+; CHECK-NEXT:    i32.or $push11=, $2, $pop10
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 1
+; CHECK-NEXT:    i32.const $push68=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop68
+; CHECK-NEXT:    i32.or $push3=, $2, $pop2
+; CHECK-NEXT:    i8x16.extract_lane_u $push4=, $1, 0
+; CHECK-NEXT:    i32.const $push67=, 15
+; CHECK-NEXT:    i32.and $push5=, $pop4, $pop67
+; CHECK-NEXT:    i32.or $push6=, $2, $pop5
+; CHECK-NEXT:    v128.load8_splat $push7=, 0($pop6)
+; CHECK-NEXT:    v128.load8_lane $push8=, 0($pop3), $pop7, 1
+; CHECK-NEXT:    v128.load8_lane $push12=, 0($pop11), $pop8, 2
+; CHECK-NEXT:    v128.load8_lane $push16=, 0($pop15), $pop12, 3
+; CHECK-NEXT:    v128.load8_lane $push20=, 0($pop19), $pop16, 4
+; CHECK-NEXT:    v128.load8_lane $push24=, 0($pop23), $pop20, 5
+; CHECK-NEXT:    v128.load8_lane $push28=, 0($pop27), $pop24, 6
+; CHECK-NEXT:    v128.load8_lane $push32=, 0($pop31), $pop28, 7
+; CHECK-NEXT:    v128.load8_lane $push36=, 0($pop35), $pop32, 8
+; CHECK-NEXT:    v128.load8_lane $push40=, 0($pop39), $pop36, 9
+; CHECK-NEXT:    v128.load8_lane $push44=, 0($pop43), $pop40, 10
+; CHECK-NEXT:    v128.load8_lane $push48=, 0($pop47), $pop44, 11
+; CHECK-NEXT:    v128.load8_lane $push52=, 0($pop51), $pop48, 12
+; CHECK-NEXT:    v128.load8_lane $push56=, 0($pop55), $pop52, 13
+; CHECK-NEXT:    v128.load8_lane $push60=, 0($pop59), $pop56, 14
+; CHECK-NEXT:    v128.load8_lane $push64=, 0($pop63), $pop60, 15
+; CHECK-NEXT:    return $pop64
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0
@@ -190,7 +283,7 @@ define <4 x i32> @half_shuffle_i32x4(<4 x i32> %src) {
 ; CHECK-LABEL: half_shuffle_i32x4:
 ; CHECK:         .functype half_shuffle_i32x4 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 0, 0, 8, 9, 10, 11, 0, 1, 2, 3, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    i32.const $push1=, 0
 ; CHECK-NEXT:    i32x4.replace_lane $push2=, $pop0, 0, $pop1
 ; CHECK-NEXT:    i32.const $push3=, 3
@@ -210,14 +303,25 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; CHECK-LABEL: mashup_swizzle_i8x16:
 ; CHECK:         .functype mashup_swizzle_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    i8x16.replace_lane $push1=, $pop0, 3, $2
-; CHECK-NEXT:    i32.const $push2=, 42
-; CHECK-NEXT:    i8x16.replace_lane $push3=, $pop1, 4, $pop2
-; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop3, 12, $2
-; CHECK-NEXT:    i32.const $push6=, 42
-; CHECK-NEXT:    i8x16.replace_lane $push5=, $pop4, 14, $pop6
-; CHECK-NEXT:    return $pop5
+; CHECK-NEXT:    global.get $push12=, __stack_pointer
+; CHECK-NEXT:    i32.const $push13=, 16
+; CHECK-NEXT:    i32.sub $push16=, $pop12, $pop13
+; CHECK-NEXT:    local.tee $push15=, $3=, $pop16
+; CHECK-NEXT:    v128.store 0($pop15), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push7=, $1, 7
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push8=, $pop7, $pop1
+; CHECK-NEXT:    i32.or $push9=, $3, $pop8
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 0
+; CHECK-NEXT:    i32.const $push14=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop14
+; CHECK-NEXT:    i32.or $push3=, $3, $pop2
+; CHECK-NEXT:    v128.const $push4=, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0
+; CHECK-NEXT:    v128.load8_lane $push5=, 0($pop3), $pop4, 0
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop5, 3, $2
+; CHECK-NEXT:    v128.load8_lane $push10=, 0($pop9), $pop6, 7
+; CHECK-NEXT:    i8x16.replace_lane $push11=, $pop10, 12, $2
+; CHECK-NEXT:    return $pop11
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0
@@ -304,7 +408,7 @@ define <4 x float> @undef_const_insert_f32x4() {
 ; CHECK-LABEL: undef_const_insert_f32x4:
 ; CHECK:         .functype undef_const_insert_f32x4 () -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    v128.const $push0=, 0x0p0, 0x1.5p5, 0x0p0, 0x0p0
+; CHECK-NEXT:    v128.const $push0=, 0x1.5p5, 0x1.5p5, 0x1.5p5, 0x1.5p5
 ; CHECK-NEXT:    return $pop0
   %v = insertelement <4 x float> undef, float 42., i32 1
   ret <4 x float> %v

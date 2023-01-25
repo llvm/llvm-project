@@ -35,8 +35,6 @@
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -221,7 +219,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // dominated by any other blocks in set 'BBs', and all nodes in the path
   // in the dominator tree from Entry to 'BB'.
   SmallPtrSet<BasicBlock *, 16> Candidates;
-  for (auto BB : BBs) {
+  for (auto *BB : BBs) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(BB))
       continue;
@@ -258,7 +256,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   Orders.push_back(Entry);
   while (Idx != Orders.size()) {
     BasicBlock *Node = Orders[Idx++];
-    for (auto ChildDomNode : DT.getNode(Node)->children()) {
+    for (auto *ChildDomNode : DT.getNode(Node)->children()) {
       if (Candidates.count(ChildDomNode->getBlock()))
         Orders.push_back(ChildDomNode->getBlock());
     }
@@ -330,7 +328,7 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
 
   if (BFI) {
     findBestInsertionSet(*DT, *BFI, Entry, BBs);
-    for (auto BB : BBs) {
+    for (auto *BB : BBs) {
       BasicBlock::iterator InsertPt = BB->begin();
       for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
         ;
@@ -533,8 +531,9 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
 // bit widths (APInt Operator- does not like that). If the value cannot be
 // represented in uint64 we return an "empty" APInt. This is then interpreted
 // as the value is not in range.
-static Optional<APInt> calculateOffsetDiff(const APInt &V1, const APInt &V2) {
-  Optional<APInt> Res = None;
+static std::optional<APInt> calculateOffsetDiff(const APInt &V1,
+                                                const APInt &V2) {
+  std::optional<APInt> Res;
   unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
                 V1.getBitWidth() : V2.getBitWidth();
   uint64_t LimVal1 = V1.getLimitedValue();
@@ -606,14 +605,13 @@ ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
       LLVM_DEBUG(dbgs() << "Cost: " << Cost << "\n");
 
       for (auto C2 = S; C2 != E; ++C2) {
-        Optional<APInt> Diff = calculateOffsetDiff(
-                                   C2->ConstInt->getValue(),
-                                   ConstCand->ConstInt->getValue());
+        std::optional<APInt> Diff = calculateOffsetDiff(
+            C2->ConstInt->getValue(), ConstCand->ConstInt->getValue());
         if (Diff) {
           const InstructionCost ImmCosts =
-              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.value(), Ty);
+              TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, *Diff, Ty);
           Cost -= ImmCosts;
-          LLVM_DEBUG(dbgs() << "Offset " << Diff.value() << " "
+          LLVM_DEBUG(dbgs() << "Offset " << *Diff << " "
                             << "has penalty: " << ImmCosts << "\n"
                             << "Adjusted cost: " << Cost << "\n");
         }
@@ -724,7 +722,7 @@ void ConstantHoistingPass::findBaseConstants(GlobalVariable *BaseGV) {
 
 /// Updates the operand at Idx in instruction Inst with the result of
 ///        instruction Mat. If the instruction is a PHI node then special
-///        handling for duplicate values form the same incoming basic block is
+///        handling for duplicate values from the same incoming basic block is
 ///        required.
 /// \return The update will always succeed, but the return value indicated if
 ///         Mat was used for the update or not.

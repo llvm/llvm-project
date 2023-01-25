@@ -8,8 +8,8 @@ define i32 @test_choice1(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: test_choice1:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr 0
-; P8-NEXT:    std 0, 16(1)
 ; P8-NEXT:    stdu 1, -112(1)
+; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
@@ -36,8 +36,8 @@ define i32 @test_choice1(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: test_choice1:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    mflr 0
-; P9-NEXT:    std 0, 16(1)
 ; P9-NEXT:    stdu 1, -112(1)
+; P9-NEXT:    std 0, 128(1)
 ; P9-NEXT:    xscmpuqp 0, 2, 3
 ; P9-NEXT:    bne 0, .LBB0_2
 ; P9-NEXT:    b .LBB0_1
@@ -78,8 +78,8 @@ define i32 @test_choice2(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: test_choice2:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr 0
-; P8-NEXT:    std 0, 16(1)
 ; P8-NEXT:    stdu 1, -112(1)
+; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
@@ -106,8 +106,8 @@ define i32 @test_choice2(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: test_choice2:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    mflr 0
-; P9-NEXT:    std 0, 16(1)
 ; P9-NEXT:    stdu 1, -112(1)
+; P9-NEXT:    std 0, 128(1)
 ; P9-NEXT:    xscmpuqp 0, 2, 3
 ; P9-NEXT:    crmove 20, 3
 ; P9-NEXT:    crnot 21, 20
@@ -155,8 +155,8 @@ define i32 @test_choice3(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: test_choice3:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr 0
-; P8-NEXT:    std 0, 16(1)
 ; P8-NEXT:    stdu 1, -112(1)
+; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
@@ -183,8 +183,8 @@ define i32 @test_choice3(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: test_choice3:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    mflr 0
-; P9-NEXT:    std 0, 16(1)
 ; P9-NEXT:    stdu 1, -112(1)
+; P9-NEXT:    std 0, 128(1)
 ; P9-NEXT:    xscmpuqp 0, 2, 3
 ; P9-NEXT:    bge 0, .LBB2_2
 ; P9-NEXT:    b .LBB2_1
@@ -225,8 +225,8 @@ define i32 @test_choice4(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: test_choice4:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr 0
-; P8-NEXT:    std 0, 16(1)
 ; P8-NEXT:    stdu 1, -112(1)
+; P8-NEXT:    std 0, 128(1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    # kill: def $r3 killed $r3 killed $x3
@@ -253,8 +253,8 @@ define i32 @test_choice4(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: test_choice4:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    mflr 0
-; P9-NEXT:    std 0, 16(1)
 ; P9-NEXT:    stdu 1, -112(1)
+; P9-NEXT:    std 0, 128(1)
 ; P9-NEXT:    xscmpuqp 0, 2, 3
 ; P9-NEXT:    beq 0, .LBB3_2
 ; P9-NEXT:    b .LBB3_1

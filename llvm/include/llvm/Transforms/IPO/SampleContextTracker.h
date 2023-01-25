@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include <map>
 #include <queue>
@@ -50,7 +51,7 @@ public:
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
-  Optional<uint32_t> getFunctionSize() const;
+  std::optional<uint32_t> getFunctionSize() const;
   void addFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
@@ -73,7 +74,7 @@ private:
   FunctionSamples *FuncSamples;
 
   // Function size for current context
-  Optional<uint32_t> FuncSize;
+  std::optional<uint32_t> FuncSize;
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;
@@ -143,8 +144,9 @@ public:
     return FuncToCtxtProfiles;
   }
 
-  class Iterator : public std::iterator<std::forward_iterator_tag,
-                                        const ContextTrieNode *> {
+  class Iterator : public llvm::iterator_facade_base<
+                       Iterator, std::forward_iterator_tag, ContextTrieNode *,
+                       std::ptrdiff_t, ContextTrieNode **, ContextTrieNode *> {
     std::queue<ContextTrieNode *> NodeQueue;
 
   public:
@@ -159,12 +161,6 @@ public:
       return *this;
     }
 
-    Iterator operator++(int) {
-      assert(!NodeQueue.empty() && "Iterator already at the end");
-      Iterator Ret = *this;
-      ++(*this);
-      return Ret;
-    }
     bool operator==(const Iterator &Other) const {
       if (NodeQueue.empty() && Other.NodeQueue.empty())
         return true;
@@ -172,7 +168,7 @@ public:
         return false;
       return NodeQueue.front() == Other.NodeQueue.front();
     }
-    bool operator!=(const Iterator &Other) const { return !(*this == Other); }
+
     ContextTrieNode *operator*() const {
       assert(!NodeQueue.empty() && "Invalid access to end iterator");
       return NodeQueue.front();

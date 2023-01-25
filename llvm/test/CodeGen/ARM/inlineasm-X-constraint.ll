@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=armv7-none-eabi -mattr=+neon < %s -o - | FileCheck %s
+; RUN: llc -opaque-pointers=0 -mtriple=armv7-none-eabi -mattr=+neon < %s -o - | FileCheck %s
 
 ; The following functions test the use case where an X constraint is used to
 ; add a dependency between an assembly instruction (vmsr in this case) and

@@ -43,6 +43,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 frameInfo:
   stackSize:       24
   offsetAdjustment: -24

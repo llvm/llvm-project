@@ -12,12 +12,12 @@ class SettingSkipSanityTestCase(TestBase):
 
   NO_DEBUG_INFO_TESTCASE = True
 
-  @skipIf(setting=('target.prefer-dynamic-value', 'no-dynamic-values'))
+  @skipIf(py_version=('>=', (3, 0)))
   def testSkip(self):
     """This setting is on by default"""
     self.assertTrue(False, "This test should not run!")
 
-  @skipIf(setting=('target.prefer-dynamic-value', 'run-target'))
+  @skipIf(py_version=('<', (3, 0)))
   def testNoMatch(self):
     self.assertTrue(True, "This test should run!")
 
@@ -25,11 +25,11 @@ class SettingSkipSanityTestCase(TestBase):
   def testNotExisting(self):
     self.assertTrue(True, "This test should run!")
 
-  @expectedFailureAll(setting=('target.prefer-dynamic-value', 'no-dynamic-values'))
+  @expectedFailureAll(py_version=('>=', (3, 0)))
   def testXFAIL(self):
     self.assertTrue(False, "This test should run and fail!")
 
-  @expectedFailureAll(setting=('target.prefer-dynamic-value', 'run-target'))
+  @expectedFailureAll(py_version=('<', (3, 0)))
   def testNotXFAIL(self):
     self.assertTrue(True, "This test should run and succeed!")
 

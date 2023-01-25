@@ -13,10 +13,13 @@
 #ifndef CASES_H
 #define CASES_H
 
-#include <complex>
 #include <cassert>
+#include <complex>
+#include <type_traits>
 
-const std::complex<double> testcases[] =
+#include "test_macros.h"
+
+TEST_CONSTEXPR_CXX20 const std::complex<double> testcases[] =
 {
     std::complex<double>( 1.e-6,  1.e-6),
     std::complex<double>(-1.e-6,  1.e-6),
@@ -56,32 +59,32 @@ const std::complex<double> testcases[] =
     std::complex<double>( 1.e+6,  0),
     std::complex<double>(-1.e+6,  0),
 
-    std::complex<double>(NAN, NAN),
-    std::complex<double>(-INFINITY, NAN),
-    std::complex<double>(-2, NAN),
-    std::complex<double>(-1, NAN),
-    std::complex<double>(-0.5, NAN),
-    std::complex<double>(-0., NAN),
-    std::complex<double>(+0., NAN),
-    std::complex<double>(0.5, NAN),
-    std::complex<double>(1, NAN),
-    std::complex<double>(2, NAN),
-    std::complex<double>(INFINITY, NAN),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(-2, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(-1, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(-0.5, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(-0., std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(+0., std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(0.5, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(1, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(2, std::numeric_limits<double>::quiet_NaN()),
+    std::complex<double>(std::numeric_limits<double>::infinity(), std::numeric_limits<double>::quiet_NaN()),
 
-    std::complex<double>(NAN, -INFINITY),
-    std::complex<double>(-INFINITY, -INFINITY),
-    std::complex<double>(-2, -INFINITY),
-    std::complex<double>(-1, -INFINITY),
-    std::complex<double>(-0.5, -INFINITY),
-    std::complex<double>(-0., -INFINITY),
-    std::complex<double>(+0., -INFINITY),
-    std::complex<double>(0.5, -INFINITY),
-    std::complex<double>(1, -INFINITY),
-    std::complex<double>(2, -INFINITY),
-    std::complex<double>(INFINITY, -INFINITY),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), -std::numeric_limits<double>::infinity()),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()),
+    std::complex<double>(-2, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(-1, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(-0.5, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(-0., -std::numeric_limits<double>::infinity()),
+    std::complex<double>(+0., -std::numeric_limits<double>::infinity()),
+    std::complex<double>(0.5, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(1, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(2, -std::numeric_limits<double>::infinity()),
+    std::complex<double>(std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity()),
 
-    std::complex<double>(NAN, -2),
-    std::complex<double>(-INFINITY, -2),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), -2),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), -2),
     std::complex<double>(-2, -2),
     std::complex<double>(-1, -2),
     std::complex<double>(-0.5, -2),
@@ -90,10 +93,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, -2),
     std::complex<double>(1, -2),
     std::complex<double>(2, -2),
-    std::complex<double>(INFINITY, -2),
+    std::complex<double>(std::numeric_limits<double>::infinity(), -2),
 
-    std::complex<double>(NAN, -1),
-    std::complex<double>(-INFINITY, -1),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), -1),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), -1),
     std::complex<double>(-2, -1),
     std::complex<double>(-1, -1),
     std::complex<double>(-0.5, -1),
@@ -102,10 +105,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, -1),
     std::complex<double>(1, -1),
     std::complex<double>(2, -1),
-    std::complex<double>(INFINITY, -1),
+    std::complex<double>(std::numeric_limits<double>::infinity(), -1),
 
-    std::complex<double>(NAN, -0.5),
-    std::complex<double>(-INFINITY, -0.5),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), -0.5),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), -0.5),
     std::complex<double>(-2, -0.5),
     std::complex<double>(-1, -0.5),
     std::complex<double>(-0.5, -0.5),
@@ -114,10 +117,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, -0.5),
     std::complex<double>(1, -0.5),
     std::complex<double>(2, -0.5),
-    std::complex<double>(INFINITY, -0.5),
+    std::complex<double>(std::numeric_limits<double>::infinity(), -0.5),
 
-    std::complex<double>(NAN, -0.),
-    std::complex<double>(-INFINITY, -0.),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), -0.),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), -0.),
     std::complex<double>(-2, -0.),
     std::complex<double>(-1, -0.),
     std::complex<double>(-0.5, -0.),
@@ -126,10 +129,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, -0.),
     std::complex<double>(1, -0.),
     std::complex<double>(2, -0.),
-    std::complex<double>(INFINITY, -0.),
+    std::complex<double>(std::numeric_limits<double>::infinity(), -0.),
 
-    std::complex<double>(NAN, +0.),
-    std::complex<double>(-INFINITY, +0.),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), +0.),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), +0.),
     std::complex<double>(-2, +0.),
     std::complex<double>(-1, +0.),
     std::complex<double>(-0.5, +0.),
@@ -138,10 +141,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, +0.),
     std::complex<double>(1, +0.),
     std::complex<double>(2, +0.),
-    std::complex<double>(INFINITY, +0.),
+    std::complex<double>(std::numeric_limits<double>::infinity(), +0.),
 
-    std::complex<double>(NAN, 0.5),
-    std::complex<double>(-INFINITY, 0.5),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), 0.5),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), 0.5),
     std::complex<double>(-2, 0.5),
     std::complex<double>(-1, 0.5),
     std::complex<double>(-0.5, 0.5),
@@ -150,10 +153,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, 0.5),
     std::complex<double>(1, 0.5),
     std::complex<double>(2, 0.5),
-    std::complex<double>(INFINITY, 0.5),
+    std::complex<double>(std::numeric_limits<double>::infinity(), 0.5),
 
-    std::complex<double>(NAN, 1),
-    std::complex<double>(-INFINITY, 1),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), 1),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), 1),
     std::complex<double>(-2, 1),
     std::complex<double>(-1, 1),
     std::complex<double>(-0.5, 1),
@@ -162,10 +165,10 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, 1),
     std::complex<double>(1, 1),
     std::complex<double>(2, 1),
-    std::complex<double>(INFINITY, 1),
+    std::complex<double>(std::numeric_limits<double>::infinity(), 1),
 
-    std::complex<double>(NAN, 2),
-    std::complex<double>(-INFINITY, 2),
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), 2),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), 2),
     std::complex<double>(-2, 2),
     std::complex<double>(-1, 2),
     std::complex<double>(-0.5, 2),
@@ -174,40 +177,51 @@ const std::complex<double> testcases[] =
     std::complex<double>(0.5, 2),
     std::complex<double>(1, 2),
     std::complex<double>(2, 2),
-    std::complex<double>(INFINITY, 2),
+    std::complex<double>(std::numeric_limits<double>::infinity(), 2),
 
-    std::complex<double>(NAN, INFINITY),
-    std::complex<double>(-INFINITY, INFINITY),
-    std::complex<double>(-2, INFINITY),
-    std::complex<double>(-1, INFINITY),
-    std::complex<double>(-0.5, INFINITY),
-    std::complex<double>(-0., INFINITY),
-    std::complex<double>(+0., INFINITY),
-    std::complex<double>(0.5, INFINITY),
-    std::complex<double>(1, INFINITY),
-    std::complex<double>(2, INFINITY),
-    std::complex<double>(INFINITY, INFINITY)
+    std::complex<double>(std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()),
+    std::complex<double>(-std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity()),
+    std::complex<double>(-2, std::numeric_limits<double>::infinity()),
+    std::complex<double>(-1, std::numeric_limits<double>::infinity()),
+    std::complex<double>(-0.5, std::numeric_limits<double>::infinity()),
+    std::complex<double>(-0., std::numeric_limits<double>::infinity()),
+    std::complex<double>(+0., std::numeric_limits<double>::infinity()),
+    std::complex<double>(0.5, std::numeric_limits<double>::infinity()),
+    std::complex<double>(1, std::numeric_limits<double>::infinity()),
+    std::complex<double>(2, std::numeric_limits<double>::infinity()),
+    std::complex<double>(std::numeric_limits<double>::infinity(), std::numeric_limits<double>::infinity())
 };
 
 enum {zero, non_zero, inf, NaN, non_zero_nan};
 
+template <class T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
+TEST_CONSTEXPR_CXX20 bool test_isinf(T v) {
+    return v == std::numeric_limits<T>::infinity() || v == -std::numeric_limits<T>::infinity();
+}
+
+template <class T, typename std::enable_if<std::is_arithmetic<T>::value, int>::type = 0>
+TEST_CONSTEXPR_CXX20 bool test_isnan(T v) {
+    return v != v;
+}
+
 template <class T>
+TEST_CONSTEXPR_CXX20
 int
 classify(const std::complex<T>& x)
 {
     if (x == std::complex<T>())
         return zero;
-    if (std::isinf(x.real()) || std::isinf(x.imag()))
+    if (test_isinf(x.real()) || test_isinf(x.imag()))
         return inf;
-    if (std::isnan(x.real()) && std::isnan(x.imag()))
+    if (test_isnan(x.real()) && test_isnan(x.imag()))
         return NaN;
-    if (std::isnan(x.real()))
+    if (test_isnan(x.real()))
     {
         if (x.imag() == T(0))
             return NaN;
         return non_zero_nan;
     }
-    if (std::isnan(x.imag()))
+    if (test_isnan(x.imag()))
     {
         if (x.real() == T(0))
             return NaN;

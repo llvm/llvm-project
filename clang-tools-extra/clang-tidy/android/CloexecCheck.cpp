@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 namespace {
 // Helper function to form the correct string mode for Type3.
@@ -108,6 +106,4 @@ StringRef CloexecCheck::getSpellingArg(const MatchFinder::MatchResult &Result,
       SM, Result.Context->getLangOpts());
 }
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android

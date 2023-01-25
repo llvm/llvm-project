@@ -9,12 +9,15 @@
 #include <cstdlib>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 #include "Commands/CommandObjectApropos.h"
 #include "Commands/CommandObjectBreakpoint.h"
 #include "Commands/CommandObjectCommands.h"
+#include "Commands/CommandObjectDWIMPrint.h"
+#include "Commands/CommandObjectDiagnostics.h"
 #include "Commands/CommandObjectDisassemble.h"
 #include "Commands/CommandObjectExpression.h"
 #include "Commands/CommandObjectFrame.h"
@@ -29,7 +32,6 @@
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegexCommand.h"
 #include "Commands/CommandObjectRegister.h"
-#include "Commands/CommandObjectReproducer.h"
 #include "Commands/CommandObjectScript.h"
 #include "Commands/CommandObjectSession.h"
 #include "Commands/CommandObjectSettings.h"
@@ -47,7 +49,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
@@ -104,6 +105,11 @@ static constexpr const char *InitFileWarning =
     "set the value of this variable to true.  Only do so if you understand "
     "and\n"
     "accept the security risk.";
+
+const char *CommandInterpreter::g_no_argument = "<no-argument>";
+const char *CommandInterpreter::g_need_argument = "<need-argument>";
+const char *CommandInterpreter::g_argument = "<argument>";
+
 
 #define LLDB_PROPERTIES_interpreter
 #include "InterpreterProperties.inc"
@@ -163,6 +169,17 @@ bool CommandInterpreter::GetSaveSessionOnQuit() const {
 
 void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
   const uint32_t idx = ePropertySaveSessionOnQuit;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+}
+
+bool CommandInterpreter::GetOpenTranscriptInEditor() const {
+  const uint32_t idx = ePropertyOpenTranscriptInEditor;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+void CommandInterpreter::SetOpenTranscriptInEditor(bool enable) {
+  const uint32_t idx = ePropertyOpenTranscriptInEditor;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
@@ -515,7 +532,9 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("apropos", CommandObjectApropos);
   REGISTER_COMMAND_OBJECT("breakpoint", CommandObjectMultiwordBreakpoint);
   REGISTER_COMMAND_OBJECT("command", CommandObjectMultiwordCommands);
+  REGISTER_COMMAND_OBJECT("diagnostics", CommandObjectDiagnostics);
   REGISTER_COMMAND_OBJECT("disassemble", CommandObjectDisassemble);
+  REGISTER_COMMAND_OBJECT("dwim-print", CommandObjectDWIMPrint);
   REGISTER_COMMAND_OBJECT("expression", CommandObjectExpression);
   REGISTER_COMMAND_OBJECT("frame", CommandObjectMultiwordFrame);
   REGISTER_COMMAND_OBJECT("gui", CommandObjectGUI);
@@ -527,7 +546,6 @@ void CommandInterpreter::LoadCommandDictionary() {
   REGISTER_COMMAND_OBJECT("process", CommandObjectMultiwordProcess);
   REGISTER_COMMAND_OBJECT("quit", CommandObjectQuit);
   REGISTER_COMMAND_OBJECT("register", CommandObjectRegister);
-  REGISTER_COMMAND_OBJECT("reproducer", CommandObjectReproducer);
   REGISTER_COMMAND_OBJECT("script", CommandObjectScript);
   REGISTER_COMMAND_OBJECT("settings", CommandObjectMultiwordSettings);
   REGISTER_COMMAND_OBJECT("session", CommandObjectSession);
@@ -561,7 +579,7 @@ void CommandInterpreter::LoadCommandDictionary() {
        "breakpoint set --name '%1'"}};
   // clang-format on
 
-  size_t num_regexes = llvm::array_lengthof(break_regexes);
+  size_t num_regexes = std::size(break_regexes);
 
   std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_up(
       new CommandObjectRegexCommand(
@@ -1634,7 +1652,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   std::string value;
   for (const auto &entry : *option_arg_vector) {
     std::tie(option, value_type, value) = entry;
-    if (option == "<argument>") {
+    if (option == g_argument) {
       result_str.Printf(" %s", value.c_str());
       continue;
     }
@@ -1656,11 +1674,33 @@ CommandObject *CommandInterpreter::BuildAliasResult(
                                    index);
       return nullptr;
     } else {
-      size_t strpos = raw_input_string.find(cmd_args.GetArgumentAtIndex(index));
-      if (strpos != std::string::npos)
+      const Args::ArgEntry &entry = cmd_args[index];
+      size_t strpos = raw_input_string.find(entry.c_str());
+      const char quote_char = entry.GetQuoteChar();
+      if (strpos != std::string::npos) {
+        const size_t start_fudge = quote_char == '\0' ? 0 : 1;
+        const size_t len_fudge = quote_char == '\0' ? 0 : 2;
+
+        // Make sure we aren't going outside the bounds of the cmd string:
+        if (strpos < start_fudge) {
+          result.AppendError("Unmatched quote at command beginning.");
+          return nullptr;
+        }
+        llvm::StringRef arg_text = entry.ref();
+        if (strpos - start_fudge + arg_text.size() + len_fudge 
+            > raw_input_string.size()) {
+          result.AppendError("Unmatched quote at command end.");
+          return nullptr;  
+        }
         raw_input_string = raw_input_string.erase(
-            strpos, strlen(cmd_args.GetArgumentAtIndex(index)));
-      result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
+            strpos - start_fudge, 
+            strlen(cmd_args.GetArgumentAtIndex(index)) + len_fudge);
+      }
+      if (quote_char == '\0')
+        result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
+      else
+        result_str.Printf("%c%s%c", quote_char, 
+                          entry.c_str(), quote_char);
     }
   }
 
@@ -1725,7 +1765,7 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
     options.SetIgnoreBreakpoints(true);
     options.SetKeepInMemory(false);
     options.SetTryAllThreads(true);
-    options.SetTimeout(llvm::None);
+    options.SetTimeout(std::nullopt);
 
     ExpressionResults expr_result =
         target.EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
@@ -1911,13 +1951,6 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     return true;
   }
 
-  Status error(PreprocessCommand(command_string));
-
-  if (error.Fail()) {
-    result.AppendError(error.AsCString());
-    return false;
-  }
-
   // Phase 1.
 
   // Before we do ANY kind of argument processing, we need to figure out what
@@ -1934,6 +1967,20 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // input or not.
 
   CommandObject *cmd_obj = ResolveCommandImpl(command_string, result);
+
+  // We have to preprocess the whole command string for Raw commands, since we 
+  // don't know the structure of the command.  For parsed commands, we only
+  // treat backticks as quote characters specially.
+  // FIXME: We probably want to have raw commands do their own preprocessing.
+  // For instance, I don't think people expect substitution in expr expressions. 
+  if (cmd_obj && cmd_obj->WantsRawCommandString()) {
+    Status error(PreprocessCommand(command_string));
+
+    if (error.Fail()) {
+      result.AppendError(error.AsCString());
+      return false;
+    }
+  }
 
   // Although the user may have abbreviated the command, the command_string now
   // has the command expanded to the full name.  For example, if the input was
@@ -1960,7 +2007,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     // repeat command, even though we don't add repeat commands to the history.
     if (add_to_history || empty_command) {
       Args command_args(command_string);
-      llvm::Optional<std::string> repeat_command =
+      std::optional<std::string> repeat_command =
           cmd_obj->GetRepeatCommand(command_args, 0);
       if (repeat_command)
         m_repeat_command.assign(*repeat_command);
@@ -2064,17 +2111,17 @@ void CommandInterpreter::HandleCompletion(CompletionRequest &request) {
   HandleCompletionMatches(request);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandInterpreter::GetAutoSuggestionForCommand(llvm::StringRef line) {
   if (line.empty())
-    return llvm::None;
+    return std::nullopt;
   const size_t s = m_command_history.GetSize();
   for (int i = s - 1; i >= 0; --i) {
     llvm::StringRef entry = m_command_history.GetStringAtIndex(i);
     if (entry.consume_front(line))
       return entry.str();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 void CommandInterpreter::UpdatePrompt(llvm::StringRef new_prompt) {
@@ -2163,7 +2210,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
     std::string value;
     for (const auto &option_entry : *option_arg_vector) {
       std::tie(option, value_type, value) = option_entry;
-      if (option == "<argument>") {
+      if (option == g_argument) {
         if (!wants_raw_input || (value != "--")) {
           // Since we inserted this above, make sure we don't insert it twice
           new_args.AppendArgument(value);
@@ -2174,7 +2221,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
       if (value_type != OptionParser::eOptionalArgument)
         new_args.AppendArgument(option);
 
-      if (value == "<no-argument>")
+      if (value == g_no_argument)
         continue;
 
       int index = GetOptionArgumentPosition(value.c_str());
@@ -2440,8 +2487,12 @@ bool CommandInterpreter::DidProcessStopAbnormally() const {
 
   for (const auto &thread_sp : process_sp->GetThreadList().Threads()) {
     StopInfoSP stop_info = thread_sp->GetStopInfo();
-    if (!stop_info)
-      return false;
+    if (!stop_info) {
+      // If there's no stop_info, keep iterating through the other threads;
+      // it's enough that any thread has got a stop_info that indicates
+      // an abnormal stop, to consider the process to be stopped abnormally.
+      continue;
+    }
 
     const StopReason reason = stop_info->GetStopReason();
     if (reason == eStopReasonException ||
@@ -2742,7 +2793,7 @@ void CommandInterpreter::HandleCommandsFromFile(FileSpec &cmd_file,
                // or written
       debugger.GetPrompt(), llvm::StringRef(),
       false, // Not multi-line
-      debugger.GetUseColor(), 0, *this, nullptr));
+      debugger.GetUseColor(), 0, *this));
   const bool old_async_execution = debugger.GetAsyncExecution();
 
   // Set synchronous execution if we are not stopping on continue
@@ -2766,9 +2817,6 @@ void CommandInterpreter::HandleCommandsFromFile(FileSpec &cmd_file,
 bool CommandInterpreter::GetSynchronous() { return m_synchronous_execution; }
 
 void CommandInterpreter::SetSynchronous(bool value) {
-  // Asynchronous mode is not supported during reproducer replay.
-  if (repro::Reproducer::Instance().GetLoader())
-    return;
   m_synchronous_execution = value;
 }
 
@@ -3144,8 +3192,8 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
 }
 
 bool CommandInterpreter::SaveTranscript(
-    CommandReturnObject &result, llvm::Optional<std::string> output_file) {
-  if (output_file == llvm::None || output_file->empty()) {
+    CommandReturnObject &result, std::optional<std::string> output_file) {
+  if (output_file == std::nullopt || output_file->empty()) {
     std::string now = llvm::to_string(std::chrono::system_clock::now());
     std::replace(now.begin(), now.end(), ' ', '_');
     const std::string file_name = "lldb_session_" + now + ".log";
@@ -3192,6 +3240,13 @@ bool CommandInterpreter::SaveTranscript(
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
 
+  if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
+    const FileSpec file_spec;
+    error = file->GetFileSpec(const_cast<FileSpec &>(file_spec));
+    if (error.Success())
+      Host::OpenFileInExternalEditor(file_spec, 1);
+  }
+
   return true;
 }
 
@@ -3215,9 +3270,8 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
                             llvm::StringRef(),       // Continuation prompt
                             true,                    // Get multiple lines
                             debugger.GetUseColor(),
-                            0,         // Don't show line numbers
-                            delegate,  // IOHandlerDelegate
-                            nullptr)); // FileShadowCollector
+                            0,          // Don't show line numbers
+                            delegate)); // IOHandlerDelegate
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
@@ -3235,9 +3289,8 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
                             llvm::StringRef(),       // Continuation prompt
                             true,                    // Get multiple lines
                             debugger.GetUseColor(),
-                            0,         // Don't show line numbers
-                            delegate,  // IOHandlerDelegate
-                            nullptr)); // FileShadowCollector
+                            0,          // Don't show line numbers
+                            delegate)); // IOHandlerDelegate
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
@@ -3288,9 +3341,8 @@ CommandInterpreter::GetIOHandler(bool force_create,
         llvm::StringRef(), // Continuation prompt
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),
-        0,     // Don't show line numbers
-        *this, // IOHandlerDelegate
-        GetDebugger().GetInputRecorder());
+        0,      // Don't show line numbers
+        *this); // IOHandlerDelegate
   }
   return m_command_io_handler_sp;
 }

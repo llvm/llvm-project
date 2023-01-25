@@ -27,7 +27,7 @@
 
 // RUN: %clang_profgen -fcoverage-mapping -Wl,-dead_strip -dynamiclib -o %t.nocode.dylib %s
 // RUN: nm -jgU %t.nocode.dylib > %t.nocode.syms
-// RUN: nm -jgU %t | grep -vE "main|foo|mh_execute_header" > %t.code.syms
+// RUN: nm -jgU %t | sed -e '/_\{1,\}main/d' -e '/_\{1,\}mh_execute_header/d' > %t.code.syms
 // RUN: diff %t.nocode.syms %t.code.syms
 
 #ifdef CODE

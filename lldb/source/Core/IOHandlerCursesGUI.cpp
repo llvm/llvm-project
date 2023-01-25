@@ -75,6 +75,7 @@
 #include <cstdio>
 #include <cstring>
 #include <functional>
+#include <optional>
 #include <type_traits>
 
 using namespace lldb;
@@ -3112,11 +3113,11 @@ public:
   static constexpr const char *kLoadDependentFilesExecOnly = "Executable only";
 
   std::vector<std::string> GetLoadDependentFilesChoices() {
-    std::vector<std::string> load_depentents_options;
-    load_depentents_options.push_back(kLoadDependentFilesExecOnly);
-    load_depentents_options.push_back(kLoadDependentFilesYes);
-    load_depentents_options.push_back(kLoadDependentFilesNo);
-    return load_depentents_options;
+    std::vector<std::string> load_dependents_options;
+    load_dependents_options.push_back(kLoadDependentFilesExecOnly);
+    load_dependents_options.push_back(kLoadDependentFilesYes);
+    load_dependents_options.push_back(kLoadDependentFilesNo);
+    return load_dependents_options;
   }
 
   LoadDependentFiles GetLoadDependentFiles() {
@@ -3500,19 +3501,19 @@ public:
 
     FileAction action;
     if (m_standard_input_field->IsSpecified()) {
-      action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
-                  false);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
+                      false))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_output_field->IsSpecified()) {
-      action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_error_field->IsSpecified()) {
-      action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
   }
 
@@ -5908,7 +5909,7 @@ public:
       if (m_frame_block != frame_block) {
         m_frame_block = frame_block;
 
-        VariableList *locals = frame->GetVariableList(true);
+        VariableList *locals = frame->GetVariableList(true, nullptr);
         if (locals) {
           const DynamicValueType use_dynamic = eDynamicDontRunTarget;
           for (const VariableSP &local_sp : *locals) {
@@ -6821,7 +6822,7 @@ public:
     bool set_selected_line_to_pc = false;
 
     if (update_location) {
-      const bool process_alive = process ? process->IsAlive() : false;
+      const bool process_alive = process->IsAlive();
       bool thread_changed = false;
       if (process_alive) {
         thread = exe_ctx.GetThreadPtr();
@@ -7024,7 +7025,7 @@ public:
 
           StreamString lineStream;
 
-          llvm::Optional<size_t> column;
+          std::optional<size_t> column;
           if (is_pc_line && m_sc.line_entry.IsValid() && m_sc.line_entry.column)
             column = m_sc.line_entry.column - 1;
           m_file_sp->DisplaySourceLines(curr_line + 1, column, 0, 0,
@@ -7209,8 +7210,10 @@ public:
                   window.Printf("%*s", desc_x - window.GetCursorX(), "");
                 window.MoveCursor(window_width - stop_description_len - 15,
                                   line_y);
-                window.PrintfTruncated(1, "<<< Thread %u: %s ",
-                                       thread->GetIndexID(), stop_description);
+                if (thread)
+                  window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                         thread->GetIndexID(),
+                                         stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");

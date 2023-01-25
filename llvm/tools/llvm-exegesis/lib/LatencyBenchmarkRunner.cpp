@@ -20,8 +20,9 @@ namespace exegesis {
 
 LatencyBenchmarkRunner::LatencyBenchmarkRunner(
     const LLVMState &State, InstructionBenchmark::ModeE Mode,
+    BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
     InstructionBenchmark::ResultAggregationModeE ResultAgg)
-    : BenchmarkRunner(State, Mode) {
+    : BenchmarkRunner(State, Mode, BenchmarkPhaseSelector) {
   assert((Mode == InstructionBenchmark::Latency ||
           Mode == InstructionBenchmark::InverseThroughput) &&
          "invalid mode");

@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate,instcombine -S | FileCheck %s
 
 define i32 @f1(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4) {
 ; CHECK-LABEL: f1

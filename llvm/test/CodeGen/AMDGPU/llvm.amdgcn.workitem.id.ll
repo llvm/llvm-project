@@ -22,9 +22,9 @@ declare i32 @llvm.amdgcn.workitem.id.z() #0
 ; ALL: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}v0
 
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 0
-define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workitem_id_x(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -40,9 +40,9 @@ define amdgpu_kernel void @test_workitem_id_x(i32 addrspace(1)* %out) #1 {
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 10, 10
 ; PACKED-TID: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}[[ID]]
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 1
-define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workitem_id_y(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.y()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -58,9 +58,9 @@ define amdgpu_kernel void @test_workitem_id_y(i32 addrspace(1)* %out) #1 {
 ; PACKED-TID: v_bfe_u32 [[ID:v[0-9]+]], v0, 20, 10
 ; PACKED-TID: {{buffer|flat|global}}_store_{{dword|b32}} {{.*}}[[ID]]
 ; PACKED-TID: .amdhsa_system_vgpr_workitem_id 2
-define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workitem_id_z(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workitem.id.z()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -76,13 +76,13 @@ define amdgpu_kernel void @test_workitem_id_z(i32 addrspace(1)* %out) #1 {
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_x_only(i32* %out) !reqd_work_group_size !0 {
+define amdgpu_kernel void @test_reqd_workgroup_size_x_only(ptr %out) !reqd_work_group_size !0 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
-  store volatile i32 %id.x, i32* %out
-  store volatile i32 %id.y, i32* %out
-  store volatile i32 %id.z, i32* %out
+  store volatile i32 %id.x, ptr %out
+  store volatile i32 %id.y, ptr %out
+  store volatile i32 %id.z, ptr %out
   ret void
 }
 
@@ -98,13 +98,13 @@ define amdgpu_kernel void @test_reqd_workgroup_size_x_only(i32* %out) !reqd_work
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
 
 ; ALL: flat_store_{{dword|b32}} v{{\[[0-9]+:[0-9]+\]}}, [[ZERO]]
-define amdgpu_kernel void @test_reqd_workgroup_size_y_only(i32* %out) !reqd_work_group_size !1 {
+define amdgpu_kernel void @test_reqd_workgroup_size_y_only(ptr %out) !reqd_work_group_size !1 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
-  store volatile i32 %id.x, i32* %out
-  store volatile i32 %id.y, i32* %out
-  store volatile i32 %id.z, i32* %out
+  store volatile i32 %id.x, ptr %out
+  store volatile i32 %id.y, ptr %out
+  store volatile i32 %id.z, ptr %out
   ret void
 }
 
@@ -119,13 +119,13 @@ define amdgpu_kernel void @test_reqd_workgroup_size_y_only(i32* %out) !reqd_work
 
 ; PACKED: v_bfe_u32 [[MASKED:v[0-9]+]], v0, 10, 20
 ; PACKED: flat_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[MASKED]]
-define amdgpu_kernel void @test_reqd_workgroup_size_z_only(i32* %out) !reqd_work_group_size !2 {
+define amdgpu_kernel void @test_reqd_workgroup_size_z_only(ptr %out) !reqd_work_group_size !2 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
   %id.y = call i32 @llvm.amdgcn.workitem.id.y()
   %id.z = call i32 @llvm.amdgcn.workitem.id.z()
-  store volatile i32 %id.x, i32* %out
-  store volatile i32 %id.y, i32* %out
-  store volatile i32 %id.z, i32* %out
+  store volatile i32 %id.x, ptr %out
+  store volatile i32 %id.y, ptr %out
+  store volatile i32 %id.z, ptr %out
   ret void
 }
 

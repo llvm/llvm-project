@@ -20,6 +20,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "polly-simplify"
 
@@ -758,7 +759,7 @@ class SimplifyWrapperPass final : public ScopPass {
 public:
   static char ID;
   int CallNo;
-  Optional<SimplifyImpl> Impl;
+  std::optional<SimplifyImpl> Impl;
 
   explicit SimplifyWrapperPass(int CallNo = 0) : ScopPass(ID), CallNo(CallNo) {}
 

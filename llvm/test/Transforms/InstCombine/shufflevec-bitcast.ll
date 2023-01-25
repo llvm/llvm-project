@@ -3,21 +3,21 @@
 
 declare void @use(<4 x i16>)
 
-define void @test(<16 x i8> %w, i32* %o1, float* %o2) {
+define void @test(<16 x i8> %w, ptr %o1, ptr %o2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[V_BC:%.*]] = bitcast <16 x i8> [[W:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[V_EXTRACT:%.*]] = extractelement <4 x i32> [[V_BC]], i64 3
 ; CHECK-NEXT:    [[V_BC1:%.*]] = bitcast <16 x i8> [[W]] to <4 x float>
 ; CHECK-NEXT:    [[V_EXTRACT2:%.*]] = extractelement <4 x float> [[V_BC1]], i64 3
-; CHECK-NEXT:    store i32 [[V_EXTRACT]], i32* [[O1:%.*]], align 4
-; CHECK-NEXT:    store float [[V_EXTRACT2]], float* [[O2:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V_EXTRACT]], ptr [[O1:%.*]], align 4
+; CHECK-NEXT:    store float [[V_EXTRACT2]], ptr [[O2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = shufflevector <16 x i8> %w, <16 x i8> undef, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %f = bitcast <4 x i8> %v to float
   %i = bitcast <4 x i8> %v to i32
-  store i32 %i, i32* %o1, align 4
-  store float %f, float* %o2, align 4
+  store i32 %i, ptr %o1, align 4
+  store float %f, ptr %o2, align 4
   ret void
 }
 
@@ -179,31 +179,30 @@ define <2 x i4> @shuf_bitcast_insert(<2 x i8> %v, i8 %x) {
   ret <2 x i4> %r
 }
 
-define <2 x i4> @shuf_bitcast_inserti_use1(<2 x i8> %v, i8 %x, <2 x i8>* %p) {
+define <2 x i4> @shuf_bitcast_inserti_use1(<2 x i8> %v, i8 %x, ptr %p) {
 ; CHECK-LABEL: @shuf_bitcast_inserti_use1(
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i64 0
-; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[I]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %i = insertelement <2 x i8> %v, i8 %x, i32 0
-  store <2 x i8> %i, <2 x i8>* %p
+  store <2 x i8> %i, ptr %p
   %b = bitcast <2 x i8> %i to <4 x i4>
   %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x i4> %r
 }
 
-define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, <4 x i4>* %p) {
+define <2 x i4> @shuf_bitcast_insert_use2(<2 x i8> %v, i8 %x, ptr %p) {
 ; CHECK-LABEL: @shuf_bitcast_insert_use2(
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x i8> [[V:%.*]], i8 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i4>* [[P:%.*]] to <2 x i8>*
-; CHECK-NEXT:    store <2 x i8> [[I]], <2 x i8>* [[TMP1]], align 2
+; CHECK-NEXT:    store <2 x i8> [[I]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = bitcast i8 [[X]] to <2 x i4>
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %i = insertelement <2 x i8> %v, i8 %x, i32 0
   %b = bitcast <2 x i8> %i to <4 x i4>
-  store <4 x i4> %b, <4 x i4>* %p
+  store <4 x i4> %b, ptr %p
   %r = shufflevector <4 x i4> %b, <4 x i4> undef, <2 x i32> <i32 0, i32 1>
   ret <2 x i4> %r
 }

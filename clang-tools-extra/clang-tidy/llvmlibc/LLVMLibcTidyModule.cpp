@@ -13,8 +13,7 @@
 #include "ImplementationInNamespaceCheck.h"
 #include "RestrictSystemLibcHeadersCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace llvm_libc {
 
 class LLVMLibcModule : public ClangTidyModule {
@@ -39,5 +38,4 @@ static ClangTidyModuleRegistry::Add<LLVMLibcModule>
 // and thus register the LLVMLibcModule.
 volatile int LLVMLibcModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

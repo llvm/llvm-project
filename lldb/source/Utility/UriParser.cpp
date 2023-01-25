@@ -12,6 +12,7 @@
 #include <string>
 
 #include <cstdint>
+#include <optional>
 #include <tuple>
 
 using namespace lldb_private;
@@ -24,13 +25,13 @@ llvm::raw_ostream &lldb_private::operator<<(llvm::raw_ostream &OS,
   return OS << U.path;
 }
 
-llvm::Optional<URI> URI::Parse(llvm::StringRef uri) {
+std::optional<URI> URI::Parse(llvm::StringRef uri) {
   URI ret;
 
   const llvm::StringRef kSchemeSep("://");
   auto pos = uri.find(kSchemeSep);
   if (pos == std::string::npos)
-    return llvm::None;
+    return std::nullopt;
 
   // Extract path.
   ret.scheme = uri.substr(0, pos);
@@ -50,12 +51,12 @@ llvm::Optional<URI> URI::Parse(llvm::StringRef uri) {
     // hostname is enclosed with square brackets.
     pos = host_port.rfind(']');
     if (pos == std::string::npos)
-      return llvm::None;
+      return std::nullopt;
 
     ret.hostname = host_port.substr(1, pos - 1);
     host_port = host_port.drop_front(pos + 1);
     if (!host_port.empty() && !host_port.consume_front(":"))
-      return llvm::None;
+      return std::nullopt;
   } else {
     std::tie(ret.hostname, host_port) = host_port.split(':');
   }
@@ -64,10 +65,10 @@ llvm::Optional<URI> URI::Parse(llvm::StringRef uri) {
   if (!host_port.empty()) {
     uint16_t port_value = 0;
     if (host_port.getAsInteger(0, port_value))
-      return llvm::None;
+      return std::nullopt;
     ret.port = port_value;
   } else
-    ret.port = llvm::None;
+    ret.port = std::nullopt;
 
   return ret;
 }

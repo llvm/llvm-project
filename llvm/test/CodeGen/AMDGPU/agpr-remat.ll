@@ -3,7 +3,7 @@
 
 ; Make sure there are no v_accvgpr_read_b32 copying back and forth
 ; between AGPR and VGPR.
-define amdgpu_kernel void @remat_constant_voids_spill(i32 addrspace(1)* %p) #1 {
+define amdgpu_kernel void @remat_constant_voids_spill(ptr addrspace(1) %p) #1 {
 ; GFX908-LABEL: remat_constant_voids_spill:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    v_accvgpr_write_b32 a1, 1

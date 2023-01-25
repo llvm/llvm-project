@@ -3,9 +3,9 @@
 // RUN: ld.lld %t -o %t2
 // The output file is large, most of it zeroes. We dissassemble only the
 // parts we need to speed up the test and avoid a large output file
-// RUN: llvm-objdump -d %t2 --start-address=0x100002 --stop-address=0x10000a  | FileCheck --check-prefix=CHECK1 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1000008 --stop-address=0x1000026  | FileCheck --check-prefix=CHECK2 %s
-// RUN: llvm-objdump -d %t2 --start-address=0x1100014 --stop-address=0x1100022  | FileCheck --check-prefix=CHECK3 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x100002 --stop-address=0x10000a  | FileCheck --check-prefix=CHECK1 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1000008 --stop-address=0x1000026  | FileCheck --check-prefix=CHECK2 %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 --start-address=0x1100014 --stop-address=0x1100022  | FileCheck --check-prefix=CHECK3 %s
 // In this test case a branch that is in range and does not need its range
 // extended can be pushed out of range by another Thunk, necessitating another
 // pass

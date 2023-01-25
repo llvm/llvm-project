@@ -149,14 +149,14 @@ body:             |
     %9:gpr64 = PHI %7, %bb.2, %26, %bb.3, %27, %bb.4
     %21:fpr64 = COPY %9
     %25:fpr64 = FMOVD0
-    %10:fpr64 = FADDDrr %25, %21
+    %10:fpr64 = FADDDrr %25, %21, implicit $fpcr
     %22:fpr64 = COPY %4
-    %11:fpr64 = FMULDrr %22, %10
+    %11:fpr64 = FMULDrr %22, %10, implicit $fpcr
     %23:fpr64 = COPY %4
-    %13:fpr64 = FABD64 %23, %11
+    %13:fpr64 = FABD64 %23, %11, implicit $fpcr
     %28:gpr64 = MOVi64imm 4307583784117748259
     %24:fpr64 = COPY %28
-    FCMPDrr %13, %24, implicit-def $nzcv
+    FCMPDrr %13, %24, implicit-def $nzcv, implicit $fpcr
     %17:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
     TBNZW %17, 0, %bb.6
     B %bb.7

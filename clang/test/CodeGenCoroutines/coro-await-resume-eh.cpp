@@ -3,7 +3,7 @@
 // executing the handler specified by the promise type's 'unhandled_exception'
 // member function.
 //
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 \
+// RUN: %clang_cc1 -std=c++20 \
 // RUN:   -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:   -fexceptions -fcxx-exceptions -disable-llvm-passes \
 // RUN:   | FileCheck %s
@@ -32,14 +32,14 @@ throwing_task f() {
   // of 'await_resume' threw an exception. Exceptions thrown in
   // 'await_resume' are unwound to RESUMELPAD.
   // CHECK: init.ready:
-  // CHECK-NEXT: store i1 true, i1* %[[RESUMETHREW:.+]], align 1
+  // CHECK-NEXT: store i1 true, ptr %[[RESUMETHREW:.+]], align 1
   // CHECK-NEXT: invoke void @_ZN18throwing_awaitable12await_resumeEv
   // CHECK-NEXT: to label %[[RESUMECONT:.+]] unwind label %[[RESUMELPAD:.+]]
 
   // If 'await_resume' does not throw an exception, 'false' is stored in
   // variable RESUMETHREW.
   // CHECK: [[RESUMECONT]]:
-  // CHECK-NEXT: store i1 false, i1* %[[RESUMETHREW]]
+  // CHECK-NEXT: store i1 false, ptr %[[RESUMETHREW]]
   // CHECK-NEXT: br label %[[RESUMETRYCONT:.+]]
 
   // 'unhandled_exception' is called for the exception thrown in
@@ -67,7 +67,7 @@ throwing_task f() {
   // suspend is executed immediately. Otherwise, the coroutine body is
   // executed, and then the final suspend.
   // CHECK: [[CLEANUPCONT]]:
-  // CHECK-NEXT: %[[RESUMETHREWLOAD:.+]] = load i1, i1* %[[RESUMETHREW]]
+  // CHECK-NEXT: %[[RESUMETHREWLOAD:.+]] = load i1, ptr %[[RESUMETHREW]]
   // CHECK-NEXT: br i1 %[[RESUMETHREWLOAD]], label %[[RESUMEDCONT:.+]], label %[[RESUMEDBODY:.+]]
 
   // CHECK: [[RESUMEDBODY]]:
@@ -107,6 +107,6 @@ noexcept_task g() {
   // This means that no i1 are stored before or after calling await_resume:
   // CHECK: init.ready:
   // CHECK-NEXT: call void @_ZN18noexcept_awaitable12await_resumeEv
-  // CHECK-NOT: store i1 false, i1*
+  // CHECK-NOT: store i1 false, ptr
   co_return;
 }

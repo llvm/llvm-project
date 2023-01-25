@@ -15,12 +15,12 @@ entry:
   %uninteresting1 = alloca i32, align 4
   %interesting = alloca i32, align 4
   %uninteresting2 = alloca i32, align 4
-  store i32 0, i32* %uninteresting1, align 4
-  store i32 0, i32* %interesting, align 4
-  %0 = load i32, i32* %interesting, align 4
+  store i32 0, ptr %uninteresting1, align 4
+  store i32 0, ptr %interesting, align 4
+  %0 = load i32, ptr %interesting, align 4
   %uninteresting3 = add nsw i32 %0, 1
-  store i32 %uninteresting3, i32* %interesting, align 4
-  %1 = load i32, i32* %interesting, align 4
-  store i32 %1, i32* %uninteresting2, align 4
+  store i32 %uninteresting3, ptr %interesting, align 4
+  %1 = load i32, ptr %interesting, align 4
+  store i32 %1, ptr %uninteresting2, align 4
   ret i32 0
 }

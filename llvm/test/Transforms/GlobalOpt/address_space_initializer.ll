@@ -16,29 +16,26 @@
 ; GPU-NOT: @g2 =
 
 define void @a() {
-  store i16 3, i16* @g0, align 8
-  store i16 5, i16* addrspacecast (i16 addrspace(3)* @g1 to i16*), align 8
-  store i16 7, i16* addrspacecast (i16 addrspace(1)* @g2 to i16*), align 8
+  store i16 3, ptr @g0, align 8
+  store i16 5, ptr addrspacecast (ptr addrspace(3) @g1 to ptr), align 8
+  store i16 7, ptr addrspacecast (ptr addrspace(1) @g2 to ptr), align 8
   ret void
 }
 
 define i8 @get0() {
-  %bc = bitcast i16* @g0 to i8*
-  %gep = getelementptr i8, i8* %bc, i64 1
-  %r = load i8, i8* %gep
+  %gep = getelementptr i8, ptr @g0, i64 1
+  %r = load i8, ptr %gep
   ret i8 %r
 }
 define i8 @get1() {
-  %ac = addrspacecast i16 addrspace(3)* @g1 to i16*
-  %bc = bitcast i16* %ac to i8*
-  %gep = getelementptr i8, i8* %bc, i64 1
-  %r = load i8, i8* %gep
+  %ac = addrspacecast ptr addrspace(3) @g1 to ptr
+  %gep = getelementptr i8, ptr %ac, i64 1
+  %r = load i8, ptr %gep
   ret i8 %r
 }
 define i8 @get2() {
-  %ac = addrspacecast i16 addrspace(1)* @g2 to i16*
-  %bc = bitcast i16* %ac to i8*
-  %gep = getelementptr i8, i8* %bc, i64 1
-  %r = load i8, i8* %gep
+  %ac = addrspacecast ptr addrspace(1) @g2 to ptr
+  %gep = getelementptr i8, ptr %ac, i64 1
+  %r = load i8, ptr %gep
   ret i8 %r
 }

@@ -7,7 +7,7 @@
 define <vscale x 4 x i32> @and_or_nxv4i32(<vscale x 4 x i32> %A) {
 ; CHECK-LABEL: and_or_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 8
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 4 x i32> poison, i32 255, i32 0
@@ -24,7 +24,7 @@ define <vscale x 4 x i32> @and_or_nxv4i32(<vscale x 4 x i32> %A) {
 define <vscale x 2 x i64> @or_and_nxv2i64(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: or_and_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 3
 ; CHECK-NEXT:    vand.vi v8, v8, 7
 ; CHECK-NEXT:    ret
@@ -42,7 +42,7 @@ define <vscale x 2 x i64> @or_and_nxv2i64(<vscale x 2 x i64> %a0) {
 define <vscale x 2 x i64> @or_and_nxv2i64_fold(<vscale x 2 x i64> %a0) {
 ; CHECK-LABEL: or_and_nxv2i64_fold:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 3
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 2 x i64> poison, i64 1, i32 0
@@ -60,7 +60,7 @@ define <vscale x 4 x i32> @combine_vec_shl_shl(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: combine_vec_shl_shl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 2
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    li a0, 4
 ; CHECK-NEXT:    vmv.s.x v12, a0
@@ -81,7 +81,7 @@ define <vscale x 4 x i32> @combine_vec_shl_shl(<vscale x 4 x i32> %x) {
 define <vscale x 2 x i32> @combine_vec_ashr_ashr(<vscale x 2 x i32> %x) {
 ; CHECK-LABEL: combine_vec_ashr_ashr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vsra.vi v8, v8, 6
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 2 x i32> poison, i32 2, i32 0
@@ -98,7 +98,7 @@ define <vscale x 2 x i32> @combine_vec_ashr_ashr(<vscale x 2 x i32> %x) {
 define <vscale x 8 x i16> @combine_vec_lshr_lshr(<vscale x 8 x i16> %x) {
 ; CHECK-LABEL: combine_vec_lshr_lshr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 8
 ; CHECK-NEXT:    ret
   %ins1 = insertelement <vscale x 8 x i16> poison, i16 2, i32 0

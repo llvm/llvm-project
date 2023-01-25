@@ -528,10 +528,10 @@ private:
   ///}
 
   /// Map to cache isGuaranteedToTransferExecutionToSuccessor results.
-  DenseMap<const BasicBlock *, Optional<bool>> BlockTransferMap;
+  DenseMap<const BasicBlock *, std::optional<bool>> BlockTransferMap;
 
   /// Map to cache containsIrreducibleCFG results.
-  DenseMap<const Function*, Optional<bool>> IrreducibleControlMap;
+  DenseMap<const Function *, std::optional<bool>> IrreducibleControlMap;
 
   /// Map from instructions to associated must be executed iterators.
   DenseMap<const Instruction *, std::unique_ptr<MustBeExecutedIterator>>

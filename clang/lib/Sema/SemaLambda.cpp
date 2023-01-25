@@ -21,6 +21,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaLambda.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 using namespace clang;
 using namespace sema;
 
@@ -54,17 +55,17 @@ using namespace sema;
 ///  is at the top of the stack and has the highest index.
 /// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
 ///
-/// \returns An Optional<unsigned> Index that if evaluates to 'true' contains
-/// the index (into Sema's FunctionScopeInfo stack) of the innermost lambda
-/// which is capture-ready.  If the return value evaluates to 'false' then
-/// no lambda is capture-ready for \p VarToCapture.
+/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
+/// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
+/// lambda which is capture-ready.  If the return value evaluates to 'false'
+/// then no lambda is capture-ready for \p VarToCapture.
 
-static inline Optional<unsigned>
+static inline std::optional<unsigned>
 getStackIndexOfNearestEnclosingCaptureReadyLambda(
     ArrayRef<const clang::sema::FunctionScopeInfo *> FunctionScopes,
-    VarDecl *VarToCapture) {
+    ValueDecl *VarToCapture) {
   // Label failure to capture.
-  const Optional<unsigned> NoLambdaIsCaptureReady;
+  const std::optional<unsigned> NoLambdaIsCaptureReady;
 
   // Ignore all inner captured regions.
   unsigned CurScopeIndex = FunctionScopes.size() - 1;
@@ -165,18 +166,19 @@ getStackIndexOfNearestEnclosingCaptureReadyLambda(
 /// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
 ///
 ///
-/// \returns An Optional<unsigned> Index that if evaluates to 'true' contains
-/// the index (into Sema's FunctionScopeInfo stack) of the innermost lambda
-/// which is capture-capable.  If the return value evaluates to 'false' then
-/// no lambda is capture-capable for \p VarToCapture.
+/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
+/// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
+/// lambda which is capture-capable.  If the return value evaluates to 'false'
+/// then no lambda is capture-capable for \p VarToCapture.
 
-Optional<unsigned> clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
+std::optional<unsigned>
+clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     ArrayRef<const sema::FunctionScopeInfo *> FunctionScopes,
-    VarDecl *VarToCapture, Sema &S) {
+    ValueDecl *VarToCapture, Sema &S) {
 
-  const Optional<unsigned> NoLambdaIsCaptureCapable;
+  const std::optional<unsigned> NoLambdaIsCaptureCapable;
 
-  const Optional<unsigned> OptionalStackIndex =
+  const std::optional<unsigned> OptionalStackIndex =
       getStackIndexOfNearestEnclosingCaptureReadyLambda(FunctionScopes,
                                                         VarToCapture);
   if (!OptionalStackIndex)
@@ -282,7 +284,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     StaticDataMember,
     InlineVariable,
-    VariableTemplate
+    VariableTemplate,
+    Concept
   } Kind = Normal;
 
   // Default arguments of member function parameters that appear in a class
@@ -307,6 +310,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       Kind = DataMember;
+    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+      Kind = Concept;
     }
   }
 
@@ -330,12 +335,17 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
+  case Concept:
+    // Concept definitions aren't code generated and thus aren't mangled,
+    // however the ManglingContextDecl is important for the purposes of
+    // re-forming the template argument list of the lambda for constraint
+    // evaluation.
   case StaticDataMember:
     //  -- the initializers of nonspecialized static members of template classes
     if (!IsInNonspecializedTemplate)
       return std::make_tuple(nullptr, ManglingContextDecl);
     // Fall through to get the current context.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case DataMember:
     //  -- the in-class initializers of class members
@@ -354,13 +364,11 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   llvm_unreachable("unexpected context");
 }
 
-CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
-                                           SourceRange IntroducerRange,
-                                           TypeSourceInfo *MethodTypeInfo,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<ParmVarDecl *> Params,
-                                           ConstexprSpecKind ConstexprKind,
-                                           Expr *TrailingRequiresClause) {
+CXXMethodDecl *Sema::startLambdaDefinition(
+    CXXRecordDecl *Class, SourceRange IntroducerRange,
+    TypeSourceInfo *MethodTypeInfo, SourceLocation EndLoc,
+    ArrayRef<ParmVarDecl *> Params, ConstexprSpecKind ConstexprKind,
+    StorageClass SC, Expr *TrailingRequiresClause) {
   QualType MethodType = MethodTypeInfo->getType();
   TemplateParameterList *TemplateParams =
       getGenericLambdaTemplateParameterList(getCurLambda(), *this);
@@ -390,7 +398,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
       Context, Class, EndLoc,
       DeclarationNameInfo(MethodName, IntroducerRange.getBegin(),
                           MethodNameLoc),
-      MethodType, MethodTypeInfo, SC_None, getCurFPFeatures().isFPConstrained(),
+      MethodType, MethodTypeInfo, SC, getCurFPFeatures().isFPConstrained(),
       /*isInline=*/true, ConstexprKind, EndLoc, TrailingRequiresClause);
   Method->setAccess(AS_public);
   if (!TemplateParams)
@@ -418,7 +426,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
     CheckParmsForFunctionDef(Params,
                              /*CheckParameterNames=*/false);
 
-    for (auto P : Method->parameters())
+    for (auto *P : Method->parameters())
       P->setOwningFunction(Method);
   }
 
@@ -427,7 +435,7 @@ CXXMethodDecl *Sema::startLambdaDefinition(CXXRecordDecl *Class,
 
 void Sema::handleLambdaNumbering(
     CXXRecordDecl *Class, CXXMethodDecl *Method,
-    Optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
+    std::optional<std::tuple<bool, unsigned, unsigned, Decl *>> Mangling) {
   if (Mangling) {
     bool HasKnownInternalLinkage;
     unsigned ManglingNumber, DeviceManglingNumber;
@@ -769,8 +777,8 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
     if (Context.getCanonicalFunctionResultType(ReturnType) ==
           Context.getCanonicalFunctionResultType(CSI.ReturnType)) {
       // Use the return type with the strictest possible nullability annotation.
-      auto RetTyNullability = ReturnType->getNullability(Ctx);
-      auto BlockNullability = CSI.ReturnType->getNullability(Ctx);
+      auto RetTyNullability = ReturnType->getNullability();
+      auto BlockNullability = CSI.ReturnType->getNullability();
       if (BlockNullability &&
           (!RetTyNullability ||
            hasWeakerNullability(*RetTyNullability, *BlockNullability)))
@@ -789,8 +797,8 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
 
 QualType Sema::buildLambdaInitCaptureInitialization(
     SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
-    Optional<unsigned> NumExpansions, IdentifierInfo *Id, bool IsDirectInit,
-    Expr *&Init) {
+    std::optional<unsigned> NumExpansions, IdentifierInfo *Id,
+    bool IsDirectInit, Expr *&Init) {
   // Create an 'auto' or 'auto&' TypeSourceInfo that we can use to
   // deduce against.
   QualType DeductType = Context.getAutoDeductType();
@@ -881,11 +889,12 @@ VarDecl *Sema::createLambdaInitCaptureVarDecl(SourceLocation Loc,
   return NewVD;
 }
 
-void Sema::addInitCapture(LambdaScopeInfo *LSI, VarDecl *Var) {
+void Sema::addInitCapture(LambdaScopeInfo *LSI, VarDecl *Var,
+                          bool isReferenceType) {
   assert(Var->isInitCapture() && "init capture flag should be set");
-  LSI->addCapture(Var, /*isBlock*/false, Var->getType()->isReferenceType(),
-                  /*isNested*/false, Var->getLocation(), SourceLocation(),
-                  Var->getType(), /*Invalid*/false);
+  LSI->addCapture(Var, /*isBlock*/ false, isReferenceType,
+                  /*isNested*/ false, Var->getLocation(), SourceLocation(),
+                  Var->getType(), /*Invalid*/ false);
 }
 
 void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
@@ -917,6 +926,15 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   bool ContainsUnexpandedParameterPack = false;
   SourceLocation EndLoc;
   SmallVector<ParmVarDecl *, 8> Params;
+
+  assert(
+      (ParamInfo.getDeclSpec().getStorageClassSpec() ==
+           DeclSpec::SCS_unspecified ||
+       ParamInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static) &&
+      "Unexpected storage specifier");
+  bool IsLambdaStatic =
+      ParamInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static;
+
   if (ParamInfo.getNumTypeObjects() == 0) {
     // C++11 [expr.prim.lambda]p4:
     //   If a lambda-expression does not include a lambda-declarator, it is as
@@ -938,8 +956,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     QualType DefaultTypeForNoTrailingReturn =
         getLangOpts().CPlusPlus14 ? Context.getAutoDeductType()
                                   : Context.DependentTy;
-    QualType MethodTy =
-        Context.getFunctionType(DefaultTypeForNoTrailingReturn, None, EPI);
+    QualType MethodTy = Context.getFunctionType(DefaultTypeForNoTrailingReturn,
+                                                std::nullopt, EPI);
     MethodTyInfo = Context.getTrivialTypeSourceInfo(MethodTy);
     ExplicitParams = false;
     ExplicitResultType = false;
@@ -953,7 +971,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     //   This function call operator is declared const (9.3.1) if and only if
     //   the lambda-expression's parameter-declaration-clause is not followed
     //   by mutable. It is neither virtual nor declared volatile. [...]
-    if (!FTI.hasMutableQualifier()) {
+    if (!FTI.hasMutableQualifier() && !IsLambdaStatic) {
       FTI.getOrCreateMethodQualifiers().SetTypeQual(DeclSpec::TQ_const,
                                                     SourceLocation());
     }
@@ -963,6 +981,18 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     EndLoc = ParamInfo.getSourceRange().getEnd();
 
     ExplicitResultType = FTI.hasTrailingReturnType();
+
+    if (ExplicitResultType && getLangOpts().HLSL) {
+      QualType RetTy = FTI.getTrailingReturnType().get();
+      if (!RetTy.isNull()) {
+        // HLSL does not support specifying an address space on a lambda return
+        // type.
+        LangAS AddressSpace = RetTy.getAddressSpace();
+        if (AddressSpace != LangAS::Default)
+          Diag(FTI.getTrailingReturnTypeLoc(),
+               diag::err_return_value_with_address_space);
+      }
+    }
 
     if (FTIHasNonVoidParameters(FTI)) {
       Params.reserve(FTI.NumParams);
@@ -981,6 +1011,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   CXXMethodDecl *Method =
       startLambdaDefinition(Class, Intro.Range, MethodTyInfo, EndLoc, Params,
                             ParamInfo.getDeclSpec().getConstexprSpecifier(),
+                            IsLambdaStatic ? SC_Static : SC_None,
                             ParamInfo.getTrailingRequiresClause());
   if (ExplicitParams)
     CheckCXXDefaultArguments(Method);
@@ -1088,7 +1119,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (C->Init.isInvalid())
       continue;
 
-    VarDecl *Var = nullptr;
+    ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
       Diag(C->Loc, getLangOpts().CPlusPlus14
                        ? diag::warn_cxx11_compat_init_capture
@@ -1166,7 +1197,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
           continue;
       }
 
-      Var = R.getAsSingle<VarDecl>();
+      if (auto *BD = R.getAsSingle<BindingDecl>())
+        Var = BD;
+      else
+        Var = R.getAsSingle<VarDecl>();
       if (Var && DiagnoseUseOfDecl(Var, C->Loc))
         continue;
     }
@@ -1200,7 +1234,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (Var->isInvalidDecl())
       continue;
 
-    if (!Var->hasLocalStorage()) {
+    VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
+
+    if (!Underlying->hasLocalStorage()) {
       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;
       Diag(Var->getLocation(), diag::note_previous_decl) << C->Id;
       continue;
@@ -1224,7 +1260,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     }
 
     if (C->Init.isUsable()) {
-      addInitCapture(LSI, Var);
+      addInitCapture(LSI, cast<VarDecl>(Var), C->Kind == LCK_ByRef);
     } else {
       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef :
                                                    TryCapture_ExplicitByVal;
@@ -1374,7 +1410,7 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   ConvExtInfo.TypeQuals.addConst();
   ConvExtInfo.ExceptionSpec.Type = EST_BasicNoexcept;
   QualType ConvTy =
-      S.Context.getFunctionType(PtrToFunctionTy, None, ConvExtInfo);
+      S.Context.getFunctionType(PtrToFunctionTy, std::nullopt, ConvExtInfo);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName ConversionName
@@ -1470,45 +1506,50 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
     Class->addDecl(ConversionTemplate);
   } else
     Class->addDecl(Conversion);
-  // Add a non-static member function that will be the result of
-  // the conversion with a certain unique ID.
-  DeclarationName InvokerName = &S.Context.Idents.get(
-                                                 getLambdaStaticInvokerName());
-  // FIXME: Instead of passing in the CallOperator->getTypeSourceInfo()
-  // we should get a prebuilt TrivialTypeSourceInfo from Context
-  // using FunctionTy & Loc and get its TypeLoc as a FunctionProtoTypeLoc
-  // then rewire the parameters accordingly, by hoisting up the InvokeParams
-  // loop below and then use its Params to set Invoke->setParams(...) below.
-  // This would avoid the 'const' qualifier of the calloperator from
-  // contaminating the type of the invoker, which is currently adjusted
-  // in SemaTemplateDeduction.cpp:DeduceTemplateArguments.  Fixing the
-  // trailing return type of the invoker would require a visitor to rebuild
-  // the trailing return type and adjusting all back DeclRefExpr's to refer
-  // to the new static invoker parameters - not the call operator's.
-  CXXMethodDecl *Invoke = CXXMethodDecl::Create(
-      S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
-      InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
-      S.getCurFPFeatures().isFPConstrained(),
-      /*isInline=*/true, ConstexprSpecKind::Unspecified,
-      CallOperator->getBody()->getEndLoc());
-  for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
-    InvokerParams[I]->setOwningFunction(Invoke);
-  Invoke->setParams(InvokerParams);
-  Invoke->setAccess(AS_private);
-  Invoke->setImplicit(true);
-  if (Class->isGenericLambda()) {
-    FunctionTemplateDecl *TemplateCallOperator =
-            CallOperator->getDescribedFunctionTemplate();
-    FunctionTemplateDecl *StaticInvokerTemplate = FunctionTemplateDecl::Create(
-                          S.Context, Class, Loc, InvokerName,
-                          TemplateCallOperator->getTemplateParameters(),
-                          Invoke);
-    StaticInvokerTemplate->setAccess(AS_private);
-    StaticInvokerTemplate->setImplicit(true);
-    Invoke->setDescribedFunctionTemplate(StaticInvokerTemplate);
-    Class->addDecl(StaticInvokerTemplate);
-  } else
-    Class->addDecl(Invoke);
+
+  // If the lambda is not static, we need to add a static member
+  // function that will be the result of the conversion with a
+  // certain unique ID.
+  // When it is static we just return the static call operator instead.
+  if (CallOperator->isInstance()) {
+    DeclarationName InvokerName =
+        &S.Context.Idents.get(getLambdaStaticInvokerName());
+    // FIXME: Instead of passing in the CallOperator->getTypeSourceInfo()
+    // we should get a prebuilt TrivialTypeSourceInfo from Context
+    // using FunctionTy & Loc and get its TypeLoc as a FunctionProtoTypeLoc
+    // then rewire the parameters accordingly, by hoisting up the InvokeParams
+    // loop below and then use its Params to set Invoke->setParams(...) below.
+    // This would avoid the 'const' qualifier of the calloperator from
+    // contaminating the type of the invoker, which is currently adjusted
+    // in SemaTemplateDeduction.cpp:DeduceTemplateArguments.  Fixing the
+    // trailing return type of the invoker would require a visitor to rebuild
+    // the trailing return type and adjusting all back DeclRefExpr's to refer
+    // to the new static invoker parameters - not the call operator's.
+    CXXMethodDecl *Invoke = CXXMethodDecl::Create(
+        S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
+        InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
+        S.getCurFPFeatures().isFPConstrained(),
+        /*isInline=*/true, ConstexprSpecKind::Unspecified,
+        CallOperator->getBody()->getEndLoc());
+    for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
+      InvokerParams[I]->setOwningFunction(Invoke);
+    Invoke->setParams(InvokerParams);
+    Invoke->setAccess(AS_private);
+    Invoke->setImplicit(true);
+    if (Class->isGenericLambda()) {
+      FunctionTemplateDecl *TemplateCallOperator =
+          CallOperator->getDescribedFunctionTemplate();
+      FunctionTemplateDecl *StaticInvokerTemplate =
+          FunctionTemplateDecl::Create(
+              S.Context, Class, Loc, InvokerName,
+              TemplateCallOperator->getTemplateParameters(), Invoke);
+      StaticInvokerTemplate->setAccess(AS_private);
+      StaticInvokerTemplate->setImplicit(true);
+      Invoke->setDescribedFunctionTemplate(StaticInvokerTemplate);
+      Class->addDecl(StaticInvokerTemplate);
+    } else
+      Class->addDecl(Invoke);
+  }
 }
 
 /// Add a lambda's conversion to function pointers, as described in
@@ -1546,7 +1587,8 @@ static void addBlockPointerConversion(Sema &S,
           /*IsVariadic=*/false, /*IsCXXMethod=*/true));
   ConversionEPI.TypeQuals = Qualifiers();
   ConversionEPI.TypeQuals.addConst();
-  QualType ConvTy = S.Context.getFunctionType(BlockPtrTy, None, ConversionEPI);
+  QualType ConvTy =
+      S.Context.getFunctionType(BlockPtrTy, std::nullopt, ConversionEPI);
 
   SourceLocation Loc = IntroducerRange.getBegin();
   DeclarationName Name
@@ -1574,7 +1616,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 
   // An init-capture is initialized directly from its stored initializer.
   if (Cap.isInitCapture())
-    return Cap.getVariable()->getInit();
+    return cast<VarDecl>(Cap.getVariable())->getInit();
 
   // For anything else, build an initialization expression. For an implicit
   // capture, the capture notionally happens at the capture-default, so use
@@ -1605,7 +1647,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
       Init = This;
   } else {
     assert(Cap.isVariableCapture() && "unknown kind of capture");
-    VarDecl *Var = Cap.getVariable();
+    ValueDecl *Var = Cap.getVariable();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
       CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
@@ -1654,7 +1696,7 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
 
 bool Sema::CaptureHasSideEffects(const Capture &From) {
   if (From.isInitCapture()) {
-    Expr *Init = From.getVariable()->getInit();
+    Expr *Init = cast<VarDecl>(From.getVariable())->getInit();
     if (Init && Init->HasSideEffects(Context))
       return true;
   }
@@ -1704,9 +1746,9 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
 
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
-    auto *Var = Capture.getVariable();
-    if (Var->isInitCapture())
-      TSI = Capture.getVariable()->getTypeSourceInfo();
+    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
+    if (Var && Var->isInitCapture())
+      TSI = Var->getTypeSourceInfo();
   }
 
   // FIXME: Should we really be doing this? A null TypeSourceInfo seems more
@@ -1854,7 +1896,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           return LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType);
         } else {
           assert(From.isVariableCapture() && "unknown kind of capture");
-          VarDecl *Var = From.getVariable();
+          ValueDecl *Var = From.getVariable();
           LambdaCaptureKind Kind =
               From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
           return LambdaCapture(From.getLocation(), IsImplicit, Kind, Var,

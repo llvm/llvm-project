@@ -16,7 +16,7 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>) #1
 declare <2 x i64> @llvm.bitreverse.v2i64(<2 x i64>) #1
 declare <4 x i64> @llvm.bitreverse.v4i64(<4 x i64>) #1
 
-define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) #0 {
+define amdgpu_kernel void @s_brev_i16(ptr addrspace(1) noalias %out, i16 %val) #0 {
 ; SI-LABEL: s_brev_i16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -57,49 +57,52 @@ define amdgpu_kernel void @s_brev_i16(i16 addrspace(1)* noalias %out, i16 %val) 
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
-  store i16 %brev, i16 addrspace(1)* %out
+  store i16 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i16(i16 addrspace(1)* noalias %out, i16 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i16(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i16:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s6, s2
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s10, s6
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s8, s2
+; SI-NEXT:    s_mov_b32 s9, s3
+; SI-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfrev_b32_e32 v0, v0
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: v_brev_i16:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
-; FLAT-NEXT:    s_mov_b32 s3, 0xf000
-; FLAT-NEXT:    s_mov_b32 s2, -1
-; FLAT-NEXT:    s_mov_b32 s6, s2
-; FLAT-NEXT:    s_mov_b32 s7, s3
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; FLAT-NEXT:    s_mov_b32 s7, 0xf000
+; FLAT-NEXT:    s_mov_b32 s6, -1
+; FLAT-NEXT:    s_mov_b32 s10, s6
+; FLAT-NEXT:    s_mov_b32 s11, s7
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    buffer_load_ushort v0, off, s[4:7], 0
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; FLAT-NEXT:    s_mov_b32 s8, s2
+; FLAT-NEXT:    s_mov_b32 s9, s3
+; FLAT-NEXT:    buffer_load_ushort v0, off, s[8:11], 0
+; FLAT-NEXT:    s_mov_b32 s4, s0
+; FLAT-NEXT:    s_mov_b32 s5, s1
 ; FLAT-NEXT:    s_waitcnt vmcnt(0)
 ; FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; FLAT-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; FLAT-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; FLAT-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: v_brev_i16:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -111,13 +114,13 @@ define amdgpu_kernel void @v_brev_i16(i16 addrspace(1)* noalias %out, i16 addrsp
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GISEL-NEXT:    flat_store_short v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
-  %val = load i16, i16 addrspace(1)* %valptr
+  %val = load i16, ptr addrspace(1) %valptr
   %brev = call i16 @llvm.bitreverse.i16(i16 %val) #1
-  store i16 %brev, i16 addrspace(1)* %out
+  store i16 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_i32(i32 addrspace(1)* noalias %out, i32 %val) #0 {
+define amdgpu_kernel void @s_brev_i32(ptr addrspace(1) noalias %out, i32 %val) #0 {
 ; SI-LABEL: s_brev_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
@@ -154,34 +157,34 @@ define amdgpu_kernel void @s_brev_i32(i32 addrspace(1)* noalias %out, i32 %val) 
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %brev = call i32 @llvm.bitreverse.i32(i32 %val) #1
-  store i32 %brev, i32 addrspace(1)* %out
+  store i32 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    buffer_load_dword v0, v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfrev_b32_e32 v0, v0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: v_brev_i32:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s3
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
@@ -196,9 +199,8 @@ define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrsp
 ;
 ; GISEL-LABEL: v_brev_i32:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -212,46 +214,47 @@ define amdgpu_kernel void @v_brev_i32(i32 addrspace(1)* noalias %out, i32 addrsp
 ; GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i32, i32 addrspace(1)* %valptr, i32 %tid
-  %val = load i32, i32 addrspace(1)* %gep
+  %gep = getelementptr i32, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i32, ptr addrspace(1) %gep
   %brev = call i32 @llvm.bitreverse.i32(i32 %val) #1
-  store i32 %brev, i32 addrspace(1)* %out
+  store i32 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> %val) #0 {
+define amdgpu_kernel void @s_brev_v2i32(ptr addrspace(1) noalias %out, <2 x i32> %val) #0 {
 ; SI-LABEL: s_brev_v2i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_brev_b32 s5, s5
-; SI-NEXT:    s_brev_b32 s4, s4
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    v_mov_b32_e32 v1, s5
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_brev_b32 s0, s3
+; SI-NEXT:    s_brev_b32 s1, s2
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: s_brev_v2i32:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; FLAT-NEXT:    s_mov_b32 s3, 0xf000
-; FLAT-NEXT:    s_mov_b32 s2, -1
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; FLAT-NEXT:    s_mov_b32 s7, 0xf000
+; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    s_brev_b32 s5, s5
-; FLAT-NEXT:    s_brev_b32 s4, s4
-; FLAT-NEXT:    v_mov_b32_e32 v0, s4
-; FLAT-NEXT:    v_mov_b32_e32 v1, s5
-; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; FLAT-NEXT:    s_mov_b32 s4, s0
+; FLAT-NEXT:    s_mov_b32 s5, s1
+; FLAT-NEXT:    s_brev_b32 s0, s3
+; FLAT-NEXT:    s_brev_b32 s1, s2
+; FLAT-NEXT:    v_mov_b32_e32 v0, s1
+; FLAT-NEXT:    v_mov_b32_e32 v1, s0
+; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; FLAT-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_brev_v2i32:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_brev_b32 s2, s2
 ; GISEL-NEXT:    s_brev_b32 s3, s3
@@ -262,35 +265,35 @@ define amdgpu_kernel void @s_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %brev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %val) #1
-  store <2 x i32> %brev, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2 x i32> addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_v2i32(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_v2i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfrev_b32_e32 v1, v1
 ; SI-NEXT:    v_bfrev_b32_e32 v0, v0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: v_brev_v2i32:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s3
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
@@ -306,9 +309,8 @@ define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ;
 ; GISEL-LABEL: v_brev_v2i32:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -323,44 +325,45 @@ define amdgpu_kernel void @v_brev_v2i32(<2 x i32> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %valptr, i32 %tid
-  %val = load <2 x i32>, <2 x i32> addrspace(1)* %gep
+  %gep = getelementptr <2 x i32>, ptr addrspace(1) %valptr, i32 %tid
+  %val = load <2 x i32>, ptr addrspace(1) %gep
   %brev = call <2 x i32> @llvm.bitreverse.v2i32(<2 x i32> %val) #1
-  store <2 x i32> %brev, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_i64(i64 addrspace(1)* noalias %out, i64 %val) #0 {
+define amdgpu_kernel void @s_brev_i64(ptr addrspace(1) noalias %out, i64 %val) #0 {
 ; SI-LABEL: s_brev_i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_brev_b64 s[4:5], s[4:5]
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    v_mov_b32_e32 v1, s5
-; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_brev_b64 s[0:1], s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: s_brev_i64:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x2c
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; FLAT-NEXT:    s_mov_b32 s3, 0xf000
-; FLAT-NEXT:    s_mov_b32 s2, -1
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; FLAT-NEXT:    s_mov_b32 s7, 0xf000
+; FLAT-NEXT:    s_mov_b32 s6, -1
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
-; FLAT-NEXT:    s_brev_b64 s[4:5], s[4:5]
-; FLAT-NEXT:    v_mov_b32_e32 v0, s4
-; FLAT-NEXT:    v_mov_b32_e32 v1, s5
-; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
+; FLAT-NEXT:    s_mov_b32 s4, s0
+; FLAT-NEXT:    s_mov_b32 s5, s1
+; FLAT-NEXT:    s_brev_b64 s[0:1], s[2:3]
+; FLAT-NEXT:    v_mov_b32_e32 v0, s0
+; FLAT-NEXT:    v_mov_b32_e32 v1, s1
+; FLAT-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; FLAT-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: s_brev_i64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    s_brev_b64 s[2:3], s[2:3]
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
@@ -370,35 +373,35 @@ define amdgpu_kernel void @s_brev_i64(i64 addrspace(1)* noalias %out, i64 %val) 
 ; GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; GISEL-NEXT:    s_endpgm
   %brev = call i64 @llvm.bitreverse.i64(i64 %val) #1
-  store i64 %brev, i64 addrspace(1)* %out
+  store i64 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfrev_b32_e32 v2, v0
 ; SI-NEXT:    v_bfrev_b32_e32 v1, v1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dwordx2 v[1:2], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx2 v[1:2], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: v_brev_i64:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s3
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
@@ -414,9 +417,8 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ;
 ; GISEL-LABEL: v_brev_i64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -431,14 +433,14 @@ define amdgpu_kernel void @v_brev_i64(i64 addrspace(1)* noalias %out, i64 addrsp
 ; GISEL-NEXT:    flat_store_dwordx2 v[3:4], v[1:2]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr i64, i64 addrspace(1)* %valptr, i32 %tid
-  %val = load i64, i64 addrspace(1)* %gep
+  %gep = getelementptr i64, ptr addrspace(1) %valptr, i32 %tid
+  %val = load i64, ptr addrspace(1) %gep
   %brev = call i64 @llvm.bitreverse.i64(i64 %val) #1
-  store i64 %brev, i64 addrspace(1)* %out
+  store i64 %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @s_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2 x i64> %val) #0 {
+define amdgpu_kernel void @s_brev_v2i64(ptr addrspace(1) noalias %out, <2 x i64> %val) #0 {
 ; SI-LABEL: s_brev_v2i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0xd
@@ -487,37 +489,37 @@ define amdgpu_kernel void @s_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GISEL-NEXT:    s_endpgm
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
-  store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %brev, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2 x i64> addrspace(1)* noalias %valptr) #0 {
+define amdgpu_kernel void @v_brev_v2i64(ptr addrspace(1) noalias %out, ptr addrspace(1) noalias %valptr) #0 {
 ; SI-LABEL: v_brev_v2i64:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xb
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s6, 0
-; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s10, 0
+; SI-NEXT:    s_mov_b32 s11, s7
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[4:7], 0 addr64
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
-; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b64 s[8:9], s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], v[0:1], s[8:11], 0 addr64
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_bfrev_b32_e32 v4, v2
 ; SI-NEXT:    v_bfrev_b32_e32 v3, v3
 ; SI-NEXT:    v_bfrev_b32_e32 v2, v0
 ; SI-NEXT:    v_bfrev_b32_e32 v1, v1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
+; SI-NEXT:    buffer_store_dwordx4 v[1:4], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; FLAT-LABEL: v_brev_v2i64:
 ; FLAT:       ; %bb.0:
-; FLAT-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; FLAT-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; FLAT-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; FLAT-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    v_mov_b32_e32 v1, s3
 ; FLAT-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
@@ -535,9 +537,8 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ;
 ; GISEL-LABEL: v_brev_v2i64:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x2c
+; GISEL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, 4, v0
-; GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; GISEL-NEXT:    v_mov_b32_e32 v1, s3
@@ -554,10 +555,10 @@ define amdgpu_kernel void @v_brev_v2i64(<2 x i64> addrspace(1)* noalias %out, <2
 ; GISEL-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr <2 x i64> , <2 x i64> addrspace(1)* %valptr, i32 %tid
-  %val = load <2 x i64>, <2 x i64> addrspace(1)* %gep
+  %gep = getelementptr <2 x i64> , ptr addrspace(1) %valptr, i32 %tid
+  %val = load <2 x i64>, ptr addrspace(1) %gep
   %brev = call <2 x i64> @llvm.bitreverse.v2i64(<2 x i64> %val) #1
-  store <2 x i64> %brev, <2 x i64> addrspace(1)* %out
+  store <2 x i64> %brev, ptr addrspace(1) %out
   ret void
 }
 

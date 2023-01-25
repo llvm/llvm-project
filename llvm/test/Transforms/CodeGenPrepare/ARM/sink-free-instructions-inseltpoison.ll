@@ -170,14 +170,14 @@ if.else:
 declare void @user1(<8 x i16>)
 
 ; Exts can be sunk.
-define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8> %b) {
+define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8> %b, i1 %c) {
 ; NEON-LABEL: @sink_shufflevector_ext_subadd_multiuse(
 ; NEON-NEXT:  entry:
 ; NEON-NEXT:    [[S1:%.*]] = shufflevector <16 x i8> [[A:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; NEON-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; NEON-NEXT:    [[Z3:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
 ; NEON-NEXT:    call void @user1(<8 x i16> [[Z3]])
-; NEON-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; NEON-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; NEON:       if.then:
 ; NEON-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; NEON-NEXT:    [[TMP0:%.*]] = zext <8 x i8> [[S1]] to <8 x i16>
@@ -198,7 +198,7 @@ define <8 x i16> @sink_shufflevector_ext_subadd_multiuse(<16 x i8> %a, <16 x i8>
 ; NONEON-NEXT:    [[S3:%.*]] = shufflevector <16 x i8> [[A]], <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
 ; NONEON-NEXT:    [[Z3:%.*]] = sext <8 x i8> [[S3]] to <8 x i16>
 ; NONEON-NEXT:    call void @user1(<8 x i16> [[Z3]])
-; NONEON-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; NONEON-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; NONEON:       if.then:
 ; NONEON-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[B:%.*]], <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; NONEON-NEXT:    [[Z2:%.*]] = zext <8 x i8> [[S2]] to <8 x i16>
@@ -216,7 +216,7 @@ entry:
   %s3 = shufflevector <16 x i8> %a, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %z3 = sext <8 x i8> %s3 to <8 x i16>
   call void @user1(<8 x i16> %z3)
-  br i1 undef, label %if.then, label %if.else
+  br i1 %c, label %if.then, label %if.else
 
 if.then:
   %s2 = shufflevector <16 x i8> %b, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

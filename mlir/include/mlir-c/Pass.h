@@ -51,8 +51,12 @@ DEFINE_C_API_STRUCT(MlirOpPassManager, void);
 // PassManager/OpPassManager APIs.
 //===----------------------------------------------------------------------===//
 
-/// Create a new top-level PassManager.
+/// Create a new top-level PassManager with the default anchor.
 MLIR_CAPI_EXPORTED MlirPassManager mlirPassManagerCreate(MlirContext ctx);
+
+/// Create a new top-level PassManager anchored on `anchorOp`.
+MLIR_CAPI_EXPORTED MlirPassManager
+mlirPassManagerCreateOnOperation(MlirContext ctx, MlirStringRef anchorOp);
 
 /// Destroy the provided PassManager.
 MLIR_CAPI_EXPORTED void mlirPassManagerDestroy(MlirPassManager passManager);
@@ -105,6 +109,13 @@ MLIR_CAPI_EXPORTED void mlirPassManagerAddOwnedPass(MlirPassManager passManager,
 MLIR_CAPI_EXPORTED void
 mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager, MlirPass pass);
 
+/// Parse a sequence of textual MLIR pass pipeline elements and add them to the
+/// provided OpPassManager. If parsing fails an error message is reported using
+/// the provided callback.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirOpPassManagerAddPipeline(
+    MlirOpPassManager passManager, MlirStringRef pipelineElements,
+    MlirStringCallback callback, void *userData);
+
 /// Print a textual MLIR pass pipeline by sending chunks of the string
 /// representation and forwarding `userData to `callback`. Note that the
 /// callback may be called several times with consecutive chunks of the string.
@@ -112,10 +123,12 @@ MLIR_CAPI_EXPORTED void mlirPrintPassPipeline(MlirOpPassManager passManager,
                                               MlirStringCallback callback,
                                               void *userData);
 
-/// Parse a textual MLIR pass pipeline and add it to the provided OpPassManager.
-
+/// Parse a textual MLIR pass pipeline and assign it to the provided
+/// OpPassManager. If parsing fails an error message is reported using the
+/// provided callback.
 MLIR_CAPI_EXPORTED MlirLogicalResult
-mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline);
+mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline,
+                      MlirStringCallback callback, void *userData);
 
 //===----------------------------------------------------------------------===//
 // External Pass API.

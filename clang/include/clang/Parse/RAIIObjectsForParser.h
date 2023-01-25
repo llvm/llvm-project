@@ -341,6 +341,19 @@ namespace clang {
     }
   };
 
+  class OffsetOfStateRAIIObject {
+    Sema::OffsetOfKind &OffsetOfState;
+    Sema::OffsetOfKind OldValue;
+
+  public:
+    OffsetOfStateRAIIObject(Parser &P, Sema::OffsetOfKind Value)
+        : OffsetOfState(P.OffsetOfState), OldValue(P.OffsetOfState) {
+      OffsetOfState = Value;
+    }
+
+    ~OffsetOfStateRAIIObject() { OffsetOfState = OldValue; }
+  };
+
   /// RAII object that makes sure paren/bracket/brace count is correct
   /// after declaration/statement parsing, even when there's a parsing error.
   class ParenBraceBracketBalancer {

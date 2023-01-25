@@ -47,7 +47,8 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
 
     // If the operation has recursive effects, push all of the nested operations
     // on to the stack to consider.
-    bool hasRecursiveEffects = op->hasTrait<OpTrait::HasRecursiveSideEffects>();
+    bool hasRecursiveEffects =
+        op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
     if (hasRecursiveEffects) {
       for (Region &region : op->getRegions()) {
         for (auto &block : region) {
@@ -128,8 +129,82 @@ template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *, Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *, Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
 
+template <typename... EffectTys>
+bool mlir::hasEffect(Operation *op, Value value) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
+    if (value && effect.getValue() != value)
+      return false;
+    return isa<EffectTys...>(effect.getEffect());
+  });
+}
+template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Free>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Read>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Write>(Operation *, Value);
+template bool
+mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *, Value);
+
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return false;
   return wouldOpBeTriviallyDeadImpl(op);
+}
+
+bool mlir::isMemoryEffectFree(Operation *op) {
+  if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    if (!memInterface.hasNoEffect())
+      return false;
+    // If the op does not have recursive side effects, then it is memory effect
+    // free.
+    if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
+      return true;
+  } else if (!op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
+    // Otherwise, if the op does not implement the memory effect interface and
+    // it does not have recursive side effects, then it cannot be known that the
+    // op is moveable.
+    return false;
+  }
+
+  // Recurse into the regions and ensure that all nested ops are memory effect
+  // free.
+  for (Region &region : op->getRegions())
+    for (Operation &op : region.getOps())
+      if (!isMemoryEffectFree(&op))
+        return false;
+  return true;
+}
+
+bool mlir::isSpeculatable(Operation *op) {
+  auto conditionallySpeculatable = dyn_cast<ConditionallySpeculatable>(op);
+  if (!conditionallySpeculatable)
+    return false;
+
+  switch (conditionallySpeculatable.getSpeculatability()) {
+  case Speculation::RecursivelySpeculatable:
+    for (Region &region : op->getRegions()) {
+      for (Operation &op : region.getOps())
+        if (!isSpeculatable(&op))
+          return false;
+    }
+    return true;
+
+  case Speculation::Speculatable:
+    return true;
+
+  case Speculation::NotSpeculatable:
+    return false;
+  }
+
+  llvm_unreachable("Unhandled enum in mlir::isSpeculatable!");
+}
+
+/// The implementation of this function replicates the `def Pure : TraitList`
+/// in `SideEffectInterfaces.td` and has to be kept in sync manually.
+bool mlir::isPure(Operation *op) {
+  return isSpeculatable(op) && isMemoryEffectFree(op);
 }

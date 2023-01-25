@@ -40,8 +40,8 @@ LLVM_LIBC_FUNCTION(void *, mmap,
 #endif
 
   long ret_val =
-      __llvm_libc::syscall(syscall_number, reinterpret_cast<long>(addr), size,
-                           prot, flags, fd, offset);
+      __llvm_libc::syscall_impl(syscall_number, reinterpret_cast<long>(addr),
+                                size, prot, flags, fd, offset);
 
   // The mmap/mmap2 syscalls return negative values on error. These negative
   // values are actually the negative values of the error codes. So, fix them

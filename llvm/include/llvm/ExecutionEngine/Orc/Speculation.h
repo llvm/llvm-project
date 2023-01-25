@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_SPECULATION_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
@@ -44,13 +43,13 @@ public:
 private:
   // FIX ME: find a right way to distinguish the pre-compile Symbols, and update
   // the callsite
-  Optional<AliaseeDetails> getImplFor(const SymbolStringPtr &StubSymbol) {
+  std::optional<AliaseeDetails> getImplFor(const SymbolStringPtr &StubSymbol) {
     std::lock_guard<std::mutex> Lockit(ConcurrentAccess);
     auto Position = Maps.find(StubSymbol);
     if (Position != Maps.end())
       return Position->getSecond();
     else
-      return None;
+      return std::nullopt;
   }
 
   std::mutex ConcurrentAccess;
@@ -90,8 +89,8 @@ private:
       // try to distinguish already compiled & library symbols
       if (!ImplSymbol)
         continue;
-      const auto &ImplSymbolName = ImplSymbol.getPointer()->first;
-      JITDylib *ImplJD = ImplSymbol.getPointer()->second;
+      const auto &ImplSymbolName = ImplSymbol->first;
+      JITDylib *ImplJD = ImplSymbol->second;
       auto &SymbolsInJD = SpeculativeLookUpImpls[ImplJD];
       SymbolsInJD.insert(ImplSymbolName);
     }
@@ -171,7 +170,8 @@ private:
 
 class IRSpeculationLayer : public IRLayer {
 public:
-  using IRlikiesStrRef = Optional<DenseMap<StringRef, DenseSet<StringRef>>>;
+  using IRlikiesStrRef =
+      std::optional<DenseMap<StringRef, DenseSet<StringRef>>>;
   using ResultEval = std::function<IRlikiesStrRef(Function &)>;
   using TargetAndLikelies = DenseMap<SymbolStringPtr, SymbolNameSet>;
 

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/DebugInfo.h"
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -31,12 +32,15 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::at;
 using namespace llvm::dwarf;
 
 /// Finds all intrinsics declaring local variables as living in the memory that
@@ -131,6 +135,18 @@ DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   return nullptr;
 }
 
+DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
+  // Original dbg.declare must have a location.
+  const DebugLoc &DeclareLoc = DII->getDebugLoc();
+  MDNode *Scope = DeclareLoc.getScope();
+  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
+  // Because no machine insts can come from debug intrinsics, only the scope
+  // and inlinedAt is significant. Zero line numbers are used in case this
+  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
+  // with the correct scope / inlinedAt fields.
+  return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
+}
+
 //===----------------------------------------------------------------------===//
 // DebugInfoFinder implementations.
 //===----------------------------------------------------------------------===//
@@ -161,7 +177,7 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
   if (!addCompileUnit(CU))
     return;
-  for (auto DIG : CU->getGlobalVariables()) {
+  for (auto *DIG : CU->getGlobalVariables()) {
     if (!addGlobalVariable(DIG))
       continue;
     auto *GV = DIG->getVariable();
@@ -421,12 +437,11 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
 
   // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
-  if (std::all_of(
-          N->op_begin() + 1, N->op_end(),
-          [&Visited, &DILocationReachable](const MDOperand &Op) {
-            return isDILocationReachable(Visited, DILocationReachable,
-                                         Op.get());
-          }))
+  if (llvm::all_of(llvm::drop_begin(N->operands()),
+                   [&Visited, &DILocationReachable](const MDOperand &Op) {
+                     return isDILocationReachable(Visited, DILocationReachable,
+                                                  Op.get());
+                   }))
     return nullptr;
 
   return updateLoopMetadataDebugLocationsImpl(
@@ -463,9 +478,13 @@ bool llvm::stripDebugInfo(Function &F) {
         if (NewLoopID != LoopID)
           I.setMetadata(LLVMContext::MD_loop, NewLoopID);
       }
-      // Strip heapallocsite attachments, they point into the DIType system.
-      if (I.hasMetadataOtherThanDebugLoc())
+      // Strip other attachments that are or use debug info.
+      if (I.hasMetadataOtherThanDebugLoc()) {
+        // Heapallocsites point into the DIType system.
         I.setMetadata("heapallocsite", nullptr);
+        // DIAssignID are debug info metadata primitives.
+        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+      }
     }
   }
   return Changed;
@@ -815,6 +834,35 @@ void Instruction::applyMergedLocation(const DILocation *LocA,
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
 
+void Instruction::mergeDIAssignID(
+    ArrayRef<const Instruction *> SourceInstructions) {
+  // Replace all uses (and attachments) of all the DIAssignIDs
+  // on SourceInstructions with a single merged value.
+  assert(getFunction() && "Uninserted instruction merged");
+  // Collect up the DIAssignID tags.
+  SmallVector<DIAssignID *, 4> IDs;
+  for (const Instruction *I : SourceInstructions) {
+    if (auto *MD = I->getMetadata(LLVMContext::MD_DIAssignID))
+      IDs.push_back(cast<DIAssignID>(MD));
+    assert(getFunction() == I->getFunction() &&
+           "Merging with instruction from another function not allowed");
+  }
+
+  // Add this instruction's DIAssignID too, if it has one.
+  if (auto *MD = getMetadata(LLVMContext::MD_DIAssignID))
+    IDs.push_back(cast<DIAssignID>(MD));
+
+  if (IDs.empty())
+    return; // No DIAssignID tags to process.
+
+  DIAssignID *MergeID = IDs[0];
+  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
+    if (*It != MergeID)
+      at::RAUW(*It, MergeID);
+  }
+  setMetadata(LLVMContext::MD_DIAssignID, MergeID);
+}
+
 void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
@@ -824,7 +872,14 @@ void Instruction::dropLocation() {
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
-  if (!isa<CallBase>(this)) {
+  bool MayLowerToCall = false;
+  if (isa<CallBase>(this)) {
+    auto *II = dyn_cast<IntrinsicInst>(this);
+    MayLowerToCall =
+        !II || IntrinsicInst::mayLowerToFunctionCall(II->getIntrinsicID());
+  }
+
+  if (!MayLowerToCall) {
     setDebugLoc(DebugLoc());
     return;
   }
@@ -1492,7 +1547,7 @@ void LLVMDisposeTemporaryMDNode(LLVMMetadataRef TempNode) {
 void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TargetMetadata,
                                     LLVMMetadataRef Replacement) {
   auto *Node = unwrapDI<MDNode>(TargetMetadata);
-  Node->replaceAllUsesWith(unwrap<Metadata>(Replacement));
+  Node->replaceAllUsesWith(unwrap(Replacement));
   MDNode::deleteTemporary(Node);
 }
 
@@ -1615,3 +1670,335 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
     return (LLVMMetadataKind)LLVMGenericDINodeMetadataKind;
   }
 }
+
+AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
+  assert(ID && "Expected non-null ID");
+  LLVMContext &Ctx = ID->getContext();
+  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
+
+  auto MapIt = Map.find(ID);
+  if (MapIt == Map.end())
+    return make_range(nullptr, nullptr);
+
+  return make_range(MapIt->second.begin(), MapIt->second.end());
+}
+
+AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
+  assert(ID && "Expected non-null ID");
+  LLVMContext &Ctx = ID->getContext();
+
+  auto *IDAsValue = MetadataAsValue::getIfExists(Ctx, ID);
+
+  // The ID is only used wrapped in MetadataAsValue(ID), so lets check that
+  // one of those already exists first.
+  if (!IDAsValue)
+    return make_range(Value::user_iterator(), Value::user_iterator());
+
+  return make_range(IDAsValue->user_begin(), IDAsValue->user_end());
+}
+
+void at::deleteAssignmentMarkers(const Instruction *Inst) {
+  auto Range = getAssignmentMarkers(Inst);
+  if (Range.empty())
+    return;
+  SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
+  for (auto *DAI : ToDelete)
+    DAI->eraseFromParent();
+}
+
+void at::RAUW(DIAssignID *Old, DIAssignID *New) {
+  // Replace MetadataAsValue uses.
+  if (auto *OldIDAsValue =
+          MetadataAsValue::getIfExists(Old->getContext(), Old)) {
+    auto *NewIDAsValue = MetadataAsValue::get(Old->getContext(), New);
+    OldIDAsValue->replaceAllUsesWith(NewIDAsValue);
+  }
+
+  // Replace attachments.
+  AssignmentInstRange InstRange = getAssignmentInsts(Old);
+  // Use intermediate storage for the instruction ptrs because the
+  // getAssignmentInsts range iterators will be invalidated by adding and
+  // removing DIAssignID attachments.
+  SmallVector<Instruction *> InstVec(InstRange.begin(), InstRange.end());
+  for (auto *I : InstVec)
+    I->setMetadata(LLVMContext::MD_DIAssignID, New);
+}
+
+void at::deleteAll(Function *F) {
+  SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
+        ToDelete.push_back(DAI);
+      else
+        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+    }
+  }
+  for (auto *DAI : ToDelete)
+    DAI->eraseFromParent();
+}
+
+/// Collect constant properies (base, size, offset) of \p StoreDest.
+/// Return std::nullopt if any properties are not constants.
+static std::optional<AssignmentInfo>
+getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
+                      uint64_t SizeInBits) {
+  APInt GEPOffset(DL.getIndexTypeSizeInBits(StoreDest->getType()), 0);
+  const Value *Base = StoreDest->stripAndAccumulateConstantOffsets(
+      DL, GEPOffset, /*AllowNonInbounds*/ true);
+  uint64_t OffsetInBytes = GEPOffset.getLimitedValue();
+  // Check for overflow.
+  if (OffsetInBytes == UINT64_MAX)
+    return std::nullopt;
+  if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
+    return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
+  return std::nullopt;
+}
+
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const MemIntrinsic *I) {
+  const Value *StoreDest = I->getRawDest();
+  // Assume 8 bit bytes.
+  auto *ConstLengthInBytes = dyn_cast<ConstantInt>(I->getLength());
+  if (!ConstLengthInBytes)
+    // We can't use a non-const size, bail.
+    return std::nullopt;
+  uint64_t SizeInBits = 8 * ConstLengthInBytes->getZExtValue();
+  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+}
+
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const StoreInst *SI) {
+  const Value *StoreDest = SI->getPointerOperand();
+  uint64_t SizeInBits = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
+  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+}
+
+std::optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                                    const AllocaInst *AI) {
+  uint64_t SizeInBits = DL.getTypeSizeInBits(AI->getAllocatedType());
+  return getAssignmentInfoImpl(DL, AI, SizeInBits);
+}
+
+static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
+                               Instruction &StoreLikeInst,
+                               const VarRecord &VarRec, DIBuilder &DIB) {
+  auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);
+  assert(ID && "Store instruction must have DIAssignID metadata");
+  (void)ID;
+
+  DIExpression *Expr =
+      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
+  if (!Info.StoreToWholeAlloca) {
+    auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
+                                                    Info.SizeInBits);
+    assert(R.has_value() && "failed to create fragment expression");
+    Expr = *R;
+  }
+  DIExpression *AddrExpr =
+      DIExpression::get(StoreLikeInst.getContext(), std::nullopt);
+  return DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
+                             AddrExpr, VarRec.DL);
+}
+
+#undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
+#define DEBUG_TYPE "assignment-tracking"
+
+void at::trackAssignments(Function::iterator Start, Function::iterator End,
+                          const StorageToVarsMap &Vars, const DataLayout &DL,
+                          bool DebugPrints) {
+  // Early-exit if there are no interesting variables.
+  if (Vars.empty())
+    return;
+
+  auto &Ctx = Start->getContext();
+  auto &Module = *Start->getModule();
+
+  // Undef type doesn't matter, so long as it isn't void. Let's just use i1.
+  auto *Undef = UndefValue::get(Type::getInt1Ty(Ctx));
+  DIBuilder DIB(Module, /*AllowUnresolved*/ false);
+
+  // Scan the instructions looking for stores to local variables' storage.
+  LLVM_DEBUG(errs() << "# Scanning instructions\n");
+  for (auto BBI = Start; BBI != End; ++BBI) {
+    for (Instruction &I : *BBI) {
+
+      std::optional<AssignmentInfo> Info;
+      Value *ValueComponent = nullptr;
+      Value *DestComponent = nullptr;
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        // We want to track the variable's stack home from its alloca's
+        // position onwards so we treat it as an assignment (where the stored
+        // value is Undef).
+        Info = getAssignmentInfo(DL, AI);
+        ValueComponent = Undef;
+        DestComponent = AI;
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        Info = getAssignmentInfo(DL, SI);
+        ValueComponent = SI->getValueOperand();
+        DestComponent = SI->getPointerOperand();
+      } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
+        Info = getAssignmentInfo(DL, MI);
+        // May not be able to represent this value easily.
+        ValueComponent = Undef;
+        DestComponent = MI->getOperand(0);
+      } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
+        Info = getAssignmentInfo(DL, MI);
+        // If we're zero-initing we can state the assigned value is zero,
+        // otherwise use undef.
+        auto *ConstValue = dyn_cast<ConstantInt>(MI->getOperand(1));
+        if (ConstValue && ConstValue->isZero())
+          ValueComponent = ConstValue;
+        else
+          ValueComponent = Undef;
+        DestComponent = MI->getOperand(0);
+      } else {
+        // Not a store-like instruction.
+        continue;
+      }
+
+      assert(ValueComponent && DestComponent);
+      LLVM_DEBUG(errs() << "SCAN: Found store-like: " << I << "\n");
+
+      // Check if getAssignmentInfo failed to understand this store.
+      if (!Info.has_value()) {
+        LLVM_DEBUG(
+            errs()
+            << " | SKIP: Untrackable store (e.g. through non-const gep)\n");
+        continue;
+      }
+      LLVM_DEBUG(errs() << " | BASE: " << *Info->Base << "\n");
+
+      //  Check if the store destination is a local variable with debug info.
+      auto LocalIt = Vars.find(Info->Base);
+      if (LocalIt == Vars.end()) {
+        LLVM_DEBUG(
+            errs()
+            << " | SKIP: Base address not associated with local variable\n");
+        continue;
+      }
+
+      DIAssignID *ID =
+          cast_or_null<DIAssignID>(I.getMetadata(LLVMContext::MD_DIAssignID));
+      if (!ID) {
+        ID = DIAssignID::getDistinct(Ctx);
+        I.setMetadata(LLVMContext::MD_DIAssignID, ID);
+      }
+
+      for (const VarRecord &R : LocalIt->second) {
+        auto *Assign =
+            emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
+        (void)Assign;
+        LLVM_DEBUG(errs() << " > INSERT: " << *Assign << "\n");
+      }
+    }
+  }
+}
+
+void AssignmentTrackingPass::runOnFunction(Function &F) {
+  // Collect a map of {backing storage : dbg.declares} (currently "backing
+  // storage" is limited to Allocas). We'll use this to find dbg.declares to
+  // delete after running `trackAssignments`.
+  DenseMap<const AllocaInst *, SmallPtrSet<DbgDeclareInst *, 2>> DbgDeclares;
+  // Create another similar map of {storage : variables} that we'll pass to
+  // trackAssignments.
+  StorageToVarsMap Vars;
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I);
+      if (!DDI)
+        continue;
+      // FIXME: trackAssignments doesn't let you specify any modifiers to the
+      // variable (e.g. fragment) or location (e.g. offset), so we have to
+      // leave dbg.declares with non-empty expressions in place.
+      if (DDI->getExpression()->getNumElements() != 0)
+        continue;
+      if (AllocaInst *Alloca =
+              dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
+        DbgDeclares[Alloca].insert(DDI);
+        Vars[Alloca].insert(VarRecord(DDI));
+      }
+    }
+  }
+
+  auto DL = std::make_unique<DataLayout>(F.getParent());
+  // FIXME: Locals can be backed by caller allocas (sret, byval).
+  // Note: trackAssignments doesn't respect dbg.declare's IR positions (as it
+  // doesn't "understand" dbg.declares). However, this doesn't appear to break
+  // any rules given this description of dbg.declare from
+  // llvm/docs/SourceLevelDebugging.rst:
+  //
+  //   It is not control-dependent, meaning that if a call to llvm.dbg.declare
+  //   exists and has a valid location argument, that address is considered to
+  //   be the true home of the variable across its entire lifetime.
+  trackAssignments(F.begin(), F.end(), Vars, *DL);
+
+  // Delete dbg.declares for variables now tracked with assignment tracking.
+  for (auto &P : DbgDeclares) {
+    const AllocaInst *Alloca = P.first;
+    auto Markers = at::getAssignmentMarkers(Alloca);
+    (void)Markers;
+    for (DbgDeclareInst *DDI : P.second) {
+      // Assert that the alloca that DDI uses is now linked to a dbg.assign
+      // describing the same variable (i.e. check that this dbg.declare
+      // has been replaced by a dbg.assign).
+      assert(llvm::any_of(Markers, [DDI](DbgAssignIntrinsic *DAI) {
+        return DebugVariable(DAI) == DebugVariable(DDI);
+      }));
+      // Delete DDI because the variable location is now tracked using
+      // assignment tracking.
+      DDI->eraseFromParent();
+    }
+  }
+}
+
+static const char *AssignmentTrackingModuleFlag =
+    "debug-info-assignment-tracking";
+
+static void setAssignmentTrackingModuleFlag(Module &M) {
+  M.setModuleFlag(Module::ModFlagBehavior::Max, AssignmentTrackingModuleFlag,
+                  ConstantAsMetadata::get(
+                      ConstantInt::get(Type::getInt1Ty(M.getContext()), 1)));
+}
+
+static bool getAssignmentTrackingModuleFlag(const Module &M) {
+  Metadata *Value = M.getModuleFlag(AssignmentTrackingModuleFlag);
+  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isZeroValue();
+}
+
+bool llvm::isAssignmentTrackingEnabled(const Module &M) {
+  return getAssignmentTrackingModuleFlag(M);
+}
+
+PreservedAnalyses AssignmentTrackingPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  runOnFunction(F);
+
+  // Record that this module uses assignment tracking. It doesn't matter that
+  // some functons in the module may not use it - the debug info in those
+  // functions will still be handled properly.
+  setAssignmentTrackingModuleFlag(*F.getParent());
+
+  // Q: Can we return a less conservative set than just CFGAnalyses? Can we
+  // return PreservedAnalyses::all()?
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+PreservedAnalyses AssignmentTrackingPass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  for (auto &F : M)
+    runOnFunction(F);
+
+  // Record that this module uses assignment tracking.
+  setAssignmentTrackingModuleFlag(M);
+
+  // Q: Can we return a less conservative set than just CFGAnalyses? Can we
+  // return PreservedAnalyses::all()?
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+#undef DEBUG_TYPE

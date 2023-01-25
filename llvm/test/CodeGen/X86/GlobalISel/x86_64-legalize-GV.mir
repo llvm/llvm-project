@@ -3,9 +3,9 @@
 
   @g_int = global i32 0, align 4
 
-  define i32* @test_global_ptrv() {
+  define ptr @test_global_ptrv() {
   entry:
-    ret i32* @g_int
+    ret ptr @g_int
   }
 ...
 ---

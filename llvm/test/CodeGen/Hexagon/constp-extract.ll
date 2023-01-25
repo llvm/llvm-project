@@ -13,13 +13,13 @@ entry:
   %0 = call i32 @llvm.hexagon.S2.extractu(i32 703696, i32 16, i32 4)
 ; CHECK: 43981
 ; CHECK-NOT: extractu
-  store i32 %0, i32* @x, align 4
+  store i32 %0, ptr @x, align 4
   ; extract(0x000ABCD0, 16, 4)
   ; should evaluate to 0xFFFFABCD (dec 4294945741 or -21555)
   %1 = call i32 @llvm.hexagon.S4.extract(i32 703696, i32 16, i32 4)
 ; CHECK: -21555
 ; CHECK-NOT: extract
-  store i32 %1, i32* @y, align 4
+  store i32 %1, ptr @y, align 4
   ret void
 }
 

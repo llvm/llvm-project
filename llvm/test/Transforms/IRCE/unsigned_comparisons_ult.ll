@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -S < %s 2>&1 | FileCheck %s
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: irce: in function test_01: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
@@ -12,11 +12,11 @@
 ; CHECK-NOT: irce: in function test_09: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 ; ULT condition for increasing loop.
-define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_01(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_01
 ; CHECK:        entry:
-; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %exit.mainloop.at = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
 ; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:        loop:
@@ -32,7 +32,7 @@ define void @test_01(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -42,8 +42,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 100
   br i1 %next, label %loop, label %exit
 
@@ -55,11 +55,11 @@ exit:
 }
 
 ; ULT condition for decreasing loops.
-define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_02(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_02(
 ; CHECK:        entry:
-; CHECK-NEXT:     %len = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %len = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[UMIN:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %len, i32 1)
 ; CHECK-NEXT:     %exit.preloop.at = add nsw i32 [[UMIN]], -1
 ; CHECK-NEXT:     [[COND2:%[^ ]+]] = icmp ugt i32 100, %exit.preloop.at
@@ -79,7 +79,7 @@ define void @test_02(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.preloop, label %in.bounds.preloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -89,8 +89,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 1
   br i1 %next, label %exit, label %loop
 
@@ -102,11 +102,11 @@ exit:
 }
 
 ; Check SINT_MAX.
-define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_03(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_03
 ; CHECK:        entry:
-; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %exit.mainloop.at = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
 ; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:        loop:
@@ -122,7 +122,7 @@ define void @test_03(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -132,8 +132,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 2147483647
   br i1 %next, label %loop, label %exit
 
@@ -145,11 +145,11 @@ exit:
 }
 
 ; Check SINT_MAX + 1, test is similar to test_01.
-define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_04(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_04
 ; CHECK:        entry:
-; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %exit.mainloop.at = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
 ; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:        loop:
@@ -165,7 +165,7 @@ define void @test_04(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -175,8 +175,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 2147483648
   br i1 %next, label %loop, label %exit
 
@@ -188,10 +188,10 @@ exit:
 }
 
 ; Check SINT_MAX + 1, test is similar to test_02.
-define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_05(ptr %arr, ptr %a_len_ptr) #0 {
 ; CHECK: test_05(
 ; CHECK:        entry:
-; CHECK-NEXT:     %len = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %len = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[UMIN:%[^ ]+]] = call i32 @llvm.umax.i32(i32 %len, i32 1)
 ; CHECK-NEXT:     %exit.preloop.at = add nsw i32 [[UMIN]], -1
 ; CHECK-NEXT:     [[COND2:%[^ ]+]] = icmp ugt i32 -2147483648, %exit.preloop.at
@@ -211,7 +211,7 @@ define void @test_05(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.preloop, label %in.bounds.preloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -221,8 +221,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 1
   br i1 %next, label %exit, label %loop
 
@@ -234,11 +234,11 @@ exit:
 }
 
 ; Increasing loop, UINT_MAX. Positive test.
-define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_06(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_06
 ; CHECK:        entry:
-; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %exit.mainloop.at = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
 ; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:        loop:
@@ -254,7 +254,7 @@ define void @test_06(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -264,8 +264,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 4294967295
   br i1 %next, label %loop, label %exit
 
@@ -277,14 +277,14 @@ exit:
 }
 
 ; Decreasing loop, UINT_MAX. Negative test: we cannot substract -1 from 0.
-define void @test_07(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_07(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK: test_07(
 ; CHECK-NOT:    loop.preloop:
 ; CHECK-NOT:    loop.postloop:
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -294,8 +294,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 0
   br i1 %next, label %exit, label %loop
 
@@ -310,11 +310,11 @@ exit:
 ; Iteration space [0; UINT_MAX - 99), the fact that SINT_MAX is within this
 ; range does not prevent us from performing IRCE.
 
-define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_08(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_08
 ; CHECK:        entry:
-; CHECK-NEXT:     %exit.mainloop.at = load i32, i32* %a_len_ptr, align 4, !range !0
+; CHECK-NEXT:     %exit.mainloop.at = load i32, ptr %a_len_ptr, align 4, !range !0
 ; CHECK-NEXT:     [[COND:%[^ ]+]] = icmp ult i32 0, %exit.mainloop.at
 ; CHECK-NEXT:     br i1 [[COND]], label %loop.preheader, label %main.pseudo.exit
 ; CHECK:        loop:
@@ -330,7 +330,7 @@ define void @test_08(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NEXT:     br i1 %abc.postloop, label %in.bounds.postloop, label %out.of.bounds.loopexit
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -340,8 +340,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, -100
   br i1 %next, label %loop, label %exit
 
@@ -355,7 +355,7 @@ exit:
 ; Walking through the border of unsigned range is not allowed
 ; (iteration space [-100; 100)). Negative test.
 
-define void @test_09(i32* %arr, i32* %a_len_ptr) #0 {
+define void @test_09(ptr %arr, ptr %a_len_ptr) #0 {
 
 ; CHECK:      test_09
 ; CHECK-NOT:  preloop
@@ -364,7 +364,7 @@ define void @test_09(i32* %arr, i32* %a_len_ptr) #0 {
 ; CHECK-NOT:  br i1 true
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   br label %loop
 
 loop:
@@ -374,8 +374,8 @@ loop:
   br i1 %abc, label %in.bounds, label %out.of.bounds
 
 in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp ult i32 %idx.next, 100
   br i1 %next, label %loop, label %exit
 

@@ -17,9 +17,12 @@
 namespace llvm {
   class HexagonTargetMachine;
   class ImmutablePass;
+  class PassRegistry;
 
   /// Creates a Hexagon-specific Target Transformation Info pass.
   ImmutablePass *createHexagonTargetTransformInfoPass(const HexagonTargetMachine *TM);
+
+  void initializeHexagonDAGToDAGISelPass(PassRegistry &);
 } // end namespace llvm;
 
 #endif

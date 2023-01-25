@@ -16,13 +16,13 @@ void test_ascii() {
         " is too long">
       a;
   Foo(a);                 // expected-error {{no matching function}}
-  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<{"this nontype template argument is [...]"}>'}}
+  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<Str<43>{"this nontype template argument is [...]"}>'}}
 }
 
 void test_non_ascii() {
   ASCII<"wait a s\033cond"> a;
   Bar(a);                 // expected-error {{no matching function}}
-  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<{{119, 97, 105, 116, 32, 97, 32, 115, 27, 99, ...}}>'}}
+  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<Str<14>{{119, 97, 105, 116, 32, 97, 32, 115, 27, 99, ...}}>'}}
 }
 
 // The dialects (C++20 and above) that accept string literals as non-type
@@ -30,5 +30,5 @@ void test_non_ascii() {
 void test_trigraph() {
   ASCII<"what??!"> a;     // expected-warning {{trigraph ignored}}
   Meow(a);                // expected-error {{no matching function}}
-  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<{"what??!"}>'}}
+  decltype(a)::display(); // expected-error {{no member named 'display' in 'ASCII<Str<8>{"what??!"}>'}}
 }

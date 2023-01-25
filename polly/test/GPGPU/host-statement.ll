@@ -13,7 +13,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @llvm.lifetime.start(i64, i8* nocapture) #0
+declare void @llvm.lifetime.start(i64, ptr nocapture) #0
 
 ; This test case tests that we can correctly handle a ScopStmt that is
 ; scheduled on the host, instead of within a kernel.
@@ -74,7 +74,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; KERNEL-IR: call void @llvm.nvvm.barrier0()
 
 ; Function Attrs: nounwind uwtable
-define internal void @kernel_gramschmidt(i32 %ni, i32 %nj, [512 x double]* %A, [512 x double]* %R, [512 x double]* %Q) #1 {
+define internal void @kernel_gramschmidt(i32 %ni, i32 %nj, ptr %A, ptr %R, ptr %Q) #1 {
 entry:
   br label %entry.split
 
@@ -89,10 +89,10 @@ for.cond1.preheader:                              ; preds = %entry.split, %for.i
 for.inc:                                          ; preds = %for.cond1.preheader, %for.inc
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.inc ]
   %nrm.02 = phi double [ 0.000000e+00, %for.cond1.preheader ], [ %add, %for.inc ]
-  %arrayidx5 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv, i64 %indvars.iv24
-  %tmp = load double, double* %arrayidx5, align 8, !tbaa !1
-  %arrayidx9 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv, i64 %indvars.iv24
-  %tmp27 = load double, double* %arrayidx9, align 8, !tbaa !1
+  %arrayidx5 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv, i64 %indvars.iv24
+  %tmp = load double, ptr %arrayidx5, align 8, !tbaa !1
+  %arrayidx9 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv, i64 %indvars.iv24
+  %tmp27 = load double, ptr %arrayidx9, align 8, !tbaa !1
   %mul = fmul double %tmp, %tmp27
   %add = fadd double %nrm.02, %mul
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
@@ -102,8 +102,8 @@ for.inc:                                          ; preds = %for.cond1.preheader
 for.end:                                          ; preds = %for.inc
   %add.lcssa = phi double [ %add, %for.inc ]
   %call = tail call double @sqrt(double %add.lcssa) #2
-  %arrayidx13 = getelementptr inbounds [512 x double], [512 x double]* %R, i64 %indvars.iv24, i64 %indvars.iv24
-  store double %call, double* %arrayidx13, align 8, !tbaa !1
+  %arrayidx13 = getelementptr inbounds [512 x double], ptr %R, i64 %indvars.iv24, i64 %indvars.iv24
+  store double %call, ptr %arrayidx13, align 8, !tbaa !1
   br label %for.body16
 
 for.cond33.preheader:                             ; preds = %for.body16
@@ -116,13 +116,13 @@ for.body35.lr.ph:                                 ; preds = %for.cond33.preheade
 
 for.body16:                                       ; preds = %for.end, %for.body16
   %indvars.iv10 = phi i64 [ 0, %for.end ], [ %indvars.iv.next11, %for.body16 ]
-  %arrayidx20 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv10, i64 %indvars.iv24
-  %tmp28 = load double, double* %arrayidx20, align 8, !tbaa !1
-  %arrayidx24 = getelementptr inbounds [512 x double], [512 x double]* %R, i64 %indvars.iv24, i64 %indvars.iv24
-  %tmp29 = load double, double* %arrayidx24, align 8, !tbaa !1
+  %arrayidx20 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv10, i64 %indvars.iv24
+  %tmp28 = load double, ptr %arrayidx20, align 8, !tbaa !1
+  %arrayidx24 = getelementptr inbounds [512 x double], ptr %R, i64 %indvars.iv24, i64 %indvars.iv24
+  %tmp29 = load double, ptr %arrayidx24, align 8, !tbaa !1
   %div = fdiv double %tmp28, %tmp29
-  %arrayidx28 = getelementptr inbounds [512 x double], [512 x double]* %Q, i64 %indvars.iv10, i64 %indvars.iv24
-  store double %div, double* %arrayidx28, align 8, !tbaa !1
+  %arrayidx28 = getelementptr inbounds [512 x double], ptr %Q, i64 %indvars.iv10, i64 %indvars.iv24
+  store double %div, ptr %arrayidx28, align 8, !tbaa !1
   %indvars.iv.next11 = add nuw nsw i64 %indvars.iv10, 1
   %exitcond12 = icmp ne i64 %indvars.iv.next11, 512
   br i1 %exitcond12, label %for.body16, label %for.cond33.preheader
@@ -135,8 +135,8 @@ for.cond33.loopexit:                              ; preds = %for.body62
 
 for.body35:                                       ; preds = %for.body35.lr.ph, %for.cond33.loopexit
   %indvars.iv21 = phi i64 [ %indvars.iv19, %for.body35.lr.ph ], [ %indvars.iv.next22, %for.cond33.loopexit ]
-  %arrayidx39 = getelementptr inbounds [512 x double], [512 x double]* %R, i64 %indvars.iv24, i64 %indvars.iv21
-  store double 0.000000e+00, double* %arrayidx39, align 8, !tbaa !1
+  %arrayidx39 = getelementptr inbounds [512 x double], ptr %R, i64 %indvars.iv24, i64 %indvars.iv21
+  store double 0.000000e+00, ptr %arrayidx39, align 8, !tbaa !1
   br label %for.body42
 
 for.cond60.preheader:                             ; preds = %for.body42
@@ -144,31 +144,31 @@ for.cond60.preheader:                             ; preds = %for.body42
 
 for.body42:                                       ; preds = %for.body35, %for.body42
   %indvars.iv13 = phi i64 [ 0, %for.body35 ], [ %indvars.iv.next14, %for.body42 ]
-  %arrayidx46 = getelementptr inbounds [512 x double], [512 x double]* %Q, i64 %indvars.iv13, i64 %indvars.iv24
-  %tmp30 = load double, double* %arrayidx46, align 8, !tbaa !1
-  %arrayidx50 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv13, i64 %indvars.iv21
-  %tmp31 = load double, double* %arrayidx50, align 8, !tbaa !1
+  %arrayidx46 = getelementptr inbounds [512 x double], ptr %Q, i64 %indvars.iv13, i64 %indvars.iv24
+  %tmp30 = load double, ptr %arrayidx46, align 8, !tbaa !1
+  %arrayidx50 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv13, i64 %indvars.iv21
+  %tmp31 = load double, ptr %arrayidx50, align 8, !tbaa !1
   %mul51 = fmul double %tmp30, %tmp31
-  %arrayidx55 = getelementptr inbounds [512 x double], [512 x double]* %R, i64 %indvars.iv24, i64 %indvars.iv21
-  %tmp32 = load double, double* %arrayidx55, align 8, !tbaa !1
+  %arrayidx55 = getelementptr inbounds [512 x double], ptr %R, i64 %indvars.iv24, i64 %indvars.iv21
+  %tmp32 = load double, ptr %arrayidx55, align 8, !tbaa !1
   %add56 = fadd double %tmp32, %mul51
-  store double %add56, double* %arrayidx55, align 8, !tbaa !1
+  store double %add56, ptr %arrayidx55, align 8, !tbaa !1
   %indvars.iv.next14 = add nuw nsw i64 %indvars.iv13, 1
   %exitcond15 = icmp ne i64 %indvars.iv.next14, 512
   br i1 %exitcond15, label %for.body42, label %for.cond60.preheader
 
 for.body62:                                       ; preds = %for.cond60.preheader, %for.body62
   %indvars.iv16 = phi i64 [ 0, %for.cond60.preheader ], [ %indvars.iv.next17, %for.body62 ]
-  %arrayidx66 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv16, i64 %indvars.iv21
-  %tmp33 = load double, double* %arrayidx66, align 8, !tbaa !1
-  %arrayidx70 = getelementptr inbounds [512 x double], [512 x double]* %Q, i64 %indvars.iv16, i64 %indvars.iv24
-  %tmp34 = load double, double* %arrayidx70, align 8, !tbaa !1
-  %arrayidx74 = getelementptr inbounds [512 x double], [512 x double]* %R, i64 %indvars.iv24, i64 %indvars.iv21
-  %tmp35 = load double, double* %arrayidx74, align 8, !tbaa !1
+  %arrayidx66 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv16, i64 %indvars.iv21
+  %tmp33 = load double, ptr %arrayidx66, align 8, !tbaa !1
+  %arrayidx70 = getelementptr inbounds [512 x double], ptr %Q, i64 %indvars.iv16, i64 %indvars.iv24
+  %tmp34 = load double, ptr %arrayidx70, align 8, !tbaa !1
+  %arrayidx74 = getelementptr inbounds [512 x double], ptr %R, i64 %indvars.iv24, i64 %indvars.iv21
+  %tmp35 = load double, ptr %arrayidx74, align 8, !tbaa !1
   %mul75 = fmul double %tmp34, %tmp35
   %sub = fsub double %tmp33, %mul75
-  %arrayidx79 = getelementptr inbounds [512 x double], [512 x double]* %A, i64 %indvars.iv16, i64 %indvars.iv21
-  store double %sub, double* %arrayidx79, align 8, !tbaa !1
+  %arrayidx79 = getelementptr inbounds [512 x double], ptr %A, i64 %indvars.iv16, i64 %indvars.iv21
+  store double %sub, ptr %arrayidx79, align 8, !tbaa !1
   %indvars.iv.next17 = add nuw nsw i64 %indvars.iv16, 1
   %exitcond18 = icmp ne i64 %indvars.iv.next17, 512
   br i1 %exitcond18, label %for.body62, label %for.cond33.loopexit
@@ -186,7 +186,7 @@ for.end88:                                        ; preds = %for.inc86
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #0
+declare void @llvm.lifetime.end(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind
 declare double @sqrt(double) #2

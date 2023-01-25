@@ -24,6 +24,9 @@ namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
 
+#define GEN_PASS_DECL_CONVERTGPUOPSTOROCDLOPS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
 /// If `runtime` is Unknown, gpu.printf will not be lowered
 /// The resulting pattern set should be run over a gpu.module op
@@ -41,6 +44,7 @@ std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
 createLowerGpuOpsToROCDLOpsPass(
     const std::string &chipset = "gfx900",
     unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
+    bool useBarePtrCallConv = false,
     gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);
 
 } // namespace mlir

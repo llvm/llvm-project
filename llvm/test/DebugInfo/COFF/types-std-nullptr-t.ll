@@ -22,7 +22,7 @@ source_filename = "foo.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.15.26730"
 
-@"?NullPtr@@3$$TA" = dso_local global i8* null, align 8, !dbg !0
+@"?NullPtr@@3$$TA" = dso_local global ptr null, align 8, !dbg !0
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!7, !8, !9, !10}

@@ -27,18 +27,14 @@
 #include <memory>
 #include <vector>
 
-namespace llvm {
-namespace lto {
+namespace llvm::lto {
 class LTO;
 }
-} // namespace llvm
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class BitcodeFile;
 class InputFile;
-class LazyObjFile;
 
 class BitcodeCompiler {
 public:
@@ -56,7 +52,6 @@ private:
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
 };
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

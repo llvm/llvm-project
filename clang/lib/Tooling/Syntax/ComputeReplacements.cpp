@@ -31,7 +31,7 @@ void enumerateTokenSpans(const syntax::Tree *Root,
       process(Root);
       // Report the last span to the user.
       if (SpanBegin)
-        Callback(llvm::makeArrayRef(SpanBegin, SpanEnd), SpanIsOriginal);
+        Callback(llvm::ArrayRef(SpanBegin, SpanEnd), SpanIsOriginal);
     }
 
   private:
@@ -52,7 +52,7 @@ void enumerateTokenSpans(const syntax::Tree *Root,
       }
       // Report the current span to the user.
       if (SpanBegin)
-        Callback(llvm::makeArrayRef(SpanBegin, SpanEnd), SpanIsOriginal);
+        Callback(llvm::ArrayRef(SpanBegin, SpanEnd), SpanIsOriginal);
       // Start recording a new span.
       SpanBegin = STM.getToken(L->getTokenKey());
       SpanEnd = SpanBegin + 1;
@@ -118,17 +118,17 @@ syntax::computeReplacements(const TokenBufferTokenManager &TBTM,
         // We are looking at a span of original tokens.
         if (NextOriginal != Tokens.begin()) {
           // There is a gap, record a replacement or deletion.
-          emitReplacement(llvm::makeArrayRef(NextOriginal, Tokens.begin()));
+          emitReplacement(llvm::ArrayRef(NextOriginal, Tokens.begin()));
         } else {
           // No gap, but we may have pending insertions. Emit them now.
-          emitReplacement(llvm::makeArrayRef(NextOriginal, /*Length=*/0));
+          emitReplacement(llvm::ArrayRef(NextOriginal, /*Length=*/(size_t)0));
         }
         NextOriginal = Tokens.end();
       });
 
   // We might have pending replacements at the end of file. If so, emit them.
-  emitReplacement(llvm::makeArrayRef(
-      NextOriginal, Buffer.expandedTokens().drop_back().end()));
+  emitReplacement(
+      llvm::ArrayRef(NextOriginal, Buffer.expandedTokens().drop_back().end()));
 
   return Replacements;
 }

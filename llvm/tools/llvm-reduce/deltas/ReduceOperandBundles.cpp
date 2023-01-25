@@ -95,7 +95,9 @@ static void maybeRewriteCallWithDifferentBundles(
 }
 
 /// Removes out-of-chunk operand bundles from calls.
-static void extractOperandBundesFromModule(Oracle &O, Module &Program) {
+static void extractOperandBundesFromModule(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
   OperandBundleRemapper R(O);
   R.visit(Program);
 
@@ -104,6 +106,6 @@ static void extractOperandBundesFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing OperandBundes...\n";
-  runDeltaPass(Test, extractOperandBundesFromModule);
+  runDeltaPass(Test, extractOperandBundesFromModule,
+               "Reducing Operand Bundles");
 }

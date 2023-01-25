@@ -14,11 +14,11 @@
 #ifndef LLVM_SUPPORT_CASTING_H
 #define LLVM_SUPPORT_CASTING_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <type_traits>
 
 namespace llvm {
@@ -263,8 +263,8 @@ struct CastIsPossible {
 // over. In fact, some of the isa_impl templates should be moved over to
 // CastIsPossible.
 template <typename To, typename From>
-struct CastIsPossible<To, Optional<From>> {
-  static inline bool isPossible(const Optional<From> &f) {
+struct CastIsPossible<To, std::optional<From>> {
+  static inline bool isPossible(const std::optional<From> &f) {
     assert(f && "CastIsPossible::isPossible called on a nullopt!");
     return isa_impl_wrap<
         To, const From,
@@ -359,18 +359,18 @@ struct UniquePtrCast : public CastIsPossible<To, From *> {
   }
 };
 
-/// This cast trait provides Optional<T> casting. This means that if you have a
-/// value type, you can cast it to another value type and have dyn_cast return
-/// an Optional<T>.
+/// This cast trait provides std::optional<T> casting. This means that if you
+/// have a value type, you can cast it to another value type and have dyn_cast
+/// return an std::optional<T>.
 template <typename To, typename From, typename Derived = void>
 struct OptionalValueCast
     : public CastIsPossible<To, From>,
       public DefaultDoCastIfPossible<
-          Optional<To>, From,
+          std::optional<To>, From,
           detail::SelfType<Derived, OptionalValueCast<To, From>>> {
-  static inline Optional<To> castFailed() { return Optional<To>{}; }
+  static inline std::optional<To> castFailed() { return std::optional<To>{}; }
 
-  static inline Optional<To> doCast(const From &f) { return To(f); }
+  static inline std::optional<To> doCast(const From &f) { return To(f); }
 };
 
 /// Provides a cast trait that strips `const` from types to make it easier to
@@ -533,11 +533,12 @@ struct CastInfo<To, From, std::enable_if_t<!is_simple_type<From>::value>> {
 template <typename To, typename From>
 struct CastInfo<To, std::unique_ptr<From>> : public UniquePtrCast<To, From> {};
 
-/// Provide a CastInfo specialized for Optional<From>. It's assumed that if the
-/// input is Optional<From> that the output can be Optional<To>. If that's not
-/// the case, specialize CastInfo for your use case.
+/// Provide a CastInfo specialized for std::optional<From>. It's assumed that if
+/// the input is std::optional<From> that the output can be std::optional<To>.
+/// If that's not the case, specialize CastInfo for your use case.
 template <typename To, typename From>
-struct CastInfo<To, Optional<From>> : public OptionalValueCast<To, From> {};
+struct CastInfo<To, std::optional<From>> : public OptionalValueCast<To, From> {
+};
 
 /// isa<X> - Return true if the parameter to the template is an instance of one
 /// of the template type arguments.  Used like this:
@@ -545,12 +546,12 @@ struct CastInfo<To, Optional<From>> : public OptionalValueCast<To, From> {};
 ///  if (isa<Type>(myVal)) { ... }
 ///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
 template <typename To, typename From>
-LLVM_NODISCARD inline bool isa(const From &Val) {
+[[nodiscard]] inline bool isa(const From &Val) {
   return CastInfo<To, const From>::isPossible(Val);
 }
 
 template <typename First, typename Second, typename... Rest, typename From>
-LLVM_NODISCARD inline bool isa(const From &Val) {
+[[nodiscard]] inline bool isa(const From &Val) {
   return isa<First>(Val) || isa<Second, Rest...>(Val);
 }
 
@@ -562,55 +563,27 @@ LLVM_NODISCARD inline bool isa(const From &Val) {
 ///  cast<Instruction>(myVal)->getParent()
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(const From &Val) {
+[[nodiscard]] inline decltype(auto) cast(const From &Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, const From>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(From &Val) {
+[[nodiscard]] inline decltype(auto) cast(From &Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, From>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(From *Val) {
+[[nodiscard]] inline decltype(auto) cast(From *Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, From *>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
+[[nodiscard]] inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, std::unique_ptr<From>>::doCast(std::move(Val));
-}
-
-/// dyn_cast<X> - Return the argument parameter cast to the specified type. This
-/// casting operator returns null if the argument is of the wrong type, so it
-/// can be used to test for a type as well as cast if successful. The value
-/// passed in must be present, if not, use dyn_cast_if_present. This should be
-/// used in the context of an if statement like this:
-///
-///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
-
-template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(const From &Val) {
-  return CastInfo<To, const From>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(From &Val) {
-  return CastInfo<To, From>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(From *Val) {
-  return CastInfo<To, From *>::doCastIfPossible(Val);
-}
-
-template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
-  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(std::move(Val));
 }
 
 //===----------------------------------------------------------------------===//
@@ -618,14 +591,13 @@ LLVM_NODISCARD inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
 //===----------------------------------------------------------------------===//
 
 template <typename T>
-constexpr bool IsNullable = std::is_pointer<T>::value ||
-                            std::is_constructible<T, std::nullptr_t>::value;
+constexpr bool IsNullable =
+    std::is_pointer_v<T> || std::is_constructible_v<T, std::nullptr_t>;
 
 /// ValueIsPresent provides a way to check if a value is, well, present. For
-/// pointers, this is the equivalent of checking against nullptr, for
-/// Optionals this is the equivalent of checking hasValue(). It also
-/// provides a method for unwrapping a value (think dereferencing a
-/// pointer).
+/// pointers, this is the equivalent of checking against nullptr, for Optionals
+/// this is the equivalent of checking hasValue(). It also provides a method for
+/// unwrapping a value (think calling .value() on an optional).
 
 // Generic values can't *not* be present.
 template <typename T, typename Enable = void> struct ValueIsPresent {
@@ -635,10 +607,12 @@ template <typename T, typename Enable = void> struct ValueIsPresent {
 };
 
 // Optional provides its own way to check if something is present.
-template <typename T> struct ValueIsPresent<Optional<T>> {
+template <typename T> struct ValueIsPresent<std::optional<T>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const Optional<T> &t) { return t.has_value(); }
-  static inline decltype(auto) unwrapValue(Optional<T> &t) { return t.value(); }
+  static inline bool isPresent(const std::optional<T> &t) {
+    return t.has_value();
+  }
+  static inline decltype(auto) unwrapValue(std::optional<T> &t) { return *t; }
 };
 
 // If something is "nullable" then we just compare it to nullptr to see if it
@@ -646,7 +620,7 @@ template <typename T> struct ValueIsPresent<Optional<T>> {
 template <typename T>
 struct ValueIsPresent<T, std::enable_if_t<IsNullable<T>>> {
   using UnwrappedType = T;
-  static inline bool isPresent(const T &t) { return t != nullptr; }
+  static inline bool isPresent(const T &t) { return t != T(nullptr); }
   static inline decltype(auto) unwrapValue(T &t) { return t; }
 };
 
@@ -664,38 +638,71 @@ template <typename T> inline decltype(auto) unwrapValue(T &t) {
 }
 } // namespace detail
 
+/// dyn_cast<X> - Return the argument parameter cast to the specified type. This
+/// casting operator returns null if the argument is of the wrong type, so it
+/// can be used to test for a type as well as cast if successful. The value
+/// passed in must be present, if not, use dyn_cast_if_present. This should be
+/// used in the context of an if statement like this:
+///
+///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(const From &Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, const From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(From &Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, From>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(From *Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, From *>::doCastIfPossible(Val);
+}
+
+template <typename To, typename From>
+[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+  assert(detail::isPresent(Val) && "dyn_cast on a non-existent value");
+  return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(
+      std::forward<std::unique_ptr<From> &&>(Val));
+}
+
 /// isa_and_present<X> - Functionally identical to isa, except that a null value
 /// is accepted.
 template <typename... X, class Y>
-LLVM_NODISCARD inline bool isa_and_present(const Y &Val) {
+[[nodiscard]] inline bool isa_and_present(const Y &Val) {
   if (!detail::isPresent(Val))
     return false;
   return isa<X...>(Val);
 }
 
 template <typename... X, class Y>
-LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
+[[nodiscard]] inline bool isa_and_nonnull(const Y &Val) {
   return isa_and_present<X...>(Val);
 }
 
 /// cast_if_present<X> - Functionally identical to cast, except that a null
 /// value is accepted.
 template <class X, class Y>
-LLVM_NODISCARD inline auto cast_if_present(const Y &Val) {
+[[nodiscard]] inline auto cast_if_present(const Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, const Y>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
-template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y &Val) {
+template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
-template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y *Val) {
+template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y *Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y *>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
@@ -703,7 +710,7 @@ template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y *Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto cast_if_present(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto cast_if_present(std::unique_ptr<Y> &&Val) {
   if (!detail::isPresent(Val))
     return UniquePtrCast<X, Y>::castFailed();
   return UniquePtrCast<X, Y>::doCast(std::move(Val));
@@ -769,7 +776,7 @@ template <class X, class Y> auto dyn_cast_or_null(Y *Val) {
 /// is returned.  If the cast is unsuccessful, the function returns nullptr
 /// and From is unchanged.
 template <class X, class Y>
-LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+[[nodiscard]] inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
 unique_dyn_cast(std::unique_ptr<Y> &Val) {
   if (!isa<X>(Val))
     return nullptr;
@@ -777,14 +784,14 @@ unique_dyn_cast(std::unique_ptr<Y> &Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast<X, Y>(Val);
 }
 
 // unique_dyn_cast_or_null<X> - Functionally identical to unique_dyn_cast,
 // except that a null value is accepted.
 template <class X, class Y>
-LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+[[nodiscard]] inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
 unique_dyn_cast_or_null(std::unique_ptr<Y> &Val) {
   if (!Val)
     return nullptr;
@@ -792,7 +799,7 @@ unique_dyn_cast_or_null(std::unique_ptr<Y> &Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast_or_null<X, Y>(Val);
 }
 

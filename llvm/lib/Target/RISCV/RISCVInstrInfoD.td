@@ -113,7 +113,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_D,  "fmsub.d",  DINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_D, "fnmsub.d", DINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_D, "fnmadd.d", DINX>;
 
-let SchedRW = [WriteFALU64, ReadFALU64, ReadFALU64] in {
+let SchedRW = [WriteFAdd64, ReadFAdd64, ReadFAdd64] in {
 defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", DINX, /*Commutable*/1>;
 defm FSUB_D : FPALU_rr_frm_m<0b0000101, "fsub.d", DINX>;
 }
@@ -160,10 +160,12 @@ defm FLE_D : FPCmp_rr_m<0b1010001, 0b000, "fle.d", DINX>;
 defm FCLASS_D : FPUnaryOp_r_m<0b1110001, 0b00000, 0b001, XDINX, "fclass.d">,
                 Sched<[WriteFClass64, ReadFClass64]>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_W_D : FPUnaryOp_r_frm_m<0b1100001, 0b00000, XDINX, "fcvt.w.d">,
                Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 defm          : FPUnaryOpDynFrmAlias_m<FCVT_W_D, "fcvt.w.d", XDINX>;
 
+let IsSignExtendingOpW = 1 in
 defm FCVT_WU_D : FPUnaryOp_r_frm_m<0b1100001, 0b00001, XDINX, "fcvt.wu.d">,
                  Sched<[WriteFCvtF64ToI32, ReadFCvtF64ToI32]>;
 defm           : FPUnaryOpDynFrmAlias_m<FCVT_WU_D, "fcvt.wu.d", XDINX>;
@@ -334,7 +336,9 @@ def : PatSetCC<FPR64, any_fsetccs, SETOLT, FLT_D>;
 def : PatSetCC<FPR64, any_fsetccs, SETLE, FLE_D>;
 def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D>;
 
-def Select_FPR64_Using_CC_GPR : SelectCC_rrirr<FPR64, GPR>;
+defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64>;
+
+def PseudoFROUND_D : PseudoFROUND<FPR64>;
 
 /// Loads
 

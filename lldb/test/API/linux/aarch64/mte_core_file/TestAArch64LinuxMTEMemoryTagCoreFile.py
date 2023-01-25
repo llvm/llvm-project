@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     MTE_BUF_ADDR = hex(0xffff82c74000)

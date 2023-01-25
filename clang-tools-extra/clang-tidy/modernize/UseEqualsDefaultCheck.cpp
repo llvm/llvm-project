@@ -8,15 +8,15 @@
 
 #include "UseEqualsDefaultCheck.h"
 #include "../utils/LexerUtils.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static const char SpecialFunction[] = "SpecialFunction";
 
@@ -216,17 +216,38 @@ void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
+namespace {
+AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
+} // namespace
+
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
+  // Skip unions/union-like classes since their constructors behave differently
+  // when defaulted vs. empty.
+  auto IsUnionLikeClass = recordDecl(
+      anyOf(isUnion(),
+            has(fieldDecl(isImplicit(), hasType(cxxRecordDecl(isUnion()))))));
+
+  const LangOptions &LangOpts = getLangOpts();
+  auto IsPublicOrOutOfLineUntilCPP20 =
+      LangOpts.CPlusPlus20
+          ? cxxConstructorDecl()
+          : cxxConstructorDecl(anyOf(isOutOfLine(), isPublic()));
+
   // Destructor.
-  Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
-                     this);
+  Finder->addMatcher(
+      cxxDestructorDecl(unless(hasParent(IsUnionLikeClass)), isDefinition())
+          .bind(SpecialFunction),
+      this);
   Finder->addMatcher(
       cxxConstructorDecl(
+          unless(
+              hasParent(decl(anyOf(IsUnionLikeClass, functionTemplateDecl())))),
           isDefinition(),
           anyOf(
               // Default constructor.
               allOf(unless(hasAnyConstructorInitializer(isWritten())),
-                    parameterCountIs(0)),
+                    unless(isVariadic()), parameterCountIs(0),
+                    IsPublicOrOutOfLineUntilCPP20),
               // Copy constructor.
               allOf(isCopyConstructor(),
                     // Discard constructors that can be used as a copy
@@ -237,11 +258,18 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
       this);
   // Copy-assignment operator.
   Finder->addMatcher(
-      cxxMethodDecl(isDefinition(), isCopyAssignmentOperator(),
+      cxxMethodDecl(unless(hasParent(
+                        decl(anyOf(IsUnionLikeClass, functionTemplateDecl())))),
+                    isDefinition(), isCopyAssignmentOperator(),
                     // isCopyAssignmentOperator() allows the parameter to be
                     // passed by value, and in this case it cannot be
                     // defaulted.
-                    hasParameter(0, hasType(lValueReferenceType())))
+                    hasParameter(0, hasType(lValueReferenceType())),
+                    // isCopyAssignmentOperator() allows non lvalue reference
+                    // return types, and in this case it cannot be defaulted.
+                    returns(qualType(hasCanonicalType(
+                        allOf(lValueReferenceType(pointee(type())),
+                              unless(matchers::isReferenceToConst()))))))
           .bind(SpecialFunction),
       this);
 }
@@ -311,10 +339,13 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << MemberType;
 
   if (ApplyFix) {
+    SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
+        *Body, Result.Context->getSourceManager(),
+        Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
-    Optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
-        Body->getSourceRange().getEnd().getLocWithOffset(1),
-        Result.Context->getSourceManager(), Result.Context->getLangOpts());
+    std::optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
+        UnifiedEnd, Result.Context->getSourceManager(),
+        Result.Context->getLangOpts());
     StringRef Replacement =
         Token && Token->is(tok::semi) ? "= default" : "= default;";
     Diag << FixItHint::CreateReplacement(Body->getSourceRange(), Replacement)
@@ -322,6 +353,4 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

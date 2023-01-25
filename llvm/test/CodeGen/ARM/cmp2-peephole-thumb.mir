@@ -15,21 +15,21 @@
     %retval = alloca i32, align 4
     %mul = alloca i32, align 4
     %mul1 = mul nsw i32 %a, %b
-    store i32 %mul1, i32* %mul, align 4
-    %0 = load i32, i32* %mul, align 4
+    store i32 %mul1, ptr %mul, align 4
+    %0 = load i32, ptr %mul, align 4
     %cmp = icmp sle i32 %0, 0
     br i1 %cmp, label %if.then, label %if.end
 
   if.then:                                          ; preds = %entry
-    store i32 42, i32* %retval, align 4
+    store i32 42, ptr %retval, align 4
     br label %return
 
   if.end:                                           ; preds = %entry
-    store i32 1, i32* %retval, align 4
+    store i32 1, ptr %retval, align 4
     br label %return
 
   return:                                           ; preds = %if.end, %if.then
-    %1 = load i32, i32* %retval, align 4
+    %1 = load i32, ptr %retval, align 4
     ret i32 %1
   }
 

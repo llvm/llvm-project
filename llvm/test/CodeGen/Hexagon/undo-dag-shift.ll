@@ -25,32 +25,32 @@ target triple = "hexagon"
 
 ; CHECK-LABEL: load_0
 ; CHECK: memw(r{{[0-9]+}}+r{{[0-9]}}<<#2)
-define i32 @load_0(i32 %b, i32* nocapture readonly %a) #0 {
+define i32 @load_0(i32 %b, ptr nocapture readonly %a) #0 {
 entry:
   %shr = lshr i32 %b, 5
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %shr
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %shr
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
 ; This would require r0<<#3, which is not legal.
 ; CHECK-LABEL: load_1
 ; CHECK: memw(r{{[0-9]+}}+r{{[0-9]}}<<#0)
-define i32 @load_1(i32 %b, [3 x i32]* nocapture readonly %a) #0 {
+define i32 @load_1(i32 %b, ptr nocapture readonly %a) #0 {
 entry:
   %shr = lshr i32 %b, 5
-  %arrayidx = getelementptr inbounds [3 x i32], [3 x i32]* %a, i32 %shr, i32 0
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [3 x i32], ptr %a, i32 %shr, i32 0
+  %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
 
 ; CHECK-LABEL: store_0
 ; CHECK: memw(r{{[0-9]+}}+r{{[0-9]}}<<#2)
-define void @store_0(i32 %b, i32* nocapture %a, i32 %v) #1 {
+define void @store_0(i32 %b, ptr nocapture %a, i32 %v) #1 {
 entry:
   %shr = lshr i32 %b, 5
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %shr
-  store i32 %v, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %shr
+  store i32 %v, ptr %arrayidx, align 4
   ret void
 }
 

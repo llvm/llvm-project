@@ -35,15 +35,36 @@ namespace exegesis {
 class BenchmarkRunner {
 public:
   explicit BenchmarkRunner(const LLVMState &State,
-                           InstructionBenchmark::ModeE Mode);
+                           InstructionBenchmark::ModeE Mode,
+                           BenchmarkPhaseSelectorE BenchmarkPhaseSelector);
 
   virtual ~BenchmarkRunner();
 
-  Expected<InstructionBenchmark>
-  runConfiguration(const BenchmarkCode &Configuration, unsigned NumRepetitions,
-                   unsigned LoopUnrollFactor,
-                   ArrayRef<std::unique_ptr<const SnippetRepetitor>> Repetitors,
-                   bool DumpObjectToDisk) const;
+  class RunnableConfiguration {
+    friend class BenchmarkRunner;
+
+  public:
+    ~RunnableConfiguration() = default;
+    RunnableConfiguration(RunnableConfiguration &&) = default;
+
+    RunnableConfiguration(const RunnableConfiguration &) = delete;
+    RunnableConfiguration &operator=(RunnableConfiguration &&) = delete;
+    RunnableConfiguration &operator=(const RunnableConfiguration &) = delete;
+
+  private:
+    RunnableConfiguration() = default;
+
+    InstructionBenchmark InstrBenchmark;
+    object::OwningBinary<object::ObjectFile> ObjectFile;
+  };
+
+  Expected<RunnableConfiguration>
+  getRunnableConfiguration(const BenchmarkCode &Configuration,
+                           unsigned NumRepetitions, unsigned LoopUnrollFactor,
+                           const SnippetRepetitor &Repetitor) const;
+
+  Expected<InstructionBenchmark> runConfiguration(RunnableConfiguration &&RC,
+                                                  bool DumpObjectToDisk) const;
 
   // Scratch space to run instructions that touch memory.
   struct ScratchSpace {
@@ -77,13 +98,18 @@ public:
 protected:
   const LLVMState &State;
   const InstructionBenchmark::ModeE Mode;
+  const BenchmarkPhaseSelectorE BenchmarkPhaseSelector;
 
 private:
   virtual Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const = 0;
 
-  Expected<std::string> writeObjectFile(const BenchmarkCode &Configuration,
-                                        const FillFunction &Fill) const;
+  Expected<SmallString<0>> assembleSnippet(const BenchmarkCode &BC,
+                                           const SnippetRepetitor &Repetitor,
+                                           unsigned MinInstructions,
+                                           unsigned LoopBodySize) const;
+
+  Expected<std::string> writeObjectFile(StringRef Buffer) const;
 
   const std::unique_ptr<ScratchSpace> Scratch;
 };

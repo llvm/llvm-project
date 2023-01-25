@@ -18,7 +18,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK-NOT: vec.epilog.middle.block
 ; CHECK: ret void
 
-define dso_local void @f1(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) #0 {
+define dso_local void @f1(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #0 {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -29,13 +29,13 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %bb, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %cc, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %bb, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %cc, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %0, %1
-  %arrayidx4 = getelementptr inbounds float, float* %aa, i64 %indvars.iv
-  store float %add, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %aa, i64 %indvars.iv
+  store float %add, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit
@@ -56,7 +56,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-NOT: vec.epilog.middle.block
 ; CHECK: ret void
 
-define dso_local void @f2(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) #1 {
+define dso_local void @f2(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) #1 {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -67,13 +67,13 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %bb, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %cc, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %bb, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %cc, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %0, %1
-  %arrayidx4 = getelementptr inbounds float, float* %aa, i64 %indvars.iv
-  store float %add, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %aa, i64 %indvars.iv
+  store float %add, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit
@@ -104,7 +104,7 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-MIN-4: vec.epilog.middle.block
 ; CHECK-MIN-4: ret void
 
-define dso_local void @f3(float* noalias %aa, float* noalias %bb, float* noalias %cc, i32 signext %N) {
+define dso_local void @f3(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
 entry:
   %cmp1 = icmp sgt i32 %N, 0
   br i1 %cmp1, label %for.body.preheader, label %for.end
@@ -115,13 +115,13 @@ for.body.preheader:                               ; preds = %entry
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds float, float* %bb, i64 %indvars.iv
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds float, float* %cc, i64 %indvars.iv
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds float, ptr %bb, i64 %indvars.iv
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %cc, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %0, %1
-  %arrayidx4 = getelementptr inbounds float, float* %aa, i64 %indvars.iv
-  store float %add, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %aa, i64 %indvars.iv
+  store float %add, ptr %arrayidx4, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body, label %for.end.loopexit

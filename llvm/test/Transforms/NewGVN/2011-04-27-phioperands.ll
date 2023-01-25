@@ -27,7 +27,7 @@ doemit.exit76.i:
   br label %"<bb 53>.i"
 
 "<L98>.i":
-  store i8* getelementptr inbounds ([10 x i8], [10 x i8]* @nuls, i64 0, i64 0), i8** undef, align 8
+  store ptr @nuls, ptr undef, align 8
   br label %"<bb 53>.i"
 
 "<L99>.i":
@@ -50,7 +50,7 @@ doemit.exit76.i:
 
 "<bb 53>.i":
   %wascaret_2.i = phi i32 [ 0, %"<L39>.i" ], [ 0, %"<L29>.i" ], [ 0, %"<L28>.i" ], [ 0, %"<bb 35>.i" ], [ 0, %"<L99>.i" ], [ 0, %"<L98>.i" ], [ 0, %doemit.exit76.i ], [ 1, %doemit.exit51.i ], [ 0, %"<L24>.i" ]
-  %D.5496_84.i = load i8*, i8** undef, align 8
+  %D.5496_84.i = load ptr, ptr undef, align 8
   br i1 undef, label %"<bb 54>.i", label %"<bb 5>"
 
 "<bb 54>.i":

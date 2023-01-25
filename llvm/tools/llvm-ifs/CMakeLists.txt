@@ -1,8 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
-  InterfaceStub  
+  InterfaceStub
   Object
   Support
+  TargetParser
   TextAPI
   ObjectYAML
   Option
@@ -18,4 +19,6 @@ add_llvm_tool(llvm-ifs
 
 DEPENDS
   IFSOptsTableGen
+
+  GENERATE_DRIVER
   )

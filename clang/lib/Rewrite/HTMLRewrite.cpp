@@ -488,14 +488,14 @@ void html::SyntaxHighlight(Rewriter &R, FileID FID, const Preprocessor &PP) {
       ++TokOffs;
       --TokLen;
       // FALL THROUGH to chop the 8
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::wide_string_literal:
     case tok::utf16_string_literal:
     case tok::utf32_string_literal:
       // Chop off the L, u, U or 8 prefix
       ++TokOffs;
       --TokLen;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::string_literal:
       // FIXME: Exclude the optional ud-suffix from the highlighted range.
       HighlightRange(RB, TokOffs, TokOffs+TokLen, BufferStart,

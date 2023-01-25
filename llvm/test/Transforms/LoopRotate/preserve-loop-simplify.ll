@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-rotate < %s -verify-loop-info | FileCheck %s
+; RUN: opt -S -passes=loop-rotate < %s -verify-loop-info | FileCheck %s
 ;
 ; Verify that LoopRotate preserves LoopSimplify form even in very peculiar loop
 ; structures. We manually validate the CFG with FileCheck because currently we

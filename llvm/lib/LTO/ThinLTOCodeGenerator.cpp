@@ -78,7 +78,7 @@ extern cl::opt<bool> LTODiscardValueNames;
 extern cl::opt<std::string> RemarksFilename;
 extern cl::opt<std::string> RemarksPasses;
 extern cl::opt<bool> RemarksWithHotness;
-extern cl::opt<Optional<uint64_t>, false, remarks::HotnessThresholdParser>
+extern cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold;
 extern cl::opt<std::string> RemarksFormat;
 }
@@ -237,14 +237,14 @@ crossImportIntoModule(Module &TheModule, const ModuleSummaryIndex &Index,
 static void optimizeModule(Module &TheModule, TargetMachine &TM,
                            unsigned OptLevel, bool Freestanding,
                            bool DebugPassManager, ModuleSummaryIndex *Index) {
-  Optional<PGOOptions> PGOOpt;
+  std::optional<PGOOptions> PGOOpt;
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
-  StandardInstrumentations SI(DebugPassManager);
+  StandardInstrumentations SI(TheModule.getContext(), DebugPassManager);
   SI.registerCallbacks(PIC, &FAM);
   PipelineTuningOptions PTO;
   PTO.LoopVectorization = true;
@@ -618,7 +618,7 @@ std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
 
   std::unique_ptr<TargetMachine> TM(
       TheTarget->createTargetMachine(TheTriple.str(), MCpu, FeatureStr, Options,
-                                     RelocModel, None, CGOptLevel));
+                                     RelocModel, std::nullopt, CGOptLevel));
   assert(TM && "Cannot create target machine");
 
   return TM;
@@ -1217,7 +1217,7 @@ void ThinLTOCodeGenerator::run() {
     }
   }
 
-  pruneCache(CacheOptions.Path, CacheOptions.Policy);
+  pruneCache(CacheOptions.Path, CacheOptions.Policy, ProducedBinaries);
 
   // If statistics were requested, print them out now.
   if (llvm::AreStatisticsEnabled())

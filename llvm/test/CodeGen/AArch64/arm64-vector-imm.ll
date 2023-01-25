@@ -1,41 +1,41 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
-define <8 x i8> @v_orrimm(<8 x i8>* %A) nounwind {
+define <8 x i8> @v_orrimm(ptr %A) nounwind {
 ; CHECK-LABEL: v_orrimm:
 ; CHECK-NOT: mov
 ; CHECK-NOT: mvn
 ; CHECK: orr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp3 = or <8 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1>
 	ret <8 x i8> %tmp3
 }
 
-define <16 x i8> @v_orrimmQ(<16 x i8>* %A) nounwind {
+define <16 x i8> @v_orrimmQ(ptr %A) nounwind {
 ; CHECK: v_orrimmQ
 ; CHECK-NOT: mov
 ; CHECK-NOT: mvn
 ; CHECK: orr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp3 = or <16 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1, i8 0, i8 0, i8 0, i8 1>
 	ret <16 x i8> %tmp3
 }
 
-define <8 x i8> @v_bicimm(<8 x i8>* %A) nounwind {
+define <8 x i8> @v_bicimm(ptr %A) nounwind {
 ; CHECK-LABEL: v_bicimm:
 ; CHECK-NOT: mov
 ; CHECK-NOT: mvn
 ; CHECK: bic
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp3 = and <8 x i8> %tmp1, < i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0 >
 	ret <8 x i8> %tmp3
 }
 
-define <16 x i8> @v_bicimmQ(<16 x i8>* %A) nounwind {
+define <16 x i8> @v_bicimmQ(ptr %A) nounwind {
 ; CHECK-LABEL: v_bicimmQ:
 ; CHECK-NOT: mov
 ; CHECK-NOT: mvn
 ; CHECK: bic
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
+	%tmp1 = load <16 x i8>, ptr %A
 	%tmp3 = and <16 x i8> %tmp1, < i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0, i8 -1, i8 -1, i8 -1, i8 0 >
 	ret <16 x i8> %tmp3
 }

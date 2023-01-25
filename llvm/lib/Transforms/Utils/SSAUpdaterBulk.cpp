@@ -51,7 +51,7 @@ unsigned SSAUpdaterBulk::AddVariable(StringRef Name, Type *Ty) {
 void SSAUpdaterBulk::AddAvailableValue(unsigned Var, BasicBlock *BB, Value *V) {
   assert(Var < Rewrites.size() && "Variable not found!");
   LLVM_DEBUG(dbgs() << "SSAUpdater: Var=" << Var
-                    << ": added new available value" << *V << " in "
+                    << ": added new available value " << *V << " in "
                     << BB->getName() << "\n");
   Rewrites[Var].Defines[BB] = V;
 }

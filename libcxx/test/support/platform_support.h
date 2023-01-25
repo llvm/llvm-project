@@ -17,7 +17,6 @@
 #include "test_macros.h"
 
 // locale names
-#define LOCALE_en_US           "en_US"
 #define LOCALE_en_US_UTF_8     "en_US.UTF-8"
 #define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
 #ifdef __linux__
@@ -36,8 +35,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <codecvt>
-#include <locale>
 #include <string>
 #if defined(_WIN32)
 #   include <io.h> // _mktemp_s
@@ -85,17 +82,6 @@ std::string get_temp_file_name()
     return Name;
 #endif
 }
-
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
-#ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
-inline
-std::wstring get_wide_temp_file_name()
-{
-    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t> >().from_bytes(
-        get_temp_file_name());
-}
-#endif // _LIBCPP_HAS_OPEN_WITH_WCHAR
-_LIBCPP_SUPPRESS_DEPRECATED_POP
 
 #if defined(_CS_GNU_LIBC_VERSION)
 inline bool glibc_version_less_than(char const* version) {

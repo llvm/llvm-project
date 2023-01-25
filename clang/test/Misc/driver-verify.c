@@ -3,4 +3,4 @@
 // expected-no-diagnostics
 
 // Test that -verify is strictly rejected as unknown by the driver.
-// CHECK: unknown argument: '-verify'
+// CHECK: unknown argument '-verify'; did you mean '-Xclang -verify'?

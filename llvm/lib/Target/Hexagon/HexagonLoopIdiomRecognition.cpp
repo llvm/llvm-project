@@ -522,7 +522,7 @@ void Simplifier::Context::link(Instruction *I, BasicBlock *B,
       link(OpI, B, At);
   }
 
-  B->getInstList().insert(At, I);
+  I->insertInto(B, At);
 }
 
 Value *Simplifier::Context::materialize(BasicBlock *B,
@@ -1137,7 +1137,7 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
   auto *BB = cast<Instruction>(Out)->getParent();
   bool HadPhi = false;
 
-  for (auto U : Out->users()) {
+  for (auto *U : Out->users()) {
     auto *I = dyn_cast<Instruction>(&*U);
     if (I == nullptr || I->getParent() != BB)
       continue;
@@ -2003,8 +2003,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (auto *B : L->blocks())
     for (auto &I : *B)
       if (Ignored.count(&I) == 0 &&
-          isModOrRefSet(
-              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
 
   return false;
@@ -2347,7 +2346,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
-      for (auto K : In.users()) {
+      for (auto *K : In.users()) {
         Instruction *UseI = dyn_cast<Instruction>(K);
         if (!UseI)
           continue;

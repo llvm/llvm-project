@@ -20,9 +20,7 @@ using namespace clang::tidy::matchers;
 using llvm::SmallPtrSet;
 using llvm::SmallPtrSetImpl;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 namespace {
 
@@ -61,6 +59,17 @@ void forEachFieldWithFilter(const RecordDecl &Record, const T &Fields,
   }
 }
 
+void removeFieldInitialized(const FieldDecl *M,
+                            SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
+  const RecordDecl *R = M->getParent();
+  if (R && R->isUnion()) {
+    // Erase all members in a union if any member of it is initialized.
+    for (const auto *F : R->fields())
+      FieldDecls.erase(F);
+  } else
+    FieldDecls.erase(M);
+}
+
 void removeFieldsInitializedInBody(
     const Stmt &Stmt, ASTContext &Context,
     SmallPtrSetImpl<const FieldDecl *> &FieldDecls) {
@@ -70,7 +79,7 @@ void removeFieldsInitializedInBody(
                 hasLHS(memberExpr(member(fieldDecl().bind("fieldDecl")))))),
             Stmt, Context);
   for (const auto &Match : Matches)
-    FieldDecls.erase(Match.getNodeAs<FieldDecl>("fieldDecl"));
+    removeFieldInitialized(Match.getNodeAs<FieldDecl>("fieldDecl"), FieldDecls);
 }
 
 StringRef getName(const FieldDecl *Field) { return Field->getName(); }
@@ -418,13 +427,20 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
 
   // Gather all fields (direct and indirect) that need to be initialized.
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
-  forEachField(ClassDecl, ClassDecl.fields(), [&](const FieldDecl *F) {
+  bool AnyMemberHasInitPerUnion = false;
+  forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
+                         AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
     if (IgnoreArrays && F->getType()->isArrayType())
       return;
+    if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
+      AnyMemberHasInitPerUnion = true;
+      removeFieldInitialized(F, FieldsToInit);
+    }
     if (!F->hasInClassInitializer() &&
         utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
                                                             Context) &&
-        !isEmpty(Context, F->getType()) && !F->isUnnamedBitfield())
+        !isEmpty(Context, F->getType()) && !F->isUnnamedBitfield() &&
+        !AnyMemberHasInitPerUnion)
       FieldsToInit.insert(F);
   });
   if (FieldsToInit.empty())
@@ -437,7 +453,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
       if (Init->isAnyMemberInitializer() && Init->isWritten()) {
         if (IsUnion)
           return; // We can only initialize one member of a union.
-        FieldsToInit.erase(Init->getAnyMember());
+        removeFieldInitialized(Init->getAnyMember(), FieldsToInit);
       }
     }
     removeFieldsInitializedInBody(*Ctor->getBody(), Context, FieldsToInit);
@@ -478,7 +494,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Collect all fields but only suggest a fix for the first member of unions,
   // as initializing more than one union member is an error.
   SmallPtrSet<const FieldDecl *, 16> FieldsToFix;
-  bool AnyMemberHasInitPerUnion = false;
+  AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
     if (!FieldsToInit.count(F))
@@ -561,6 +577,4 @@ void ProTypeMemberInitCheck::checkUninitializedTrivialType(
       Context.getLangOpts().CPlusPlus11 ? "{}" : " = {}");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

@@ -11,26 +11,43 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SPIRVCompositeTypeLayout
-    : Pass<"decorate-spirv-composite-type-layout", "ModuleOp"> {
-  let summary = "Decorate SPIR-V composite type with layout info";
-  let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
+def SPIRVCanonicalizeGLPass : Pass<"spirv-canonicalize-gl", ""> {
+  let summary = "Canonicalize GLSL ops";
+  let description = [{
+    Pass to run canoncalization patterns that involve GL ops.
+    These patterns cannot be run in default canonicalization because GL ops
+    aren't always available. So they should be involed specifically when needed.
+  }];
 }
 
-def SPIRVCanonicalizeGL : Pass<"spirv-canonicalize-gl", ""> {
-  let summary = "Run canonicalization involving GLSL ops";
-  let constructor = "mlir::spirv::createCanonicalizeGLPass()";
+def SPIRVCompositeTypeLayoutPass
+    : Pass<"decorate-spirv-composite-type-layout", "mlir::ModuleOp"> {
+  let summary = "Decorate SPIR-V composite type with layout info";
+  let description = [{
+    Module pass that converts composite types used by objects in the
+    StorageBuffer, PhysicalStorageBuffer, Uniform, and PushConstant storage
+    classes to attatch layout information.
+    Right now this pass only supports Vulkan layout rules.
+  }];
 }
 
-def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
+def SPIRVLowerABIAttributesPass : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
-  let constructor = "mlir::spirv::createLowerABIAttributesPass()";
+  let description = [{
+    Operation pass that lowers the ABI attributes specified during
+    SPIR-V Lowering. Specifically:
+    1. Creates the global variables for arguments of entry point function using
+      the specification in the `spirv.interface_var_abi` attribute for each
+      argument.
+    2. Inserts the EntryPointOp and the ExecutionModeOp for entry point
+      functions using the specification in the `spirv.entry_point_abi`
+      attribute.
+  }];
 }
 
 def SPIRVRewriteInsertsPass : Pass<"spirv-rewrite-inserts", "spirv::ModuleOp"> {
-  let summary = "Rewrite sequential chains of spv.CompositeInsert operations into "
-                "spv.CompositeConstruct operations";
-  let constructor = "mlir::spirv::createRewriteInsertsPass()";
+  let summary = "Rewrite sequential chains of `spirv.CompositeInsert` operations "
+                "into `spirv.CompositeConstruct` operations";
 }
 
 def SPIRVUnifyAliasedResourcePass
@@ -40,10 +57,24 @@ def SPIRVUnifyAliasedResourcePass
   let constructor = "mlir::spirv::createUnifyAliasedResourcePass()";
 }
 
-def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
+def SPIRVUpdateVCEPass : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let summary = "Deduce and attach minimal (version, capabilities, extensions) "
-                "requirements to spv.module ops";
-  let constructor = "mlir::spirv::createUpdateVersionCapabilityExtensionPass()";
+                "requirements to spirv.module ops";
+  let description = [{
+    Operation pass that deduces and attaches the minimal version/
+    capabilities/extensions requirements for spirv.module ops.
+    For each spirv.module op, this pass requires a `spirv.target_env` attribute
+    on it or an enclosing module-like op to drive the deduction. The reason is
+    that an op can be enabled by multiple extensions/capabilities. So we need
+    to know which one to pick. `spirv.target_env` gives the hard limit as for
+    what the target environment can support; this pass deduces what are
+    actually needed for a specific spirv.module op.
+  }];
+}
+
+def SPIRVWebGPUPreparePass : Pass<"spirv-webgpu-prepare", "spirv::ModuleOp"> {
+  let summary = "Prepare SPIR-V to target WebGPU by expanding unsupported ops "
+                "and replacing with supported ones";
 }
 
 #endif // MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES

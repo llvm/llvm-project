@@ -289,8 +289,14 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
 
   LateParsedAttrList LateParsedAttrs(true);
   if (DeclaratorInfo.isFunctionDeclarator()) {
-    if (Tok.is(tok::kw_requires))
+    if (Tok.is(tok::kw_requires)) {
+      CXXScopeSpec &ScopeSpec = DeclaratorInfo.getCXXScopeSpec();
+      DeclaratorScopeObj DeclScopeObj(*this, ScopeSpec);
+      if (ScopeSpec.isValid() &&
+          Actions.ShouldEnterDeclaratorScope(getCurScope(), ScopeSpec))
+        DeclScopeObj.EnterDeclaratorScope();
       ParseTrailingRequiresClause(DeclaratorInfo);
+    }
 
     MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
   }
@@ -335,8 +341,8 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
         // Recover as if it were an explicit specialization.
         TemplateParameterLists FakedParamLists;
         FakedParamLists.push_back(Actions.ActOnTemplateParameterList(
-            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc, None,
-            LAngleLoc, nullptr));
+            0, SourceLocation(), TemplateInfo.TemplateLoc, LAngleLoc,
+            std::nullopt, LAngleLoc, nullptr));
 
         return ParseFunctionDefinition(
             DeclaratorInfo, ParsedTemplateInfo(&FakedParamLists,
@@ -386,7 +392,7 @@ Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
 
   SourceLocation BoolKWLoc;
   if (TryConsumeToken(tok::kw_bool, BoolKWLoc))
-    Diag(Tok.getLocation(), diag::ext_concept_legacy_bool_keyword) <<
+    Diag(Tok.getLocation(), diag::err_concept_legacy_bool_keyword) <<
         FixItHint::CreateRemoval(SourceLocation(BoolKWLoc));
 
   DiagnoseAndSkipCXX11Attributes();
@@ -868,26 +874,38 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 /// template parameters.
 ///
 ///       type-parameter:    [C++ temp.param]
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///                  ...[opt] identifier[opt]
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///                  identifier[opt] = id-expression
+///         template-head type-parameter-key ...[opt] identifier[opt]
+///         template-head type-parameter-key identifier[opt] = id-expression
 ///       type-parameter-key:
 ///         'class'
 ///         'typename'       [C++1z]
-NamedDecl *
-Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
+///       template-head:     [C++2a]
+///         'template' '<' template-parameter-list '>'
+///             requires-clause[opt]
+NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
+                                                  unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
   // Handle the template <...> part.
   SourceLocation TemplateLoc = ConsumeToken();
   SmallVector<NamedDecl*,8> TemplateParams;
   SourceLocation LAngleLoc, RAngleLoc;
+  ExprResult OptionalRequiresClauseConstraintER;
   {
     MultiParseScope TemplateParmScope(*this);
     if (ParseTemplateParameters(TemplateParmScope, Depth + 1, TemplateParams,
                                 LAngleLoc, RAngleLoc)) {
       return nullptr;
+    }
+    if (TryConsumeToken(tok::kw_requires)) {
+      OptionalRequiresClauseConstraintER =
+          Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+              /*IsTrailingRequiresClause=*/false));
+      if (!OptionalRequiresClauseConstraintER.isUsable()) {
+        SkipUntil(tok::comma, tok::greater, tok::greatergreater,
+                  StopAtSemi | StopBeforeMatch);
+        return nullptr;
+      }
     }
   }
 
@@ -950,11 +968,9 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
   if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
     DiagnoseMisplacedEllipsis(EllipsisLoc, NameLoc, AlreadyHasEllipsis, true);
 
-  TemplateParameterList *ParamList =
-    Actions.ActOnTemplateParameterList(Depth, SourceLocation(),
-                                       TemplateLoc, LAngleLoc,
-                                       TemplateParams,
-                                       RAngleLoc, nullptr);
+  TemplateParameterList *ParamList = Actions.ActOnTemplateParameterList(
+      Depth, SourceLocation(), TemplateLoc, LAngleLoc, TemplateParams,
+      RAngleLoc, OptionalRequiresClauseConstraintER.get());
 
   // Grab a default argument (if available).
   // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before
@@ -1414,12 +1430,15 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 ///
 /// \param SS The scope specifier appearing before the template-id, if any.
 ///
+/// \param AllowImplicitTypename whether this is a context where T::type
+/// denotes a dependent type.
 /// \param IsClassName Is this template-id appearing in a context where we
 /// know it names a class, such as in an elaborated-type-specifier or
 /// base-specifier? ('typename' and 'template' are unneeded and disallowed
 /// in those contexts.)
-void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
-                                           bool IsClassName) {
+void Parser::AnnotateTemplateIdTokenAsType(
+    CXXScopeSpec &SS, ImplicitTypenameContext AllowImplicitTypename,
+    bool IsClassName) {
   assert(Tok.is(tok::annot_template_id) && "Requires template-id tokens");
 
   TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
@@ -1437,7 +1456,7 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
                 TemplateId->Template, TemplateId->Name,
                 TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
                 TemplateArgsPtr, TemplateId->RAngleLoc,
-                /*IsCtorOrDtorName*/ false, IsClassName);
+                /*IsCtorOrDtorName=*/false, IsClassName, AllowImplicitTypename);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
   setTypeAnnotation(Tok, Type);

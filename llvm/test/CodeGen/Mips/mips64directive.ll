@@ -6,7 +6,7 @@
 ; CHECK: 8byte
 define i64 @foo1() nounwind readonly {
 entry:
-  %0 = load i64, i64* @gl, align 8
+  %0 = load i64, ptr @gl, align 8
   ret i64 %0
 }
 

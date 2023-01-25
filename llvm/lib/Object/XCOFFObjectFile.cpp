@@ -86,6 +86,37 @@ uint8_t XCOFFRelocation<AddressType>::getRelocatedLength() const {
   return (Info & XR_BIASED_LENGTH_MASK) + 1;
 }
 
+template struct ExceptionSectionEntry<support::ubig32_t>;
+template struct ExceptionSectionEntry<support::ubig64_t>;
+
+template <typename T>
+Expected<StringRef> getLoaderSecSymNameInStrTbl(const T *LoaderSecHeader,
+                                                uint64_t Offset) {
+  if (LoaderSecHeader->LengthOfStrTbl > Offset)
+    return (reinterpret_cast<const char *>(LoaderSecHeader) +
+            LoaderSecHeader->OffsetToStrTbl + Offset);
+
+  return createError("entry with offset 0x" + Twine::utohexstr(Offset) +
+                     " in the loader section's string table with size 0x" +
+                     Twine::utohexstr(LoaderSecHeader->LengthOfStrTbl) +
+                     " is invalid");
+}
+
+Expected<StringRef> LoaderSectionSymbolEntry32::getSymbolName(
+    const LoaderSectionHeader32 *LoaderSecHeader32) const {
+  const NameOffsetInStrTbl *NameInStrTbl =
+      reinterpret_cast<const NameOffsetInStrTbl *>(SymbolName);
+  if (NameInStrTbl->IsNameInStrTbl != XCOFFSymbolRef::NAME_IN_STR_TBL_MAGIC)
+    return generateXCOFFFixedNameStringRef(SymbolName);
+
+  return getLoaderSecSymNameInStrTbl(LoaderSecHeader32, NameInStrTbl->Offset);
+}
+
+Expected<StringRef> LoaderSectionSymbolEntry64::getSymbolName(
+    const LoaderSectionHeader64 *LoaderSecHeader64) const {
+  return getLoaderSecSymNameInStrTbl(LoaderSecHeader64, Offset);
+}
+
 uintptr_t
 XCOFFObjectFile::getAdvancedSymbolEntryAddress(uintptr_t CurrentAddress,
                                                uint32_t Distance) {
@@ -383,7 +414,7 @@ XCOFFObjectFile::getSectionContents(DataRefImpl Sec) const {
         Twine::utohexstr(OffsetToRaw) + " and size 0x" +
         Twine::utohexstr(SectionSize) + " goes past the end of the file");
 
-  return makeArrayRef(ContentStart,SectionSize);
+  return ArrayRef(ContentStart, SectionSize);
 }
 
 uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
@@ -392,41 +423,58 @@ uint64_t XCOFFObjectFile::getSectionAlignment(DataRefImpl Sec) const {
   return Result;
 }
 
-Expected<uintptr_t> XCOFFObjectFile::getLoaderSectionAddress() const {
-  uint64_t OffsetToLoaderSection = 0;
-  uint64_t SizeOfLoaderSection = 0;
+uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
+  if (is64Bit())
+    return toSection64(Sec)->FileOffsetToRawData;
 
-  if (is64Bit()) {
-    for (const auto &Sec64 : sections64())
-      if (Sec64.getSectionType() == XCOFF::STYP_LOADER) {
-        OffsetToLoaderSection = Sec64.FileOffsetToRawData;
-        SizeOfLoaderSection = Sec64.SectionSize;
-        break;
-      }
-  } else {
-    for (const auto &Sec32 : sections32())
-      if (Sec32.getSectionType() == XCOFF::STYP_LOADER) {
-        OffsetToLoaderSection = Sec32.FileOffsetToRawData;
-        SizeOfLoaderSection = Sec32.SectionSize;
-        break;
-      }
-  }
+  return toSection32(Sec)->FileOffsetToRawData;
+}
 
-  // No loader section is not an error.
-  if (!SizeOfLoaderSection)
+Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
+    XCOFF::SectionTypeFlags SectType) const {
+  DataRefImpl DRI = getSectionByType(SectType);
+
+  if (DRI.p == 0) // No section is not an error.
     return 0;
 
-  uintptr_t LoderSectionStart =
-      reinterpret_cast<uintptr_t>(base() + OffsetToLoaderSection);
-  if (Error E =
-          Binary::checkOffset(Data, LoderSectionStart, SizeOfLoaderSection))
-    return createError(toString(std::move(E)) +
-                       ": loader section with offset 0x" +
-                       Twine::utohexstr(OffsetToLoaderSection) +
-                       " and size 0x" + Twine::utohexstr(SizeOfLoaderSection) +
-                       " goes past the end of the file");
+  uint64_t SectionOffset = getSectionFileOffsetToRawData(DRI);
+  uint64_t SizeOfSection = getSectionSize(DRI);
 
-  return LoderSectionStart;
+  uintptr_t SectionStart = reinterpret_cast<uintptr_t>(base() + SectionOffset);
+  if (Error E = Binary::checkOffset(Data, SectionStart, SizeOfSection)) {
+    SmallString<32> UnknownType;
+    Twine(("<Unknown:") + Twine::utohexstr(SectType) + ">")
+        .toVector(UnknownType);
+    const char *SectionName = UnknownType.c_str();
+
+    switch (SectType) {
+#define ECASE(Value, String)                                                   \
+  case XCOFF::Value:                                                           \
+    SectionName = String;                                                      \
+    break
+
+      ECASE(STYP_PAD, "pad");
+      ECASE(STYP_DWARF, "dwarf");
+      ECASE(STYP_TEXT, "text");
+      ECASE(STYP_DATA, "data");
+      ECASE(STYP_BSS, "bss");
+      ECASE(STYP_EXCEPT, "expect");
+      ECASE(STYP_INFO, "info");
+      ECASE(STYP_TDATA, "tdata");
+      ECASE(STYP_TBSS, "tbss");
+      ECASE(STYP_LOADER, "loader");
+      ECASE(STYP_DEBUG, "debug");
+      ECASE(STYP_TYPCHK, "typchk");
+      ECASE(STYP_OVRFLO, "ovrflo");
+#undef ECASE
+    }
+    return createError(toString(std::move(E)) + ": " + SectionName +
+                       " section with offset 0x" +
+                       Twine::utohexstr(SectionOffset) + " and size 0x" +
+                       Twine::utohexstr(SizeOfSection) +
+                       " goes past the end of the file");
+  }
+  return SectionStart;
 }
 
 bool XCOFFObjectFile::isSectionCompressed(DataRefImpl Sec) const {
@@ -664,7 +712,7 @@ Triple::ArchType XCOFFObjectFile::getArch() const {
   return is64Bit() ? Triple::ppc64 : Triple::ppc;
 }
 
-SubtargetFeatures XCOFFObjectFile::getFeatures() const {
+Expected<SubtargetFeatures> XCOFFObjectFile::getFeatures() const {
   return SubtargetFeatures();
 }
 
@@ -735,6 +783,22 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   DataRefImpl DRI;
   DRI.p = getWithOffset(getSectionHeaderTableAddress(),
                         getSectionHeaderSize() * (Num - 1));
+  return DRI;
+}
+
+DataRefImpl
+XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
+  DataRefImpl DRI;
+  auto GetSectionAddr = [&](const auto &Sections) -> uintptr_t {
+    for (const auto &Sec : Sections)
+      if (Sec.getSectionType() == SectType)
+        return reinterpret_cast<uintptr_t>(&Sec);
+    return uintptr_t(0);
+  };
+  if (is64Bit())
+    DRI.p = GetSectionAddr(sections64());
+  else
+    DRI.p = GetSectionAddr(sections32());
   return DRI;
 }
 
@@ -960,6 +1024,31 @@ Expected<ArrayRef<Reloc>> XCOFFObjectFile::relocations(const Shdr &Sec) const {
   return ArrayRef<Reloc>(StartReloc, StartReloc + NumRelocEntries);
 }
 
+template <typename ExceptEnt>
+Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
+  assert((is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry64)) ||
+         (!is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry32)));
+
+  Expected<uintptr_t> ExceptionSectOrErr =
+      getSectionFileOffsetToRawData(XCOFF::STYP_EXCEPT);
+  if (!ExceptionSectOrErr)
+    return ExceptionSectOrErr.takeError();
+
+  DataRefImpl DRI = getSectionByType(XCOFF::STYP_EXCEPT);
+  if (DRI.p == 0)
+    return ArrayRef<ExceptEnt>();
+
+  ExceptEnt *ExceptEntStart =
+      reinterpret_cast<ExceptEnt *>(*ExceptionSectOrErr);
+  return ArrayRef<ExceptEnt>(
+      ExceptEntStart, ExceptEntStart + getSectionSize(DRI) / sizeof(ExceptEnt));
+}
+
+template Expected<ArrayRef<ExceptionSectionEntry32>>
+XCOFFObjectFile::getExceptionEntries() const;
+template Expected<ArrayRef<ExceptionSectionEntry64>>
+XCOFFObjectFile::getExceptionEntries() const;
+
 Expected<XCOFFStringTable>
 XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
   // If there is a string table, then the buffer must contain at least 4 bytes
@@ -997,7 +1086,8 @@ XCOFFObjectFile::parseStringTable(const XCOFFObjectFile *Obj, uint64_t Offset) {
 // This function returns the import file table. Each entry in the import file
 // table consists of: "path_name\0base_name\0archive_member_name\0".
 Expected<StringRef> XCOFFObjectFile::getImportFileTable() const {
-  Expected<uintptr_t> LoaderSectionAddrOrError = getLoaderSectionAddress();
+  Expected<uintptr_t> LoaderSectionAddrOrError =
+      getSectionFileOffsetToRawData(XCOFF::STYP_LOADER);
   if (!LoaderSectionAddrOrError)
     return LoaderSectionAddrOrError.takeError();
 

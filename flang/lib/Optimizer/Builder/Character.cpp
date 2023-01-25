@@ -372,7 +372,7 @@ fir::factory::CharacterExprHelper::createCharacterTemp(mlir::Type type,
   if (typeLen == fir::CharacterType::unknownLen())
     lenParams.push_back(len);
   auto ref = builder.allocateLocal(loc, charTy, "", ".chrtmp",
-                                   /*shape=*/llvm::None, lenParams);
+                                   /*shape=*/std::nullopt, lenParams);
   return {ref, len};
 }
 
@@ -419,7 +419,8 @@ void fir::factory::CharacterExprHelper::createAssign(
   auto rhsCstLen = getCompileTimeLength(rhs);
   auto lhsCstLen = getCompileTimeLength(lhs);
   bool compileTimeSameLength =
-      lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen;
+      (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) ||
+      (rhs.getLen() == lhs.getLen());
 
   if (compileTimeSameLength && *lhsCstLen == 1) {
     createLengthOneAssign(lhs, rhs);
@@ -472,6 +473,17 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createConcatenate(
   return temp;
 }
 
+mlir::Value fir::factory::CharacterExprHelper::genSubstringBase(
+    mlir::Value stringRawAddr, mlir::Value lowerBound,
+    mlir::Type substringAddrType, mlir::Value one) {
+  if (!one)
+    one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
+  auto offset =
+      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
+  auto addr = createElementAddr(stringRawAddr, offset);
+  return builder.createConvert(loc, substringAddrType, addr);
+}
+
 fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
     const fir::CharBoxValue &box, llvm::ArrayRef<mlir::Value> bounds) {
   // Constant need to be materialize in memory to use fir.coordinate_of.
@@ -487,14 +499,12 @@ fir::CharBoxValue fir::factory::CharacterExprHelper::createSubstring(
         builder.createConvert(loc, builder.getCharacterLengthType(), bound));
   auto lowerBound = castBounds[0];
   // FIR CoordinateOp is zero based but Fortran substring are one based.
-  auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
-  auto offset =
-      builder.create<mlir::arith::SubIOp>(loc, lowerBound, one).getResult();
-  auto addr = createElementAddr(box.getBuffer(), offset);
   auto kind = getCharacterKind(box.getBuffer().getType());
   auto charTy = fir::CharacterType::getUnknownLen(builder.getContext(), kind);
   auto resultType = builder.getRefType(charTy);
-  auto substringRef = builder.createConvert(loc, resultType, addr);
+  auto one = builder.createIntegerConstant(loc, lowerBound.getType(), 1);
+  auto substringRef =
+      genSubstringBase(box.getBuffer(), lowerBound, resultType, one);
 
   // Compute the length.
   mlir::Value substringLen;
@@ -664,9 +674,14 @@ mlir::Value fir::factory::CharacterExprHelper::extractCodeFromSingleton(
 
 mlir::Value
 fir::factory::CharacterExprHelper::readLengthFromBox(mlir::Value box) {
+  auto charTy = recoverCharacterType(box.getType());
+  return readLengthFromBox(box, charTy);
+}
+
+mlir::Value fir::factory::CharacterExprHelper::readLengthFromBox(
+    mlir::Value box, fir::CharacterType charTy) {
   auto lenTy = builder.getCharacterLengthType();
   auto size = builder.create<fir::BoxEleSizeOp>(loc, lenTy, box);
-  auto charTy = recoverCharacterType(box.getType());
   auto bits = builder.getKindMap().getCharacterBitsize(charTy.getFKind());
   auto width = bits / 8;
   if (width > 1) {

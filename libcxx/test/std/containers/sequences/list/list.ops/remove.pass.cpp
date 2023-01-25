@@ -41,9 +41,9 @@ int main(int, char**) {
     L c(a1, a1 + 4);
 #if TEST_STD_VER > 17
     assert(c.remove(3) == 1);
-	ASSERT_SAME_TYPE(L::size_type, decltype(c.remove(3)));
+    ASSERT_SAME_TYPE(L::size_type, decltype(c.remove(3)));
 #else
-	ASSERT_SAME_TYPE(void,         decltype(c.remove(3)));
+    ASSERT_SAME_TYPE(void,         decltype(c.remove(3)));
     c.remove(3);
 #endif
 

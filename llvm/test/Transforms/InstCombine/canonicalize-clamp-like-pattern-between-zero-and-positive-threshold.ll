@@ -383,17 +383,17 @@ define <3 x i32> @t21_ult_slt_vec_undef2(<3 x i32> %x, <3 x i32> %replacement_lo
 
 ;-------------------------------------------------------------------------------
 
-define i32* @t22_pointers(i32* %x, i32* %replacement_low, i32* %replacement_high) {
+define ptr @t22_pointers(ptr %x, ptr %replacement_low, ptr %replacement_high) {
 ; CHECK-LABEL: @t22_pointers(
-; CHECK-NEXT:    [[T0:%.*]] = icmp slt i32* [[X:%.*]], inttoptr (i64 65536 to i32*)
-; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], i32* [[REPLACEMENT_LOW:%.*]], i32* [[REPLACEMENT_HIGH:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = icmp ult i32* [[X]], inttoptr (i64 65536 to i32*)
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], i32* [[X]], i32* [[T1]]
-; CHECK-NEXT:    ret i32* [[R]]
+; CHECK-NEXT:    [[T0:%.*]] = icmp slt ptr [[X:%.*]], inttoptr (i64 65536 to ptr)
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[T0]], ptr [[REPLACEMENT_LOW:%.*]], ptr [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ult ptr [[X]], inttoptr (i64 65536 to ptr)
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T2]], ptr [[X]], ptr [[T1]]
+; CHECK-NEXT:    ret ptr [[R]]
 ;
-  %t0 = icmp slt i32* %x, inttoptr (i64 65536 to i32*)
-  %t1 = select i1 %t0, i32* %replacement_low, i32* %replacement_high
-  %t2 = icmp ult i32* %x, inttoptr (i64 65536 to i32*)
-  %r = select i1 %t2, i32* %x, i32* %t1
-  ret i32* %r
+  %t0 = icmp slt ptr %x, inttoptr (i64 65536 to ptr)
+  %t1 = select i1 %t0, ptr %replacement_low, ptr %replacement_high
+  %t2 = icmp ult ptr %x, inttoptr (i64 65536 to ptr)
+  %r = select i1 %t2, ptr %x, ptr %t1
+  ret ptr %r
 }

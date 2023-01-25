@@ -3,6 +3,7 @@ add_flang_library(FIRDialect
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
+  FortranVariableInterface.cpp
   Inliner.cpp
 
   DEPENDS
@@ -12,7 +13,7 @@ add_flang_library(FIRDialect
 
   LINK_LIBS
   FIRSupport
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

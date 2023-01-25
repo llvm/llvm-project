@@ -79,7 +79,7 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
         true,                  // Multi-line
         true,                  // The REPL prompt is always colored
         1,                     // Line number
-        *this, nullptr);
+        *this);
 
     // Don't exit if CTRL+C is pressed
     static_cast<IOHandlerEditline *>(m_io_handler_sp.get())
@@ -378,7 +378,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           case lldb::eExpressionSetupError:
           case lldb::eExpressionParseError:
             add_to_code = false;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case lldb::eExpressionDiscarded:
             error_sp->Printf("%s\n", error.AsCString());
             break;

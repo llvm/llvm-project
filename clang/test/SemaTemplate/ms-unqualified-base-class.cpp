@@ -83,3 +83,37 @@ int main() {
 
   return I;
 }
+
+template <typename Type, int TSize> class Vec {}; // expected-note {{template is declared here}}
+
+template <int TDim> class Index : public Vec<int, TDim> {
+  // after-error@+1 {{member initializer 'Vec' does not name a non-static data member or base class}}
+  Index() : Vec() {} // before-warning {{unqualified base initializer of class templates is a Microsoft extension}}
+};
+
+template class Index<0>;
+
+template <typename T> class Array : public Vec<T, 4> {
+  // after-error@+1 {{member initializer 'Vec' does not name a non-static data member or base class}}
+  Array() : Vec() {} // before-warning {{unqualified base initializer of class templates is a Microsoft extension}}
+};
+
+template class Array<double>;
+
+template <typename T> class Wrong : public Vec<T, 4> {
+  Wrong() : NonExistent() {} // expected-error {{member initializer 'NonExistent' does not name a non-static data member or base class}}
+};
+
+template class Wrong<double>;
+
+template <typename T> class Wrong2 : public Vec<T, 4> {
+  Wrong2() : Vec<T>() {} // expected-error {{too few template arguments for class template 'Vec'}}
+};
+
+template class Wrong2<double>;
+
+template <typename T> class Wrong3 : public Vec<T, 4> {
+  Wrong3() : Base() {} // expected-error {{member initializer 'Base' does not name a non-static data member or base class}}
+};
+
+template class Wrong3<double>;

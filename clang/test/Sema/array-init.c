@@ -48,7 +48,7 @@ void func(void) {
 
   struct threeElements *p = 7; // expected-error{{incompatible integer to pointer conversion initializing 'struct threeElements *' with an expression of type 'int'}}
 
-  extern int blockScopeExtern[3] = { 1, 3, 5 }; // expected-error{{'extern' variable cannot have an initializer}}
+  extern int blockScopeExtern[3] = { 1, 3, 5 }; // expected-error{{declaration of block scope identifier with linkage cannot have an initializer}}
 
   static long x2[3] = { 1.0,
                         "abc", // expected-error{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}

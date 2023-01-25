@@ -74,7 +74,7 @@ public:
   uint64_t readInt() { return Record[Idx++]; }
 
   ArrayRef<uint64_t> readIntArray(unsigned Len) {
-    auto Array = llvm::makeArrayRef(Record).slice(Idx, Len);
+    auto Array = llvm::ArrayRef(Record).slice(Idx, Len);
     Idx += Len;
     return Array;
   }

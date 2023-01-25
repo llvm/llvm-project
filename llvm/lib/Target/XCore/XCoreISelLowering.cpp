@@ -64,7 +64,6 @@ getTargetNodeName(unsigned Opcode) const
     case XCoreISD::BR_JT32           : return "XCoreISD::BR_JT32";
     case XCoreISD::FRAME_TO_ARGS_OFFSET : return "XCoreISD::FRAME_TO_ARGS_OFFSET";
     case XCoreISD::EH_RETURN         : return "XCoreISD::EH_RETURN";
-    case XCoreISD::MEMBARRIER        : return "XCoreISD::MEMBARRIER";
   }
   return nullptr;
 }
@@ -928,7 +927,7 @@ LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const {
 SDValue XCoreTargetLowering::
 LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  return DAG.getNode(XCoreISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
+  return DAG.getNode(ISD::MEMBARRIER, DL, MVT::Other, Op.getOperand(0));
 }
 
 SDValue XCoreTargetLowering::
@@ -1128,7 +1127,6 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = RetCCInfo.getNextStackOffset();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
 
@@ -1217,8 +1215,7 @@ SDValue XCoreTargetLowering::LowerCCCCallTo(
   InFlag = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, dl, PtrVT, true),
-                             DAG.getConstant(0, dl, PtrVT, true), InFlag, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InFlag, dl);
   InFlag = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
@@ -1345,11 +1342,11 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
     };
     XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
     unsigned FirstVAReg = CCInfo.getFirstUnallocated(ArgRegs);
-    if (FirstVAReg < array_lengthof(ArgRegs)) {
+    if (FirstVAReg < std::size(ArgRegs)) {
       int offset = 0;
       // Save remaining registers, storing higher register numbers at a higher
       // address
-      for (int i = array_lengthof(ArgRegs) - 1; i >= (int)FirstVAReg; --i) {
+      for (int i = std::size(ArgRegs) - 1; i >= (int)FirstVAReg; --i) {
         // Create a stack slot
         int FI = MFI.CreateFixedObject(4, offset, true);
         if (i == (int)FirstVAReg) {
@@ -1383,23 +1380,21 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
   // Aggregates passed "byVal" need to be copied by the callee.
   // The callee will use a pointer to this copy, rather than the original
   // pointer.
-  for (SmallVectorImpl<ArgDataPair>::const_iterator ArgDI = ArgData.begin(),
-                                                    ArgDE = ArgData.end();
-       ArgDI != ArgDE; ++ArgDI) {
-    if (ArgDI->Flags.isByVal() && ArgDI->Flags.getByValSize()) {
-      unsigned Size = ArgDI->Flags.getByValSize();
+  for (const ArgDataPair &ArgDI : ArgData) {
+    if (ArgDI.Flags.isByVal() && ArgDI.Flags.getByValSize()) {
+      unsigned Size = ArgDI.Flags.getByValSize();
       Align Alignment =
-          std::max(Align(StackSlotSize), ArgDI->Flags.getNonZeroByValAlign());
+          std::max(Align(StackSlotSize), ArgDI.Flags.getNonZeroByValAlign());
       // Create a new object on the stack and copy the pointee into it.
       int FI = MFI.CreateStackObject(Size, Alignment, false);
       SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(
-          Chain, dl, FIN, ArgDI->SDV, DAG.getConstant(Size, dl, MVT::i32),
+          Chain, dl, FIN, ArgDI.SDV, DAG.getConstant(Size, dl, MVT::i32),
           Alignment, false, false, false, MachinePointerInfo(),
           MachinePointerInfo()));
     } else {
-      InVals.push_back(ArgDI->SDV);
+      InVals.push_back(ArgDI.SDV);
     }
   }
 

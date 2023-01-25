@@ -142,11 +142,11 @@ define <4 x double> @pr25999_phis1(i1 %c, <2 x double> %a, <4 x double> %b) {
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @dummy(<2 x double> [[A:%.*]])
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[A]], [[BB1:%.*]] ], [ [[R]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x double> [ [[B:%.*]], [[BB1]] ], [ zeroinitializer, [[BB2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
+; CHECK-NEXT:    [[T1:%.*]] = phi <2 x double> [ [[A]], [[BB1:%.*]] ], [ [[R]], [[BB2]] ]
+; CHECK-NEXT:    [[T2:%.*]] = phi <4 x double> [ [[B:%.*]], [[BB1]] ], [ zeroinitializer, [[BB2]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[T1]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[T2]], <4 x double> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[T4]]
 ;
 bb1:
   br i1 %c, label %bb2, label %bb3
@@ -156,11 +156,11 @@ bb2:
   br label %bb3
 
 bb3:
-  %tmp1 = phi <2 x double> [ %a, %bb1 ], [ %r, %bb2 ]
-  %tmp2 = phi <4 x double> [ %b, %bb1 ], [ zeroinitializer, %bb2 ]
-  %tmp3 = extractelement <2 x double> %tmp1, i32 0
-  %tmp4 = insertelement <4 x double> %tmp2, double %tmp3, i32 2
-  ret <4 x double> %tmp4
+  %t1 = phi <2 x double> [ %a, %bb1 ], [ %r, %bb2 ]
+  %t2 = phi <4 x double> [ %b, %bb1 ], [ zeroinitializer, %bb2 ]
+  %t3 = extractelement <2 x double> %t1, i32 0
+  %t4 = insertelement <4 x double> %t2, double %t3, i32 2
+  ret <4 x double> %t4
 }
 
 declare <2 x double> @dummy(<2 x double>)
@@ -173,12 +173,12 @@ define <4 x double> @pr25999_phis2(i1 %c, <2 x double> %a, <4 x double> %b) {
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x double> @dummy(<2 x double> [[A:%.*]])
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x double> [ [[A]], [[BB1:%.*]] ], [ [[R]], [[BB2]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x double> [ [[B:%.*]], [[BB1]] ], [ zeroinitializer, [[BB2]] ]
-; CHECK-NEXT:    [[D:%.*]] = fadd <2 x double> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[T1:%.*]] = phi <2 x double> [ [[A]], [[BB1:%.*]] ], [ [[R]], [[BB2]] ]
+; CHECK-NEXT:    [[T2:%.*]] = phi <4 x double> [ [[B:%.*]], [[BB1]] ], [ zeroinitializer, [[BB2]] ]
+; CHECK-NEXT:    [[D:%.*]] = fadd <2 x double> [[T1]], [[T1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x double> [[D]], <2 x double> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
-; CHECK-NEXT:    ret <4 x double> [[TMP4]]
+; CHECK-NEXT:    [[T4:%.*]] = shufflevector <4 x double> [[T2]], <4 x double> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 4, i32 3>
+; CHECK-NEXT:    ret <4 x double> [[T4]]
 ;
 bb1:
   br i1 %c, label %bb2, label %bb3
@@ -188,21 +188,21 @@ bb2:
   br label %bb3
 
 bb3:
-  %tmp1 = phi <2 x double> [ %a, %bb1 ], [ %r, %bb2 ]
-  %tmp2 = phi <4 x double> [ %b, %bb1 ], [ zeroinitializer, %bb2 ]
-  %d = fadd <2 x double> %tmp1, %tmp1
-  %tmp3 = extractelement <2 x double> %d, i32 0
-  %tmp4 = insertelement <4 x double> %tmp2, double %tmp3, i32 2
-  ret <4 x double> %tmp4
+  %t1 = phi <2 x double> [ %a, %bb1 ], [ %r, %bb2 ]
+  %t2 = phi <4 x double> [ %b, %bb1 ], [ zeroinitializer, %bb2 ]
+  %d = fadd <2 x double> %t1, %t1
+  %t3 = extractelement <2 x double> %d, i32 0
+  %t4 = insertelement <4 x double> %t2, double %t3, i32 2
+  ret <4 x double> %t4
 }
 
 ; PR26354: https://llvm.org/bugs/show_bug.cgi?id=26354
 ; Don't create a shufflevector if we know that we're not going to replace the insertelement.
 
-define double @pr26354(<2 x double>* %tmp, i1 %B) {
+define double @pr26354(ptr %t, i1 %B) {
 ; CHECK-LABEL: @pr26354(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, <2 x double>* [[TMP:%.*]], align 16
+; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, ptr [[T:%.*]], align 16
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[E2:%.*]] = extractelement <2 x double> [[LD]], i64 1
@@ -217,7 +217,7 @@ define double @pr26354(<2 x double>* %tmp, i1 %B) {
 ;
 
 entry:
-  %ld = load <2 x double>, <2 x double>* %tmp
+  %ld = load <2 x double>, ptr %t
   %e1 = extractelement <2 x double> %ld, i32 0
   %e2 = extractelement <2 x double> %ld, i32 1
   br i1 %B, label %if, label %end
@@ -240,7 +240,7 @@ define <4 x float> @PR30923(<2 x float> %x) {
 ; CHECK-LABEL: @PR30923(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[EXT1:%.*]] = extractelement <2 x float> [[X:%.*]], i64 1
-; CHECK-NEXT:    store float [[EXT1]], float* undef, align 4
+; CHECK-NEXT:    store float [[EXT1]], ptr undef, align 4
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[EXT2:%.*]] = extractelement <2 x float> [[X]], i64 0
@@ -250,7 +250,7 @@ define <4 x float> @PR30923(<2 x float> %x) {
 ;
 bb1:
   %ext1 = extractelement <2 x float> %x, i32 1
-  store float %ext1, float* undef, align 4
+  store float %ext1, ptr undef, align 4
   br label %bb2
 
 bb2:
@@ -355,8 +355,8 @@ define <4 x float> @insert_not_undef_shuffle_translate_commute(float %x, <4 x fl
 
 define <4 x float> @insert_insert_shuffle_translate(float %x1, float %x2, <4 x float> %q) {
 ; CHECK-LABEL: @insert_insert_shuffle_translate(
-; CHECK-NEXT:    [[XV2:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X2:%.*]], i64 2
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[XV2]], float [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[Q:%.*]], float [[X1:%.*]], i64 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[TMP1]], float [[X2:%.*]], i64 2
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %xv1 = insertelement <4 x float> %q, float %x1, i32 0

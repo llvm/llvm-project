@@ -18,7 +18,7 @@
 ; CHECK:  %[[TMP3O:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP3]], 1
 ; CHECK:  %[[OS3:[._0-9a-zA-Z]*]]   = or i1 %[[OS2]], %[[TMP3O]]
 ; CHECK:  %[[TMP3R:[._0-9a-zA-Z]*]] = extractvalue { i64, i1 } %[[TMP3]], 0
-; CHECK:  %polly.access.A{{[0-9]*}} = getelementptr double, double* %A, i64 %[[TMP3R]]
+; CHECK:  %polly.access.A{{[0-9]*}} = getelementptr double, ptr %A, i64 %[[TMP3R]]
 ;
 ; CHECK:  %polly.rtc.overflown = xor i1 %[[OS3]], true
 ; CHECK:  %polly.rtc.result = and i1 %{{[^,]*}}, %polly.rtc.overflown
@@ -33,7 +33,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(i64 %n, i64 %m, i64 %p, double* %A, i32* %B) {
+define void @foo(i64 %n, i64 %m, i64 %p, ptr %A, ptr %B) {
 entry:
   br label %for.cond
 
@@ -59,16 +59,16 @@ for.cond4:                                        ; preds = %for.inc, %for.body3
   br i1 %exitcond, label %for.body6, label %for.end
 
 for.body6:                                        ; preds = %for.cond4
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %k.0
-  %tmp3 = load i32, i32* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %k.0
+  %tmp3 = load i32, ptr %arrayidx, align 2
   %conv = sitofp i32 %tmp3 to double
   %tmp4 = mul nuw i64 %m, %p
   %tmp5 = mul nsw i64 %i.0, %tmp4
   %tmp6 = mul nsw i64 %j.0, %p
   %arrayidx7.sum = add i64 %tmp5, %tmp6
   %arrayidx8.sum = add i64 %arrayidx7.sum, %k.0
-  %arrayidx9 = getelementptr inbounds double, double* %A, i64 %arrayidx8.sum
-  store double %conv, double* %arrayidx9, align 8
+  %arrayidx9 = getelementptr inbounds double, ptr %A, i64 %arrayidx8.sum
+  store double %conv, ptr %arrayidx9, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body6

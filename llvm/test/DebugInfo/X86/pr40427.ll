@@ -18,7 +18,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define i16 @lolwat(i1 %spoons, i64 *%bees, i16 %yellow, i64 *%more) {
+define i16 @lolwat(i1 %spoons, ptr %bees, i16 %yellow, ptr %more) {
 entry:
   br i1 %spoons, label %trueb, label %falseb
 trueb:
@@ -30,11 +30,10 @@ block:
 ; CHECK-NEXT: [[LOADR:%[0-9]+]]:gr16 = MOV16rm %0,
 ; INSTRREF-SAME: debug-instr-number 1
 ; DBGVALUE-NEXT: DBG_VALUE [[LOADR]], $noreg, ![[DBGVAR]]
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[DBGVAR]]
+; INSTRREF-NEXT: DBG_INSTR_REF ![[DBGVAR]], {{.+}}, dbg-instr-ref(1, 0)
 ; CHECK-NEXT: %{{[0-9]+}}:gr32 = IMPLICIT_DEF
-  %foo = phi i64 *[%bees, %trueb], [%more, %falseb]
-  %forks = bitcast i64 *%foo to i32 *
-  %ret = load i32, i32 *%forks, !dbg !6
+  %foo = phi ptr[%bees, %trueb], [%more, %falseb]
+  %ret = load i32, ptr %foo, !dbg !6
   %cast = trunc i32 %ret to i16, !dbg !6
   call void @llvm.dbg.value(metadata i16 %cast, metadata !1, metadata !DIExpression()), !dbg !6
   %orly2 = add i16 %yellow, 1

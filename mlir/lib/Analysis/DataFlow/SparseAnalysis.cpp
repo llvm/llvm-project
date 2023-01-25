@@ -41,7 +41,7 @@ LogicalResult AbstractSparseDataFlowAnalysis::initialize(Operation *top) {
     if (region.empty())
       continue;
     for (Value argument : region.front().getArguments())
-      markAllPessimisticFixpoint(getLatticeElement(argument));
+      setToEntryState(getLatticeElement(argument));
   }
 
   return initializeRecursively(top);
@@ -87,21 +87,16 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   // Get the result lattices.
   SmallVector<AbstractSparseLattice *> resultLattices;
   resultLattices.reserve(op->getNumResults());
-  // Track whether all results have reached their fixpoint.
-  bool allAtFixpoint = true;
   for (Value result : op->getResults()) {
     AbstractSparseLattice *resultLattice = getLatticeElement(result);
-    allAtFixpoint &= resultLattice->isAtFixpoint();
     resultLattices.push_back(resultLattice);
   }
-  // If all result lattices have reached a fixpoint, there is nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     return visitRegionSuccessors({branch}, branch,
-                                 /*successorIndex=*/llvm::None, resultLattices);
+                                 /*successorIndex=*/std::nullopt,
+                                 resultLattices);
   }
 
   // The results of a call operation are determined by the callgraph.
@@ -110,7 +105,7 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
     // If not all return sites are known, then conservatively assume we can't
     // reason about the data-flow.
     if (!predecessors->allPredecessorsKnown())
-      return markAllPessimisticFixpoint(resultLattices);
+      return setAllToEntryStates(resultLattices);
     for (Operation *predecessor : predecessors->getKnownPredecessors())
       for (auto it : llvm::zip(predecessor->getOperands(), resultLattices))
         join(std::get<1>(it), *getLatticeElementFor(op, std::get<0>(it)));
@@ -123,9 +118,6 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   for (Value operand : op->getOperands()) {
     AbstractSparseLattice *operandLattice = getLatticeElement(operand);
     operandLattice->useDefSubscribe(this);
-    // If any of the operand states are not initialized, bail out.
-    if (operandLattice->isUninitialized())
-      return;
     operandLattices.push_back(operandLattice);
   }
 
@@ -145,16 +137,10 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
   // Get the argument lattices.
   SmallVector<AbstractSparseLattice *> argLattices;
   argLattices.reserve(block->getNumArguments());
-  bool allAtFixpoint = true;
   for (BlockArgument argument : block->getArguments()) {
     AbstractSparseLattice *argLattice = getLatticeElement(argument);
-    allAtFixpoint &= argLattice->isAtFixpoint();
     argLattices.push_back(argLattice);
   }
-  // If all argument lattices have reached their fixpoints, then there is
-  // nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The argument lattices of entry blocks are set by region control-flow or the
   // callgraph.
@@ -166,7 +152,7 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
       // If not all callsites are known, conservatively mark all lattices as
       // having reached their pessimistic fixpoints.
       if (!callsites->allPredecessorsKnown())
-        return markAllPessimisticFixpoint(argLattices);
+        return setAllToEntryStates(argLattices);
       for (Operation *callsite : callsites->getKnownPredecessors()) {
         auto call = cast<CallOpInterface>(callsite);
         for (auto it : llvm::zip(call.getArgOperands(), argLattices))
@@ -209,20 +195,20 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
         if (Value operand = operands[it.index()]) {
           join(it.value(), *getLatticeElementFor(block, operand));
         } else {
-          // Conservatively mark internally produced arguments as having reached
-          // their pessimistic fixpoint.
-          markAllPessimisticFixpoint(it.value());
+          // Conservatively consider internally produced arguments as entry
+          // points.
+          setAllToEntryStates(it.value());
         }
       }
     } else {
-      return markAllPessimisticFixpoint(argLattices);
+      return setAllToEntryStates(argLattices);
     }
   }
 }
 
 void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
     ProgramPoint point, RegionBranchOpInterface branch,
-    Optional<unsigned> successorIndex,
+    std::optional<unsigned> successorIndex,
     ArrayRef<AbstractSparseLattice *> lattices) {
   const auto *predecessors = getOrCreateFor<PredecessorState>(point, point);
   assert(predecessors->allPredecessorsKnown() &&
@@ -230,7 +216,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
   for (Operation *op : predecessors->getKnownPredecessors()) {
     // Get the incoming successor operands.
-    Optional<OperandRange> operands;
+    std::optional<OperandRange> operands;
 
     // Check if the predecessor is the parent op.
     if (op == branch) {
@@ -243,7 +229,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     if (!operands) {
       // We can't reason about the data-flow.
-      return markAllPessimisticFixpoint(lattices);
+      return setAllToEntryStates(lattices);
     }
 
     ValueRange inputs = predecessors->getSuccessorInputs(op);
@@ -252,7 +238,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (auto *op = point.dyn_cast<Operation *>()) {
+      if (point.dyn_cast<Operation *>()) {
         if (!inputs.empty())
           firstIndex = inputs.front().cast<OpResult>().getResultNumber();
         visitNonControlFlowArgumentsImpl(
@@ -285,13 +271,281 @@ AbstractSparseDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
   return state;
 }
 
-void AbstractSparseDataFlowAnalysis::markAllPessimisticFixpoint(
+void AbstractSparseDataFlowAnalysis::setAllToEntryStates(
     ArrayRef<AbstractSparseLattice *> lattices) {
   for (AbstractSparseLattice *lattice : lattices)
-    propagateIfChanged(lattice, lattice->markPessimisticFixpoint());
+    setToEntryState(lattice);
 }
 
 void AbstractSparseDataFlowAnalysis::join(AbstractSparseLattice *lhs,
                                           const AbstractSparseLattice &rhs) {
   propagateIfChanged(lhs, lhs->join(rhs));
+}
+
+//===----------------------------------------------------------------------===//
+// AbstractSparseBackwardDataFlowAnalysis
+//===----------------------------------------------------------------------===//
+
+AbstractSparseBackwardDataFlowAnalysis::AbstractSparseBackwardDataFlowAnalysis(
+    DataFlowSolver &solver, SymbolTableCollection &symbolTable)
+    : DataFlowAnalysis(solver), symbolTable(symbolTable) {
+  registerPointKind<CFGEdge>();
+}
+
+LogicalResult
+AbstractSparseBackwardDataFlowAnalysis::initialize(Operation *top) {
+  return initializeRecursively(top);
+}
+
+LogicalResult
+AbstractSparseBackwardDataFlowAnalysis::initializeRecursively(Operation *op) {
+  visitOperation(op);
+  for (Region &region : op->getRegions()) {
+    for (Block &block : region) {
+      getOrCreate<Executable>(&block)->blockContentSubscribe(this);
+      // Initialize ops in reverse order, so we can do as much initial
+      // propagation as possible without having to go through the
+      // solver queue.
+      for (auto it = block.rbegin(); it != block.rend(); it++)
+        if (failed(initializeRecursively(&*it)))
+          return failure();
+    }
+  }
+  return success();
+}
+
+LogicalResult
+AbstractSparseBackwardDataFlowAnalysis::visit(ProgramPoint point) {
+  if (Operation *op = point.dyn_cast<Operation *>())
+    visitOperation(op);
+  else if (point.dyn_cast<Block *>())
+    // For backward dataflow, we don't have to do any work for the blocks
+    // themselves. CFG edges between blocks are processed by the BranchOp
+    // logic in `visitOperation`, and entry blocks for functions are tied
+    // to the CallOp arguments by visitOperation.
+    return success();
+  else
+    return failure();
+  return success();
+}
+
+SmallVector<AbstractSparseLattice *>
+AbstractSparseBackwardDataFlowAnalysis::getLatticeElements(ValueRange values) {
+  SmallVector<AbstractSparseLattice *> resultLattices;
+  resultLattices.reserve(values.size());
+  for (Value result : values) {
+    AbstractSparseLattice *resultLattice = getLatticeElement(result);
+    resultLattices.push_back(resultLattice);
+  }
+  return resultLattices;
+}
+
+SmallVector<const AbstractSparseLattice *>
+AbstractSparseBackwardDataFlowAnalysis::getLatticeElementsFor(
+    ProgramPoint point, ValueRange values) {
+  SmallVector<const AbstractSparseLattice *> resultLattices;
+  resultLattices.reserve(values.size());
+  for (Value result : values) {
+    const AbstractSparseLattice *resultLattice =
+        getLatticeElementFor(point, result);
+    resultLattices.push_back(resultLattice);
+  }
+  return resultLattices;
+}
+
+static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
+  return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
+}
+
+void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
+  // If we're in a dead block, bail out.
+  if (!getOrCreate<Executable>(op->getBlock())->isLive())
+    return;
+
+  SmallVector<AbstractSparseLattice *> operandLattices =
+      getLatticeElements(op->getOperands());
+  SmallVector<const AbstractSparseLattice *> resultLattices =
+      getLatticeElementsFor(op, op->getResults());
+
+  // Block arguments of region branch operations flow back into the operands
+  // of the parent op
+  if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
+    visitRegionSuccessors(branch, operandLattices);
+    return;
+  }
+
+  if (auto branch = dyn_cast<BranchOpInterface>(op)) {
+    // Block arguments of successor blocks flow back into our operands.
+
+    // We remember all operands not forwarded to any block in a BitVector.
+    // We can't just cut out a range here, since the non-forwarded ops might
+    // be non-contiguous (if there's more than one successor).
+    BitVector unaccounted(op->getNumOperands(), true);
+
+    for (auto [index, block] : llvm::enumerate(op->getSuccessors())) {
+      SuccessorOperands successorOperands = branch.getSuccessorOperands(index);
+      OperandRange forwarded = successorOperands.getForwardedOperands();
+      if (!forwarded.empty()) {
+        MutableArrayRef<OpOperand> operands = op->getOpOperands().slice(
+            forwarded.getBeginOperandIndex(), forwarded.size());
+        for (OpOperand &operand : operands) {
+          unaccounted.reset(operand.getOperandNumber());
+          if (std::optional<BlockArgument> blockArg =
+                  detail::getBranchSuccessorArgument(
+                      successorOperands, operand.getOperandNumber(), block)) {
+            meet(getLatticeElement(operand.get()),
+                 *getLatticeElementFor(op, *blockArg));
+          }
+        }
+      }
+    }
+    // Operands not forwarded to successor blocks are typically parameters
+    // of the branch operation itself (for example the boolean for if/else).
+    for (int index : unaccounted.set_bits()) {
+      OpOperand &operand = op->getOpOperand(index);
+      visitBranchOperand(operand);
+    }
+    return;
+  }
+
+  // For function calls, connect the arguments of the entry blocks
+  // to the operands of the call op.
+  if (auto call = dyn_cast<CallOpInterface>(op)) {
+    Operation *callableOp = call.resolveCallable(&symbolTable);
+    if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
+      Region *region = callable.getCallableRegion();
+      if (!region->empty()) {
+        Block &block = region->front();
+        for (auto [blockArg, operand] :
+             llvm::zip(block.getArguments(), operandLattices)) {
+          meet(operand, *getLatticeElementFor(op, blockArg));
+        }
+      }
+      return;
+    }
+  }
+
+  // The block arguments of the branched to region flow back into the
+  // operands of the yield operation.
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+    if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
+      SmallVector<RegionSuccessor> successors;
+      SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
+      branch.getSuccessorRegions(op->getParentRegion()->getRegionNumber(),
+                                 operands, successors);
+      // All operands not forwarded to any successor. This set can be
+      // non-contiguous in the presence of multiple successors.
+      BitVector unaccounted(op->getNumOperands(), true);
+
+      for (const RegionSuccessor &successor : successors) {
+        ValueRange inputs = successor.getSuccessorInputs();
+        Region *region = successor.getSuccessor();
+        OperandRange operands =
+            region ? terminator.getSuccessorOperands(region->getRegionNumber())
+                   : terminator.getSuccessorOperands({});
+        MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
+        for (auto [opoperand, input] : llvm::zip(opoperands, inputs)) {
+          meet(getLatticeElement(opoperand.get()),
+               *getLatticeElementFor(op, input));
+          unaccounted.reset(
+              const_cast<OpOperand &>(opoperand).getOperandNumber());
+        }
+      }
+      // Visit operands of the branch op not forwarded to the next region.
+      // (Like e.g. the boolean of `scf.conditional`)
+      for (int index : unaccounted.set_bits()) {
+        visitBranchOperand(op->getOpOperand(index));
+      }
+      return;
+    }
+  }
+
+  // yield-like ops usually don't implement `RegionBranchTerminatorOpInterface`,
+  // since they behave like a return in the sense that they forward to the
+  // results of some other (here: the parent) op.
+  if (op->hasTrait<OpTrait::ReturnLike>()) {
+    if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
+      OperandRange operands = op->getOperands();
+      ResultRange results = op->getParentOp()->getResults();
+      assert(results.size() == operands.size() &&
+             "Can't derive arg mapping for yield-like op.");
+      for (auto [operand, result] : llvm::zip(operands, results))
+        meet(getLatticeElement(operand), *getLatticeElementFor(op, result));
+      return;
+    }
+
+    // Going backwards, the operands of the return are derived from the
+    // results of all CallOps calling this CallableOp.
+    if (auto callable = dyn_cast<CallableOpInterface>(op->getParentOp())) {
+      const PredecessorState *callsites =
+          getOrCreateFor<PredecessorState>(op, callable);
+      if (callsites->allPredecessorsKnown()) {
+        for (Operation *call : callsites->getKnownPredecessors()) {
+          SmallVector<const AbstractSparseLattice *> callResultLattices =
+              getLatticeElementsFor(op, call->getResults());
+          for (auto [op, result] :
+               llvm::zip(operandLattices, callResultLattices))
+            meet(op, *result);
+        }
+      } else {
+        // If we don't know all the callers, we can't know where the
+        // returned values go. Note that, in particular, this will trigger
+        // for the return ops of any public functions.
+        setAllToExitStates(operandLattices);
+      }
+      return;
+    }
+  }
+
+  visitOperationImpl(op, operandLattices, resultLattices);
+}
+
+void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
+    RegionBranchOpInterface branch,
+    ArrayRef<AbstractSparseLattice *> operandLattices) {
+  Operation *op = branch.getOperation();
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
+  branch.getSuccessorRegions(/*index=*/{}, operands, successors);
+
+  // All operands not forwarded to any successor. This set can be non-contiguous
+  // in the presence of multiple successors.
+  BitVector unaccounted(op->getNumOperands(), true);
+
+  for (RegionSuccessor &successor : successors) {
+    Region *region = successor.getSuccessor();
+    OperandRange operands =
+        region ? branch.getSuccessorEntryOperands(region->getRegionNumber())
+               : branch.getSuccessorEntryOperands({});
+    MutableArrayRef<OpOperand> opoperands = operandsToOpOperands(operands);
+    ValueRange inputs = successor.getSuccessorInputs();
+    for (auto [operand, input] : llvm::zip(opoperands, inputs)) {
+      meet(getLatticeElement(operand.get()), *getLatticeElementFor(op, input));
+      unaccounted.reset(operand.getOperandNumber());
+    }
+  }
+  // All operands not forwarded to regions are typically parameters of the
+  // branch operation itself (for example the boolean for if/else).
+  for (int index : unaccounted.set_bits()) {
+    visitBranchOperand(op->getOpOperand(index));
+  }
+}
+
+const AbstractSparseLattice *
+AbstractSparseBackwardDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
+                                                             Value value) {
+  AbstractSparseLattice *state = getLatticeElement(value);
+  addDependency(state, point);
+  return state;
+}
+
+void AbstractSparseBackwardDataFlowAnalysis::setAllToExitStates(
+    ArrayRef<AbstractSparseLattice *> lattices) {
+  for (AbstractSparseLattice *lattice : lattices)
+    setToExitState(lattice);
+}
+
+void AbstractSparseBackwardDataFlowAnalysis::meet(
+    AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs) {
+  propagateIfChanged(lhs, lhs->meet(rhs));
 }

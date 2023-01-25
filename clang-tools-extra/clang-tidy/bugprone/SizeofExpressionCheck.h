@@ -31,6 +31,7 @@ private:
   const bool WarnOnSizeOfIntegerExpression;
   const bool WarnOnSizeOfThis;
   const bool WarnOnSizeOfCompareToConstant;
+  const bool WarnOnSizeOfPointerToAggregate;
 };
 
 } // namespace bugprone

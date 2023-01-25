@@ -25,6 +25,7 @@ executable("llvm-dwp") {
     "//llvm/lib/Object",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-dwp.cpp" ]
 }

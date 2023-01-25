@@ -99,9 +99,10 @@ struct MachineFunctionInfo {
   /// supplied allocator.
   ///
   /// This function can be overridden in a derive class.
-  template<typename Ty>
-  static Ty *create(BumpPtrAllocator &Allocator, MachineFunction &MF) {
-    return new (Allocator.Allocate<Ty>()) Ty(MF);
+  template <typename FuncInfoTy, typename SubtargetTy = TargetSubtargetInfo>
+  static FuncInfoTy *create(BumpPtrAllocator &Allocator, const Function &F,
+                            const SubtargetTy *STI) {
+    return new (Allocator.Allocate<FuncInfoTy>()) FuncInfoTy(F, STI);
   }
 
   template <typename Ty>
@@ -280,6 +281,7 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   // Keep track of the function section.
   MCSection *Section = nullptr;
 
+  // Catchpad unwind destination info for wasm EH.
   // Keeps track of Wasm exception handling related data. This will be null for
   // functions that aren't using a wasm EH personality.
   WasmEHFuncInfo *WasmEHInfo = nullptr;
@@ -372,6 +374,9 @@ class LLVM_EXTERNAL_VISIBILITY MachineFunction {
   bool HasEHCatchret = false;
   bool HasEHScopes = false;
   bool HasEHFunclets = false;
+
+  /// BBID to assign to the next basic block of this function.
+  unsigned NextBBID = 0;
 
   /// Section Type for basic blocks, only relevant with basic block sections.
   BasicBlockSection BBSectionsType = BasicBlockSection::None;
@@ -522,6 +527,10 @@ public:
   /// during register allocation. See DebugPHIRegallocPos.
   DenseMap<unsigned, DebugPHIRegallocPos> DebugPHIPositions;
 
+  /// Flag for whether this function contains DBG_VALUEs (false) or
+  /// DBG_INSTR_REF (true).
+  bool UseDebugInstrRef = false;
+
   /// Create a substitution between one <instr,operand> value to a different,
   /// new value.
   void makeDebugValueSubstitution(DebugInstrOperandPair, DebugInstrOperandPair,
@@ -562,9 +571,16 @@ public:
   /// (or DBG_PHI).
   void finalizeDebugInstrRefs();
 
-  /// Returns true if the function's variable locations should be tracked with
+  /// Determine whether, in the current machine configuration, we should use
+  /// instruction referencing or not.
+  bool shouldUseDebugInstrRef() const;
+
+  /// Returns true if the function's variable locations are tracked with
   /// instruction referencing.
   bool useDebugInstrRef() const;
+
+  /// Set whether this function will use instruction referencing or not.
+  void setUseDebugInstrRef(bool UseInstrRef);
 
   /// A reserved operand number representing the instructions memory operand,
   /// for instructions that have a stack spill fused into them.
@@ -752,14 +768,12 @@ public:
   ///
   template<typename Ty>
   Ty *getInfo() {
-    if (!MFInfo)
-      MFInfo = Ty::template create<Ty>(Allocator, *this);
     return static_cast<Ty*>(MFInfo);
   }
 
   template<typename Ty>
   const Ty *getInfo() const {
-     return const_cast<MachineFunction*>(this)->getInfo<Ty>();
+    return static_cast<const Ty *>(MFInfo);
   }
 
   template <typename Ty> Ty *cloneInfo(const Ty &Old) {
@@ -767,6 +781,9 @@ public:
     MFInfo = Ty::template create<Ty>(Allocator, Old);
     return static_cast<Ty *>(MFInfo);
   }
+
+  /// Initialize the target specific MachineFunctionInfo
+  void initTargetMachineFunctionInfo(const TargetSubtargetInfo &STI);
 
   MachineFunctionInfo *cloneInfoFrom(
       const MachineFunction &OrigMF,
@@ -1030,7 +1047,8 @@ public:
   /// the function.
   MachineInstr::ExtraInfo *createMIExtraInfo(
       ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
-      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr);
+      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr,
+      MDNode *PCSections = nullptr, uint32_t CFIType = 0);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);
@@ -1055,7 +1073,7 @@ public:
     return FrameInstructions;
   }
 
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
+  [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used
@@ -1101,10 +1119,6 @@ public:
   /// Find or create an LandingPadInfo for the specified MachineBasicBlock.
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);
 
-  /// Remap landing pad labels and remove any deleted landing pads.
-  void tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap = nullptr,
-                       bool TidyIfNoBeginLabels = true);
-
   /// Return a reference to the landing pad info for the current function.
   const std::vector<LandingPadInfo> &getLandingPads() const {
     return LandingPads;
@@ -1120,22 +1134,11 @@ public:
   /// entry.
   MCSymbol *addLandingPad(MachineBasicBlock *LandingPad);
 
-  /// Provide the catch typeinfo for a landing pad.
-  void addCatchTypeInfo(MachineBasicBlock *LandingPad,
-                        ArrayRef<const GlobalValue *> TyInfo);
-
-  /// Provide the filter typeinfo for a landing pad.
-  void addFilterTypeInfo(MachineBasicBlock *LandingPad,
-                         ArrayRef<const GlobalValue *> TyInfo);
-
-  /// Add a cleanup action for a landing pad.
-  void addCleanup(MachineBasicBlock *LandingPad);
-
   /// Return the type id for the specified typeinfo.  This is function wide.
   unsigned getTypeIDFor(const GlobalValue *TI);
 
   /// Return the id of the filter encoded by TyIds.  This is function wide.
-  int getFilterIDFor(std::vector<unsigned> &TyIds);
+  int getFilterIDFor(ArrayRef<unsigned> TyIds);
 
   /// Map the landing pad's EH symbol to the call site indexes.
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);

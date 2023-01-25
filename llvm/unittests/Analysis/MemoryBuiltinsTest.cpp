@@ -29,7 +29,8 @@ TEST(AllocSize, AllocationBuiltinsTest) {
       FunctionType::get(Type::getInt8PtrTy(Context), {ArgTy}, false),
       GlobalValue::ExternalLinkage, "F", &M);
 
-  AllocSizeFn->addFnAttr(Attribute::getWithAllocSizeArgs(Context, 1, None));
+  AllocSizeFn->addFnAttr(
+      Attribute::getWithAllocSizeArgs(Context, 1, std::nullopt));
 
   // 100 is arbitrary.
   std::unique_ptr<CallInst> Caller(

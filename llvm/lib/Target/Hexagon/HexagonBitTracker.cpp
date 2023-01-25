@@ -997,7 +997,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &BI,
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Hexagon::J2_jumpt:
     case Hexagon::J2_jumptpt:
     case Hexagon::J2_jumptnew:
@@ -1223,7 +1223,7 @@ bool HexagonEvaluator::evaluateFormalCopy(const MachineInstr &MI,
   RegisterRef RD = MI.getOperand(0);
   RegisterRef RS = MI.getOperand(1);
   assert(RD.Sub == 0);
-  if (!Register::isPhysicalRegister(RS.Reg))
+  if (!RS.Reg.isPhysical())
     return false;
   RegExtMap::const_iterator F = VRX.find(RD.Reg);
   if (F == VRX.end())

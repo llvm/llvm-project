@@ -20,6 +20,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 
+namespace {
 class R600MCInstLower : public AMDGPUMCInstLower {
 public:
   R600MCInstLower(MCContext &ctx, const R600Subtarget &ST,
@@ -28,6 +29,7 @@ public:
   /// Lower a MachineInstr to an MCInst
   void lower(const MachineInstr *MI, MCInst &OutMI) const;
 };
+} // namespace
 
 R600MCInstLower::R600MCInstLower(MCContext &Ctx, const R600Subtarget &ST,
                                  const AsmPrinter &AP)

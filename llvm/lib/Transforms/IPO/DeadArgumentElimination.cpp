@@ -222,7 +222,7 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
   // function empty.
-  NF->getBasicBlockList().splice(NF->begin(), F.getBasicBlockList());
+  NF->splice(NF->begin(), &F);
 
   // Loop over the argument list, transferring uses of the old arguments over to
   // the new arguments, also transferring over the names as well.  While we're
@@ -238,8 +238,8 @@ bool DeadArgumentEliminationPass::deleteDeadVarargs(Function &F) {
   // Clone metadata from the old function, including debug info descriptor.
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   F.getAllMetadata(MDs);
-  for (auto MD : MDs)
-    NF->addMetadata(MD.first, *MD.second);
+  for (auto [KindID, Node] : MDs)
+    NF->addMetadata(KindID, *Node);
 
   // Fix up any BlockAddresses that refer to the function.
   F.replaceAllUsesWith(ConstantExpr::getBitCast(NF, F.getType()));
@@ -996,7 +996,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   // Since we have now created the new function, splice the body of the old
   // function right into the new function, leaving the old rotting hulk of the
   // function empty.
-  NF->getBasicBlockList().splice(NF->begin(), F->getBasicBlockList());
+  NF->splice(NF->begin(), F);
 
   // Loop over the argument list, transferring uses of the old arguments over to
   // the new arguments, also transferring over the names as well.
@@ -1056,14 +1056,14 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         // value (possibly 0 if we became void).
         auto *NewRet = ReturnInst::Create(F->getContext(), RetVal, RI);
         NewRet->setDebugLoc(RI->getDebugLoc());
-        BB.getInstList().erase(RI);
+        RI->eraseFromParent();
       }
 
   // Clone metadata from the old function, including debug info descriptor.
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   F->getAllMetadata(MDs);
-  for (auto MD : MDs)
-    NF->addMetadata(MD.first, *MD.second);
+  for (auto [KindID, Node] : MDs)
+    NF->addMetadata(KindID, *Node);
 
   // If either the return value(s) or argument(s) are removed, then probably the
   // function does not follow standard calling conventions anymore. Hence, add

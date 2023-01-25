@@ -7,14 +7,14 @@
 define i8 @sext_i1_to_i8(i1 %a) nounwind {
 ; RV32I-LABEL: sext_i1_to_i8:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_i1_to_i8:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
 ; RV64I-NEXT:    ret
   %1 = sext i1 %a to i8
   ret i8 %1
@@ -23,14 +23,14 @@ define i8 @sext_i1_to_i8(i1 %a) nounwind {
 define i16 @sext_i1_to_i16(i1 %a) nounwind {
 ; RV32I-LABEL: sext_i1_to_i16:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_i1_to_i16:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
 ; RV64I-NEXT:    ret
   %1 = sext i1 %a to i16
   ret i16 %1
@@ -39,14 +39,14 @@ define i16 @sext_i1_to_i16(i1 %a) nounwind {
 define i32 @sext_i1_to_i32(i1 %a) nounwind {
 ; RV32I-LABEL: sext_i1_to_i32:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_i1_to_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
 ; RV64I-NEXT:    ret
   %1 = sext i1 %a to i32
   ret i32 %1
@@ -55,15 +55,15 @@ define i32 @sext_i1_to_i32(i1 %a) nounwind {
 define i64 @sext_i1_to_i64(i1 %a) nounwind {
 ; RV32I-LABEL: sext_i1_to_i64:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    andi a0, a0, 1
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    slli a0, a0, 31
+; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_i1_to_i64:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    slli a0, a0, 63
+; RV64I-NEXT:    srai a0, a0, 63
 ; RV64I-NEXT:    ret
   %1 = sext i1 %a to i64
   ret i64 %1
@@ -475,16 +475,16 @@ define i32 @sext_of_not_cmp_i32(i32 %x) {
 ; RV32I-LABEL: sext_of_not_cmp_i32:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi a0, a0, -7
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_of_not_cmp_i32:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    addi a0, a0, -7
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
   %cmp = icmp eq i32 %x, 7
   %xor = xor i1 %cmp, 1
@@ -497,16 +497,16 @@ define i64 @sext_of_not_cmp_i64(i64 %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xori a0, a0, 7
 ; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    snez a0, a0
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: sext_of_not_cmp_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi a0, a0, -7
-; RV64I-NEXT:    snez a0, a0
-; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    addi a0, a0, -1
 ; RV64I-NEXT:    ret
   %cmp = icmp eq i64 %x, 7
   %xor = xor i1 %cmp, 1

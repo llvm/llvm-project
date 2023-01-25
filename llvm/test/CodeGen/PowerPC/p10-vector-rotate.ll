@@ -81,8 +81,8 @@ entry:
 define <1 x i128> @test_vrlqnm(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c) {
 ; CHECK-LE-LABEL: test_vrlqnm:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    plxv v5, .LCPI4_0@PCREL(0), 1
-; CHECK-LE-NEXT:    vperm v3, v4, v3, v5
+; CHECK-LE-NEXT:    plxv vs0, .LCPI4_0@PCREL(0), 1
+; CHECK-LE-NEXT:    xxperm v3, v4, vs0
 ; CHECK-LE-NEXT:    vrlqnm v2, v2, v3
 ; CHECK-LE-NEXT:    blr
 ;
@@ -90,9 +90,9 @@ define <1 x i128> @test_vrlqnm(<1 x i128> %a, <1 x i128> %b, <1 x i128> %c) {
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis r3, r2, .LCPI4_0@toc@ha
 ; CHECK-BE-NEXT:    addi r3, r3, .LCPI4_0@toc@l
-; CHECK-BE-NEXT:    lxv v5, 0(r3)
-; CHECK-BE-NEXT:    vperm v3, v3, v4, v5
-; CHECK-BE-NEXT:    vrlqnm v2, v2, v3
+; CHECK-BE-NEXT:    lxv vs0, 0(r3)
+; CHECK-BE-NEXT:    xxperm v4, v3, vs0
+; CHECK-BE-NEXT:    vrlqnm v2, v2, v4
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = bitcast <1 x i128> %b to <16 x i8>

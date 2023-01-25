@@ -37,6 +37,7 @@
 #include "lldb/Utility/Log.h"
 
 #include "lldb/../../source/Plugins/ObjectFile/JIT/ObjectFileJIT.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -702,9 +703,9 @@ public:
   LoadAddressResolver(Target *target, bool &symbol_was_missing_weak)
       : m_target(target), m_symbol_was_missing_weak(symbol_was_missing_weak) {}
 
-  llvm::Optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
+  std::optional<lldb::addr_t> Resolve(SymbolContextList &sc_list) {
     if (sc_list.IsEmpty())
-      return llvm::None;
+      return std::nullopt;
 
     lldb::addr_t load_address = LLDB_INVALID_ADDRESS;
 
@@ -758,7 +759,7 @@ public:
     if (m_symbol_was_missing_weak)
       return 0;
 
-    return llvm::None;
+    return std::nullopt;
   }
 
   lldb::addr_t GetBestInternalLoadAddress() const {

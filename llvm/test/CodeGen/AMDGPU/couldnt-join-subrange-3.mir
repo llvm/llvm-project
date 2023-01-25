@@ -44,7 +44,7 @@ body:             |
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.4(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   dead %16:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY]].sub3, undef %17:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
+  ; GCN-NEXT:   dead %16:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN [[COPY]].sub3, undef %17:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
   ; GCN-NEXT:   dead %18:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
   ; GCN-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
   ; GCN-NEXT:   dead %20:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
@@ -100,7 +100,7 @@ body:             |
     S_BRANCH %bb.3
 
   bb.3:
-    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sgpr_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
+    dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from constant-pool, align 1, addrspace 4)
     dead %60:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %36:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
     dead %67:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

@@ -83,12 +83,12 @@ define i1 @poison_on_call_user_is_ok(i1 %b, i8 %x) {
 ; We were asserting that all users of a trivialized integer-type instruction were
 ; also integer-typed, but that's too strong. The alloca has a pointer-type result.
 
-define void @PR34179(i32* %a) {
+define void @PR34179(ptr %a) {
 ; CHECK-LABEL: @PR34179(
-; CHECK-NEXT:    [[T0:%.*]] = load volatile i32, i32* [[A:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = load volatile i32, ptr [[A:%.*]]
 ; CHECK-NEXT:    ret void
 ;
-  %t0 = load volatile i32, i32* %a
+  %t0 = load volatile i32, ptr %a
   %vla = alloca i32, i32 %t0
   ret void
 }

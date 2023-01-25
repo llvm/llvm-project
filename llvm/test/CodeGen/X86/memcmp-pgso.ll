@@ -68,11 +68,11 @@ define i1 @length2_eq_nobuiltin_attr(ptr %X, ptr %Y) nounwind !prof !14 {
 define i32 @length3(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-LABEL: length3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzwl (%rdi), %eax
-; X64-NEXT:    movzwl (%rsi), %ecx
-; X64-NEXT:    rolw $8, %ax
+; X64-NEXT:    movzwl (%rdi), %ecx
+; X64-NEXT:    movzwl (%rsi), %edx
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    cmpw %cx, %ax
+; X64-NEXT:    rolw $8, %dx
+; X64-NEXT:    cmpw %dx, %cx
 ; X64-NEXT:    jne .LBB4_3
 ; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movzbl 2(%rdi), %eax
@@ -80,9 +80,10 @@ define i32 @length3(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB4_3: # %res_block
-; X64-NEXT:    setae %al
-; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    leal -1(%rax,%rax), %eax
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpw %dx, %cx
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    orl $1, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
   ret i32 %m
@@ -146,11 +147,11 @@ define i1 @length4_eq_const(ptr %X) nounwind !prof !14 {
 define i32 @length5(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-LABEL: length5:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %eax
-; X64-NEXT:    movl (%rsi), %ecx
-; X64-NEXT:    bswapl %eax
+; X64-NEXT:    movl (%rdi), %ecx
+; X64-NEXT:    movl (%rsi), %edx
 ; X64-NEXT:    bswapl %ecx
-; X64-NEXT:    cmpl %ecx, %eax
+; X64-NEXT:    bswapl %edx
+; X64-NEXT:    cmpl %edx, %ecx
 ; X64-NEXT:    jne .LBB9_3
 ; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movzbl 4(%rdi), %eax
@@ -158,9 +159,10 @@ define i32 @length5(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB9_3: # %res_block
-; X64-NEXT:    setae %al
-; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    leal -1(%rax,%rax), %eax
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    cmpl %edx, %ecx
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    orl $1, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 5) nounwind
   ret i32 %m
@@ -257,8 +259,8 @@ define i32 @length12(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-NEXT:  .LBB15_2: # %res_block
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    setae %al
-; X64-NEXT:    leal -1(%rax,%rax), %eax
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    orl $1, %eax
 ; X64-NEXT:  .LBB15_3: # %endblock
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 12) nounwind
@@ -287,8 +289,8 @@ define i32 @length16(ptr %X, ptr %Y) nounwind !prof !14 {
 ; X64-NEXT:  .LBB16_2: # %res_block
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    setae %al
-; X64-NEXT:    leal -1(%rax,%rax), %eax
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    orl $1, %eax
 ; X64-NEXT:  .LBB16_3: # %endblock
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 16) nounwind

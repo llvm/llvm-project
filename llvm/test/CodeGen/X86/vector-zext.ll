@@ -2148,8 +2148,8 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSE2-NEXT:    movdqa %xmm3, %xmm8
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3]
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm2[8],xmm0[9],xmm2[9],xmm0[10],xmm2[10],xmm0[11],xmm2[11],xmm0[12],xmm2[12],xmm0[13],xmm2[13],xmm0[14],xmm2[14],xmm0[15],xmm2[15]
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
@@ -2161,17 +2161,17 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1],xmm7[2],xmm2[2],xmm7[3],xmm2[3]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm2[4],xmm6[5],xmm2[5],xmm6[6],xmm2[6],xmm6[7],xmm2[7]
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
+; SSE2-NEXT:    movdqa %xmm1, %xmm8
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSE2-NEXT:    movdqa %xmm1, 112(%rdi)
-; SSE2-NEXT:    movdqa %xmm4, 96(%rdi)
+; SSE2-NEXT:    movdqa %xmm8, 96(%rdi)
 ; SSE2-NEXT:    movdqa %xmm6, 80(%rdi)
 ; SSE2-NEXT:    movdqa %xmm7, 64(%rdi)
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdi)
 ; SSE2-NEXT:    movdqa %xmm5, 32(%rdi)
 ; SSE2-NEXT:    movdqa %xmm3, 16(%rdi)
-; SSE2-NEXT:    movdqa %xmm8, (%rdi)
+; SSE2-NEXT:    movdqa %xmm4, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: zext_32i8_to_32i32:
@@ -2180,8 +2180,8 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm3
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; SSSE3-NEXT:    movdqa %xmm3, %xmm8
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm4
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
 ; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
 ; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm2[8],xmm0[9],xmm2[9],xmm0[10],xmm2[10],xmm0[11],xmm2[11],xmm0[12],xmm2[12],xmm0[13],xmm2[13],xmm0[14],xmm2[14],xmm0[15],xmm2[15]
 ; SSSE3-NEXT:    movdqa %xmm0, %xmm5
@@ -2193,17 +2193,17 @@ define <32 x i32> @zext_32i8_to_32i32(<32 x i8> %x) {
 ; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm2[0],xmm7[1],xmm2[1],xmm7[2],xmm2[2],xmm7[3],xmm2[3]
 ; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm2[4],xmm6[5],xmm2[5],xmm6[6],xmm2[6],xmm6[7],xmm2[7]
 ; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm2[8],xmm1[9],xmm2[9],xmm1[10],xmm2[10],xmm1[11],xmm2[11],xmm1[12],xmm2[12],xmm1[13],xmm2[13],xmm1[14],xmm2[14],xmm1[15],xmm2[15]
-; SSSE3-NEXT:    movdqa %xmm1, %xmm4
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
+; SSSE3-NEXT:    movdqa %xmm1, %xmm8
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm8 = xmm8[0],xmm2[0],xmm8[1],xmm2[1],xmm8[2],xmm2[2],xmm8[3],xmm2[3]
 ; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
 ; SSSE3-NEXT:    movdqa %xmm1, 112(%rdi)
-; SSSE3-NEXT:    movdqa %xmm4, 96(%rdi)
+; SSSE3-NEXT:    movdqa %xmm8, 96(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm6, 80(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm7, 64(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm0, 48(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm5, 32(%rdi)
 ; SSSE3-NEXT:    movdqa %xmm3, 16(%rdi)
-; SSSE3-NEXT:    movdqa %xmm8, (%rdi)
+; SSSE3-NEXT:    movdqa %xmm4, (%rdi)
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: zext_32i8_to_32i32:

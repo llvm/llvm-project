@@ -9,20 +9,20 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
 
-define i8 @test_load(i8* %a) sanitize_hwaddress {
+define i8 @test_load(ptr %a) sanitize_hwaddress {
 ; CHECK-LABEL: @test_load(
-; OFFSET: %[[SHADOW:[^ ]*]] = call i8* asm "", "=r,0"(i8* inttoptr (i64 12345678 to i8*))
-; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %a to i64
+; OFFSET: %[[SHADOW:[^ ]*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 12345678 to ptr))
+; CHECK: %[[A:[^ ]*]] = ptrtoint ptr %a to i64
 ; CHECK: %[[B:[^ ]*]] = lshr i64 %[[A]], 56
 ; CHECK: %[[PTRTAG:[^ ]*]] = trunc i64 %[[B]] to i8
 ; CHECK: %[[C:[^ ]*]] = or i64 %[[A]], -72057594037927936
 ; CHECK: %[[D:[^ ]*]] = lshr i64 %[[C]], 4
 
-; NOOFFSET: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
+; NOOFFSET: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to ptr
 
-; OFFSET: %[[E:[^ ]*]] = getelementptr i8, i8* %[[SHADOW]], i64 %[[D]]
+; OFFSET: %[[E:[^ ]*]] = getelementptr i8, ptr %[[SHADOW]], i64 %[[D]]
 
-; CHECK: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
+; CHECK: %[[MEMTAG:[^ ]*]] = load i8, ptr %[[E]]
 ; CHECK: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
 
 ; MATCH-ALL: %[[G:[^ ]*]] = icmp ne i8 %[[PTRTAG]], -1
@@ -34,13 +34,13 @@ define i8 @test_load(i8* %a) sanitize_hwaddress {
 ; CHECK: call void asm sideeffect "brk #2336", "{x0}"(i64 %[[A]])
 ; CHECK: br label
 
-; CHECK: %[[G:[^ ]*]] = load i8, i8* %a, align 4
+; CHECK: %[[G:[^ ]*]] = load i8, ptr %a, align 4
 ; CHECK: ret i8 %[[G]]
 
-; OUTLINE: %[[SHADOW:[^ ]*]] = call i8* asm "", "=r,0"(i8* inttoptr (i64 12345678 to i8*))
-; OUTLINE: call void @llvm.hwasan.check.memaccess(i8* %[[SHADOW]], i8* %a, i32 67043360)
+; OUTLINE: %[[SHADOW:[^ ]*]] = call ptr asm "", "=r,0"(ptr inttoptr (i64 12345678 to ptr))
+; OUTLINE: call void @llvm.hwasan.check.memaccess(ptr %[[SHADOW]], ptr %a, i32 67043360)
 entry:
-  %b = load i8, i8* %a, align 4
+  %b = load i8, ptr %a, align 4
   ret i8 %b
 }
 

@@ -27,14 +27,14 @@ define void @func() #0 !dbg !4 {
 entry:
   %y.addr.i = alloca i32, align 4
   %x = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %x, metadata !15, metadata !DIExpression()), !dbg !17
-  %0 = load volatile i32, i32* %x, align 4, !dbg !18
-  store i32 %0, i32* %y.addr.i, align 4
-  call void @llvm.dbg.declare(metadata i32* %y.addr.i, metadata !19, metadata !DIExpression()), !dbg !20
-  %1 = load i32, i32* %y.addr.i, align 4, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !15, metadata !DIExpression()), !dbg !17
+  %0 = load volatile i32, ptr %x, align 4, !dbg !18
+  store i32 %0, ptr %y.addr.i, align 4
+  call void @llvm.dbg.declare(metadata ptr %y.addr.i, metadata !19, metadata !DIExpression()), !dbg !20
+  %1 = load i32, ptr %y.addr.i, align 4, !dbg !21
   %tobool.i = icmp ne i32 %1, 0, !dbg !21
   %cond.i = select i1 %tobool.i, i32 4, i32 7, !dbg !21
-  store volatile i32 %cond.i, i32* %x, align 4, !dbg !18
+  store volatile i32 %cond.i, ptr %x, align 4, !dbg !18
   ret void, !dbg !22
 }
 

@@ -11,10 +11,10 @@
 #include "TestTU.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -39,7 +39,7 @@ protected:
   }
 
   /// An overload for convenience.
-  llvm::Optional<OpaqueType> fromCompletionResult(const NamedDecl *D) {
+  std::optional<OpaqueType> fromCompletionResult(const NamedDecl *D) {
     return OpaqueType::fromCompletionResult(
         astCtx(), CodeCompletionResult(D, CCP_Declaration));
   }
@@ -75,7 +75,7 @@ protected:
 
 private:
   // Set after calling build().
-  llvm::Optional<ParsedAST> AST;
+  std::optional<ParsedAST> AST;
 };
 
 TEST_F(ExpectedTypeConversionTest, BasicTypes) {
@@ -164,10 +164,10 @@ int* int_ptr_;
 
   auto IntPtrTy = *OpaqueType::fromType(astCtx(), typeOf("int_ptr_"));
   EXPECT_EQ(fromCompletionResult(decl("returns_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("returns_dependent")), std::nullopt);
 
   EXPECT_EQ(fromCompletionResult(decl("var_not_dependent")), IntPtrTy);
-  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), llvm::None);
+  EXPECT_EQ(fromCompletionResult(decl("var_dependent")), std::nullopt);
 }
 
 } // namespace

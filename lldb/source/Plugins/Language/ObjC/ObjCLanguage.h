@@ -108,7 +108,7 @@ public:
 
   lldb::TypeCategoryImplSP GetFormatters() override;
 
-  std::vector<ConstString>
+  std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
 

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utility functions for the driver. Because there
+// This file contains utility functions for the ctx.driver. Because there
 // are so many small functions, we created this separate file to make
 // Driver.cpp less cluttered.
 //
@@ -16,7 +16,6 @@
 #include "Driver.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -34,12 +34,15 @@ using namespace lld::elf;
 // Create OptTable
 
 // Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
 // Create table mapping all options defined in Options.td
-static const opt::OptTable::Info optInfo[] = {
+static constexpr opt::OptTable::Info optInfo[] = {
 #define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
   {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
    X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
@@ -47,7 +50,7 @@ static const opt::OptTable::Info optInfo[] = {
 #undef OPTION
 };
 
-ELFOptTable::ELFOptTable() : OptTable(optInfo) {}
+ELFOptTable::ELFOptTable() : GenericOptTable(optInfo) {}
 
 // Set color diagnostics according to --color-diagnostics={auto,always,never}
 // or --no-color-diagnostics flags.
@@ -169,11 +172,17 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_o:
-      // If -o path contains directories, "lld @response.txt" will likely
-      // fail because the archive we are creating doesn't contain empty
+    case OPT_Map:
+    case OPT_print_archive_stats:
+    case OPT_why_extract:
+      // If an output path contains directories, "lld @response.txt" will
+      // likely fail because the archive we are creating doesn't contain empty
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
-      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
+      os << arg->getSpelling();
+      if (arg->getOption().getRenderStyle() == opt::Option::RenderSeparateStyle)
+        os << ' ';
+      os << quote(path::filename(arg->getValue())) << '\n';
       break;
     case OPT_lto_sample_profile:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";
@@ -201,7 +210,8 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
 
 // Find a file by concatenating given paths. If a resulting path
 // starts with "=", the character is replaced with a --sysroot value.
-static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
+static std::optional<std::string> findFile(StringRef path1,
+                                           const Twine &path2) {
   SmallString<128> s;
   if (path1.startswith("="))
     path::append(s, config->sysroot, path1.substr(1), path2);
@@ -210,31 +220,31 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
 
   if (fs::exists(s))
     return std::string(s);
-  return None;
+  return std::nullopt;
 }
 
-Optional<std::string> elf::findFromSearchPaths(StringRef path) {
+std::optional<std::string> elf::findFromSearchPaths(StringRef path) {
   for (StringRef dir : config->searchPaths)
-    if (Optional<std::string> s = findFile(dir, path))
+    if (std::optional<std::string> s = findFile(dir, path))
       return s;
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<basename>. We'll look for lib<basename>.so or lib<basename>.a from
 // search paths.
-Optional<std::string> elf::searchLibraryBaseName(StringRef name) {
+std::optional<std::string> elf::searchLibraryBaseName(StringRef name) {
   for (StringRef dir : config->searchPaths) {
     if (!config->isStatic)
-      if (Optional<std::string> s = findFile(dir, "lib" + name + ".so"))
+      if (std::optional<std::string> s = findFile(dir, "lib" + name + ".so"))
         return s;
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+    if (std::optional<std::string> s = findFile(dir, "lib" + name + ".a"))
       return s;
   }
-  return None;
+  return std::nullopt;
 }
 
 // This is for -l<namespec>.
-Optional<std::string> elf::searchLibrary(StringRef name) {
+std::optional<std::string> elf::searchLibrary(StringRef name) {
   llvm::TimeTraceScope timeScope("Locate library", name);
   if (name.startswith(":"))
     return findFromSearchPaths(name.substr(1));
@@ -244,7 +254,7 @@ Optional<std::string> elf::searchLibrary(StringRef name) {
 // If a linker/version script doesn't exist in the current directory, we also
 // look for the script in the '-L' search paths. This matches the behaviour of
 // '-T', --version-script=, and linker script INPUT() command in ld.bfd.
-Optional<std::string> elf::searchScript(StringRef name) {
+std::optional<std::string> elf::searchScript(StringRef name) {
   if (fs::exists(name))
     return name.str();
   return findFromSearchPaths(name);

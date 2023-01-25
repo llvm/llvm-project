@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -disable-output
+; RUN: opt < %s -passes=reassociate -disable-output
 ; PR13021
 
 define float @test2(float %x) {

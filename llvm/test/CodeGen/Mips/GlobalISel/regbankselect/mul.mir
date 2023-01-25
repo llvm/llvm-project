@@ -3,7 +3,7 @@
 --- |
 
   define void @mul_i32(i32 %x, i32 %y) {entry: ret void}
-  define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag) { ret void }
+  define void @umul_with_overflow(i32 %lhs, i32 %rhs, ptr %pmul, ptr %pcarry_flag) { ret void }
 
 ...
 ---

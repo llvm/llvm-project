@@ -89,9 +89,9 @@ private:
   /// parameter. These are used by an implementation to opt-into stricter
   /// checking.
   bool isFortifiedCallFoldable(CallInst *CI, unsigned ObjSizeOp,
-                               Optional<unsigned> SizeOp = None,
-                               Optional<unsigned> StrOp = None,
-                               Optional<unsigned> FlagsOp = None);
+                               std::optional<unsigned> SizeOp = std::nullopt,
+                               std::optional<unsigned> StrOp = std::nullopt,
+                               std::optional<unsigned> FlagsOp = std::nullopt);
 };
 
 /// LibCallSimplifier - This class implements a collection of optimizations
@@ -161,6 +161,7 @@ private:
   Value *optimizeStrNDup(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrCpy(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStpCpy(CallInst *CI, IRBuilderBase &B);
+  Value *optimizeStrLCpy(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrNCpy(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrLen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrNLen(CallInst *CI, IRBuilderBase &B);
@@ -182,6 +183,9 @@ private:
   Value *optimizeRealloc(CallInst *CI, IRBuilderBase &B);
   Value *optimizeWcslen(CallInst *CI, IRBuilderBase &B);
   Value *optimizeBCopy(CallInst *CI, IRBuilderBase &B);
+
+  // Helper to optimize stpncpy and strncpy.
+  Value *optimizeStringNCpy(CallInst *CI, bool RetEnd, IRBuilderBase &B);
   // Wrapper for all String/Memory Library Call Optimizations
   Value *optimizeStringMemoryLibCall(CallInst *CI, IRBuilderBase &B);
 
@@ -222,6 +226,8 @@ private:
   Value *optimizePuts(CallInst *CI, IRBuilderBase &B);
 
   // Helper methods
+  Value* emitSnPrintfMemCpy(CallInst *CI, Value *StrArg, StringRef Str,
+                            uint64_t N, IRBuilderBase &B);
   Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
                           IRBuilderBase &B);
   void classifyArgUse(Value *Val, Function *F, bool IsFloat,

@@ -27,6 +27,8 @@ Symbol func(llvm::StringRef Name);
 Symbol cls(llvm::StringRef Name);
 // Creates an enum symbol.
 Symbol enm(llvm::StringRef Name);
+// Creates an enum constant symbol.
+Symbol enmConstant(llvm::StringRef Name);
 // Creates a variable symbol.
 Symbol var(llvm::StringRef Name);
 // Creates a namespace symbol.
@@ -39,6 +41,8 @@ Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,
                llvm::StringRef USRPrefix);
 // Create an @interface or @implementation.
 Symbol objcClass(llvm::StringRef Name);
+// Create an @interface or @implementation category.
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName);
 // Create an @protocol.
 Symbol objcProtocol(llvm::StringRef Name);
 

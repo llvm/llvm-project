@@ -1064,3 +1064,41 @@ func.func @test_interleaved_affine_for_if() {
 
   return
 }
+
+// -----
+// CHECK-LABEL: func @dependent_parallel() {
+func.func @dependent_parallel() {
+  %0 = memref.alloc() : memref<10xf32>
+  %cst = arith.constant 7.000000e+00 : f32
+  affine.parallel (%i0) = (0) to (10) {
+    affine.store %cst, %0[%i0] : memref<10xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+  }
+  affine.parallel (%i1) = (0) to (10) {
+    %1 = affine.load %0[%i1] : memref<10xf32>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+  }
+  return
+}
+
+// -----
+
+func.func @affine_if_no_dependence() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<15xi1>
+  %true = arith.constant true
+  affine.store %true, %alloc[%c1] : memref<15xi1>
+  // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+  // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+  // This set is empty.
+  affine.if affine_set<(d0, d1, d2, d3) : ((d0 + 1) mod 8 >= 0, d0 * -8 >= 0)>(%c1, %c1, %c1, %c1){
+    %265 = affine.load %alloc[%c1] : memref<15xi1>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+  }
+  return
+}

@@ -15,7 +15,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @jd(i32 %b, i32* %A, i32* %B) {
+define void @jd(i32 %b, ptr %A, ptr %B) {
 entry:
   br label %for.cond
 
@@ -30,18 +30,18 @@ for.body:                                         ; preds = %for.cond
 
 if.then:                                          ; preds = %for.body
   %tmp = add nsw i64 %indvars.iv, -1
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %tmp
-  %tmp3 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp3, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %tmp
+  %tmp3 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp3, ptr %arrayidx2, align 4
   br label %if.end
 
 if.else:                                          ; preds = %for.body
   %tmp4 = add nsw i64 %indvars.iv, -1
-  %arrayidx5 = getelementptr inbounds i32, i32* %B, i64 %tmp4
-  %tmp5 = load i32, i32* %arrayidx5, align 4
-  %arrayidx7 = getelementptr inbounds i32, i32* %B, i64 %indvars.iv
-  store i32 %tmp5, i32* %arrayidx7, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %B, i64 %tmp4
+  %tmp5 = load i32, ptr %arrayidx5, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %B, i64 %indvars.iv
+  store i32 %tmp5, ptr %arrayidx7, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

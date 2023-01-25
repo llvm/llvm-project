@@ -6,11 +6,11 @@
 ; Function Attrs: nounwind
 define void @foo() #0 {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   %conv = fpext float %0 to double
   %add = fadd double %conv, 1.500000e+00
   %conv1 = fptrunc double %add to float
-  store float %conv1, float* @x, align 4
+  store float %conv1, ptr @x, align 4
   ret void
 }
 ; CHECK: 	.ent	foo
@@ -20,11 +20,11 @@ entry:
 ; Function Attrs: nounwind
 define void @nofoo() #1 {
 entry:
-  %0 = load float, float* @x, align 4
+  %0 = load float, ptr @x, align 4
   %conv = fpext float %0 to double
   %add = fadd double %conv, 3.900000e+00
   %conv1 = fptrunc double %add to float
-  store float %conv1, float* @x, align 4
+  store float %conv1, ptr @x, align 4
   ret void
 }
 

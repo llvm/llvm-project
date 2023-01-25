@@ -1,9 +1,9 @@
-; RUN: opt < %s -passes='asan-pipeline' -S -mtriple=x86_64-scei-ps4 | FileCheck %s
-; RUN: opt < %s -passes='asan-pipeline' -S -mtriple=x86_64-sie-ps5 | FileCheck %s
+; RUN: opt < %s -passes=asan -S -mtriple=x86_64-scei-ps4 | FileCheck %s
+; RUN: opt < %s -passes=asan -S -mtriple=x86_64-sie-ps5 | FileCheck %s
 
-define i32 @read_4_bytes(i32* %a) sanitize_address {
+define i32 @read_4_bytes(ptr %a) sanitize_address {
 entry:
-  %tmp1 = load i32, i32* %a, align 4
+  %tmp1 = load i32, ptr %a, align 4
   ret i32 %tmp1
 }
 

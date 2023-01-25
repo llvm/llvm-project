@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 namespace {
 AST_MATCHER(FloatingLiteral, floatHalf) {
@@ -66,6 +64,4 @@ void IncorrectRoundingsCheck::check(const MatchFinder::MatchResult &Result) {
        "consider using lround (#include <cmath>) instead");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

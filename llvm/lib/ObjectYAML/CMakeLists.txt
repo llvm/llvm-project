@@ -34,6 +34,7 @@ add_llvm_component_library(LLVMObjectYAML
   BinaryFormat
   Object
   Support
+  TargetParser
   DebugInfoCodeView
   MC
   )

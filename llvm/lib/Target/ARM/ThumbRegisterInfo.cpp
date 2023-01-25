@@ -141,7 +141,7 @@ static void emitThumbRegPlusImmInReg(
   Register LdReg = DestReg;
   if (DestReg == ARM::SP)
     assert(BaseReg == ARM::SP && "Unexpected!");
-  if (!isARMLowRegister(DestReg) && !Register::isVirtualRegister(DestReg))
+  if (!isARMLowRegister(DestReg) && !DestReg.isVirtual())
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {
@@ -458,7 +458,7 @@ void ThumbRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   (void)Done;
 }
 
-void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                             int SPAdj, unsigned FIOperandNum,
                                             RegScavenger *RS) const {
   MachineInstr &MI = *II;
@@ -498,14 +498,14 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.isDebugValue()) {
     MI.getOperand(FIOperandNum).  ChangeToRegister(FrameReg, false /*isDef*/);
     MI.getOperand(FIOperandNum+1).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   // Modify MI as necessary to handle as much of 'Offset' as possible
   assert(MF.getInfo<ARMFunctionInfo>()->isThumbFunction() &&
          "This eliminateFrameIndex only supports Thumb1!");
   if (rewriteFrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
-    return;
+    return true;
 
   // If we get here, the immediate doesn't fit into the instruction.  We folded
   // as much as possible above, handle the rest, providing a register that is
@@ -596,6 +596,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Add predicate back if it's needed.
   if (MI.isPredicable())
     MIB.add(predOps(ARMCC::AL));
+  return false;
 }
 
 bool

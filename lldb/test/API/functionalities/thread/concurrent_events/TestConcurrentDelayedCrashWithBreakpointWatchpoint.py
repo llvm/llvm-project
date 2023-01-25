@@ -1,6 +1,4 @@
 
-import unittest2
-
 from lldbsuite.test.decorators import *
 from lldbsuite.test.concurrent_base import ConcurrentEventsBase
 from lldbsuite.test.lldbtest import TestBase

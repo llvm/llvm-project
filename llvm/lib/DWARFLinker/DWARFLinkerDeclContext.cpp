@@ -64,7 +64,7 @@ DeclContextTree::getChildDeclContext(DeclContext &Context, const DWARFDie &DIE,
          Context.getTag() == dwarf::DW_TAG_compile_unit) &&
         !dwarf::toUnsigned(DIE.find(dwarf::DW_AT_external), 0))
       return PointerIntPair<DeclContext *, 1>(nullptr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case dwarf::DW_TAG_member:
   case dwarf::DW_TAG_namespace:
   case dwarf::DW_TAG_structure_type:

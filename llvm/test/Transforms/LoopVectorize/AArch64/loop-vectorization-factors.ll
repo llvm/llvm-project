@@ -1,14 +1,14 @@
-; RUN: opt -S < %s -basic-aa -loop-vectorize -force-vector-interleave=1 2>&1 | FileCheck %s
+; RUN: opt -S < %s -passes=loop-vectorize -force-vector-interleave=1 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64"
 
 ; CHECK-LABEL: @add_a(
-; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: load <16 x i8>, ptr
 ; CHECK: add <16 x i8>
 ; CHECK: store <16 x i8>
 ; Function Attrs: nounwind
-define void @add_a(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+define void @add_a(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp8 = icmp sgt i32 %len, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
@@ -18,13 +18,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %conv = zext i8 %0 to i32
   %add = add nuw nsw i32 %conv, 2
   %conv1 = trunc i32 %add to i8
-  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %conv1, i8* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %conv1, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -34,11 +34,11 @@ for.body:                                         ; preds = %entry, %for.body
 ; Ensure that we preserve nuw/nsw if we're not shrinking the values we're
 ; working with.
 ; CHECK-LABEL: @add_a1(
-; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: load <16 x i8>, ptr
 ; CHECK: add nuw nsw <16 x i8>
 ; CHECK: store <16 x i8>
 ; Function Attrs: nounwind
-define void @add_a1(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+define void @add_a1(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp8 = icmp sgt i32 %len, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
@@ -48,11 +48,11 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %add = add nuw nsw i8 %0, 2
-  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %add, i8* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %add, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -60,11 +60,11 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_b(
-; CHECK: load <8 x i16>, <8 x i16>*
+; CHECK: load <8 x i16>, ptr
 ; CHECK: add <8 x i16>
 ; CHECK: store <8 x i16>
 ; Function Attrs: nounwind
-define void @add_b(i16* noalias nocapture readonly %p, i16* noalias nocapture %q, i32 %len) #0 {
+define void @add_b(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp9 = icmp sgt i32 %len, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
@@ -74,13 +74,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i16, i16* %p, i64 %indvars.iv
-  %0 = load i16, i16* %arrayidx
+  %arrayidx = getelementptr inbounds i16, ptr %p, i64 %indvars.iv
+  %0 = load i16, ptr %arrayidx
   %conv8 = zext i16 %0 to i32
   %add = add nuw nsw i32 %conv8, 2
   %conv1 = trunc i32 %add to i16
-  %arrayidx3 = getelementptr inbounds i16, i16* %q, i64 %indvars.iv
-  store i16 %conv1, i16* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i16, ptr %q, i64 %indvars.iv
+  store i16 %conv1, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -88,11 +88,11 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; CHECK-LABEL: @add_c(
-; CHECK: load <8 x i8>, <8 x i8>*
+; CHECK: load <8 x i8>, ptr
 ; CHECK: add <8 x i16>
 ; CHECK: store <8 x i16>
 ; Function Attrs: nounwind
-define void @add_c(i8* noalias nocapture readonly %p, i16* noalias nocapture %q, i32 %len) #0 {
+define void @add_c(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp8 = icmp sgt i32 %len, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
@@ -102,13 +102,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %conv = zext i8 %0 to i32
   %add = add nuw nsw i32 %conv, 2
   %conv1 = trunc i32 %add to i16
-  %arrayidx3 = getelementptr inbounds i16, i16* %q, i64 %indvars.iv
-  store i16 %conv1, i16* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i16, ptr %q, i64 %indvars.iv
+  store i16 %conv1, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -119,7 +119,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: load <8 x i16>
 ; CHECK: add nsw <8 x i32>
 ; CHECK: store <8 x i32>
-define void @add_d(i16* noalias nocapture readonly %p, i32* noalias nocapture %q, i32 %len) #0 {
+define void @add_d(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp7 = icmp sgt i32 %len, 0
   br i1 %cmp7, label %for.body, label %for.cond.cleanup
@@ -129,12 +129,12 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i16, i16* %p, i64 %indvars.iv
-  %0 = load i16, i16* %arrayidx
+  %arrayidx = getelementptr inbounds i16, ptr %p, i64 %indvars.iv
+  %0 = load i16, ptr %arrayidx
   %conv = sext i16 %0 to i32
   %add = add nsw i32 %conv, 2
-  %arrayidx2 = getelementptr inbounds i32, i32* %q, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx2
+  %arrayidx2 = getelementptr inbounds i32, ptr %q, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx2
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -151,7 +151,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: xor <16 x i8>
 ; CHECK: mul <16 x i8>
 ; CHECK: store <16 x i8>
-define void @add_e(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
+define void @add_e(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 entry:
   %cmp.32 = icmp sgt i32 %len, 0
   br i1 %cmp.32, label %for.body.lr.ph, label %for.cond.cleanup
@@ -166,8 +166,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %conv = zext i8 %0 to i32
   %add = shl i32 %conv, 4
   %conv2 = add nuw nsw i32 %add, 32
@@ -178,8 +178,8 @@ for.body:                                         ; preds = %for.body, %for.body
   %conv17 = xor i32 %mul.masked, %conv11
   %mul18 = mul nuw nsw i32 %conv17, %and
   %conv19 = trunc i32 %mul18 to i8
-  %arrayidx21 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %conv19, i8* %arrayidx21
+  %arrayidx21 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %conv19, ptr %arrayidx21
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -197,7 +197,7 @@ for.body:                                         ; preds = %for.body, %for.body
 ; CHECK: xor <8 x i8>
 ; CHECK: mul <8 x i8>
 ; CHECK: store <8 x i8>
-define void @add_f(i16* noalias nocapture readonly %p, i8* noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
+define void @add_f(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i8 %arg1, i8 %arg2, i32 %len) #0 {
 entry:
   %cmp.32 = icmp sgt i32 %len, 0
   br i1 %cmp.32, label %for.body.lr.ph, label %for.cond.cleanup
@@ -212,8 +212,8 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i16, i16* %p, i64 %indvars.iv
-  %0 = load i16, i16* %arrayidx
+  %arrayidx = getelementptr inbounds i16, ptr %p, i64 %indvars.iv
+  %0 = load i16, ptr %arrayidx
   %conv = sext i16 %0 to i32
   %add = shl i32 %conv, 4
   %conv2 = add nsw i32 %add, 32
@@ -225,8 +225,8 @@ for.body:                                         ; preds = %for.body, %for.body
   %conv17 = xor i32 %mul.masked, %conv11
   %mul18 = mul nuw nsw i32 %conv17, %and
   %conv19 = trunc i32 %mul18 to i8
-  %arrayidx21 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %conv19, i8* %arrayidx21
+  %arrayidx21 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %conv19, ptr %arrayidx21
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -234,11 +234,11 @@ for.body:                                         ; preds = %for.body, %for.body
 }
 
 ; CHECK-LABEL: @add_phifail(
-; CHECK: load <16 x i8>, <16 x i8>*
+; CHECK: load <16 x i8>, ptr
 ; CHECK: add nuw nsw <16 x i32>
 ; CHECK: store <16 x i8>
 ; Function Attrs: nounwind
-define void @add_phifail(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+define void @add_phifail(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 entry:
   %cmp8 = icmp sgt i32 %len, 0
   br i1 %cmp8, label %for.body, label %for.cond.cleanup
@@ -249,13 +249,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %conv = zext i8 %0 to i32
   %add = add nuw nsw i32 %conv, 2
   %conv1 = trunc i32 %add to i8
-  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %conv1, i8* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %conv1, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len
@@ -265,12 +265,12 @@ for.body:                                         ; preds = %entry, %for.body
 ; Function Attrs: nounwind
 ; When we vectorize this loop, we generate correct code
 ; even when %len exactly divides VF (since we extract from the second last index
-; and pass this to the for.cond.cleanup block). Vectorized loop returns 
+; and pass this to the for.cond.cleanup block). Vectorized loop returns
 ; the correct value a_phi = p[len -2]
-define i8 @add_phifail2(i8* noalias nocapture readonly %p, i8* noalias nocapture %q, i32 %len) #0 {
+define i8 @add_phifail2(ptr noalias nocapture readonly %p, ptr noalias nocapture %q, i32 %len) #0 {
 ; CHECK-LABEL: @add_phifail2(
 ; CHECK: vector.body:
-; CHECK:   %wide.load = load <16 x i8>, <16 x i8>*
+; CHECK:   %wide.load = load <16 x i8>, ptr
 ; CHECK:   %[[L1:.+]] = zext <16 x i8> %wide.load to <16 x i32>
 ; CHECK:   add nuw nsw <16 x i32>
 ; CHECK:   store <16 x i8>
@@ -293,13 +293,13 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
   %a_phi = phi i32 [ %conv, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx
   %conv = zext i8 %0 to i32
   %add = add nuw nsw i32 %conv, 2
   %conv1 = trunc i32 %add to i8
-  %arrayidx3 = getelementptr inbounds i8, i8* %q, i64 %indvars.iv
-  store i8 %conv1, i8* %arrayidx3
+  %arrayidx3 = getelementptr inbounds i8, ptr %q, i64 %indvars.iv
+  store i8 %conv1, ptr %arrayidx3
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %len

@@ -17,6 +17,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -39,7 +40,7 @@ struct CachedFileContents {
   SmallVector<dependency_directives_scan::Token, 10> DepDirectiveTokens;
   /// Accessor to the directive tokens that's atomic to avoid data races.
   /// \p CachedFileContents has ownership of the pointer.
-  std::atomic<const Optional<DependencyDirectivesTy> *> DepDirectives;
+  std::atomic<const std::optional<DependencyDirectivesTy> *> DepDirectives;
 
   ~CachedFileContents() { delete DepDirectives.load(); }
 };
@@ -88,17 +89,16 @@ public:
 
   /// \returns The scanned preprocessor directive tokens of the file that are
   /// used to speed up preprocessing, if available.
-  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens() const {
     assert(!isError() && "error");
     assert(!isDirectory() && "not a file");
     assert(Contents && "contents not initialized");
     if (auto *Directives = Contents->DepDirectives.load()) {
       if (Directives->has_value())
-        return ArrayRef<dependency_directives_scan::Directive>(
-            Directives->value());
+        return ArrayRef<dependency_directives_scan::Directive>(**Directives);
     }
-    return None;
+    return std::nullopt;
   }
 
   /// \returns The error.
@@ -263,7 +263,7 @@ public:
 
   StringRef getContents() const { return Entry.getOriginalContents(); }
 
-  Optional<ArrayRef<dependency_directives_scan::Directive>>
+  std::optional<ArrayRef<dependency_directives_scan::Directive>>
   getDirectiveTokens() const {
     return Entry.getDirectiveTokens();
   }
@@ -271,7 +271,7 @@ public:
 
 /// A virtual file system optimized for the dependency discovery.
 ///
-/// It is primarily designed to work with source files whose contents was was
+/// It is primarily designed to work with source files whose contents was
 /// preprocessed to remove any tokens that are unlikely to affect the dependency
 /// computation.
 ///
@@ -374,6 +374,13 @@ private:
                                     const CachedFileSystemEntry &Entry) {
     return SharedCache.getShardForFilename(Filename)
         .getOrInsertEntryForFilename(Filename, Entry);
+  }
+
+  void printImpl(raw_ostream &OS, PrintType Type,
+                 unsigned IndentLevel) const override {
+    printIndent(OS, IndentLevel);
+    OS << "DependencyScanningFilesystem\n";
+    getUnderlyingFS().print(OS, Type, IndentLevel + 1);
   }
 
   /// The global cache shared between worker threads.

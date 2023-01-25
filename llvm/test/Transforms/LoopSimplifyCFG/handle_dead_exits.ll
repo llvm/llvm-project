@@ -1,10 +1,10 @@
-; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -loop-simplifycfg %s | FileCheck %s
+; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes=loop-simplifycfg %s | FileCheck %s
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(loop-simplifycfg)' %s | FileCheck %s
 
-declare i32* @fake_personality_function()
+declare ptr @fake_personality_function()
 declare void @foo()
 
-define i32 @test_remove_lpad(i1 %exitcond) personality i32* ()* @fake_personality_function {
+define i32 @test_remove_lpad(i1 %exitcond) personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_remove_lpad(
 entry:
   br label %for.body
@@ -31,7 +31,7 @@ never-unwind:
   unreachable
 }
 
-define i32 @test_remove_phi_lpad(i1 %exitcond) personality i32* ()* @fake_personality_function {
+define i32 @test_remove_phi_lpad(i1 %exitcond) personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_remove_phi_lpad(
 entry:
   br label %for.body
@@ -59,7 +59,7 @@ never-unwind:
   ret i32 %p
 }
 
-define i32 @test_split_remove_phi_lpad_(i1 %exitcond) personality i32* ()* @fake_personality_function {
+define i32 @test_split_remove_phi_lpad_(i1 %exitcond) personality ptr @fake_personality_function {
 ; CHECK-LABEL: @test_split_remove_phi_lpad_(
 entry:
   invoke void @foo() to label %for.body unwind label %unwind-bb

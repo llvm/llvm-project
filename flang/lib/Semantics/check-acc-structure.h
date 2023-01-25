@@ -70,7 +70,6 @@ public:
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
 private:
-
   bool CheckAllowedModifier(llvm::acc::Clause clause);
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
   bool IsInsideComputeConstruct() const;

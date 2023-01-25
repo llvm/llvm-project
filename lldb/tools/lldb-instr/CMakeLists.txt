@@ -11,6 +11,4 @@ add_lldb_tool(lldb-instr
     clangSerialization
     clangTooling
 
-  LINK_COMPONENTS
-    Support
   )

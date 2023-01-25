@@ -49,7 +49,7 @@ define i64 @bad.0(i32 %start, i32 %low.limit, i32 %high.limit) {
   ret i64 %postinc.sext
 }
 
-define i64 @bad.1(i32 %start, i32 %low.limit, i32 %high.limit, i1* %unknown) {
+define i64 @bad.1(i32 %start, i32 %low.limit, i32 %high.limit, ptr %unknown) {
 ; CHECK-LABEL: Classifying expressions for: @bad.1
  entry:
   %postinc.start = add i32 %start, 1
@@ -66,7 +66,7 @@ define i64 @bad.1(i32 %start, i32 %low.limit, i32 %high.limit, i1* %unknown) {
   br i1 %break.early, label %continue.1, label %early.exit
 
  continue.1:
-  %cond = load volatile i1, i1* %unknown
+  %cond = load volatile i1, ptr %unknown
   %idx.inc = add nsw i32 %idx, 1
   br i1 %cond, label %loop, label %continue
 

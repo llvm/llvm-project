@@ -9,12 +9,12 @@
 ; GCN: buffer_store_short v[[R_I16]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_f16_to_i16(
-    i16 addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fptoui half %a.val to i16
-  store i16 %r.val, i16 addrspace(1)* %r
+  store i16 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -25,12 +25,12 @@ entry:
 ; GCN: buffer_store_dword v[[R_I32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_f16_to_i32(
-    i32 addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fptoui half %a.val to i32
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -45,12 +45,12 @@ entry:
 ; GCN: buffer_store_dwordx2 v[[[R_I64_Low]]{{\:}}[[R_I64_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_f16_to_i64(
-    i64 addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fptoui half %a.val to i64
-  store i64 %r.val, i64 addrspace(1)* %r
+  store i64 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -73,12 +73,12 @@ entry:
 ; GCN:     s_endpgm
 
 define amdgpu_kernel void @fptoui_v2f16_to_v2i16(
-    <2 x i16> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fptoui <2 x half> %a.val to <2 x i16>
-  store <2 x i16> %r.val, <2 x i16> addrspace(1)* %r
+  store <2 x i16> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -92,12 +92,12 @@ entry:
 ; GCN: buffer_store_dwordx2
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_v2f16_to_v2i32(
-    <2 x i32> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fptoui <2 x half> %a.val to <2 x i32>
-  store <2 x i32> %r.val, <2 x i32> addrspace(1)* %r
+  store <2 x i32> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -120,12 +120,12 @@ entry:
 ; GCN: buffer_store_dwordx4 v[[[R_I64_0_Low]]{{\:}}[[R_I64_1_High]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fptoui_v2f16_to_v2i64(
-    <2 x i64> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fptoui <2 x half> %a.val to <2 x i64>
-  store <2 x i64> %r.val, <2 x i64> addrspace(1)* %r
+  store <2 x i64> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -135,9 +135,9 @@ entry:
 ; SI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, vcc
 ; VI: v_cmp_eq_f16_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{[0-9]+}}
 ; VI: v_cndmask_b32_e64 v{{[0-9]+}}, 0, 1, s[4:5]
-define amdgpu_kernel void @fptoui_f16_to_i1(i1 addrspace(1)* %out, half %in) {
+define amdgpu_kernel void @fptoui_f16_to_i1(ptr addrspace(1) %out, half %in) {
 entry:
   %conv = fptoui half %in to i1
-  store i1 %conv, i1 addrspace(1)* %out
+  store i1 %conv, ptr addrspace(1) %out
   ret void
 }

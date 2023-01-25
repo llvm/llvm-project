@@ -6,12 +6,12 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-define void @foo(i32* nocapture %a0) local_unnamed_addr #0 {
+define void @foo(ptr nocapture %a0) local_unnamed_addr #0 {
 b1:
-  %v2 = getelementptr inbounds i32, i32* %a0, i32 26
-  %v3 = load i32, i32* %v2, align 4
+  %v2 = getelementptr inbounds i32, ptr %a0, i32 26
+  %v3 = load i32, ptr %v2, align 4
   %v4 = add nsw i32 %v3, 1
-  %v5 = load i32, i32* %a0, align 4
+  %v5 = load i32, ptr %a0, align 4
   br label %b6
 
 b6:                                               ; preds = %b28, %b1
@@ -40,7 +40,7 @@ b6:                                               ; preds = %b28, %b1
 
 b28:                                              ; preds = %b6
   %v29 = add nsw i32 %v3, %v7
-  store i32 %v29, i32* %a0, align 4
+  store i32 %v29, ptr %a0, align 4
   br label %b6
 
 b30:                                              ; preds = %b6

@@ -10,18 +10,18 @@ define void @caller() #0 {
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32
-  store i32 42, i32* %x
-  call void @promote_i32_ptr(i32* %x), !prof !0
+  store i32 42, ptr %x
+  call void @promote_i32_ptr(ptr %x), !prof !0
   ret void
 }
 
-define internal void @promote_i32_ptr(i32* %xp) !prof !1 {
+define internal void @promote_i32_ptr(ptr %xp) !prof !1 {
 ; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr
 ; CHECK-SAME: (i32 [[XP_0_VAL:%.*]]) !prof [[PROF1:![0-9]+]] {
 ; CHECK-NEXT:    call void @use_i32(i32 [[XP_0_VAL]])
 ; CHECK-NEXT:    ret void
 ;
-  %x = load i32, i32* %xp
+  %x = load i32, ptr %xp
   call void @use_i32(i32 %x)
   ret void
 }

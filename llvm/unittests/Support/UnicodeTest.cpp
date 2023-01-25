@@ -45,6 +45,11 @@ TEST(Unicode, columnWidthUTF8) {
   EXPECT_EQ(3, columnWidthUTF8("q\344\270\200"));
   EXPECT_EQ(3, columnWidthUTF8("\314\200\340\270\201\344\270\200"));
 
+  EXPECT_EQ(2, columnWidthUTF8("\342\214\232")); // U+231A WATCH (emoji)
+  EXPECT_EQ(2, columnWidthUTF8("\360\237\253\233")); // U+1FADB PEA POD (Unicode 15 emoji)
+  EXPECT_EQ(2, columnWidthUTF8("\360\233\204\262")); // U+1B132 HIRAGANA LETTER SMALL KO
+  EXPECT_EQ(2, columnWidthUTF8("\360\227\201\202")); // U+17042 TANGUT IDEOGRAPH
+
   // Invalid UTF-8 strings, columnWidthUTF8 should error out.
   EXPECT_EQ(-2, columnWidthUTF8("\344"));
   EXPECT_EQ(-2, columnWidthUTF8("\344\270"));
@@ -139,6 +144,7 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x0FAD9u, map("CJK COMPATIBILITY IDEOGRAPH-FAD9"));
   EXPECT_EQ(0x2F800u, map("CJK COMPATIBILITY IDEOGRAPH-2F800"));
   EXPECT_EQ(0x2FA1Du, map("CJK COMPATIBILITY IDEOGRAPH-2FA1D"));
+  EXPECT_EQ(0x31350u, map("CJK UNIFIED IDEOGRAPH-31350")); // Unicode 15.0
 
   EXPECT_EQ(0xAC00u, map("HANGUL SYLLABLE GA"));
   EXPECT_EQ(0xAC14u, map("HANGUL SYLLABLE GASS"));
@@ -156,9 +162,12 @@ TEST(Unicode, nameToCodepointStrict) {
   EXPECT_EQ(0x02235u, map("BECAUSE"));
   EXPECT_EQ(0x1F514u, map("BELL"));
   EXPECT_EQ(0x1F9A9u, map("FLAMINGO"));
+  EXPECT_EQ(0x1F9A9u, map("FLAMINGO"));
   EXPECT_EQ(0x1F402u, map("OX")); // 2 characters
   EXPECT_EQ(0x0FBF9u, map("ARABIC LIGATURE UIGHUR KIRGHIZ YEH WITH HAMZA "
                           "ABOVE WITH ALEF MAKSURA ISOLATED FORM"));
+  EXPECT_EQ(0x11F04u, map("KAWI LETTER A")); // Unicode 15.0
+  EXPECT_EQ(0x1FA77u, map("PINK HEART")); // Unicode 15.0
 
   // Aliases
   EXPECT_EQ(0x0000u, map("NULL"));

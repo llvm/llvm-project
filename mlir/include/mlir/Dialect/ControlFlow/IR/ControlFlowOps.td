@@ -22,13 +22,14 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def ControlFlow_Dialect : Dialect {
   let name = "cf";
   let cppNamespace = "::mlir::cf";
-  let dependentDialects = ["arith::ArithmeticDialect"];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+  let dependentDialects = ["arith::ArithDialect"];
   let description = [{
     This dialect contains low-level, i.e. non-region based, control flow
     constructs. These constructs generally represent control flow directly
     on SSA blocks of a control flow graph.
   }];
+
+  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 class CF_Op<string mnemonic, list<Trait> traits = []> :
@@ -65,7 +66,7 @@ def AssertOp : CF_Op<"assert"> {
 
 def BranchOp : CF_Op<"br", [
     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-    NoSideEffect, Terminator
+    Pure, Terminator
   ]> {
   let summary = "branch operation";
   let description = [{
@@ -114,7 +115,7 @@ def BranchOp : CF_Op<"br", [
 def CondBranchOp : CF_Op<"cond_br",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-     NoSideEffect, Terminator]> {
+     Pure, Terminator]> {
   let summary = "conditional branch operation";
   let description = [{
     The `cond_br` terminator operation represents a conditional branch on a
@@ -229,7 +230,7 @@ def CondBranchOp : CF_Op<"cond_br",
 def SwitchOp : CF_Op<"switch",
     [AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-     NoSideEffect, Terminator]> {
+     Pure, Terminator]> {
   let summary = "switch operation";
   let description = [{
     The `switch` terminator operation represents a switch on a signless integer
@@ -254,7 +255,7 @@ def SwitchOp : CF_Op<"switch",
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,
-    I32ElementsAttr:$case_operand_segments
+    DenseI32ArrayAttr:$case_operand_segments
   );
   let successors = (successor
     AnySuccessor:$defaultDestination,

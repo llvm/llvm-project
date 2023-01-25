@@ -168,7 +168,7 @@ public:
     return X86::NumTargetFixupKinds;
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
@@ -584,11 +584,10 @@ void X86AsmBackend::emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst)
 
   // Update the maximum alignment on the current section if necessary.
   MCSection *Sec = OS.getCurrentSectionOnly();
-  if (AlignBoundary.value() > Sec->getAlignment())
-    Sec->setAlignment(AlignBoundary);
+  Sec->ensureMinAlignment(AlignBoundary);
 }
 
-Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
+std::optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
     if (STI.getTargetTriple().getArch() == Triple::x86_64) {
@@ -614,7 +613,7 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
                  .Default(-1u);
     }
     if (Type == -1u)
-      return None;
+      return std::nullopt;
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   }
   return MCAsmBackend::getFixupKind(Name);
@@ -1146,8 +1145,8 @@ public:
     , Is64Bit(is64Bit) {
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override {
-    return StringSwitch<Optional<MCFixupKind>>(Name)
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override {
+    return StringSwitch<std::optional<MCFixupKind>>(Name)
         .Case("dir32", FK_Data_4)
         .Case("secrel32", FK_SecRel_4)
         .Case("secidx", FK_SecRel_2)

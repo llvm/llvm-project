@@ -6,8 +6,8 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 ; X32-LABEL: test_shl:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    shldl $2, %ecx, %edx
 ; X32-NEXT:    movl %edx, 60(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -48,13 +48,13 @@ define <2 x i256> @test_shl(<2 x i256> %In) {
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; X64-NEXT:    shldq $2, %rcx, %rdx
-; X64-NEXT:    shldq $2, %rdi, %rcx
+; X64-NEXT:    shldq $2, %rdx, %rcx
+; X64-NEXT:    shldq $2, %rdi, %rdx
 ; X64-NEXT:    shldq $2, %r9, %rdi
 ; X64-NEXT:    shlq $63, %rsi
 ; X64-NEXT:    shlq $2, %r9
-; X64-NEXT:    movq %rdx, 56(%rax)
-; X64-NEXT:    movq %rcx, 48(%rax)
+; X64-NEXT:    movq %rcx, 56(%rax)
+; X64-NEXT:    movq %rdx, 48(%rax)
 ; X64-NEXT:    movq %rdi, 40(%rax)
 ; X64-NEXT:    movq %r9, 32(%rax)
 ; X64-NEXT:    movq %rsi, 24(%rax)
@@ -84,36 +84,37 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X32-NEXT:    .cfi_offset %edi, -16
 ; X32-NEXT:    .cfi_offset %ebx, -12
 ; X32-NEXT:    .cfi_offset %ebp, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl %ebx, %ecx
-; X32-NEXT:    shldl $28, %edi, %ecx
-; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    shldl $28, %esi, %edi
-; X32-NEXT:    shldl $28, %edx, %esi
-; X32-NEXT:    shldl $28, %eax, %edx
-; X32-NEXT:    shldl $28, %ebp, %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shldl $28, %eax, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $4, %eax, %ecx
-; X32-NEXT:    shrl $4, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %ebx, 60(%eax)
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl %ebp, %ebx
+; X32-NEXT:    shldl $28, %edx, %ebx
+; X32-NEXT:    shldl $28, %esi, %edx
+; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    shldl $28, %ecx, %esi
+; X32-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X32-NEXT:    shldl $28, %edi, %ecx
+; X32-NEXT:    shldl $28, %eax, %edi
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shldl $28, %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    shrdl $4, %eax, %edx
+; X32-NEXT:    shrl $4, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %ebp, 60(%eax)
 ; X32-NEXT:    movl %ebx, 56(%eax)
-; X32-NEXT:    movl %edi, 52(%eax)
-; X32-NEXT:    movl %esi, 48(%eax)
-; X32-NEXT:    movl %edx, 44(%eax)
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 40(%eax)
-; X32-NEXT:    movl %ebp, 36(%eax)
-; X32-NEXT:    movl %ecx, 32(%eax)
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, 52(%eax)
+; X32-NEXT:    movl (%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, 48(%eax)
+; X32-NEXT:    movl %ecx, 44(%eax)
+; X32-NEXT:    movl %edi, 40(%eax)
+; X32-NEXT:    movl %esi, 36(%eax)
+; X32-NEXT:    movl %edx, 32(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    shrl $31, %ecx
 ; X32-NEXT:    movl %ecx, (%eax)
@@ -143,12 +144,12 @@ define <2 x i256> @test_srl(<2 x i256> %In) {
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; X64-NEXT:    shrdq $4, %rsi, %r9
-; X64-NEXT:    shrdq $4, %rcx, %rsi
+; X64-NEXT:    shrdq $4, %rdx, %rsi
+; X64-NEXT:    shrdq $4, %rcx, %rdx
 ; X64-NEXT:    shrq $63, %r8
-; X64-NEXT:    shrdq $4, %rdx, %rcx
-; X64-NEXT:    shrq $4, %rdx
-; X64-NEXT:    movq %rdx, 56(%rdi)
-; X64-NEXT:    movq %rcx, 48(%rdi)
+; X64-NEXT:    shrq $4, %rcx
+; X64-NEXT:    movq %rcx, 56(%rdi)
+; X64-NEXT:    movq %rdx, 48(%rdi)
 ; X64-NEXT:    movq %rsi, 40(%rdi)
 ; X64-NEXT:    movq %r9, 32(%rdi)
 ; X64-NEXT:    movq %r8, (%rdi)
@@ -178,36 +179,37 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X32-NEXT:    .cfi_offset %edi, -16
 ; X32-NEXT:    .cfi_offset %ebx, -12
 ; X32-NEXT:    .cfi_offset %ebp, -8
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X32-NEXT:    movl %ebx, %ecx
-; X32-NEXT:    shldl $26, %edi, %ecx
-; X32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X32-NEXT:    shldl $26, %esi, %edi
-; X32-NEXT:    shldl $26, %edx, %esi
-; X32-NEXT:    shldl $26, %eax, %edx
-; X32-NEXT:    shldl $26, %ebp, %eax
-; X32-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    shldl $26, %eax, %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $6, %eax, %ecx
-; X32-NEXT:    sarl $6, %ebx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl %ebx, 60(%eax)
-; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X32-NEXT:    movl %ebp, %ebx
+; X32-NEXT:    shldl $26, %edx, %ebx
+; X32-NEXT:    shldl $26, %esi, %edx
+; X32-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X32-NEXT:    shldl $26, %ecx, %esi
+; X32-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X32-NEXT:    shldl $26, %edi, %ecx
+; X32-NEXT:    shldl $26, %eax, %edi
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    shldl $26, %eax, %esi
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X32-NEXT:    shrdl $6, %eax, %edx
+; X32-NEXT:    sarl $6, %ebp
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl %ebp, 60(%eax)
 ; X32-NEXT:    movl %ebx, 56(%eax)
-; X32-NEXT:    movl %edi, 52(%eax)
-; X32-NEXT:    movl %esi, 48(%eax)
-; X32-NEXT:    movl %edx, 44(%eax)
-; X32-NEXT:    movl (%esp), %edx # 4-byte Reload
-; X32-NEXT:    movl %edx, 40(%eax)
-; X32-NEXT:    movl %ebp, 36(%eax)
-; X32-NEXT:    movl %ecx, 32(%eax)
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, 52(%eax)
+; X32-NEXT:    movl (%esp), %ebx # 4-byte Reload
+; X32-NEXT:    movl %ebx, 48(%eax)
+; X32-NEXT:    movl %ecx, 44(%eax)
+; X32-NEXT:    movl %edi, 40(%eax)
+; X32-NEXT:    movl %esi, 36(%eax)
+; X32-NEXT:    movl %edx, 32(%eax)
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    sarl $31, %ecx
 ; X32-NEXT:    movl %ecx, 28(%eax)
@@ -237,12 +239,12 @@ define <2 x i256> @test_sra(<2 x i256> %In) {
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rdx
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
 ; X64-NEXT:    shrdq $6, %rsi, %r9
-; X64-NEXT:    shrdq $6, %rcx, %rsi
+; X64-NEXT:    shrdq $6, %rdx, %rsi
+; X64-NEXT:    shrdq $6, %rcx, %rdx
 ; X64-NEXT:    sarq $63, %r8
-; X64-NEXT:    shrdq $6, %rdx, %rcx
-; X64-NEXT:    sarq $6, %rdx
-; X64-NEXT:    movq %rdx, 56(%rdi)
-; X64-NEXT:    movq %rcx, 48(%rdi)
+; X64-NEXT:    sarq $6, %rcx
+; X64-NEXT:    movq %rcx, 56(%rdi)
+; X64-NEXT:    movq %rdx, 48(%rdi)
 ; X64-NEXT:    movq %rsi, 40(%rdi)
 ; X64-NEXT:    movq %r9, 32(%rdi)
 ; X64-NEXT:    movq %r8, 24(%rdi)

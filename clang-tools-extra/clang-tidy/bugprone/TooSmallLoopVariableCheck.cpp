@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 static constexpr llvm::StringLiteral LoopName =
     llvm::StringLiteral("forLoopName");
@@ -175,6 +173,4 @@ void TooSmallLoopVariableCheck::check(const MatchFinder::MatchResult &Result) {
         << LoopVarType << UpperBoundType;
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

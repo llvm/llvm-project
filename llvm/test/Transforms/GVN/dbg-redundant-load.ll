@@ -1,4 +1,4 @@
-; RUN: opt -gvn -S < %s | FileCheck %s
+; RUN: opt -passes=gvn -S < %s | FileCheck %s
 
 ; Check that the redundant load from %if.then is removed.
 ; Also, check that the debug location associated to load %0 still refers to
@@ -8,20 +8,20 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: @test_redundant_load(
 ; CHECK-LABEL: entry:
-; CHECK-NEXT: load i32, i32* %Y, align 4, !dbg ![[LOC:[0-9]+]]
+; CHECK-NEXT: load i32, ptr %Y, align 4, !dbg ![[LOC:[0-9]+]]
 ; CHECK-LABEL: if.then:
 ; CHECK-NOT: load
 ; CHECK-LABEL: if.end:
 ; CHECK: ![[LOC]] = !DILocation(line: 3, scope: !{{.*}})
 
-define i32 @test_redundant_load(i32 %X, i32* %Y) !dbg !6 {
+define i32 @test_redundant_load(i32 %X, ptr %Y) !dbg !6 {
 entry:
-  %0 = load i32, i32* %Y, align 4, !dbg !8
+  %0 = load i32, ptr %Y, align 4, !dbg !8
   %cmp = icmp sgt i32 %X, -1, !dbg !9
   br i1 %cmp, label %if.then, label %if.end, !dbg !9
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %Y, align 4, !dbg !10
+  %1 = load i32, ptr %Y, align 4, !dbg !10
   %add = add nsw i32 %0, %1, !dbg !10
   call void @foo(), !dbg !11
   br label %if.end, !dbg !12

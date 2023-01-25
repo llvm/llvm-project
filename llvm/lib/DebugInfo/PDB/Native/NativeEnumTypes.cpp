@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
@@ -27,7 +26,7 @@ NativeEnumTypes::NativeEnumTypes(NativeSession &PDBSession,
                                  LazyRandomTypeCollection &Types,
                                  std::vector<codeview::TypeLeafKind> Kinds)
     : Index(0), Session(PDBSession) {
-  Optional<TypeIndex> TI = Types.getFirst();
+  std::optional<TypeIndex> TI = Types.getFirst();
   while (TI) {
     CVType CVT = Types.getType(*TI);
     TypeLeafKind K = CVT.kind();

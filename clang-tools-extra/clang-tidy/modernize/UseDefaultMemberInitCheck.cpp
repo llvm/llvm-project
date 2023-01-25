@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 AST_MATCHER_P(InitListExpr, initCountIs, unsigned, N) {
@@ -296,6 +294,4 @@ void UseDefaultMemberInitCheck::checkExistingInit(
       << FixItHint::CreateRemoval(Init->getSourceRange());
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

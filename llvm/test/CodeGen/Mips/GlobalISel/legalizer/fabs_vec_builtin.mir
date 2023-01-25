@@ -3,10 +3,10 @@
 --- |
 
   declare <4 x float> @llvm.mips.fmax.a.w(<4 x float>, <4 x float>)
-  define void @fabs_v4f32_builtin(<4 x float>* %a, <4 x float>* %c) { entry: ret void }
+  define void @fabs_v4f32_builtin(ptr %a, ptr %c) { entry: ret void }
 
   declare <2 x double> @llvm.mips.fmax.a.d(<2 x double>, <2 x double>)
-  define void @fabs_v2f64_builtin(<2 x double>* %a, <2 x double>* %c) { entry: ret void }
+  define void @fabs_v2f64_builtin(ptr %a, ptr %c) { entry: ret void }
 
 ...
 ---

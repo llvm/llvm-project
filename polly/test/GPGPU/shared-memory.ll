@@ -1,9 +1,9 @@
-; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
 ; RUN: -polly-acc-use-shared \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
-; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen-ppcg \
 ; RUN: -polly-acc-use-shared \
 ; RUN: -disable-output -polly-acc-dump-kernel-ir < %s | \
 ; RUN: FileCheck -check-prefix=KERNEL %s

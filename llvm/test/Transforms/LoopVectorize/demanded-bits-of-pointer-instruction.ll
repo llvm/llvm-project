@@ -4,15 +4,15 @@
 ; Only make sure we do not crash.
 
 ; CHECK: @test
-define void @test(i8* %ptr, i8* %ptr_end) {
+define void @test(ptr %ptr, ptr %ptr_end) {
 start:
   br label %loop
 
 loop:
-  %ptr2 = phi i8* [ %ptr3, %loop ], [ %ptr, %start ]
+  %ptr2 = phi ptr [ %ptr3, %loop ], [ %ptr, %start ]
   %x = sext i8 undef to i64
-  %ptr3 = getelementptr inbounds i8, i8* %ptr2, i64 1
-  %cmp = icmp ult i8* %ptr3, %ptr_end
+  %ptr3 = getelementptr inbounds i8, ptr %ptr2, i64 1
+  %cmp = icmp ult ptr %ptr3, %ptr_end
   br i1 %cmp, label %loop, label %end
 
 end:

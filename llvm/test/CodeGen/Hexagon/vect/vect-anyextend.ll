@@ -8,8 +8,8 @@ target triple = "hexagon-unknown-linux-gnu"
 
 define void @foo() nounwind {
 entry:
-  %_p_vec_full48 = load <4 x i8>, <4 x i8>* undef, align 8
+  %_p_vec_full48 = load <4 x i8>, ptr undef, align 8
   %0 = zext <4 x i8> %_p_vec_full48 to <4 x i32>
-  store <4 x i32> %0, <4 x i32>* undef, align 8
+  store <4 x i32> %0, ptr undef, align 8
   unreachable
 }

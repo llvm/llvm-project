@@ -12,6 +12,7 @@
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -61,8 +62,8 @@ public:
     return false;
   }
 
-  bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
-                       RegisterInfo &reg_info) override;
+  std::optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
+                                              uint32_t reg_num) override;
 
   bool CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) override;
 

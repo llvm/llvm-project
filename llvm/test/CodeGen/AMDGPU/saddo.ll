@@ -12,7 +12,7 @@ declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
 
 declare { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32>, <2 x i32>) nounwind readnone
 
-define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @saddo_i64_zext(ptr addrspace(1) %out, i64 %a, i64 %b) nounwind {
 ; SI-LABEL: saddo_i64_zext:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -120,11 +120,11 @@ define amdgpu_kernel void @saddo_i64_zext(i64 addrspace(1)* %out, i64 %a, i64 %b
   %carry = extractvalue { i64, i1 } %sadd, 1
   %ext = zext i1 %carry to i64
   %add2 = add i64 %val, %ext
-  store i64 %add2, i64 addrspace(1)* %out, align 8
+  store i64 %add2, ptr addrspace(1) %out, align 8
   ret void
 }
 
-define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 %a, i32 %b) nounwind {
+define amdgpu_kernel void @s_saddo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i32 %a, i32 %b) nounwind {
 ; SI-LABEL: s_saddo_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -224,12 +224,12 @@ define amdgpu_kernel void @s_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
   %sadd = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b) nounwind
   %val = extractvalue { i32, i1 } %sadd, 0
   %carry = extractvalue { i32, i1 } %sadd, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
-define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* %carryout, i32 addrspace(1)* %aptr, i32 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_saddo_i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
 ; SI-LABEL: v_saddo_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -336,17 +336,17 @@ define amdgpu_kernel void @v_saddo_i32(i32 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX11-NEXT:    global_store_b8 v0, v2, s[2:3]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a = load i32, i32 addrspace(1)* %aptr, align 4
-  %b = load i32, i32 addrspace(1)* %bptr, align 4
+  %a = load i32, ptr addrspace(1) %aptr, align 4
+  %b = load i32, ptr addrspace(1) %bptr, align 4
   %sadd = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b) nounwind
   %val = extractvalue { i32, i1 } %sadd, 0
   %carry = extractvalue { i32, i1 } %sadd, 1
-  store i32 %val, i32 addrspace(1)* %out, align 4
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i32 %val, ptr addrspace(1) %out, align 4
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
-define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 %a, i64 %b) nounwind {
+define amdgpu_kernel void @s_saddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, i64 %a, i64 %b) nounwind {
 ; SI-LABEL: s_saddo_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -453,12 +453,12 @@ define amdgpu_kernel void @s_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
   %val = extractvalue { i64, i1 } %sadd, 0
   %carry = extractvalue { i64, i1 } %sadd, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
-define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* %carryout, i64 addrspace(1)* %aptr, i64 addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_saddo_i64(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
 ; SI-LABEL: v_saddo_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -574,17 +574,17 @@ define amdgpu_kernel void @v_saddo_i64(i64 addrspace(1)* %out, i1 addrspace(1)* 
 ; GFX11-NEXT:    global_store_b8 v6, v0, s[6:7]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a = load i64, i64 addrspace(1)* %aptr, align 4
-  %b = load i64, i64 addrspace(1)* %bptr, align 4
+  %a = load i64, ptr addrspace(1) %aptr, align 4
+  %b = load i64, ptr addrspace(1) %bptr, align 4
   %sadd = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b) nounwind
   %val = extractvalue { i64, i1 } %sadd, 0
   %carry = extractvalue { i64, i1 } %sadd, 1
-  store i64 %val, i64 addrspace(1)* %out, align 8
-  store i1 %carry, i1 addrspace(1)* %carryout
+  store i64 %val, ptr addrspace(1) %out, align 8
+  store i1 %carry, ptr addrspace(1) %carryout
   ret void
 }
 
-define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %carryout, <2 x i32> addrspace(1)* %aptr, <2 x i32> addrspace(1)* %bptr) nounwind {
+define amdgpu_kernel void @v_saddo_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %carryout, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
 ; SI-LABEL: v_saddo_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x9
@@ -713,13 +713,13 @@ define amdgpu_kernel void @v_saddo_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 ; GFX11-NEXT:    global_store_b64 v5, v[0:1], s[2:3]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
-  %a = load <2 x i32>, <2 x i32> addrspace(1)* %aptr, align 4
-  %b = load <2 x i32>, <2 x i32> addrspace(1)* %bptr, align 4
+  %a = load <2 x i32>, ptr addrspace(1) %aptr, align 4
+  %b = load <2 x i32>, ptr addrspace(1) %bptr, align 4
   %sadd = call { <2 x i32>, <2 x i1> } @llvm.sadd.with.overflow.v2i32(<2 x i32> %a, <2 x i32> %b) nounwind
   %val = extractvalue { <2 x i32>, <2 x i1> } %sadd, 0
   %carry = extractvalue { <2 x i32>, <2 x i1> } %sadd, 1
-  store <2 x i32> %val, <2 x i32> addrspace(1)* %out, align 4
+  store <2 x i32> %val, ptr addrspace(1) %out, align 4
   %carry.ext = zext <2 x i1> %carry to <2 x i32>
-  store <2 x i32> %carry.ext, <2 x i32> addrspace(1)* %carryout
+  store <2 x i32> %carry.ext, ptr addrspace(1) %carryout
   ret void
 }

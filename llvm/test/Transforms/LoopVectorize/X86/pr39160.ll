@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
@@ -64,7 +64,7 @@ bb68:                                             ; preds = %bb62
   br label %bb62
 }
 
-define i32 @foo(i32 addrspace(1)* %p) {
+define i32 @foo(ptr addrspace(1) %p) {
 
 ; CHECK-LABEL: foo
 ; CHECK:       middle.block:
@@ -88,7 +88,7 @@ inner:                                            ; preds = %inner, %outer
   br i1 %5, label %inner, label %outer_latch
 
 outer_latch:                                      ; preds = %inner
-  store atomic i32 %2, i32 addrspace(1)* %p unordered, align 4
+  store atomic i32 %2, ptr addrspace(1) %p unordered, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %6 = icmp ugt i64 %iv, 63
   br i1 %6, label %exit, label %outer

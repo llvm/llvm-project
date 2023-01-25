@@ -29,3 +29,17 @@ func.func @transfer_write(%t: tensor<?x?xf32>, %o1: index,
       : vector<5x6xf32>, tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @gather(
+//  CHECK-SAME:     %[[base:.*]]: tensor<?x?xf32>, %[[v:.*]]: vector<16xi32>,
+//  CHECK-SAME:     %[[mask:.*]]: vector<16xi1>, %[[pass_thru:.*]]: vector<16xf32>)
+//       CHECK:   %[[m:.*]] = bufferization.to_memref %[[base]] : memref<?x?xf32>
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[out:.*]] = vector.gather %[[m]][%[[c0]], %[[c0]]] [%[[v]]], %[[mask]], %[[pass_thru]] : memref<?x?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+func.func @gather(%base: tensor<?x?xf32>, %v: vector<16xi32>, %mask: vector<16xi1>, %pass_thru: vector<16xf32>) -> vector<16xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.gather %base[%c0, %c0][%v], %mask, %pass_thru : tensor<?x?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  return %0 : vector<16xf32>
+}

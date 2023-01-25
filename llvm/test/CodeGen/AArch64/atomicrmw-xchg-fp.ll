@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-- -O1 -fast-isel=0 -global-isel=false %s -o - | FileCheck %s -check-prefix=NOLSE
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-- -mattr=+lse -O1 -fast-isel=0 -global-isel=false %s -o - | FileCheck %s -check-prefix=LSE
 
-define half @test_rmw_xchg_f16(half* %dst, half %new) {
+define half @test_rmw_xchg_f16(ptr %dst, half %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f16:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    // kill: def $h0 killed $h0 def $s0
@@ -25,11 +25,11 @@ define half @test_rmw_xchg_f16(half* %dst, half %new) {
 ; LSE-NEXT:    fmov s0, w8
 ; LSE-NEXT:    // kill: def $h0 killed $h0 killed $s0
 ; LSE-NEXT:    ret
-  %res = atomicrmw xchg half* %dst, half %new seq_cst
+  %res = atomicrmw xchg ptr %dst, half %new seq_cst
   ret half %res
 }
 
-define float @test_rmw_xchg_f32(float* %dst, float %new) {
+define float @test_rmw_xchg_f32(ptr %dst, float %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f32:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    fmov w9, s0
@@ -48,11 +48,11 @@ define float @test_rmw_xchg_f32(float* %dst, float %new) {
 ; LSE-NEXT:    swpal w8, w8, [x0]
 ; LSE-NEXT:    fmov s0, w8
 ; LSE-NEXT:    ret
-  %res = atomicrmw xchg float* %dst, float %new seq_cst
+  %res = atomicrmw xchg ptr %dst, float %new seq_cst
   ret float %res
 }
 
-define double @test_rmw_xchg_f64(double* %dst, double %new) {
+define double @test_rmw_xchg_f64(ptr %dst, double %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f64:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    fmov x8, d0
@@ -71,11 +71,11 @@ define double @test_rmw_xchg_f64(double* %dst, double %new) {
 ; LSE-NEXT:    swpal x8, x8, [x0]
 ; LSE-NEXT:    fmov d0, x8
 ; LSE-NEXT:    ret
-  %res = atomicrmw xchg double* %dst, double %new seq_cst
+  %res = atomicrmw xchg ptr %dst, double %new seq_cst
   ret double %res
 }
 
-define fp128 @test_rmw_xchg_f128(fp128* %dst, fp128 %new) {
+define fp128 @test_rmw_xchg_f128(ptr %dst, fp128 %new) {
 ; NOLSE-LABEL: test_rmw_xchg_f128:
 ; NOLSE:       // %bb.0:
 ; NOLSE-NEXT:    sub sp, sp, #32
@@ -97,16 +97,22 @@ define fp128 @test_rmw_xchg_f128(fp128* %dst, fp128 %new) {
 ; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
 ; LSE-NEXT:    str q0, [sp, #16]
-; LSE-NEXT:    ldp x9, x8, [sp, #16]
+; LSE-NEXT:    ldp x2, x3, [sp, #16]
+; LSE-NEXT:    ldp x4, x5, [x0]
 ; LSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldaxp x11, x10, [x0]
-; LSE-NEXT:    stlxp w12, x9, x8, [x0]
-; LSE-NEXT:    cbnz w12, .LBB3_1
+; LSE-NEXT:    mov x7, x5
+; LSE-NEXT:    mov x6, x4
+; LSE-NEXT:    mov x5, x7
+; LSE-NEXT:    mov x4, x6
+; LSE-NEXT:    caspal x4, x5, x2, x3, [x0]
+; LSE-NEXT:    cmp x5, x7
+; LSE-NEXT:    ccmp x4, x6, #0, eq
+; LSE-NEXT:    b.ne .LBB3_1
 ; LSE-NEXT:  // %bb.2: // %atomicrmw.end
-; LSE-NEXT:    stp x11, x10, [sp]
+; LSE-NEXT:    stp x4, x5, [sp]
 ; LSE-NEXT:    ldr q0, [sp], #32
 ; LSE-NEXT:    ret
-  %res = atomicrmw xchg fp128* %dst, fp128 %new seq_cst
+  %res = atomicrmw xchg ptr %dst, fp128 %new seq_cst
   ret fp128 %res
 }

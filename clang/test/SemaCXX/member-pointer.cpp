@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify %std_cxx98- %s
 
 struct A {};
 enum B { Dummy };
@@ -14,7 +12,10 @@ class H : A {}; // expected-note 2{{implicitly declared private here}}
 int A::*pdi1;
 int (::A::*pdi2);
 int (A::*pfi)(int);
-void (*A::*ppfie)() throw(); // expected-error {{exception specifications are not allowed beyond a single level of indirection}}
+void (*A::*ppfie)() throw();
+#if __cplusplus < 201703L
+// expected-error@-2 {{exception specifications are not allowed beyond a single level of indirection}}
+#endif
 
 int B::*pbi;
 #if __cplusplus <= 199711L // C++03 or earlier modes

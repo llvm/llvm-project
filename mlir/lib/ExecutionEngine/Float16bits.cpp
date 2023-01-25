@@ -12,7 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/Float16bits.h"
+
+#ifdef MLIR_FLOAT16_DEFINE_FUNCTIONS // We are building this library
+
 #include <cmath>
+#include <cstring>
 
 namespace {
 
@@ -146,30 +150,46 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
   return os;
 }
 
-// Provide a float->bfloat conversion routine in case the runtime doesn't have
-// one.
-extern "C" uint16_t
+// Mark these symbols as weak so they don't conflict when compiler-rt also
+// defines them.
+#define ATTR_WEAK
 #ifdef __has_attribute
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
-    __attribute__((__weak__))
+#undef ATTR_WEAK
+#define ATTR_WEAK __attribute__((__weak__))
 #endif
 #endif
-    __truncsfbf2(float f) {
-  return float2bfloat(f);
+
+#if defined(__x86_64__)
+// On x86 bfloat16 is passed in SSE registers. Since both float and __bf16
+// are passed in the same register we can use the wider type and careful casting
+// to conform to x86_64 psABI. This only works with the assumption that we're
+// dealing with little-endian values passed in wider registers.
+// Ideally this would directly use __bf16, but that type isn't supported by all
+// compilers.
+using BF16ABIType = float;
+#else
+// Default to uint16_t if we have nothing else.
+using BF16ABIType = uint16_t;
+#endif
+
+// Provide a float->bfloat conversion routine in case the runtime doesn't have
+// one.
+extern "C" BF16ABIType ATTR_WEAK __truncsfbf2(float f) {
+  uint16_t bf = float2bfloat(f);
+  // The output can be a float type, bitcast it from uint16_t.
+  BF16ABIType ret = 0;
+  std::memcpy(&ret, &bf, sizeof(bf));
+  return ret;
 }
 
 // Provide a double->bfloat conversion routine in case the runtime doesn't have
 // one.
-extern "C" uint16_t
-#ifdef __has_attribute
-#if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
-    !defined(_WIN32)
-    __attribute__((__weak__))
-#endif
-#endif
-    __truncdfbf2(double d) {
+extern "C" BF16ABIType ATTR_WEAK __truncdfbf2(double d) {
   // This does a double rounding step, but it's precise enough for our use
   // cases.
   return __truncsfbf2(static_cast<float>(d));
 }
+
+#endif // MLIR_FLOAT16_DEFINE_FUNCTIONS

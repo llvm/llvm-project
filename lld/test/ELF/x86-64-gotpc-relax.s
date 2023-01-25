@@ -7,11 +7,11 @@
 # RUN: ld.lld %t.o -o %t1 --apply-dynamic-relocs
 # RUN: llvm-readobj -x .got.plt -r %t1 | FileCheck --check-prefixes=RELOC,APPLY-DYNAMIC-RELOCS %s
 # RUN: ld.lld %t.o -o %t1
-# RUN: llvm-objdump -d %t1 | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t1 | FileCheck --check-prefix=DISASM %s
 
 ## --no-relax disables GOT optimization.
 # RUN: ld.lld --no-relax %t.o -o %t2
-# RUN: llvm-objdump -d %t2 | FileCheck --check-prefix=NORELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck --check-prefix=NORELAX %s
 
 ## There is one R_X86_64_IRELATIVE relocations.
 # RELOC-LABEL: Relocations [

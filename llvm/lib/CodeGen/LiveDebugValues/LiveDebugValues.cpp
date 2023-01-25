@@ -18,6 +18,7 @@
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 
 /// \file LiveDebugValues.cpp
 ///
@@ -72,11 +73,6 @@ public:
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
-  }
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -106,6 +102,14 @@ LiveDebugValues::LiveDebugValues() : MachineFunctionPass(ID) {
 }
 
 bool LiveDebugValues::runOnMachineFunction(MachineFunction &MF) {
+  // Except for Wasm, all targets should be only using physical register at this
+  // point. Wasm only use virtual registers throught its pipeline, but its
+  // virtual registers don't participate  in this LiveDebugValues analysis; only
+  // its target indices do.
+  assert(MF.getTarget().getTargetTriple().isWasm() ||
+         MF.getProperties().hasProperty(
+             MachineFunctionProperties::Property::NoVRegs));
+
   bool InstrRefBased = MF.useDebugInstrRef();
   // Allow the user to force selection of InstrRef LDV.
   InstrRefBased |= ForceInstrRefLDV;

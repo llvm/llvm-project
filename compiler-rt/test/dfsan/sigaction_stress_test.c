@@ -3,8 +3,6 @@
 // RUN: %clangxx_dfsan -mllvm -dfsan-track-origins=1 -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && %run %t
 //
 // Test that the state of shadows from a sigaction handler are consistent.
-//
-// REQUIRES: x86_64-target-arch
 
 #include <signal.h>
 #include <stdarg.h>

@@ -95,15 +95,24 @@ endif()
 if(TARGET clang)
   add_lldb_test_dependency(clang)
 
-  if(TARGET asan)
-    add_lldb_test_dependency(asan)
+  # TestFullLtoStepping depends on LTO, and only runs when the compiler is clang.
+  add_lldb_test_dependency(LTO)
+
+  if (TARGET libcxx OR ("libcxx" IN_LIST LLVM_ENABLE_RUNTIMES))
+    set(LLDB_HAS_LIBCXX ON)
+    if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+      set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
+      set(LIBCXX_GENERATED_INCLUDE_TARGET_DIR "${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE}/c++/v1")
+    else()
+      set(LIBCXX_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LIBCXX_LIBDIR_SUFFIX})
+      set(LIBCXX_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include/c++/v1")
+    endif()
+    add_lldb_test_dependency(cxx)
   endif()
 
-  if(TARGET tsan)
-    add_lldb_test_dependency(tsan)
-  endif()
-
-  if (TARGET compiler-rt)
+  if (TARGET compiler-rt OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+    set(LLDB_HAS_COMPILER_RT ON)
     add_lldb_test_dependency(compiler-rt)
   endif()
 
@@ -118,7 +127,7 @@ if(TARGET clang)
     else()
       # We require libcxx for the test suite, so if we aren't building it,
       # provide a helpful error about how to resolve the situation.
-      if(NOT TARGET cxx AND NOT libcxx IN_LIST LLVM_ENABLE_RUNTIMES)
+      if(NOT LLDB_HAS_LIBCXX)
         message(FATAL_ERROR
           "LLDB test suite requires libc++, but it is currently disabled. "
           "Please add `libcxx` to `LLVM_ENABLE_RUNTIMES` or disable tests via "
@@ -126,15 +135,6 @@ if(TARGET clang)
       endif()
     endif()
   endif()
-
-  # Add libc++ dependency for libc++-specific tests. This is an optional
-  # dependency as it's also possible to run the libc++ tests against the libc++
-  # installed on the system.
-  if (TARGET cxx)
-    set(LLDB_HAS_LIBCXX ON)
-    add_lldb_test_dependency(cxx)
-  endif()
-
 endif()
 
 if (LLDB_BUILT_STANDALONE)
@@ -178,6 +178,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_SHARED_LIBS
   LLDB_HAS_LIBCXX
+  LLDB_TOOL_LLDB_SERVER_BUILD
   LLDB_USE_SYSTEM_DEBUGSERVER
   LLDB_IS_64_BITS)
 

@@ -268,7 +268,7 @@ function f1(n1) result(res1)
   ! CHECK:   %[[V_11:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_10]] : i64
   ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:   %[[V_14:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_15:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_16:[0-9]+]] = fir.insert_value %[[V_15]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -283,7 +283,7 @@ function f1(n1) result(res1)
   ! CHECK: ^bb2:  // 2 preds: ^bb1, ^bb3
   ! CHECK:   br ^bb5
   ! CHECK: ^bb3:  // pred: ^bb1
-  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
+  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   %[[V_19:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
   ! CHECK:   %[[V_20:[0-9]+]] = arith.cmpi eq, %[[V_19]], %c2{{.*}}_i32 : i32
   ! CHECK:   cond_br %[[V_20]], ^bb2, ^bb4
@@ -295,7 +295,7 @@ function f1(n1) result(res1)
   ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}_i64_6, %[[V_24]] : i64
   ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_27:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:   %[[V_28:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_29:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_30:[0-9]+]] = fir.insert_value %[[V_29]], %c32{{.*}}_i8_9, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -304,7 +304,7 @@ function f1(n1) result(res1)
   ! CHECK:     %[[V_33]] = fir.coordinate_of %[[V_32]], %arg3 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
   ! CHECK:     fir.store %[[V_30]] to %[[V_33]] : !fir.ref<!fir.char<1>>
   ! CHECK:   }
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
+  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   br ^bb5
   ! CHECK: ^bb5:  // 2 preds: ^bb2, ^bb4
   ! CHECK:   %[[V_31:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
@@ -327,7 +327,7 @@ entry f2(n2)
   ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
-  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
+  ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   %[[V_7:[0-9]+]] = fir.load %arg2 : !fir.ref<i32>
   ! CHECK:   %[[V_8:[0-9]+]] = arith.cmpi eq, %[[V_7]], %c2{{.*}}_i32 : i32
   ! CHECK:   cond_br %[[V_8]], ^bb2, ^bb3
@@ -341,7 +341,7 @@ entry f2(n2)
   ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_12]] : i64
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_15:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:   %[[V_16:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_17:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_18:[0-9]+]] = fir.insert_value %[[V_17]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -350,7 +350,7 @@ entry f2(n2)
   ! CHECK:     %[[V_21:[0-9]+]] = fir.coordinate_of %[[V_20]], %arg3 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
   ! CHECK:     fir.store %[[V_18]] to %[[V_21]] : !fir.ref<!fir.char<1>>
   ! CHECK:   }
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
+  ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   br ^bb4
   ! CHECK: ^bb4:  // 2 preds: ^bb2, ^bb3
   ! CHECK:   %[[V_19:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
@@ -380,7 +380,7 @@ entry f3
   ! CHECK:   %[[V_12:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_11]] : i64
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_8]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK:   %[[V_15:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
   ! CHECK:   %[[V_16:[0-9]+]] = fir.undefined !fir.char<1>
   ! CHECK:   %[[V_17:[0-9]+]] = fir.insert_value %[[V_16]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -389,7 +389,7 @@ entry f3
   ! CHECK:     %[[V_20:[0-9]+]] = fir.coordinate_of %[[V_19]], %arg2 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
   ! CHECK:     fir.store %[[V_17]] to %[[V_20]] : !fir.ref<!fir.char<1>>
   ! CHECK:   }
-  ! CHECK:   fir.call @_QFf1Ps3(%[[V_3]]) : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
+  ! CHECK:   fir.call @_QFf1Ps3(%[[V_3]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   br ^bb2
   ! CHECK: ^bb2:  // pred: ^bb1
   ! CHECK:   %[[V_18:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
@@ -410,7 +410,7 @@ contains
     ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
     ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -436,7 +436,7 @@ contains
     ! CHECK:   %[[V_7:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_6]] : i64
     ! CHECK:   %[[V_8:[0-9]+]] = fir.convert %[[V_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
     ! CHECK:   %[[V_9:[0-9]+]] = fir.convert %[[V_3]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_8]], %[[V_9]], %[[V_7]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
     ! CHECK:   %[[V_10:[0-9]+]] = arith.subi %[[V_2]]#1, %c1{{.*}} : index
     ! CHECK:   %[[V_11:[0-9]+]] = fir.undefined !fir.char<1>
     ! CHECK:   %[[V_12:[0-9]+]] = fir.insert_value %[[V_11]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>

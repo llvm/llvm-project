@@ -7,16 +7,16 @@
 ; LoopStandardAnalysisResults).
 declare void @llvm.experimental.guard(i1, ...)
 
-; CHECK: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
-; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
-; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LoopSimplifyCFGPass on Loop at depth 1
+; CHECK: Running pass: LoopPredicationPass on loop
+; CHECK-NEXT: Running pass: LICMPass on loop
+; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on loop
+; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-NEXT: Running pass: LoopPredicationPass on loop
+; CHECK-NEXT: Running pass: LICMPass on loop
+; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on loop
+; CHECK-NEXT: Running pass: LoopSimplifyCFGPass on loop
 
-
-define i32 @unsigned_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
+define i32 @unsigned_loop_0_to_n_ult_check(ptr %array, i32 %length, i32 %n) {
 entry:
   %tmp5 = icmp eq i32 %n, 0
   br i1 %tmp5, label %exit, label %loop.preheader
@@ -38,8 +38,8 @@ deopt:                                            ; preds = %loop
 
 guarded:                                          ; preds = %loop
   %i.i64 = zext i32 %i to i64
-  %array.i.ptr = getelementptr inbounds i32, i32* %array, i64 %i.i64
-  %array.i = load i32, i32* %array.i.ptr, align 4
+  %array.i.ptr = getelementptr inbounds i32, ptr %array, i64 %i.i64
+  %array.i = load i32, ptr %array.i.ptr, align 4
   %loop.acc.next = add i32 %loop.acc, %array.i
   %i.next = add nuw i32 %i, 1
   %continue = icmp ult i32 %i.next, %n

@@ -19,33 +19,30 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%class.C = type { i32 (...)** }
+%class.C = type { ptr }
 
-define hidden i32 @_ZNK1C1fEv(%class.C* %this) {
+define hidden i32 @_ZNK1C1fEv(ptr %this) {
 entry:
-  %0 = bitcast %class.C* %this to i1 (%class.C*)***
-  %vtable = load i1 (%class.C*)**, i1 (%class.C*)*** %0
-  %1 = bitcast i1 (%class.C*)** %vtable to i8*
-  %2 = tail call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1C")
-  tail call void @llvm.assume(i1 %2)
-  %vfn = getelementptr inbounds i1 (%class.C*)*, i1 (%class.C*)** %vtable, i64 2
-  %3 = load i1 (%class.C*)*, i1 (%class.C*)** %vfn
-  %call = tail call zeroext i1 %3(%class.C* %this)
+  %vtable = load ptr, ptr %this
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1C")
+  tail call void @llvm.assume(i1 %0)
+  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 2
+  %1 = load ptr, ptr %vfn
+  %call = tail call zeroext i1 %1(ptr %this)
   br i1 %call, label %if.then, label %return
 
 if.then:
-  %vtable2 = load i1 (%class.C*)**, i1 (%class.C*)*** %0
-  %4 = bitcast i1 (%class.C*)** %vtable2 to i8*
-  %5 = tail call i1 @llvm.type.test(i8* %4, metadata !"_ZTS1C")
-  tail call void @llvm.assume(i1 %5)
-  %vfn3 = getelementptr inbounds i1 (%class.C*)*, i1 (%class.C*)** %vtable2, i64 3
-  %6 = load i1 (%class.C*)*, i1 (%class.C*)** %vfn3
+  %vtable2 = load ptr, ptr %this
+  %2 = tail call i1 @llvm.type.test(ptr %vtable2, metadata !"_ZTS1C")
+  tail call void @llvm.assume(i1 %2)
+  %vfn3 = getelementptr inbounds ptr, ptr %vtable2, i64 3
+  %3 = load ptr, ptr %vfn3
   ; The method being called here and the method being called before
   ; the branch above both return true in the same vtable and only that
   ; vtable. Therefore, if this call is reached, we must select
   ; 20074028. Earlier versions of LLVM mistakenly concluded that
   ; this code *never* selects 200744028.
-  %call4 = tail call zeroext i1 %6(%class.C* nonnull %this)
+  %call4 = tail call zeroext i1 %3(ptr nonnull %this)
   %. = select i1 %call4, i32 20074028, i32 3007762
   br label %return
 
@@ -54,6 +51,6 @@ return:
   ret i32 %retval.0
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 declare void @llvm.assume(i1)

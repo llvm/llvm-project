@@ -9,10 +9,10 @@
 #include "SystemZTargetMachine.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZ.h"
+#include "SystemZMachineFunctionInfo.h"
 #include "SystemZMachineScheduler.h"
 #include "SystemZTargetTransformInfo.h"
 #include "TargetInfo/SystemZTargetInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,6 +25,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Transforms/Scalar.h"
+#include <optional>
 #include <string>
 
 using namespace llvm;
@@ -40,39 +41,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTarget() {
   initializeSystemZShortenInstPass(PR);
   initializeSystemZPostRewritePass(PR);
   initializeSystemZTDCPassPass(PR);
+  initializeSystemZDAGToDAGISelPass(PR);
 }
 
-// Determine whether we use the vector ABI.
-static bool UsesVectorABI(StringRef CPU, StringRef FS) {
-  // We use the vector ABI whenever the vector facility is avaiable.
-  // This is the case by default if CPU is z13 or later, and can be
-  // overridden via "[+-]vector" feature string elements.
-  bool VectorABI = true;
-  bool SoftFloat = false;
-  if (CPU.empty() || CPU == "generic" ||
-      CPU == "z10" || CPU == "z196" || CPU == "zEC12" ||
-      CPU == "arch8" || CPU == "arch9" || CPU == "arch10")
-    VectorABI = false;
-
-  SmallVector<StringRef, 3> Features;
-  FS.split(Features, ',', -1, false /* KeepEmpty */);
-  for (auto &Feature : Features) {
-    if (Feature == "vector" || Feature == "+vector")
-      VectorABI = true;
-    if (Feature == "-vector")
-      VectorABI = false;
-    if (Feature == "soft-float" || Feature == "+soft-float")
-      SoftFloat = true;
-    if (Feature == "-soft-float")
-      SoftFloat = false;
-  }
-
-  return VectorABI && !SoftFloat;
-}
-
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
-                                     StringRef FS) {
-  bool VectorABI = UsesVectorABI(CPU, FS);
+static std::string computeDataLayout(const Triple &TT) {
   std::string Ret;
 
   // Big endian.
@@ -92,10 +64,9 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // 128-bit floats are aligned only to 64 bits.
   Ret += "-f128:64";
 
-  // When using the vector ABI on Linux, 128-bit vectors are also aligned to 64
-  // bits. On z/OS, vector types are always aligned to 64 bits.
-  if (VectorABI || TT.isOSzOS())
-    Ret += "-v128:64";
+  // The DataLayout string always holds a vector alignment of 64 bits, see
+  // comment in clang/lib/Basic/Targets/SystemZ.h.
+  Ret += "-v128:64";
 
   // We prefer 16 bits of aligned for all globals; see above.
   Ret += "-a:8:16";
@@ -115,7 +86,7 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<TargetLoweringObjectFileELF>();
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   // Static code is suitable for use in a dynamic executable; there is no
   // separate DynamicNoPIC model.
   if (!RM || *RM == Reloc::DynamicNoPIC)
@@ -153,8 +124,8 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 //   of copy relocs, so locally-binding data symbols might not be in
 //   the range of LARL.  We need the Medium model in that case.
 static CodeModel::Model
-getEffectiveSystemZCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
-                             bool JIT) {
+getEffectiveSystemZCodeModel(std::optional<CodeModel::Model> CM,
+                             Reloc::Model RM, bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
       report_fatal_error("Target does not support the tiny CodeModel", false);
@@ -170,11 +141,11 @@ getEffectiveSystemZCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
 SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<Reloc::Model> RM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(
-          T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
+          T, computeDataLayout(TT), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
           OL),
@@ -340,4 +311,11 @@ TargetPassConfig *SystemZTargetMachine::createPassConfig(PassManagerBase &PM) {
 TargetTransformInfo
 SystemZTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(SystemZTTIImpl(this, F));
+}
+
+MachineFunctionInfo *SystemZTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SystemZMachineFunctionInfo::create<SystemZMachineFunctionInfo>(
+      Allocator, F, STI);
 }

@@ -44,12 +44,12 @@ struct TraceStartRequest {
   /// Tracing technology name, e.g. intel-pt, arm-coresight.
   std::string type;
 
-  /// If \a llvm::None, then this starts tracing the whole process. Otherwise,
+  /// If \a std::nullopt, then this starts tracing the whole process. Otherwise,
   /// only tracing for the specified threads is enabled.
-  llvm::Optional<std::vector<lldb::tid_t>> tids;
+  std::optional<std::vector<lldb::tid_t>> tids;
 
   /// \return
-  ///     \b true if \a tids is \a None, i.e. whole process tracing.
+  ///     \b true if \a tids is \a std::nullopt, i.e. whole process tracing.
   bool IsProcessTracing() const;
 };
 
@@ -72,9 +72,9 @@ struct TraceStopRequest {
 
   /// Tracing technology name, e.g. intel-pt, arm-coresight.
   std::string type;
-  /// If \a llvm::None, then this stops tracing the whole process. Otherwise,
+  /// If \a std::nullopt, then this stops tracing the whole process. Otherwise,
   /// only tracing for the specified threads is stopped.
-  llvm::Optional<std::vector<lldb::tid_t>> tids;
+  std::optional<std::vector<lldb::tid_t>> tids;
 };
 
 bool fromJSON(const llvm::json::Value &value, TraceStopRequest &packet,
@@ -132,8 +132,8 @@ llvm::json::Value toJSON(const TraceCpuState &packet);
 struct TraceGetStateResponse {
   std::vector<TraceThreadState> traced_threads;
   std::vector<TraceBinaryData> process_binary_data;
-  llvm::Optional<std::vector<TraceCpuState>> cpus;
-  llvm::Optional<std::vector<std::string>> warnings;
+  std::optional<std::vector<TraceCpuState>> cpus;
+  std::optional<std::vector<std::string>> warnings;
 
   void AddWarning(llvm::StringRef warning);
 };
@@ -152,9 +152,9 @@ struct TraceGetBinaryDataRequest {
   /// Identifier for the data.
   std::string kind;
   /// Optional tid if the data is related to a thread.
-  llvm::Optional<lldb::tid_t> tid;
+  std::optional<lldb::tid_t> tid;
   /// Optional core id if the data is related to a cpu core.
-  llvm::Optional<lldb::cpu_id_t> cpu_id;
+  std::optional<lldb::cpu_id_t> cpu_id;
 };
 
 bool fromJSON(const llvm::json::Value &value,

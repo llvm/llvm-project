@@ -80,7 +80,7 @@
 !12 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "t1", scope: !13, file: !3, line: 4, size: 8, flags: DIFlagTypePassByValue, elements: !4)
 !13 = !DINamespace(scope: null)
 !14 = !{!15}
-!15 = !DITemplateValueParameter(type: !16, value: i32* @foo)
+!15 = !DITemplateValueParameter(type: !16, value: ptr @foo)
 !16 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !17, size: 64)
 !17 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !18 = !{i32 7, !"Dwarf Version", i32 4}

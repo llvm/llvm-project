@@ -19,11 +19,11 @@
 ; NOTYPE-NOT: !DIBasicType
 
 %rust_task = type {}
-define void @test(i32* %a, i8* %b) !dbg !9 {
+define void @test(ptr %a, ptr %b) !dbg !9 {
     %s = mul i8 22, 9, !attach !0, !dbg !10
-    store i8 %s, i8* %b, !attach !1, !dbg !11
+    store i8 %s, ptr %b, !attach !1, !dbg !11
     call void @foo(), !attach !2, !dbg !12
-    store i32 7, i32* %a, !attach !3, !dbg !13
+    store i32 7, ptr %a, !attach !3, !dbg !13
     %t = add i32 0, 5, !attach !4, !dbg !14
     ret void
 }

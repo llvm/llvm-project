@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_FRONTEND_DEPENDENCYOUTPUTOPTIONS_H
 #define LLVM_CLANG_FRONTEND_DEPENDENCYOUTPUTOPTIONS_H
 
+#include "clang/Basic/HeaderInclude.h"
 #include <string>
 #include <vector>
 
@@ -43,6 +44,12 @@ public:
                                           /// also includes that were skipped
                                           /// due to the "include guard
                                           /// optimization" or #pragma once.
+
+  /// The format of header information.
+  HeaderIncludeFormatKind HeaderIncludeFormat = HIFMT_Textual;
+
+  /// Determine whether header information should be filtered.
+  HeaderIncludeFilteringKind HeaderIncludeFiltering = HIFIL_None;
 
   /// Destination of cl.exe style /showIncludes info.
   ShowIncludesDestination ShowIncludesDest = ShowIncludesDestination::None;
@@ -80,7 +87,8 @@ public:
   DependencyOutputOptions()
       : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
         AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowSkippedHeaderIncludes(0) {}
+        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
+        HeaderIncludeFiltering(HIFIL_None) {}
 };
 
 }  // end namespace clang

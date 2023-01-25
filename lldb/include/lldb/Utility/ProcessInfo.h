@@ -14,7 +14,6 @@
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/NameMatches.h"
-#include "llvm/Support/YAMLTraits.h"
 #include <vector>
 
 namespace lldb_private {
@@ -88,7 +87,6 @@ public:
   const Environment &GetEnvironment() const { return m_environment; }
 
 protected:
-  template <class T> friend struct llvm::yaml::MappingTraits;
   FileSpec m_executable;
   std::string m_arg0; // argv[0] if supported. If empty, then use m_executable.
   // Not all process plug-ins support specifying an argv[0] that differs from
@@ -148,7 +146,6 @@ public:
                       bool verbose) const;
 
 protected:
-  friend struct llvm::yaml::MappingTraits<ProcessInstanceInfo>;
   uint32_t m_euid = UINT32_MAX;
   uint32_t m_egid = UINT32_MAX;
   lldb::pid_t m_parent_pid = LLDB_INVALID_PROCESS_ID;
@@ -210,19 +207,6 @@ protected:
   bool m_match_all_users = false;
 };
 
-namespace repro {
-llvm::Optional<ProcessInstanceInfoList> GetReplayProcessInstanceInfoList();
-} // namespace repro
 } // namespace lldb_private
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ProcessInstanceInfo)
-
-namespace llvm {
-namespace yaml {
-template <> struct MappingTraits<lldb_private::ProcessInstanceInfo> {
-  static void mapping(IO &io, lldb_private::ProcessInstanceInfo &PII);
-};
-} // namespace yaml
-} // namespace llvm
 
 #endif // LLDB_UTILITY_PROCESSINFO_H

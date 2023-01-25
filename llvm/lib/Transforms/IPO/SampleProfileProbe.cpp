@@ -98,14 +98,14 @@ void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (any_isa<const Module *>(IR))
-    runAfterPass(any_cast<const Module *>(IR));
-  else if (any_isa<const Function *>(IR))
-    runAfterPass(any_cast<const Function *>(IR));
-  else if (any_isa<const LazyCallGraph::SCC *>(IR))
-    runAfterPass(any_cast<const LazyCallGraph::SCC *>(IR));
-  else if (any_isa<const Loop *>(IR))
-    runAfterPass(any_cast<const Loop *>(IR));
+  if (const auto **M = any_cast<const Module *>(&IR))
+    runAfterPass(*M);
+  else if (const auto **F = any_cast<const Function *>(&IR))
+    runAfterPass(*F);
+  else if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
+    runAfterPass(*C);
+  else if (const auto **L = any_cast<const Loop *>(&IR))
+    runAfterPass(*L);
   else
     llvm_unreachable("Unknown IR unit");
 }
@@ -137,7 +137,7 @@ void PseudoProbeVerifier::runAfterPass(const Loop *L) {
 void PseudoProbeVerifier::collectProbeFactors(const BasicBlock *Block,
                                               ProbeFactorMap &ProbeFactors) {
   for (const auto &I : *Block) {
-    if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+    if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
       uint64_t Hash = computeCallStackHash(I);
       ProbeFactors[{Probe->Id, Hash}] += Probe->Factor;
     }
@@ -421,7 +421,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   ProbeFactorMap ProbeFactors;
   for (auto &Block : F) {
     for (auto &I : Block) {
-      if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+      if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
         uint64_t Hash = computeCallStackHash(I);
         ProbeFactors[{Probe->Id, Hash}] += BBProfileCount(&Block);
       }
@@ -431,7 +431,7 @@ void PseudoProbeUpdatePass::runOnFunction(Function &F,
   // Fix up over-counted probes.
   for (auto &Block : F) {
     for (auto &I : Block) {
-      if (Optional<PseudoProbe> Probe = extractProbe(I)) {
+      if (std::optional<PseudoProbe> Probe = extractProbe(I)) {
         uint64_t Hash = computeCallStackHash(I);
         float Sum = ProbeFactors[{Probe->Id, Hash}];
         if (Sum != 0)

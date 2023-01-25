@@ -132,3 +132,15 @@ def InvalidTypeR : InvalidType<"InvalidTypeR", "invalid_r"> {
   // CHECK: `struct` can only be used at the top-level context
   let assemblyFormat = "custom<Foo>(struct(params))";
 }
+
+def InvalidTypeS : InvalidType<"InvalidTypeS", "invalid_s"> {
+  let parameters = (ins OptionalParameter<"int">:$a, "int":$b);
+  // CHECK: `custom` is only allowed in an optional group if all captured parameters are optional
+  let assemblyFormat = "(`(` custom<Foo>($a, $b)^ `)`)?";
+}
+
+def InvalidTypeT : InvalidType<"InvalidTypeT", "invalid_t"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  // CHECK: `custom` directive with no bound parameters cannot be used as optional group anchor
+  let assemblyFormat = "$a (`(` custom<Foo>(ref($a))^ `)`)?";
+}

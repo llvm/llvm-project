@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 
 ; There is no memory form of 128-bit comparison.
-define i64 @f1(i64 %a, i64 %b, fp128 *%ptr, float %f2) #0 {
+define i64 @f1(i64 %a, i64 %b, ptr %ptr, float %f2) #0 {
 ; CHECK-LABEL: f1:
 ; CHECK-DAG: lxebr %f0, %f0
 ; CHECK-DAG: ld %f1, 0(%r4)
@@ -14,7 +14,7 @@ define i64 @f1(i64 %a, i64 %b, fp128 *%ptr, float %f2) #0 {
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
   %f2x = fpext float %f2 to fp128
-  %f1 = load fp128, fp128 *%ptr
+  %f1 = load fp128, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f128(
                                                fp128 %f1, fp128 %f2x,
                                                metadata !"oeq",
@@ -24,7 +24,7 @@ define i64 @f1(i64 %a, i64 %b, fp128 *%ptr, float %f2) #0 {
 }
 
 ; Check comparison with zero - cannot use LOAD AND TEST.
-define i64 @f2(i64 %a, i64 %b, fp128 *%ptr) #0 {
+define i64 @f2(i64 %a, i64 %b, ptr %ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK-DAG: ld %f0, 0(%r4)
 ; CHECK-DAG: ld %f2, 8(%r4)
@@ -33,7 +33,7 @@ define i64 @f2(i64 %a, i64 %b, fp128 *%ptr) #0 {
 ; CHECK-NEXT: ber %r14
 ; CHECK: lgr %r2, %r3
 ; CHECK: br %r14
-  %f = load fp128, fp128 *%ptr
+  %f = load fp128, ptr %ptr
   %cond = call i1 @llvm.experimental.constrained.fcmps.f128(
                                                fp128 %f, fp128 0xL00000000000000000000000000000000,
                                                metadata !"oeq",

@@ -29,9 +29,9 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 %20 = type { [768 x i32] }
 %21 = type { [416 x i32] }
 
-define void @test(%1* %A) #0 align 2 {
+define void @test(ptr %A) #0 align 2 {
 entry:
-  %v1 = load i32, i32* undef, align 4
+  %v1 = load i32, ptr undef, align 4
   br label %bb13
 
 bb13:
@@ -49,14 +49,12 @@ bb21:
   %v22 = add nsw i32 undef, 1
   %v23 = add i32 %v22, %v3
   %v24 = mul nsw i32 %v23, %v1
-  %v25 = getelementptr inbounds %1, %1* %A, i32 0, i32 7, i32 1, i32 %v24
-  %v26 = bitcast %0* %v25 to <32 x i32>*
-  %v27 = load <32 x i32>, <32 x i32>* %v26, align 256
+  %v25 = getelementptr inbounds %1, ptr %A, i32 0, i32 7, i32 1, i32 %v24
+  %v27 = load <32 x i32>, ptr %v25, align 256
   %v28 = add i32 undef, %v3
   %v29 = mul nsw i32 %v28, 32
-  %v30 = getelementptr inbounds %1, %1* %A, i32 0, i32 7, i32 14, i32 %v29
-  %v31 = bitcast %0* %v30 to <32 x i32>*
-  %v32 = load <32 x i32>, <32 x i32>* %v31, align 128
+  %v30 = getelementptr inbounds %1, ptr %A, i32 0, i32 7, i32 14, i32 %v29
+  %v32 = load <32 x i32>, ptr %v30, align 128
   br i1 undef, label %bb21, label %bb37
 
 bb37:

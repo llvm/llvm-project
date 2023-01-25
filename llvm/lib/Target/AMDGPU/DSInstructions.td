@@ -277,6 +277,19 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
+class DS_BVH_STACK<string opName>
+: DS_Pseudo<opName,
+  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, offset:$offset),
+  " $vdst, $addr, $data0, $data1$offset"> {
+  let Constraints = "$addr = $addr_in";
+  let DisableEncoding = "$addr_in";
+  let has_gds = 0;
+  let gdsValue = 0;
+  // TODO: Use MMOs in the LDS address space instead of hasSideEffects = 1.
+  let hasSideEffects = 1;
+  let SchedRW = [WriteLDS, WriteLDS];
+}
 
 class DS_1A_RET<string opName, RegisterClass rc = VGPR_32, bit HasTiedOutput = 0, Operand ofs = offset,
                 RegisterOperand data_op = getLdStRegisterOperand<rc>.ret>
@@ -636,7 +649,7 @@ defm DS_READ2_B64    : DS_1A_Off8_RET_mc<"ds_read2_b64", VReg_128>;
 defm DS_READ2ST64_B64: DS_1A_Off8_RET_mc<"ds_read2st64_b64", VReg_128>;
 
 let has_m0_read = 0 in {
-let SubtargetPredicate = HasD16LoadStore in {
+let SubtargetPredicate = HasD16LoadStore, TiedSourceNotRead = 1 in {
 def DS_READ_U8_D16     : DS_1A_RET_Tied<"ds_read_u8_d16">;
 def DS_READ_U8_D16_HI  : DS_1A_RET_Tied<"ds_read_u8_d16_hi">;
 def DS_READ_I8_D16     : DS_1A_RET_Tied<"ds_read_i8_d16">;
@@ -713,6 +726,7 @@ let SubtargetPredicate = isGFX11Plus in {
 
 def DS_ADD_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_add_gs_reg_rtn", VReg_64, VGPR_32>;
 def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -1107,6 +1121,16 @@ let SubtargetPredicate = isGFX90APlus in {
 def : DSAtomicRetPat<DS_ADD_RTN_F64, f64, atomic_load_fadd_local_64>;
 let AddedComplexity = 1 in
 def : DSAtomicRetPat<DS_ADD_F64, f64, atomic_load_fadd_local_noret_64>;
+
+class DSAtomicRetPatIntrinsic<DS_Pseudo inst, ValueType vt, PatFrag frag,
+  bit gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value)),
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+}
+
+def : DSAtomicRetPatIntrinsic<DS_ADD_RTN_F64, f64, int_amdgcn_flat_atomic_fadd_local_addrspace>;
+let AddedComplexity = 1 in
+def : DSAtomicRetPatIntrinsic<DS_ADD_F64, f64, int_amdgcn_flat_atomic_fadd_noret_local_addrspace>;
 }
 
 let SubtargetPredicate = isGFX940Plus in {
@@ -1250,6 +1274,7 @@ defm DS_CMPSTORE_RTN_F64                 : DS_Real_gfx11<0x071>;
 defm DS_ADD_RTN_F32                      : DS_Real_gfx11<0x079>;
 defm DS_ADD_GS_REG_RTN                   : DS_Real_gfx11<0x07a>;
 defm DS_SUB_GS_REG_RTN                   : DS_Real_gfx11<0x07b>;
+defm DS_BVH_STACK_RTN_B32                : DS_Real_gfx11<0x0ad>;
 
 //===----------------------------------------------------------------------===//
 // GFX10.

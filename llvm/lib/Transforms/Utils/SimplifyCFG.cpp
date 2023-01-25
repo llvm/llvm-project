@@ -14,7 +14,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Sequence.h"
@@ -41,6 +40,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -57,6 +57,7 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
@@ -80,6 +81,7 @@
 #include <cstdint>
 #include <iterator>
 #include <map>
+#include <optional>
 #include <set>
 #include <tuple>
 #include <utility>
@@ -114,6 +116,12 @@ static cl::opt<unsigned> TwoEntryPHINodeFoldingThreshold(
 static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
+
+static cl::opt<unsigned>
+    HoistCommonSkipLimit("simplifycfg-hoist-common-skip-limit", cl::Hidden,
+                         cl::init(20),
+                         cl::desc("Allow reordering across at most this many "
+                                  "instructions when hoisting"));
 
 static cl::opt<bool>
     SinkCommon("simplifycfg-sink-common", cl::Hidden, cl::init(true),
@@ -380,7 +388,7 @@ static InstructionCost computeSpeculationCost(const User *I,
   assert((!isa<Instruction>(I) ||
           isSafeToSpeculativelyExecute(cast<Instruction>(I))) &&
          "Instruction is not safe to speculatively execute!");
-  return TTI.getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency);
+  return TTI.getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency);
 }
 
 /// If we have a merge point of an "if condition" as accepted above,
@@ -472,7 +480,8 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB,
 static ConstantInt *GetConstantInt(Value *V, const DataLayout &DL) {
   // Normal constant int.
   ConstantInt *CI = dyn_cast<ConstantInt>(V);
-  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy())
+  if (CI || !isa<Constant>(V) || !V->getType()->isPointerTy() ||
+      DL.isNonIntegralPointerType(V->getType()))
     return CI;
 
   // This is some kind of pointer constant. Turn it into a pointer-sized
@@ -829,8 +838,8 @@ static bool ValuesOverlap(std::vector<ValueEqualityComparisonCase> &C1,
   if (V1->size() == 1) {
     // Just scan V2.
     ConstantInt *TheVal = (*V1)[0].Value;
-    for (unsigned i = 0, e = V2->size(); i != e; ++i)
-      if (TheVal == (*V2)[i].Value)
+    for (const ValueEqualityComparisonCase &VECC : *V2)
+      if (TheVal == VECC.Value)
         return true;
   }
 
@@ -1050,15 +1059,6 @@ static int ConstantIntSortPredicate(ConstantInt *const *P1,
   return LHS->getValue().ult(RHS->getValue()) ? 1 : -1;
 }
 
-static inline bool HasBranchWeights(const Instruction *I) {
-  MDNode *ProfMD = I->getMetadata(LLVMContext::MD_prof);
-  if (ProfMD && ProfMD->getOperand(0))
-    if (MDString *MDS = dyn_cast<MDString>(ProfMD->getOperand(0)))
-      return MDS->getString().equals("branch_weights");
-
-  return false;
-}
-
 /// Get Weights of a given terminator, the default weight is at the front
 /// of the vector. If TI is a conditional eq, we need to swap the branch-weight
 /// metadata.
@@ -1128,7 +1128,7 @@ static void CloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     NewBonusInst->dropUndefImplyingAttrsAndUnknownMetadata(
         LLVMContext::MD_annotation);
 
-    PredBlock->getInstList().insert(PTI->getIterator(), NewBonusInst);
+    NewBonusInst->insertInto(PredBlock, PTI->getIterator());
     NewBonusInst->takeName(&BonusInst);
     BonusInst.setName(NewBonusInst->getName() + ".old");
 
@@ -1177,8 +1177,8 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
 
   // Update the branch weight metadata along the way
   SmallVector<uint64_t, 8> Weights;
-  bool PredHasWeights = HasBranchWeights(PTI);
-  bool SuccHasWeights = HasBranchWeights(TI);
+  bool PredHasWeights = hasBranchWeightMD(*PTI);
+  bool SuccHasWeights = hasBranchWeightMD(*TI);
 
   if (PredHasWeights) {
     GetBranchWeights(PTI, Weights);
@@ -1430,6 +1430,64 @@ static bool isSafeToHoistInvoke(BasicBlock *BB1, BasicBlock *BB2,
   return true;
 }
 
+// Get interesting characteristics of instructions that `HoistThenElseCodeToIf`
+// didn't hoist. They restrict what kind of instructions can be reordered
+// across.
+enum SkipFlags {
+  SkipReadMem = 1,
+  SkipSideEffect = 2,
+  SkipImplicitControlFlow = 4
+};
+
+static unsigned skippedInstrFlags(Instruction *I) {
+  unsigned Flags = 0;
+  if (I->mayReadFromMemory())
+    Flags |= SkipReadMem;
+  // We can't arbitrarily move around allocas, e.g. moving allocas (especially
+  // inalloca) across stacksave/stackrestore boundaries.
+  if (I->mayHaveSideEffects() || isa<AllocaInst>(I))
+    Flags |= SkipSideEffect;
+  if (!isGuaranteedToTransferExecutionToSuccessor(I))
+    Flags |= SkipImplicitControlFlow;
+  return Flags;
+}
+
+// Returns true if it is safe to reorder an instruction across preceding
+// instructions in a basic block.
+static bool isSafeToHoistInstr(Instruction *I, unsigned Flags) {
+  // Don't reorder a store over a load.
+  if ((Flags & SkipReadMem) && I->mayWriteToMemory())
+    return false;
+
+  // If we have seen an instruction with side effects, it's unsafe to reorder an
+  // instruction which reads memory or itself has side effects.
+  if ((Flags & SkipSideEffect) &&
+      (I->mayReadFromMemory() || I->mayHaveSideEffects()))
+    return false;
+
+  // Reordering across an instruction which does not necessarily transfer
+  // control to the next instruction is speculation.
+  if ((Flags & SkipImplicitControlFlow) && !isSafeToSpeculativelyExecute(I))
+    return false;
+
+  // Hoisting of llvm.deoptimize is only legal together with the next return
+  // instruction, which this pass is not always able to do.
+  if (auto *CB = dyn_cast<CallBase>(I))
+    if (CB->getIntrinsicID() == Intrinsic::experimental_deoptimize)
+      return false;
+
+  // It's also unsafe/illegal to hoist an instruction above its instruction
+  // operands
+  BasicBlock *BB = I->getParent();
+  for (Value *Op : I->operands()) {
+    if (auto *J = dyn_cast<Instruction>(Op))
+      if (J->getParent() == BB)
+        return false;
+  }
+
+  return true;
+}
+
 static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValueMayBeModified = false);
 
 /// Given a conditional branch that goes to BB1 and BB2, hoist any common code
@@ -1444,7 +1502,8 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
   // instructions in the two blocks.  In particular, we don't want to get into
   // O(M*N) situations here where M and N are the sizes of BB1 and BB2.  As
   // such, we currently just scan for obviously identical instructions in an
-  // identical order.
+  // identical order, possibly separated by the same number of non-identical
+  // instructions.
   BasicBlock *BB1 = BI->getSuccessor(0); // The true destination.
   BasicBlock *BB2 = BI->getSuccessor(1); // The false destination
 
@@ -1467,7 +1526,7 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     while (isa<DbgInfoIntrinsic>(I2))
       I2 = &*BB2_Itr++;
   }
-  if (isa<PHINode>(I1) || !I1->isIdenticalToWhenDefined(I2))
+  if (isa<PHINode>(I1))
     return false;
 
   BasicBlock *BIParent = BI->getParent();
@@ -1493,75 +1552,104 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
     // terminator. Let the loop below handle those 2 cases.
   }
 
-  do {
+  // Count how many instructions were not hoisted so far. There's a limit on how
+  // many instructions we skip, serving as a compilation time control as well as
+  // preventing excessive increase of life ranges.
+  unsigned NumSkipped = 0;
+
+  // Record any skipped instuctions that may read memory, write memory or have
+  // side effects, or have implicit control flow.
+  unsigned SkipFlagsBB1 = 0;
+  unsigned SkipFlagsBB2 = 0;
+
+  for (;;) {
     // If we are hoisting the terminator instruction, don't move one (making a
     // broken BB), instead clone it, and remove BI.
-    if (I1->isTerminator())
+    if (I1->isTerminator() || I2->isTerminator()) {
+      // If any instructions remain in the block, we cannot hoist terminators.
+      if (NumSkipped || !I1->isIdenticalToWhenDefined(I2))
+        return Changed;
       goto HoistTerminator;
-
-    // If we're going to hoist a call, make sure that the two instructions we're
-    // commoning/hoisting are both marked with musttail, or neither of them is
-    // marked as such. Otherwise, we might end up in a situation where we hoist
-    // from a block where the terminator is a `ret` to a block where the terminator
-    // is a `br`, and `musttail` calls expect to be followed by a return.
-    auto *C1 = dyn_cast<CallInst>(I1);
-    auto *C2 = dyn_cast<CallInst>(I2);
-    if (C1 && C2)
-      if (C1->isMustTailCall() != C2->isMustTailCall())
-        return Changed;
-
-    if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
-      return Changed;
-
-    // If any of the two call sites has nomerge attribute, stop hoisting.
-    if (const auto *CB1 = dyn_cast<CallBase>(I1))
-      if (CB1->cannotMerge())
-        return Changed;
-    if (const auto *CB2 = dyn_cast<CallBase>(I2))
-      if (CB2->cannotMerge())
-        return Changed;
-
-    if (isa<DbgInfoIntrinsic>(I1) || isa<DbgInfoIntrinsic>(I2)) {
-      assert (isa<DbgInfoIntrinsic>(I1) && isa<DbgInfoIntrinsic>(I2));
-      // The debug location is an integral part of a debug info intrinsic
-      // and can't be separated from it or replaced.  Instead of attempting
-      // to merge locations, simply hoist both copies of the intrinsic.
-      BIParent->getInstList().splice(BI->getIterator(),
-                                     BB1->getInstList(), I1);
-      BIParent->getInstList().splice(BI->getIterator(),
-                                     BB2->getInstList(), I2);
-      Changed = true;
-    } else {
-      // For a normal instruction, we just move one to right before the branch,
-      // then replace all uses of the other with the first.  Finally, we remove
-      // the now redundant second instruction.
-      BIParent->getInstList().splice(BI->getIterator(),
-                                     BB1->getInstList(), I1);
-      if (!I2->use_empty())
-        I2->replaceAllUsesWith(I1);
-      I1->andIRFlags(I2);
-      unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
-                             LLVMContext::MD_range,
-                             LLVMContext::MD_fpmath,
-                             LLVMContext::MD_invariant_load,
-                             LLVMContext::MD_nonnull,
-                             LLVMContext::MD_invariant_group,
-                             LLVMContext::MD_align,
-                             LLVMContext::MD_dereferenceable,
-                             LLVMContext::MD_dereferenceable_or_null,
-                             LLVMContext::MD_mem_parallel_loop_access,
-                             LLVMContext::MD_access_group,
-                             LLVMContext::MD_preserve_access_index};
-      combineMetadata(I1, I2, KnownIDs, true);
-
-      // I1 and I2 are being combined into a single instruction.  Its debug
-      // location is the merged locations of the original instructions.
-      I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
-
-      I2->eraseFromParent();
-      Changed = true;
     }
-    ++NumHoistCommonInstrs;
+
+    if (I1->isIdenticalToWhenDefined(I2)) {
+      // Even if the instructions are identical, it may not be safe to hoist
+      // them if we have skipped over instructions with side effects or their
+      // operands weren't hoisted.
+      if (!isSafeToHoistInstr(I1, SkipFlagsBB1) ||
+          !isSafeToHoistInstr(I2, SkipFlagsBB2))
+        return Changed;
+
+      // If we're going to hoist a call, make sure that the two instructions
+      // we're commoning/hoisting are both marked with musttail, or neither of
+      // them is marked as such. Otherwise, we might end up in a situation where
+      // we hoist from a block where the terminator is a `ret` to a block where
+      // the terminator is a `br`, and `musttail` calls expect to be followed by
+      // a return.
+      auto *C1 = dyn_cast<CallInst>(I1);
+      auto *C2 = dyn_cast<CallInst>(I2);
+      if (C1 && C2)
+        if (C1->isMustTailCall() != C2->isMustTailCall())
+          return Changed;
+
+      if (!TTI.isProfitableToHoist(I1) || !TTI.isProfitableToHoist(I2))
+        return Changed;
+
+      // If any of the two call sites has nomerge attribute, stop hoisting.
+      if (const auto *CB1 = dyn_cast<CallBase>(I1))
+        if (CB1->cannotMerge())
+          return Changed;
+      if (const auto *CB2 = dyn_cast<CallBase>(I2))
+        if (CB2->cannotMerge())
+          return Changed;
+
+      if (isa<DbgInfoIntrinsic>(I1) || isa<DbgInfoIntrinsic>(I2)) {
+        assert(isa<DbgInfoIntrinsic>(I1) && isa<DbgInfoIntrinsic>(I2));
+        // The debug location is an integral part of a debug info intrinsic
+        // and can't be separated from it or replaced.  Instead of attempting
+        // to merge locations, simply hoist both copies of the intrinsic.
+        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
+        BIParent->splice(BI->getIterator(), BB2, I2->getIterator());
+      } else {
+        // For a normal instruction, we just move one to right before the
+        // branch, then replace all uses of the other with the first.  Finally,
+        // we remove the now redundant second instruction.
+        BIParent->splice(BI->getIterator(), BB1, I1->getIterator());
+        if (!I2->use_empty())
+          I2->replaceAllUsesWith(I1);
+        I1->andIRFlags(I2);
+        unsigned KnownIDs[] = {LLVMContext::MD_tbaa,
+                               LLVMContext::MD_range,
+                               LLVMContext::MD_fpmath,
+                               LLVMContext::MD_invariant_load,
+                               LLVMContext::MD_nonnull,
+                               LLVMContext::MD_invariant_group,
+                               LLVMContext::MD_align,
+                               LLVMContext::MD_dereferenceable,
+                               LLVMContext::MD_dereferenceable_or_null,
+                               LLVMContext::MD_mem_parallel_loop_access,
+                               LLVMContext::MD_access_group,
+                               LLVMContext::MD_preserve_access_index};
+        combineMetadata(I1, I2, KnownIDs, true);
+
+        // I1 and I2 are being combined into a single instruction.  Its debug
+        // location is the merged locations of the original instructions.
+        I1->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
+
+        I2->eraseFromParent();
+      }
+      Changed = true;
+      ++NumHoistCommonInstrs;
+    } else {
+      if (NumSkipped >= HoistCommonSkipLimit)
+        return Changed;
+      // We are about to skip over a pair of non-identical instructions. Record
+      // if any have characteristics that would prevent reordering instructions
+      // across them.
+      SkipFlagsBB1 |= skippedInstrFlags(I1);
+      SkipFlagsBB2 |= skippedInstrFlags(I2);
+      ++NumSkipped;
+    }
 
     I1 = &*BB1_Itr++;
     I2 = &*BB2_Itr++;
@@ -1574,9 +1662,9 @@ bool SimplifyCFGOpt::HoistThenElseCodeToIf(BranchInst *BI,
       while (isa<DbgInfoIntrinsic>(I2))
         I2 = &*BB2_Itr++;
     }
-  } while (I1->isIdenticalToWhenDefined(I2));
+  }
 
-  return true;
+  return Changed;
 
 HoistTerminator:
   // It may not be possible to hoist an invoke.
@@ -1605,7 +1693,7 @@ HoistTerminator:
 
   // Okay, it is safe to hoist the terminator.
   Instruction *NT = I1->clone();
-  BIParent->getInstList().insert(BI->getIterator(), NT);
+  NT->insertInto(BIParent, BI->getIterator());
   if (!NT->getType()->isVoidTy()) {
     I1->replaceAllUsesWith(NT);
     I2->replaceAllUsesWith(NT);
@@ -1915,9 +2003,15 @@ static bool sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 
   // Finally nuke all instructions apart from the common instruction.
-  for (auto *I : Insts)
-    if (I != I0)
-      I->eraseFromParent();
+  for (auto *I : Insts) {
+    if (I == I0)
+      continue;
+    // The remaining uses are debug users, replace those with the common inst.
+    // In most (all?) cases this just introduces a use-before-def.
+    assert(I->user_empty() && "Inst unexpectedly still has non-dbg users");
+    I->replaceAllUsesWith(I0);
+    I->eraseFromParent();
+  }
 
   return true;
 }
@@ -2403,7 +2497,7 @@ static void MergeCompatibleInvokesImpl(ArrayRef<InvokeInst *> Invokes,
 
     auto *MergedInvoke = cast<InvokeInst>(II0->clone());
     // NOTE: all invokes have the same attributes, so no handling needed.
-    MergedInvokeBB->getInstList().push_back(MergedInvoke);
+    MergedInvoke->insertInto(MergedInvokeBB, MergedInvokeBB->end());
 
     if (!HasNormalDest) {
       // This set does not have a normal destination,
@@ -2550,6 +2644,34 @@ static bool MergeCompatibleInvokes(BasicBlock *BB, DomTreeUpdater *DTU) {
 
   return Changed;
 }
+
+namespace {
+/// Track ephemeral values, which should be ignored for cost-modelling
+/// purposes. Requires walking instructions in reverse order.
+class EphemeralValueTracker {
+  SmallPtrSet<const Instruction *, 32> EphValues;
+
+  bool isEphemeral(const Instruction *I) {
+    if (isa<AssumeInst>(I))
+      return true;
+    return !I->mayHaveSideEffects() && !I->isTerminator() &&
+           all_of(I->users(), [&](const User *U) {
+             return EphValues.count(cast<Instruction>(U));
+           });
+  }
+
+public:
+  bool track(const Instruction *I) {
+    if (isEphemeral(I)) {
+      EphValues.insert(I);
+      return true;
+    }
+    return false;
+  }
+
+  bool contains(const Instruction *I) const { return EphValues.contains(I); }
+};
+} // namespace
 
 /// Determine if we can hoist sink a sole store instruction out of a
 /// conditional block.
@@ -2752,7 +2874,8 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // the `then` block, then avoid speculating it.
   if (!BI->getMetadata(LLVMContext::MD_unpredictable)) {
     uint64_t TWeight, FWeight;
-    if (BI->extractProfMetadata(TWeight, FWeight) && (TWeight + FWeight) != 0) {
+    if (extractBranchWeights(*BI, TWeight, FWeight) &&
+        (TWeight + FWeight) != 0) {
       uint64_t EndWeight = Invert ? TWeight : FWeight;
       BranchProbability BIEndProb =
           BranchProbability::getBranchProbability(EndWeight, TWeight + FWeight);
@@ -2774,13 +2897,11 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   unsigned SpeculatedInstructions = 0;
   Value *SpeculatedStoreValue = nullptr;
   StoreInst *SpeculatedStore = nullptr;
-  for (BasicBlock::iterator BBI = ThenBB->begin(),
-                            BBE = std::prev(ThenBB->end());
-       BBI != BBE; ++BBI) {
-    Instruction *I = &*BBI;
+  EphemeralValueTracker EphTracker;
+  for (Instruction &I : reverse(drop_end(*ThenBB))) {
     // Skip debug info.
     if (isa<DbgInfoIntrinsic>(I)) {
-      SpeculatedDbgIntrinsics.push_back(I);
+      SpeculatedDbgIntrinsics.push_back(&I);
       continue;
     }
 
@@ -2792,9 +2913,13 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
       // the samples collected on the non-conditional path are counted towards
       // the conditional path. We leave it for the counts inference algorithm to
       // figure out a proper count for an unknown probe.
-      SpeculatedDbgIntrinsics.push_back(I);
+      SpeculatedDbgIntrinsics.push_back(&I);
       continue;
     }
+
+    // Ignore ephemeral values, they will be dropped by the transform.
+    if (EphTracker.track(&I))
+      continue;
 
     // Only speculatively execute a single instruction (not counting the
     // terminator) for now.
@@ -2803,23 +2928,23 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
       return false;
 
     // Don't hoist the instruction if it's unsafe or expensive.
-    if (!isSafeToSpeculativelyExecute(I) &&
+    if (!isSafeToSpeculativelyExecute(&I) &&
         !(HoistCondStores && (SpeculatedStoreValue = isSafeToSpeculateStore(
-                                  I, BB, ThenBB, EndBB))))
+                                  &I, BB, ThenBB, EndBB))))
       return false;
     if (!SpeculatedStoreValue &&
-        computeSpeculationCost(I, TTI) >
+        computeSpeculationCost(&I, TTI) >
             PHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic)
       return false;
 
     // Store the store speculation candidate.
     if (SpeculatedStoreValue)
-      SpeculatedStore = cast<StoreInst>(I);
+      SpeculatedStore = cast<StoreInst>(&I);
 
     // Do not hoist the instruction if any of its operands are defined but not
     // used in BB. The transformation will prevent the operand from
     // being sunk into the use block.
-    for (Use &Op : I->operands()) {
+    for (Use &Op : I.operands()) {
       Instruction *OpI = dyn_cast<Instruction>(Op);
       if (!OpI || OpI->getParent() != BB || OpI->mayHaveSideEffects())
         continue; // Not a candidate for sinking.
@@ -2831,11 +2956,8 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Consider any sink candidates which are only used in ThenBB as costs for
   // speculation. Note, while we iterate over a DenseMap here, we are summing
   // and so iteration order isn't significant.
-  for (SmallDenseMap<Instruction *, unsigned, 4>::iterator
-           I = SinkCandidateUseCounts.begin(),
-           E = SinkCandidateUseCounts.end();
-       I != E; ++I)
-    if (I->first->hasNUses(I->second)) {
+  for (const auto &[Inst, Count] : SinkCandidateUseCounts)
+    if (Inst->hasNUses(Count)) {
       ++SpeculatedInstructions;
       if (SpeculatedInstructions > 1)
         return false;
@@ -2857,6 +2979,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Insert a select of the value of the speculated store.
   if (SpeculatedStoreValue) {
     IRBuilder<NoFolder> Builder(BI);
+    Value *OrigV = SpeculatedStore->getValueOperand();
     Value *TrueV = SpeculatedStore->getValueOperand();
     Value *FalseV = SpeculatedStoreValue;
     if (Invert)
@@ -2866,6 +2989,35 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
     SpeculatedStore->setOperand(0, S);
     SpeculatedStore->applyMergedLocation(BI->getDebugLoc(),
                                          SpeculatedStore->getDebugLoc());
+    // The value stored is still conditional, but the store itself is now
+    // unconditonally executed, so we must be sure that any linked dbg.assign
+    // intrinsics are tracking the new stored value (the result of the
+    // select). If we don't, and the store were to be removed by another pass
+    // (e.g. DSE), then we'd eventually end up emitting a location describing
+    // the conditional value, unconditionally.
+    //
+    // === Before this transformation ===
+    // pred:
+    //   store %one, %x.dest, !DIAssignID !1
+    //   dbg.assign %one, "x", ..., !1, ...
+    //   br %cond if.then
+    //
+    // if.then:
+    //   store %two, %x.dest, !DIAssignID !2
+    //   dbg.assign %two, "x", ..., !2, ...
+    //
+    // === After this transformation ===
+    // pred:
+    //   store %one, %x.dest, !DIAssignID !1
+    //   dbg.assign %one, "x", ..., !1
+    ///  ...
+    //   %merge = select %cond, %two, %one
+    //   store %merge, %x.dest, !DIAssignID !2
+    //   dbg.assign %merge, "x", ..., !2
+    for (auto *DAI : at::getAssignmentMarkers(SpeculatedStore)) {
+      if (any_of(DAI->location_ops(), [&](Value *V) { return V == OrigV; }))
+        DAI->replaceVariableLocationOp(OrigV, S);
+    }
   }
 
   // Metadata can be dependent on the condition we are hoisting above.
@@ -2874,15 +3026,24 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // be misleading while debugging.
   // Similarly strip attributes that maybe dependent on condition we are
   // hoisting above.
-  for (auto &I : *ThenBB) {
-    if (!SpeculatedStoreValue || &I != SpeculatedStore)
-      I.setDebugLoc(DebugLoc());
+  for (auto &I : make_early_inc_range(*ThenBB)) {
+    if (!SpeculatedStoreValue || &I != SpeculatedStore) {
+      // Don't update the DILocation of dbg.assign intrinsics.
+      if (!isa<DbgAssignIntrinsic>(&I))
+        I.setDebugLoc(DebugLoc());
+    }
     I.dropUndefImplyingAttrsAndUnknownMetadata();
+
+    // Drop ephemeral values.
+    if (EphTracker.contains(&I)) {
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+      I.eraseFromParent();
+    }
   }
 
   // Hoist the instructions.
-  BB->getInstList().splice(BI->getIterator(), ThenBB->getInstList(),
-                           ThenBB->begin(), std::prev(ThenBB->end()));
+  BB->splice(BI->getIterator(), ThenBB, ThenBB->begin(),
+             std::prev(ThenBB->end()));
 
   // Insert selects and rewrite the PHI operands.
   IRBuilder<NoFolder> Builder(BI);
@@ -2910,8 +3071,12 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
   // Remove speculated dbg intrinsics.
   // FIXME: Is it possible to do this in a more elegant way? Moving/merging the
   // dbg value for the different flows and inserting it after the select.
-  for (Instruction *I : SpeculatedDbgIntrinsics)
-    I->eraseFromParent();
+  for (Instruction *I : SpeculatedDbgIntrinsics) {
+    // We still want to know that an assignment took place so don't remove
+    // dbg.assign intrinsics.
+    if (!isa<DbgAssignIntrinsic>(I))
+      I->eraseFromParent();
+  }
 
   ++NumSpeculations;
   return true;
@@ -2920,15 +3085,7 @@ bool SimplifyCFGOpt::SpeculativelyExecuteBB(BranchInst *BI, BasicBlock *ThenBB,
 /// Return true if we can thread a branch across this block.
 static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
   int Size = 0;
-
-  SmallPtrSet<const Value *, 32> EphValues;
-  auto IsEphemeral = [&](const Instruction *I) {
-    if (isa<AssumeInst>(I))
-      return true;
-    return !I->mayHaveSideEffects() && !I->isTerminator() &&
-           all_of(I->users(),
-                  [&](const User *U) { return EphValues.count(U); });
-  };
+  EphemeralValueTracker EphTracker;
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
@@ -2939,11 +3096,9 @@ static bool BlockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
         return false;
 
     // Ignore ephemeral values which are deleted during codegen.
-    if (IsEphemeral(&I))
-      EphValues.insert(&I);
     // We will delete Phis while threading, so Phis should not be accounted in
     // block's size.
-    else if (!isa<PHINode>(I)) {
+    if (!EphTracker.track(&I) && !isa<PHINode>(I)) {
       if (Size++ > MaxSmallBlockSize)
         return false; // Don't clone large BB's.
     }
@@ -2983,7 +3138,7 @@ static ConstantInt *getKnownValueOnEdge(Value *V, BasicBlock *From,
 /// If we have a conditional branch on something for which we know the constant
 /// value in predecessors (e.g. a phi node in the current block), thread edges
 /// from the predecessor to their ultimate destination.
-static Optional<bool>
+static std::optional<bool>
 FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
                                             const DataLayout &DL,
                                             AssumptionCache *AC) {
@@ -3089,7 +3244,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
       }
       if (N) {
         // Insert the new instruction into its new home.
-        EdgeBB->getInstList().insert(InsertPt, N);
+        N->insertInto(EdgeBB, InsertPt);
 
         // Register the new instruction with the assumption cache if necessary.
         if (auto *Assume = dyn_cast<AssumeInst>(N))
@@ -3117,7 +3272,7 @@ FoldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     MergeBlockIntoPredecessor(EdgeBB, DTU);
 
     // Signal repeat, simplifying any other constants.
-    return None;
+    return std::nullopt;
   }
 
   return false;
@@ -3127,13 +3282,13 @@ static bool FoldCondBranchOnValueKnownInPredecessor(BranchInst *BI,
                                                     DomTreeUpdater *DTU,
                                                     const DataLayout &DL,
                                                     AssumptionCache *AC) {
-  Optional<bool> Result;
+  std::optional<bool> Result;
   bool EverChanged = false;
   do {
     // Note that None means "we changed things, but recurse further."
     Result = FoldCondBranchOnValueKnownInPredecessorImpl(BI, DTU, DL, AC);
-    EverChanged |= Result == None || *Result;
-  } while (Result == None);
+    EverChanged |= Result == std::nullopt || *Result;
+  } while (Result == std::nullopt);
   return EverChanged;
 }
 
@@ -3174,7 +3329,7 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // from the block that we know is predictably not entered.
   if (!DomBI->getMetadata(LLVMContext::MD_unpredictable)) {
     uint64_t TWeight, FWeight;
-    if (DomBI->extractProfMetadata(TWeight, FWeight) &&
+    if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
       BranchProbability BITrueProb =
           BranchProbability::getBranchProbability(TWeight, TWeight + FWeight);
@@ -3354,9 +3509,9 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
                                    uint64_t &SuccTrueWeight,
                                    uint64_t &SuccFalseWeight) {
   bool PredHasWeights =
-      PBI->extractProfMetadata(PredTrueWeight, PredFalseWeight);
+      extractBranchWeights(*PBI, PredTrueWeight, PredFalseWeight);
   bool SuccHasWeights =
-      BI->extractProfMetadata(SuccTrueWeight, SuccFalseWeight);
+      extractBranchWeights(*BI, SuccTrueWeight, SuccFalseWeight);
   if (PredHasWeights || SuccHasWeights) {
     if (!PredHasWeights)
       PredTrueWeight = PredFalseWeight = 1;
@@ -3371,7 +3526,7 @@ static bool extractPredSuccWeights(BranchInst *PBI, BranchInst *BI,
 /// Determine if the two branches share a common destination and deduce a glue
 /// that joins the branches' conditions to arrive at the common destination if
 /// that would be profitable.
-static Optional<std::pair<Instruction::BinaryOps, bool>>
+static std::optional<std::tuple<BasicBlock *, Instruction::BinaryOps, bool>>
 shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
                                           const TargetTransformInfo *TTI) {
   assert(BI && PBI && BI->isConditional() && PBI->isConditional() &&
@@ -3384,7 +3539,7 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   uint64_t PTWeight, PFWeight;
   BranchProbability PBITrueProb, Likely;
   if (TTI && !PBI->getMetadata(LLVMContext::MD_unpredictable) &&
-      PBI->extractProfMetadata(PTWeight, PFWeight) &&
+      extractBranchWeights(*PBI, PTWeight, PFWeight) &&
       (PTWeight + PFWeight) != 0) {
     PBITrueProb =
         BranchProbability::getBranchProbability(PTWeight, PTWeight + PFWeight);
@@ -3394,21 +3549,21 @@ shouldFoldCondBranchesToCommonDestination(BranchInst *BI, BranchInst *PBI,
   if (PBI->getSuccessor(0) == BI->getSuccessor(0)) {
     // Speculate the 2nd condition unless the 1st is probably true.
     if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
-      return {{Instruction::Or, false}};
+      return {{BI->getSuccessor(0), Instruction::Or, false}};
   } else if (PBI->getSuccessor(1) == BI->getSuccessor(1)) {
     // Speculate the 2nd condition unless the 1st is probably false.
     if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
-      return {{Instruction::And, false}};
+      return {{BI->getSuccessor(1), Instruction::And, false}};
   } else if (PBI->getSuccessor(0) == BI->getSuccessor(1)) {
     // Speculate the 2nd condition unless the 1st is probably true.
     if (PBITrueProb.isUnknown() || PBITrueProb < Likely)
-      return {{Instruction::And, true}};
+      return {{BI->getSuccessor(1), Instruction::And, true}};
   } else if (PBI->getSuccessor(1) == BI->getSuccessor(0)) {
     // Speculate the 2nd condition unless the 1st is probably false.
     if (PBITrueProb.isUnknown() || PBITrueProb.getCompl() < Likely)
-      return {{Instruction::Or, true}};
+      return {{BI->getSuccessor(0), Instruction::Or, true}};
   }
-  return None;
+  return std::nullopt;
 }
 
 static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
@@ -3419,9 +3574,10 @@ static bool performBranchToCommonDestFolding(BranchInst *BI, BranchInst *PBI,
   BasicBlock *PredBlock = PBI->getParent();
 
   // Determine if the two branches share a common destination.
+  BasicBlock *CommonSucc;
   Instruction::BinaryOps Opc;
   bool InvertPredCond;
-  std::tie(Opc, InvertPredCond) =
+  std::tie(CommonSucc, Opc, InvertPredCond) =
       *shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI);
 
   LLVM_DEBUG(dbgs() << "FOLDING BRANCH TO COMMON DEST:\n" << *PBI << *BB);
@@ -3580,10 +3736,11 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       continue;
 
     // Determine if the two branches share a common destination.
+    BasicBlock *CommonSucc;
     Instruction::BinaryOps Opc;
     bool InvertPredCond;
     if (auto Recipe = shouldFoldCondBranchesToCommonDestination(BI, PBI, TTI))
-      std::tie(Opc, InvertPredCond) = *Recipe;
+      std::tie(CommonSucc, Opc, InvertPredCond) = *Recipe;
     else
       continue;
 
@@ -3593,7 +3750,7 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
       Type *Ty = BI->getCondition()->getType();
       InstructionCost Cost = TTI->getArithmeticInstrCost(Opc, Ty, CostKind);
       if (InvertPredCond && (!PBI->getCondition()->hasOneUse() ||
-          !isa<CmpInst>(PBI->getCondition())))
+                             !isa<CmpInst>(PBI->getCondition())))
         Cost += TTI->getArithmeticInstrCost(Instruction::Xor, Ty, CostKind);
 
       if (Cost > BranchFoldThreshold)
@@ -3632,8 +3789,8 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, DomTreeUpdater *DTU,
 
     // Account for the cost of duplicating this instruction into each
     // predecessor. Ignore free instructions.
-    if (!TTI ||
-        TTI->getUserCost(&I, CostKind) != TargetTransformInfo::TCC_Free) {
+    if (!TTI || TTI->getInstructionCost(&I, CostKind) !=
+                    TargetTransformInfo::TCC_Free) {
       NumBonusInsts += PredCount;
 
       // Early exits once we reach the limit.
@@ -3805,7 +3962,8 @@ static bool mergeConditionalStoreToAddress(
         return false; // Not in white-list - not worthwhile folding.
       // And finally, if this is a non-free instruction that we are okay
       // speculating, ensure that we consider the speculation budget.
-      Cost += TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+      Cost +=
+          TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       if (Cost > Budget)
         return false; // Eagerly refuse to fold as soon as we're out of budget.
     }
@@ -4004,6 +4162,11 @@ static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     return false;
   if (!IfFalseBB->phis().empty())
     return false; // TODO
+  // This helps avoid infinite loop with SimplifyCondBranchToCondBranch which
+  // may undo the transform done here.
+  // TODO: There might be a more fine-grained solution to this.
+  if (!llvm::succ_empty(IfFalseBB))
+    return false;
   // Use lambda to lazily compute expensive condition after cheap ones.
   auto NoSideEffects = [](BasicBlock &BB) {
     return llvm::none_of(BB, [](const Instruction &I) {
@@ -4349,7 +4512,7 @@ bool SimplifyCFGOpt::SimplifySwitchOnSelect(SwitchInst *SI,
   // Get weight for TrueBB and FalseBB.
   uint32_t TrueWeight = 0, FalseWeight = 0;
   SmallVector<uint64_t, 8> Weights;
-  bool HasWeights = HasBranchWeights(SI);
+  bool HasWeights = hasBranchWeightMD(*SI);
   if (HasWeights) {
     GetBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -5021,7 +5184,9 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
           DTU->applyUpdates(Updates);
           Updates.clear();
         }
-        removeUnwindEdge(TI->getParent(), DTU);
+        auto *CI = cast<CallInst>(removeUnwindEdge(TI->getParent(), DTU));
+        if (!CI->doesNotThrow())
+          CI->setDoesNotThrow();
         Changed = true;
       }
     } else if (auto *CSI = dyn_cast<CatchSwitchInst>(TI)) {
@@ -5209,7 +5374,7 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
   BranchInst *NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
 
   // Update weight for the newly-created conditional branch.
-  if (HasBranchWeights(SI)) {
+  if (hasBranchWeightMD(*SI)) {
     SmallVector<uint64_t, 8> Weights;
     GetBranchWeights(SI, Weights);
     if (Weights.size() == 1 + SI->getNumCases()) {
@@ -5279,7 +5444,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   SmallVector<ConstantInt *, 8> DeadCases;
   SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
   SmallVector<BasicBlock *, 8> UniqueSuccessors;
-  for (auto &Case : SI->cases()) {
+  for (const auto &Case : SI->cases()) {
     auto *Successor = Case.getCaseSuccessor();
     if (DTU) {
       if (!NumPerSuccessorCases.count(Successor))
@@ -5379,7 +5544,7 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   ForwardingNodesMap ForwardingNodes;
   BasicBlock *SwitchBlock = SI->getParent();
   bool Changed = false;
-  for (auto &Case : SI->cases()) {
+  for (const auto &Case : SI->cases()) {
     ConstantInt *CaseValue = Case.getCaseValue();
     BasicBlock *CaseDest = Case.getCaseSuccessor();
 
@@ -5595,7 +5760,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
                                   const DataLayout &DL,
                                   const TargetTransformInfo &TTI,
                                   uintptr_t MaxUniqueResults) {
-  for (auto &I : SI->cases()) {
+  for (const auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
 
     // Resulting value at phi nodes for this case value.
@@ -5684,13 +5849,13 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
       // Find mininal value.
-      for (auto Case : CaseValues)
+      for (auto *Case : CaseValues)
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
 
       // Mark the bits case number touched.
       APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
-      for (auto Case : CaseValues)
+      for (auto *Case : CaseValues)
         BitMask |= (Case->getValue() - MinCaseVal->getValue());
 
       // Check if cases with the same result can cover all number
@@ -5956,7 +6121,7 @@ SwitchLookupTable::SwitchLookupTable(
   Array->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   // Set the alignment to that of an array items. We will be only loading one
   // value out of it.
-  Array->setAlignment(Align(DL.getPrefTypeAlignment(ValueType)));
+  Array->setAlignment(DL.getPrefTypeAlign(ValueType));
   Kind = ArrayKind;
 }
 
@@ -6501,7 +6666,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // cases such as a sequence crossing zero {-4,0,4,8} if we interpret case values
   // as signed.
   SmallVector<int64_t,4> Values;
-  for (auto &C : SI->cases())
+  for (const auto &C : SI->cases())
     Values.push_back(C.getCaseValue()->getValue().getSExtValue());
   llvm::sort(Values);
 
@@ -6856,7 +7021,7 @@ bool SimplifyCFGOpt::simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
 
   // If this basic block has dominating predecessor blocks and the dominating
   // blocks' conditions imply BI's condition, we know the direction of BI.
-  Optional<bool> Imp = isImpliedByDomCondition(BI->getCondition(), BI, DL);
+  std::optional<bool> Imp = isImpliedByDomCondition(BI->getCondition(), BI, DL);
   if (Imp) {
     // Turn this into a branch on constant.
     auto *OldCond = BI->getCondition();
@@ -7023,7 +7188,7 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
         IRBuilder<> Builder(T);
         if (BranchInst *BI = dyn_cast<BranchInst>(T)) {
           BB->removePredecessor(Predecessor);
-          // Turn uncoditional branches into unreachables and remove the dead
+          // Turn unconditional branches into unreachables and remove the dead
           // destination from conditional branches.
           if (BI->isUnconditional())
             Builder.CreateUnreachable();
@@ -7050,7 +7215,7 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           Builder.SetInsertPoint(Unreachable);
           // The new block contains only one instruction: Unreachable
           Builder.CreateUnreachable();
-          for (auto &Case : SI->cases())
+          for (const auto &Case : SI->cases())
             if (Case.getCaseSuccessor() == BB) {
               BB->removePredecessor(Predecessor);
               Case.setSuccessor(Unreachable);

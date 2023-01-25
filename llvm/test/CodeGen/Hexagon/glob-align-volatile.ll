@@ -9,9 +9,8 @@ target triple = "hexagon"
 ; Function Attrs: nounwind optsize
 define i32 @f0(i32 %a0) #0 {
 b0:
-  %v0 = inttoptr i32 %a0 to %s.0*
-  %v1 = getelementptr inbounds %s.0, %s.0* %v0, i32 0, i32 0
-  %v2 = load volatile i32, i32* %v1, align 4, !tbaa !0
+  %v0 = inttoptr i32 %a0 to ptr
+  %v2 = load volatile i32, ptr %v0, align 4, !tbaa !0
   ret i32 %v2
 }
 

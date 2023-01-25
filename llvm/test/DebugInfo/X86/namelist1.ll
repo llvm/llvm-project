@@ -33,7 +33,7 @@ source_filename = "namelist.ll"
 define void @MAIN_() !dbg !2 {
 L.entry:
   %b_350 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %b_350, metadata !12, metadata !DIExpression()), !dbg !13
+  call void @llvm.dbg.declare(metadata ptr %b_350, metadata !12, metadata !DIExpression()), !dbg !13
   call void @llvm.dbg.value(metadata i32 1, metadata !14, metadata !DIExpression()), !dbg !13
   ret void, !dbg !17
 }

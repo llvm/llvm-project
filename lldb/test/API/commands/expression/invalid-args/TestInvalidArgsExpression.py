@@ -7,7 +7,9 @@ class InvalidArgsExpressionTestCase(TestBase):
     @no_debug_info_test
     def test_invalid_lang(self):
         self.expect("expression -l foo --", error=True,
-                    substrs=["error: unknown language type: 'foo' for expression"])
+                    substrs=["error: unknown language type: 'foo' for expression",
+                             "List of supported languages:",
+                             "c++", "c++11", "c++14"])
 
     @no_debug_info_test
     def test_invalid_all_thread(self):

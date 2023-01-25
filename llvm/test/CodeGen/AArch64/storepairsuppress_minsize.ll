@@ -27,7 +27,7 @@ define void @test_default() uwtable {
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_BLOCK @return_in_block()
-  store %T_IN_BLOCK %1, %T_IN_BLOCK* @in_block_store
+  store %T_IN_BLOCK %1, ptr @in_block_store
   ret void
 }
 
@@ -46,7 +46,7 @@ define void @test_minsize() minsize uwtable {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_BLOCK @return_in_block()
-  store %T_IN_BLOCK %1, %T_IN_BLOCK* @in_block_store
+  store %T_IN_BLOCK %1, ptr @in_block_store
   ret void
 }
 
@@ -67,6 +67,6 @@ define void @test_optsize() optsize uwtable {
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
   %1 = call %T_IN_BLOCK @return_in_block()
-  store %T_IN_BLOCK %1, %T_IN_BLOCK* @in_block_store
+  store %T_IN_BLOCK %1, ptr @in_block_store
   ret void
 }

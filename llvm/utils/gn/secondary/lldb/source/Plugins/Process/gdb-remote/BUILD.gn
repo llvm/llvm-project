@@ -26,6 +26,7 @@ static_library("gdb-remote") {
     "//lldb/source/Target",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # XXX if (have_libcompression) { deps += [ compression } }

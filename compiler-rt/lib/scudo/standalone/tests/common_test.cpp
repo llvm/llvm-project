@@ -69,4 +69,23 @@ TEST(ScudoCommonTest, Zeros) {
   unmap(P, Size, 0, &Data);
 }
 
+#if SCUDO_LINUX
+TEST(ScudoCommonTest, GetRssFromBuffer) {
+  constexpr int64_t AllocSize = 10000000;
+  constexpr int64_t Error = 3000000;
+  constexpr size_t Runs = 10;
+
+  int64_t Rss = scudo::GetRSS();
+  EXPECT_GT(Rss, 0);
+
+  std::vector<std::unique_ptr<char[]>> Allocs(Runs);
+  for (auto &Alloc : Allocs) {
+    Alloc.reset(new char[AllocSize]());
+    int64_t Prev = Rss;
+    Rss = scudo::GetRSS();
+    EXPECT_LE(std::abs(Rss - AllocSize - Prev), Error);
+  }
+}
+#endif // SCUDO_LINUX
+
 } // namespace scudo

@@ -13,10 +13,10 @@ target datalayout = "n8:16:32:64"
 ; CHECK: %[[PHI:.*]] = phi i32 [ 0, %entry ], [ %{{.*}}, %if.then5 ], [ %[[PHI]], %if.end ]
 ; CHECK-LABEL: Determining loop execution counts for: @test
 ; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
-; CHECK: Loop %for.body18: max backedge-taken count is 2147483646
+; CHECK: Loop %for.body18: constant max backedge-taken count is 2147483646
 ; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.cond: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.cond: Unpredictable constant max backedge-taken count.
 ; CHECK: Loop %for.cond: Unpredictable predicated backedge-taken count.
 ;
 ; Now simplify the loop, which should cause SCEV to re-compute more precise
@@ -25,13 +25,13 @@ target datalayout = "n8:16:32:64"
 ; CHECK: phi i32 [ %{{.*}}, %if.then5 ], [ 0, %entry ]
 ; CHECK-LABEL: Determining loop execution counts for: @test
 ; CHECK: Loop %for.body18: Unpredictable backedge-taken count.
-; CHECK: Loop %for.body18: max backedge-taken count is 2147483646
+; CHECK: Loop %for.body18: constant max backedge-taken count is 2147483646
 ; CHECK: Loop %for.body18: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %for.cond: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.cond: max backedge-taken count is -2147483647
+; CHECK: Loop %for.cond: constant max backedge-taken count is -2147483647
 ; CHECK: Loop %for.cond: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %for.cond.outer: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %for.cond.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %for.cond.outer: Unpredictable constant max backedge-taken count.
 ; CHECK: Loop %for.cond.outer: Unpredictable predicated backedge-taken count.
 define i32 @test() nounwind {
 entry:
@@ -42,7 +42,7 @@ for.cond:                                         ; preds = %if.then5, %if.end, 
   %0 = phi i32 [ 0, %entry ], [ %add, %if.end ], [ %add, %if.then5 ]
   %add = add i32 %0, 1
   %cmp = icmp slt i32 %0, 1
-  %tmp1 = load i32, i32* @maxStat, align 4
+  %tmp1 = load i32, ptr @maxStat, align 4
   br i1 %cmp, label %for.body, label %for.cond14.preheader
 
 for.cond14.preheader:                             ; preds = %for.cond
@@ -66,7 +66,7 @@ for.body18:                                       ; preds = %for.body18, %for.co
   %i13.027 = phi i32 [ %1, %for.body18 ], [ 0, %for.cond14.preheader ]
   call void @foo() nounwind
   %1 = add nsw i32 %i13.027, 1
-  %tmp16 = load i32, i32* @maxStat, align 4
+  %tmp16 = load i32, ptr @maxStat, align 4
   %cmp17 = icmp slt i32 %1, %tmp16
   br i1 %cmp17, label %for.body18, label %return
 
@@ -82,20 +82,20 @@ declare void @foo() nounwind
 ; First SCEV print:
 ; CHECK-LABEL: Determining loop execution counts for: @mergeExit
 ; CHECK: Loop %while.cond191: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %while.cond191: max backedge-taken count is -1
+; CHECK: Loop %while.cond191: constant max backedge-taken count is -1
 ; CHECK: Loop %while.cond191: Unpredictable predicated backedge-taken count.
 ; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %while.cond191.outer: Unpredictable max backedge-taken count.
+; CHECK: Loop %while.cond191.outer: Unpredictable constant max backedge-taken count.
 ; CHECK: Loop %while.cond191.outer: Unpredictable predicated backedge-taken count.
 ;
 ; After simplifying, the max backedge count is refined.
 ; Second SCEV print:
 ; CHECK-LABEL: Determining loop execution counts for: @mergeExit
 ; CHECK: Loop %while.cond191: <multiple exits> backedge-taken count is 0
-; CHECK: Loop %while.cond191: max backedge-taken count is 0
+; CHECK: Loop %while.cond191: constant max backedge-taken count is 0
 ; CHECK: Loop %while.cond191: Predicated backedge-taken count is 0
 ; CHECK: Loop %while.cond191.outer: <multiple exits> Unpredictable backedge-taken count.
-; CHECK: Loop %while.cond191.outer: max backedge-taken count is false
+; CHECK: Loop %while.cond191.outer: constant max backedge-taken count is false
 ; CHECK: Loop %while.cond191.outer: Unpredictable predicated backedge-taken count.
 define void @mergeExit(i32 %MapAttrCount) nounwind uwtable ssp {
 entry:

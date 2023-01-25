@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 namespace std {
 template <typename... T> struct coroutine_traits;
@@ -33,8 +33,8 @@ template <> struct std::coroutine_traits<void> {
 // CHECK-LABEL: f0(
 extern "C" void f0() {
   // CHECK: %__promise = alloca %"struct.std::coroutine_traits<void>::promise_type"
-  // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
-  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type11return_voidEv(%"struct.std::coroutine_traits<void>::promise_type"* {{[^,]*}} %__promise)
+  // CHECK: %call = call noalias noundef nonnull ptr @_Znwm(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJvEE12promise_type11return_voidEv(ptr {{[^,]*}} %__promise)
   // CHECK: call void @_ZdlPv
   co_return;
 }
@@ -52,8 +52,8 @@ struct std::coroutine_traits<int> {
 // CHECK-LABEL: f1(
 extern "C" int f1() {
   // CHECK: %__promise = alloca %"struct.std::coroutine_traits<int>::promise_type"
-  // CHECK: %call = call noalias noundef nonnull i8* @_Znwm(
-  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type12return_valueEi(%"struct.std::coroutine_traits<int>::promise_type"* {{[^,]*}} %__promise, i32 noundef 42)
+  // CHECK: %call = call noalias noundef nonnull ptr @_Znwm(
+  // CHECK: call void @_ZNSt16coroutine_traitsIJiEE12promise_type12return_valueEi(ptr {{[^,]*}} %__promise, i32 noundef 42)
   // CHECK: call void @_ZdlPv
   co_return 42;
 }

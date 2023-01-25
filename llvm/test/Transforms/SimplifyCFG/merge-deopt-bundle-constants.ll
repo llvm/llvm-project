@@ -4,18 +4,17 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @test_01(i1 %cond) gc "statepoint-example" personality i32* ()* @zot {
+define void @test_01(i1 %cond) gc "statepoint-example" personality ptr @zot {
 ; CHECK-LABEL: @test_01(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[COND:%.*]], i32 0, i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = call i8* @wibble()
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP4]] to i8 addrspace(1)* (i8 addrspace(1)*)*
-; CHECK-NEXT:    [[TMP0:%.*]] = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* [[TMP5]](i8 addrspace(1)* undef) [ "deopt"(i32 [[DOT]]) ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wibble()
+; CHECK-NEXT:    [[TMP0:%.*]] = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) [[TMP4]](ptr addrspace(1) undef) [ "deopt"(i32 [[DOT]]) ]
 ; CHECK-NEXT:    to label [[BB8_CONT:%.*]] unwind label [[BB13:%.*]]
 ; CHECK:       bb8.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb13:
-; CHECK-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    ret void
 ;
@@ -26,40 +25,37 @@ bb1:                                              ; preds = %bb13
   ret void
 
 bb3:                                              ; preds = %bb
-  %tmp4 = call i8* @wibble()
-  %tmp5 = bitcast i8* %tmp4 to i8 addrspace(1)* (i8 addrspace(1)*)*
-  %tmp6 = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* %tmp5(i8 addrspace(1)* undef) [ "deopt"(i32 0) ]
+  %tmp4 = call ptr @wibble()
+  %tmp6 = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) %tmp4(ptr addrspace(1) undef) [ "deopt"(i32 0) ]
   to label %bb7 unwind label %bb13
 
 bb7:                                              ; preds = %bb3
   unreachable
 
 bb8:                                              ; preds = %bb
-  %tmp9 = call i8* @wibble()
-  %tmp10 = bitcast i8* %tmp9 to i8 addrspace(1)* (i8 addrspace(1)*)*
-  %tmp11 = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* %tmp10(i8 addrspace(1)* undef) [ "deopt"(i32 1) ]
+  %tmp9 = call ptr @wibble()
+  %tmp11 = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) %tmp9(ptr addrspace(1) undef) [ "deopt"(i32 1) ]
   to label %bb12 unwind label %bb13
 
 bb12:                                             ; preds = %bb8
   unreachable
 
 bb13:                                             ; preds = %bb8, %bb3
-  %tmp14 = landingpad { i8*, i32 }
+  %tmp14 = landingpad { ptr, i32 }
   cleanup
   br label %bb1
 }
 
-define void @test_02(i1 %cond) gc "statepoint-example" personality i32* ()* @zot {
+define void @test_02(i1 %cond) gc "statepoint-example" personality ptr @zot {
 ; CHECK-LABEL: @test_02(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP4:%.*]] = call i8* @wibble()
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP4]] to i8 addrspace(1)* (i8 addrspace(1)*)*
-; CHECK-NEXT:    [[TMP0:%.*]] = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* [[TMP5]](i8 addrspace(1)* undef) [ "deopt"(i32 0) ]
+; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @wibble()
+; CHECK-NEXT:    [[TMP0:%.*]] = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) [[TMP4]](ptr addrspace(1) undef) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    to label [[BB8_CONT:%.*]] unwind label [[BB13:%.*]]
 ; CHECK:       bb8.cont:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb13:
-; CHECK-NEXT:    [[TMP14:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP14:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    ret void
 ;
@@ -70,30 +66,28 @@ bb1:                                              ; preds = %bb13
   ret void
 
 bb3:                                              ; preds = %bb
-  %tmp4 = call i8* @wibble()
-  %tmp5 = bitcast i8* %tmp4 to i8 addrspace(1)* (i8 addrspace(1)*)*
-  %tmp6 = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* %tmp5(i8 addrspace(1)* undef) [ "deopt"(i32 0) ]
+  %tmp4 = call ptr @wibble()
+  %tmp6 = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) %tmp4(ptr addrspace(1) undef) [ "deopt"(i32 0) ]
   to label %bb7 unwind label %bb13
 
 bb7:                                              ; preds = %bb3
   unreachable
 
 bb8:                                              ; preds = %bb
-  %tmp9 = call i8* @wibble()
-  %tmp10 = bitcast i8* %tmp9 to i8 addrspace(1)* (i8 addrspace(1)*)*
-  %tmp11 = invoke align 8 dereferenceable_or_null(8) i8 addrspace(1)* %tmp10(i8 addrspace(1)* undef) [ "deopt"(i32 0) ]
+  %tmp9 = call ptr @wibble()
+  %tmp11 = invoke align 8 dereferenceable_or_null(8) ptr addrspace(1) %tmp9(ptr addrspace(1) undef) [ "deopt"(i32 0) ]
   to label %bb12 unwind label %bb13
 
 bb12:                                             ; preds = %bb8
   unreachable
 
 bb13:                                             ; preds = %bb8, %bb3
-  %tmp14 = landingpad { i8*, i32 }
+  %tmp14 = landingpad { ptr, i32 }
   cleanup
   br label %bb1
 }
 
 
-declare i32* @zot()
+declare ptr @zot()
 
-declare i8* @wibble()
+declare ptr @wibble()

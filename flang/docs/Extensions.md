@@ -140,7 +140,7 @@ end
   for the default kind of INTEGER are assumed to have the least larger kind
   that can hold them, if one exists.
 * BOZ literals can be used as INTEGER values in contexts where the type is
-  unambiguous: the right hand sides of assigments and initializations
+  unambiguous: the right hand sides of assignments and initializations
   of INTEGER entities, as actual arguments to a few intrinsic functions
   (ACHAR, BTEST, CHAR), and as actual arguments of references to
   procedures with explicit interfaces whose corresponding dummy
@@ -235,6 +235,27 @@ end
   respectively.
 * A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
   editing if no nonzero scale factor (kP) is in effect.
+* The name `IMAG` is accepted as an alias for the generic intrinsic
+  function `AIMAG`.
+* The legacy extension intrinsic functions `IZEXT` and `JZEXT`
+  are supported; `ZEXT` has different behavior with various older
+  compilers, so it is not supported.
+* f18 doesn't impose a limit on the number of continuation lines
+  allowed for a single statement.
+* When a type-bound procedure declaration statement has neither interface
+  nor attributes, the "::" before the bindings is optional, even
+  if a binding has renaming with "=> proc".
+  The colons are not necessary for an unambiguous parse, C768
+  notwithstanding.
+* A type-bound procedure binding can be passed as an actual
+  argument corresponding to a dummy procedure and can be used as
+  the target of a procedure pointer assignment statement.
+* An explicit `INTERFACE` can declare the interface of a
+  procedure pointer even if it is not a dummy argument.
+* A `NOPASS` type-bound procedure binding is required by C1529
+  to apply only to a scalar data-ref, but most compilers don't
+  enforce it and the constraint is not necessary for a correct
+  implementation.
 
 ### Extensions supported when enabled by options
 
@@ -287,7 +308,7 @@ end
 * Use of INTEGER data with the intrinsic logical operators `.NOT.`, `.AND.`, `.OR.`,
   and `.XOR.`.
 * IF (integer expression) THEN ... END IF  (PGI/Intel)
-* Comparsion of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
+* Comparison of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
 * Procedure pointers in COMMON blocks (PGI/Intel)
 * Underindexing multi-dimensional arrays (e.g., A(1) rather than A(1,1)) (PGI only)
 * Legacy PGI `NCHARACTER` type and `NC` Kanji character literals
@@ -309,6 +330,9 @@ end
 * VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
 * Continuation lines on `INCLUDE` lines
 * `NULL()` actual argument corresponding to an `ALLOCATABLE` dummy data object
+* User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
+  arguments, in accordance with the standard; some Fortran compilers
+  permit such usage.
 
 ## Preprocessing behavior
 
@@ -335,6 +359,26 @@ end
   This Fortran 2008 feature might as well be viewed like an
   extension; no other compiler that we've tested can handle
   it yet.
+* According to 11.1.3.3p1, if a selector of an `ASSOCIATE` or
+  related construct is defined by a variable, it has the `TARGET`
+  attribute if the variable was a `POINTER` or `TARGET`.
+  We read this to include the case of the variable being a
+  pointer-valued function reference.
+  No other Fortran compiler seems to handle this correctly for
+  `ASSOCIATE`, though NAG gets it right for `SELECT TYPE`.
+* The standard doesn't explicitly require that a named constant that
+  appears as part of a complex-literal-constant be a scalar, but
+  most compilers emit an error when an array appears.
+  f18 supports them with a portability warning.
+* f18 does not enforce a blanket prohibition against generic
+  interfaces containing a mixture of functions and subroutines.
+  Apart from some contexts in which the standard requires all of
+  a particular generic interface to have only all functions or
+  all subroutines as its specific procedures, we allow both to
+  appear, unlike several other Fortran compilers.
+  This is especially desirable when two generics of the same
+  name are combined due to USE association and the mixture may
+  be inadvertent.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
@@ -410,3 +454,80 @@ end
   to some forms of input in this situation.)
   For sequential formatted output, RECL= serves as a limit on record lengths
   that raises an error when it is exceeded.
+
+* When a `DATA` statement in a `BLOCK` construct could be construed as
+  either initializing a host-associated object or declaring a new local
+  initialized object, f18 interprets the standard's classification of
+  a `DATA` statement as being a "declaration" rather than a "specification"
+  construct, and notes that the `BLOCK` construct is defined as localizing
+  names that have specifications in the `BLOCK` construct.
+  So this example will elicit an error about multiple initialization:
+```
+subroutine subr
+  integer n = 1
+  block
+    data n/2/
+  end block
+end subroutine
+```
+
+  Other Fortran compilers disagree with each other in their interpretations
+  of this example.
+  The precedent among the most commonly used compilers
+  agrees with f18's interpretation: a `DATA` statement without any other
+  specification of the name refers to the host-associated object.
+
+* Many Fortran compilers allow a non-generic procedure to be `USE`-associated
+  into a scope that also contains a generic interface of the same name
+  but does not have the `USE`-associated non-generic procedure as a
+  specific procedure.
+```
+module m1
+ contains
+  subroutine foo(n)
+    integer, intent(in) :: n
+  end subroutine
+end module
+
+module m2
+  use m1, only: foo
+  interface foo
+    module procedure noargs
+  end interface
+ contains
+  subroutine noargs
+  end subroutine
+end module
+```
+
+  This case elicits a warning from f18, as it should not be treated
+  any differently than the same case with the non-generic procedure of
+  the same name being defined in the same scope rather than being
+  `USE`-associated into it, which is explicitly non-conforming in the
+  standard and not allowed by most other compilers.
+  If the `USE`-associated entity of the same name is not a procedure,
+  most compilers disallow it as well.
+
+* Fortran 2018 19.3.4p1: "A component name has the scope of its derived-type
+  definition.  Outside the type definition, it may also appear ..." which
+  seems to imply that within its derived-type definition, a component
+  name is in its scope, and at least shadows any entity of the same name
+  in the enclosing scope and might be read, thanks to the "also", to mean
+  that a "bare" reference to the name could be used in a specification inquiry.
+  However, most other compilers do not allow a component to shadow exterior
+  symbols, much less appear in specification inquiries, and there are
+  application codes that expect exterior symbols whose names match
+  components to be visible in a derived-type definition's default initialization
+  expressions, and so f18 follows that precedent.
+
+* 19.3.1p1 "Within its scope, a local identifier of an entity of class (1)
+  or class (4) shall not be the same as a global identifier used in that scope..."
+  is read so as to allow the name of a module, submodule, main program,
+  or `BLOCK DATA` subprogram to also be the name of an local entity in its
+  scope, with a portability warning, since that global name is not actually
+  capable of being "used" in its scope.
+
+## De Facto Standard Features
+
+* `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
+  same type, a case that is technically implementation-defined.

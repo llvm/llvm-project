@@ -22,5 +22,5 @@ InitializeCOMRAII::InitializeCOMRAII(COMThreadingMode Threading,
                                      bool SpeedOverMemory) {}
 
 InitializeCOMRAII::~InitializeCOMRAII() = default;
-}
-}
+} // namespace sys
+} // namespace llvm

@@ -61,7 +61,6 @@ private:
                              ASTContext &Ctx);
   static SmallVector<const MemRegion *, 4>
   getCapturedStackRegions(const BlockDataRegion &B, CheckerContext &C);
-  static bool isArcManagedBlock(const MemRegion *R, CheckerContext &C);
   static bool isNotInCurrentFrame(const MemRegion *R, CheckerContext &C);
 };
 } // namespace
@@ -108,13 +107,6 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
   }
 
   return range;
-}
-
-bool StackAddrEscapeChecker::isArcManagedBlock(const MemRegion *R,
-                                               CheckerContext &C) {
-  assert(R && "MemRegion should not be null");
-  return C.getASTContext().getLangOpts().ObjCAutoRefCount &&
-         isa<BlockDataRegion>(R);
 }
 
 bool StackAddrEscapeChecker::isNotInCurrentFrame(const MemRegion *R,
@@ -214,7 +206,7 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
 void StackAddrEscapeChecker::checkReturnedBlockCaptures(
     const BlockDataRegion &B, CheckerContext &C) const {
   for (const MemRegion *Region : getCapturedStackRegions(B, C)) {
-    if (isArcManagedBlock(Region, C) || isNotInCurrentFrame(Region, C))
+    if (isNotInCurrentFrame(Region, C))
       continue;
     ExplodedNode *N = C.generateNonFatalErrorNode();
     if (!N)
@@ -267,8 +259,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
     checkReturnedBlockCaptures(*B, C);
 
-  if (!isa<StackSpaceRegion>(R->getMemorySpace()) ||
-      isNotInCurrentFrame(R, C) || isArcManagedBlock(R, C))
+  if (!isa<StackSpaceRegion>(R->getMemorySpace()) || isNotInCurrentFrame(R, C))
     return;
 
   // Returning a record by value is fine. (In this case, the returned
@@ -348,8 +339,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       // Check the globals for the same.
       if (!isa<GlobalsSpaceRegion>(Region->getMemorySpace()))
         return true;
-      if (VR && VR->hasStackStorage() && !isArcManagedBlock(VR, Ctx) &&
-          !isNotInCurrentFrame(VR, Ctx))
+      if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
         V.emplace_back(Region, VR);
       return true;
     }

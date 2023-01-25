@@ -17,9 +17,7 @@
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void OwningMemoryCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "LegacyResourceProducers", LegacyResourceProducers);
@@ -370,6 +368,4 @@ bool OwningMemoryCheck::handleOwnerMembers(const BoundNodes &Nodes) {
   return false;
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

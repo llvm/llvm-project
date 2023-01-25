@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=800 -unroll-peel-max-count=0 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=800 -unroll-peel-max-count=0 | FileCheck %s
 
 ; We should not peel this loop even though we can, because the max count is set
 ; to zero.

@@ -1,11 +1,6 @@
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
-; RUN: -passes=msan 2>&1 | FileCheck                                           \
-; RUN: "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS1" %s
-; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
-; RUN: -passes=msan 2>&1 | FileCheck                                           \
-; RUN: "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS2" %s
-; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -S -passes=msan    \
-; RUN: 2>&1 | FileCheck "-check-prefixes=CHECK,CHECK-KMSAN,CHECK-ORIGINS2" %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS1" %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S -passes=msan 2>&1 | FileCheck "-check-prefixes=CHECK,CHECK-MSAN,CHECK-ORIGINS2" %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0 -S -passes=msan 2>&1        | FileCheck "-check-prefixes=CHECK,CHECK-KMSAN,CHECK-ORIGINS2" %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -15,11 +10,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Check that debug info for origin propagation code is set correctly.
 
 ; Function Attrs: nounwind
-define void @Store(i32* nocapture %p, i32 %x) #0 !dbg !4 {
+define void @Store(ptr nocapture %p, i32 %x) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %p, i64 0, metadata !11, metadata !DIExpression()), !dbg !16
+  tail call void @llvm.dbg.value(metadata ptr %p, i64 0, metadata !11, metadata !DIExpression()), !dbg !16
   tail call void @llvm.dbg.value(metadata i32 %x, i64 0, metadata !12, metadata !DIExpression()), !dbg !16
-  store i32 %x, i32* %p, align 4, !dbg !17, !tbaa !18
+  store i32 %x, ptr %p, align 4, !dbg !17, !tbaa !18
   ret void, !dbg !22
 }
 
@@ -63,9 +58,9 @@ attributes #1 = { nounwind readnone }
 ; CHECK-MSAN: [[ORIGIN:%[0-9a-z]+]] = load {{.*}} @__msan_param_origin_tls
 
 ; CHECK-KMSAN: %param_shadow
-; CHECK-KMSAN: load i32, i32*
+; CHECK-KMSAN: load i32, ptr
 ; CHECK-KMSAN: %param_origin
-; CHECK-KMSAN: [[ORIGIN:%[0-9a-z]+]] = load i32, i32*
+; CHECK-KMSAN: [[ORIGIN:%[0-9a-z]+]] = load i32, ptr
 
 ; CHECK: store {{.*}}!dbg ![[DBG:[0-9]+]]
 ; CHECK: icmp

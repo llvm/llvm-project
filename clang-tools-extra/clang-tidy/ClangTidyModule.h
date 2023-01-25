@@ -65,11 +65,11 @@ public:
 
   /// Create instances of checks that are enabled.
   std::vector<std::unique_ptr<ClangTidyCheck>>
-  createChecks(ClangTidyContext *Context);
+  createChecks(ClangTidyContext *Context) const;
 
   /// Create instances of checks that are enabled for the current Language.
   std::vector<std::unique_ptr<ClangTidyCheck>>
-  createChecksForLanguage(ClangTidyContext *Context);
+  createChecksForLanguage(ClangTidyContext *Context) const;
 
   typedef llvm::StringMap<CheckFactory> FactoryMap;
   FactoryMap::const_iterator begin() const { return Factories.begin(); }

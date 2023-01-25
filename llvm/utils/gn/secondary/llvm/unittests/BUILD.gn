@@ -10,9 +10,11 @@ group("unittests") {
     "Bitstream:BitstreamTests",
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
+    "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/GSYM:DebugInfoGSYMTests",
+    "DebugInfo/LogicalView:DebugInfoLogicalViewTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
     "DebugInfo/PDB:DebugInfoPDBTests",
     "DebugInfo/Symbolizer:DebugInfoSymbolizerTests",
@@ -43,6 +45,8 @@ group("unittests") {
     "Support:SupportTests",
     "Support/DynamicLibrary:DynamicLibraryTests",
     "TableGen:TableGenTests",
+    "TargetParser:TargetParserTests",
+    "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
     "Transforms/IPO:IPOTests",
@@ -52,8 +56,9 @@ group("unittests") {
     "XRay:XRayTests",
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
-    "tools/llvm-profgen:LLVMProfgenTests",
     "tools/llvm-mca:LLVMMCATests",
+    "tools/llvm-profgen:LLVMProfgenTests",
+    "//llvm/lib/TargetParser",
   ]
 
   # Target-dependent unit tests.
@@ -77,6 +82,9 @@ group("unittests") {
       "Target/ARM:ARMTests",
       "tools/llvm-exegesis/ARM:LLVMExegesisARMTests",
     ]
+  }
+  if (llvm_build_LoongArch) {
+    deps += [ "Target/LoongArch:LoongArchTests" ]
   }
   if (llvm_build_Mips) {
     deps += [ "tools/llvm-exegesis/Mips:LLVMExegesisMipsTests" ]

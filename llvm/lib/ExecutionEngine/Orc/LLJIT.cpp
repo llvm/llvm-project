@@ -9,12 +9,14 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
@@ -80,6 +82,53 @@ Function *addHelperAndWrapper(Module &M, StringRef WrapperName,
 
   return WrapperFn;
 }
+
+class ORCPlatformSupport : public LLJIT::PlatformSupport {
+public:
+  ORCPlatformSupport(orc::LLJIT &J) : J(J) {}
+
+  Error initialize(orc::JITDylib &JD) override {
+    using llvm::orc::shared::SPSExecutorAddr;
+    using llvm::orc::shared::SPSString;
+    using SPSDLOpenSig = SPSExecutorAddr(SPSString, int32_t);
+    enum dlopen_mode : int32_t {
+      ORC_RT_RTLD_LAZY = 0x1,
+      ORC_RT_RTLD_NOW = 0x2,
+      ORC_RT_RTLD_LOCAL = 0x4,
+      ORC_RT_RTLD_GLOBAL = 0x8
+    };
+
+    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlopen_wrapper")) {
+      return J.getExecutionSession().callSPSWrapper<SPSDLOpenSig>(
+          *WrapperAddr, DSOHandles[&JD], JD.getName(),
+          int32_t(ORC_RT_RTLD_LAZY));
+    } else
+      return WrapperAddr.takeError();
+  }
+
+  Error deinitialize(orc::JITDylib &JD) override {
+    using llvm::orc::shared::SPSExecutorAddr;
+    using SPSDLCloseSig = int32_t(SPSExecutorAddr);
+
+    if (auto WrapperAddr = J.lookup("__orc_rt_jit_dlclose_wrapper")) {
+      int32_t result;
+      auto E = J.getExecutionSession().callSPSWrapper<SPSDLCloseSig>(
+          *WrapperAddr, result, DSOHandles[&JD]);
+      if (E)
+        return E;
+      else if (result)
+        return make_error<StringError>("dlclose failed",
+                                       inconvertibleErrorCode());
+      DSOHandles.erase(&JD);
+    } else
+      return WrapperAddr.takeError();
+    return Error::success();
+  }
+
+private:
+  orc::LLJIT &J;
+  DenseMap<orc::JITDylib *, orc::ExecutorAddr> DSOHandles;
+};
 
 class GenericLLVMIRPlatformSupport;
 
@@ -667,6 +716,7 @@ Error LLJITBuilderState::prepareForConstruction() {
   if (!CreateObjectLinkingLayer) {
     auto &TT = JTMB->getTargetTriple();
     if (TT.getArch() == Triple::riscv64 ||
+        TT.getArch() == Triple::loongarch64 ||
         (TT.isOSBinFormatMachO() &&
          (TT.getArch() == Triple::aarch64 || TT.getArch() == Triple::x86_64))) {
 
@@ -676,8 +726,12 @@ Error LLJITBuilderState::prepareForConstruction() {
           [](ExecutionSession &ES,
              const Triple &) -> Expected<std::unique_ptr<ObjectLayer>> {
         auto ObjLinkingLayer = std::make_unique<ObjectLinkingLayer>(ES);
-        ObjLinkingLayer->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, std::make_unique<jitlink::InProcessEHFrameRegistrar>()));
+        if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES))
+          ObjLinkingLayer->addPlugin(
+              std::make_unique<EHFrameRegistrationPlugin>(
+                  ES, std::move(*EHFrameRegistrar)));
+        else
+          return EHFrameRegistrar.takeError();
         return std::move(ObjLinkingLayer);
       };
     }
@@ -880,6 +934,13 @@ Error LLJIT::applyDataLayout(Module &M) {
   return Error::success();
 }
 
+Error setUpOrcPlatform(LLJIT& J) {
+    LLVM_DEBUG(
+        { dbgs() << "Setting up orc platform support for LLJIT\n"; });
+    J.setPlatformSupport(std::make_unique<ORCPlatformSupport>(J));
+    return Error::success();
+}
+
 void setUpGenericLLVMIRPlatform(LLJIT &J) {
   LLVM_DEBUG(
       { dbgs() << "Setting up GenericLLVMIRPlatform support for LLJIT\n"; });
@@ -953,6 +1014,13 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 
   if (S.NumCompileThreads > 0)
     CODLayer->setCloneToNewContextOnEmit(true);
+}
+
+// In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
+// them to be linked in.
+LLVM_ATTRIBUTE_USED void linkComponents() {
+  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
 }
 
 } // End namespace orc.

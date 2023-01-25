@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // using iterator_category = input_iterator_tag; // Only defined if `View` is a forward range.
 // using iterator_concept = conditional_t<forward_range<Base>, forward_iterator_tag, input_iterator_tag>;

@@ -471,4 +471,5 @@ def V6_vzb_altAlias : InstAlias<"$Vdd32 = vzxtb($Vu32)", (V6_vzb HvxWR:$Vdd32, H
 def V6_vzh_altAlias : InstAlias<"$Vdd32 = vzxth($Vu32)", (V6_vzh HvxWR:$Vdd32, HvxVR:$Vu32)>, Requires<[UseHVX]>;
 def V6_zld0Alias : InstAlias<"z = vmem($Rt32)", (V6_zLd_ai IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
 def V6_zldp0Alias : InstAlias<"if ($Pv4) z = vmem($Rt32)", (V6_zLd_pred_ai PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
+def Y2_crswap_oldAlias : InstAlias<"crswap($Rx32,sgp)", (Y2_crswap0 IntRegs:$Rx32)>;
 def Y2_dcfetchAlias : InstAlias<"dcfetch($Rs32)", (Y2_dcfetchbo IntRegs:$Rs32, 0)>;

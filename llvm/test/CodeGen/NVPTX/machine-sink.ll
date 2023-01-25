@@ -15,8 +15,8 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 define float @post_dominate(float %x, i1 %cond) {
 ; CHECK-LABEL: post_dominate(
 entry:
-  %0 = load float, float* addrspacecast (float addrspace(3)* @scalar1 to float*), align 4
-  %1 = load float, float* addrspacecast (float addrspace(3)* @scalar2 to float*), align 4
+  %0 = load float, ptr addrspacecast (ptr addrspace(3) @scalar1 to ptr), align 4
+  %1 = load float, ptr addrspacecast (ptr addrspace(3) @scalar2 to ptr), align 4
 ; CHECK: ld.shared.f32
 ; CHECK: ld.shared.f32
   %2 = fmul float %0, %0

@@ -9,11 +9,12 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include <optional>
 
 namespace mlir {
 namespace transform {
@@ -22,21 +23,13 @@ namespace detail {
 /// Asserts that the operations provided as template arguments implement the
 /// TransformOpInterface and MemoryEffectsOpInterface. This must be a dynamic
 /// assertion since interface implementations may be registered at runtime.
-template <typename OpTy>
-static inline void checkImplementsTransformInterface(MLIRContext *context) {
-  // Since the operation is being inserted into the Transform dialect and the
-  // dialect does not implement the interface fallback, only check for the op
-  // itself having the interface implementation.
-  RegisteredOperationName opName =
-      *RegisteredOperationName::lookup(OpTy::getOperationName(), context);
-  assert((opName.hasInterface<TransformOpInterface>() ||
-          opName.hasTrait<OpTrait::IsTerminator>()) &&
-         "non-terminator ops injected into the transform dialect must "
-         "implement TransformOpInterface");
-  assert(opName.hasInterface<MemoryEffectOpInterface>() &&
-         "ops injected into the transform dialect must implement "
-         "MemoryEffectsOpInterface");
-}
+void checkImplementsTransformOpInterface(StringRef name, MLIRContext *context);
+
+/// Asserts that the type provided as template argument implements the
+/// TransformHandleTypeInterface. This must be a dynamic assertion since
+/// interface implementations may be registered at runtime.
+void checkImplementsTransformHandleTypeInterface(TypeID typeID,
+                                                 MLIRContext *context);
 } // namespace detail
 #endif // NDEBUG
 } // namespace transform
@@ -120,6 +113,18 @@ protected:
     });
   }
 
+  /// Injects the types into the Transform dialect. The types must implement
+  /// the TransformHandleTypeInterface and the implementation must be already
+  /// available when the type is injected. Furthermore, the types must provide
+  /// a `getMnemonic` static method returning an object convertible to
+  /// `StringRef` that is unique across all injected types.
+  template <typename... TypeTys>
+  void registerTypes() {
+    opInitializers.push_back([](TransformDialect *transformDialect) {
+      transformDialect->addTypesChecked<TypeTys...>();
+    });
+  }
+
   /// Declares that this Transform dialect extension depends on the dialect
   /// provided as template parameter. When the Transform dialect is loaded,
   /// dependent dialects will be loaded as well. This is intended for dialects
@@ -182,6 +187,51 @@ private:
   bool buildOnly;
 };
 
+template <typename OpTy>
+void TransformDialect::addOperationIfNotRegistered() {
+  StringRef name = OpTy::getOperationName();
+  std::optional<RegisteredOperationName> opName =
+      RegisteredOperationName::lookup(name, getContext());
+  if (!opName) {
+    addOperations<OpTy>();
+#ifndef NDEBUG
+    detail::checkImplementsTransformOpInterface(name, getContext());
+#endif // NDEBUG
+    return;
+  }
+
+  if (opName->getTypeID() == TypeID::get<OpTy>())
+    return;
+
+  reportDuplicateOpRegistration(name);
+}
+
+template <typename Type>
+void TransformDialect::addTypeIfNotRegistered() {
+  // Use the address of the parse method as a proxy for identifying whether we
+  // are registering the same type class for the same mnemonic.
+  StringRef mnemonic = Type::getMnemonic();
+  auto [it, inserted] = typeParsingHooks.try_emplace(mnemonic, Type::parse);
+  if (!inserted) {
+    const ExtensionTypeParsingHook &parsingHook = it->getValue();
+    if (parsingHook != &Type::parse)
+      reportDuplicateTypeRegistration(mnemonic);
+    else
+      return;
+  }
+  typePrintingHooks.try_emplace(
+      TypeID::get<Type>(), +[](mlir::Type type, AsmPrinter &printer) {
+        printer << Type::getMnemonic();
+        cast<Type>(type).print(printer);
+      });
+  addTypes<Type>();
+
+#ifndef NDEBUG
+  detail::checkImplementsTransformHandleTypeInterface(TypeID::get<Type>(),
+                                                      getContext());
+#endif // NDEBUG
+}
+
 /// A wrapper for transform dialect extensions that forces them to be
 /// constructed in the build-only mode.
 template <typename DerivedTy>
@@ -192,5 +242,7 @@ public:
 
 } // namespace transform
 } // namespace mlir
+
+#include "mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc"
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H

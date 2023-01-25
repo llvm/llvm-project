@@ -23,7 +23,6 @@ class MCInst;
 class MCInstrInfo;
 class MCOperand;
 class MCSubtargetInfo;
-class FeatureBitset;
 
 class AMDGPUMCCodeEmitter : public MCCodeEmitter {
   virtual void anchor();

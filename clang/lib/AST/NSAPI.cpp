@@ -11,6 +11,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/StringSwitch.h"
+#include <optional>
 
 using namespace clang;
 
@@ -142,14 +143,15 @@ Selector NSAPI::getNSArraySelector(NSArrayMethodKind MK) const {
   return NSArraySelectors[MK];
 }
 
-Optional<NSAPI::NSArrayMethodKind> NSAPI::getNSArrayMethodKind(Selector Sel) {
+std::optional<NSAPI::NSArrayMethodKind>
+NSAPI::getNSArrayMethodKind(Selector Sel) {
   for (unsigned i = 0; i != NumNSArrayMethods; ++i) {
     NSArrayMethodKind MK = NSArrayMethodKind(i);
     if (Sel == getNSArraySelector(MK))
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSDictionarySelector(
@@ -243,7 +245,7 @@ Selector NSAPI::getNSDictionarySelector(
   return NSDictionarySelectors[MK];
 }
 
-Optional<NSAPI::NSDictionaryMethodKind>
+std::optional<NSAPI::NSDictionaryMethodKind>
 NSAPI::getNSDictionaryMethodKind(Selector Sel) {
   for (unsigned i = 0; i != NumNSDictionaryMethods; ++i) {
     NSDictionaryMethodKind MK = NSDictionaryMethodKind(i);
@@ -251,7 +253,7 @@ NSAPI::getNSDictionaryMethodKind(Selector Sel) {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSSetSelector(NSSetMethodKind MK) const {
@@ -300,15 +302,14 @@ Selector NSAPI::getNSSetSelector(NSSetMethodKind MK) const {
   return NSSetSelectors[MK];
 }
 
-Optional<NSAPI::NSSetMethodKind>
-NSAPI::getNSSetMethodKind(Selector Sel) {
+std::optional<NSAPI::NSSetMethodKind> NSAPI::getNSSetMethodKind(Selector Sel) {
   for (unsigned i = 0; i != NumNSSetMethods; ++i) {
     NSSetMethodKind MK = NSSetMethodKind(i);
     if (Sel == getNSSetSelector(MK))
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
@@ -363,7 +364,7 @@ Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
   return Sels[MK];
 }
 
-Optional<NSAPI::NSNumberLiteralMethodKind>
+std::optional<NSAPI::NSNumberLiteralMethodKind>
 NSAPI::getNSNumberLiteralMethodKind(Selector Sel) const {
   for (unsigned i = 0; i != NumNSNumberLiteralMethods; ++i) {
     NSNumberLiteralMethodKind MK = NSNumberLiteralMethodKind(i);
@@ -371,14 +372,14 @@ NSAPI::getNSNumberLiteralMethodKind(Selector Sel) const {
       return MK;
   }
 
-  return None;
+  return std::nullopt;
 }
 
-Optional<NSAPI::NSNumberLiteralMethodKind>
+std::optional<NSAPI::NSNumberLiteralMethodKind>
 NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
   const BuiltinType *BT = T->getAs<BuiltinType>();
   if (!BT)
-    return None;
+    return std::nullopt;
 
   const TypedefType *TDT = T->getAs<TypedefType>();
   if (TDT) {
@@ -496,7 +497,7 @@ NSAPI::getNSNumberFactoryMethodKind(QualType T) const {
     break;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 /// Returns true if \param T is a typedef of "BOOL" in objective-c.

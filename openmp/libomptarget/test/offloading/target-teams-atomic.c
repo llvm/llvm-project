@@ -17,9 +17,9 @@ int main() {
   // CHECK-NEXT: update: x=[[#NUM_TEAMS]]{{$}}
   int x = 0;
   int numTeams;
-  #pragma omp target teams num_teams(NUM_TEAMS_TRY) map(tofrom:x, numTeams)
+#pragma omp target teams num_teams(NUM_TEAMS_TRY) map(tofrom : x, numTeams)
   {
-    #pragma omp atomic update
+#pragma omp atomic update
     ++x;
     if (omp_get_team_num() == 0)
       numTeams = omp_get_num_teams();
@@ -32,10 +32,10 @@ int main() {
   bool xCaptured[numTeams];
   memset(xCaptured, 0, sizeof xCaptured);
   x = 0;
-  #pragma omp target teams num_teams(NUM_TEAMS_TRY) map(tofrom:x, numTeams)
+#pragma omp target teams num_teams(NUM_TEAMS_TRY) map(tofrom : x, numTeams)
   {
     int v;
-    #pragma omp atomic capture
+#pragma omp atomic capture
     v = x++;
     xCaptured[v] = true;
   }

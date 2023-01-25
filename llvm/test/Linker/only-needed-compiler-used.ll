@@ -6,7 +6,7 @@
 ; Empty destination module!
 
 
-; CHECK-DAG:          @llvm.compiler.used = appending global [2 x i8*] [i8* @used1, i8* bitcast (i32* @used2 to i8*)], section "llvm.metadata"
+; CHECK-DAG:          @llvm.compiler.used = appending global [2 x ptr] [ptr @used1, ptr @used2], section "llvm.metadata"
 ; NO-INTERNALIZE-DAG: @used1 = global i8 4
 ; INTERNALIZE-DAG:    @used1 = internal global i8 4
 ; NO-INTERNALIZE-DAG: @used2 = global i32 123

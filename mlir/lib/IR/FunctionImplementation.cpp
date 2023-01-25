@@ -41,8 +41,8 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
         OpAsmParser::Argument argument;
         auto argPresent = parser.parseOptionalArgument(
             argument, /*allowType=*/true, /*allowAttrs=*/true);
-        if (argPresent.hasValue()) {
-          if (failed(argPresent.getValue()))
+        if (argPresent.has_value()) {
+          if (failed(argPresent.value()))
             return failure(); // Present but malformed.
 
           // Reject this if the preceding argument was missing a name.
@@ -113,7 +113,7 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
   return parser.parseRParen();
 }
 
-ParseResult mlir::function_interface_impl::parseFunctionSignature(
+ParseResult function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
@@ -125,9 +125,10 @@ ParseResult mlir::function_interface_impl::parseFunctionSignature(
   return success();
 }
 
-void mlir::function_interface_impl::addArgAndResultAttrs(
+void function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result, ArrayRef<DictionaryAttr> argAttrs,
-    ArrayRef<DictionaryAttr> resultAttrs) {
+    ArrayRef<DictionaryAttr> resultAttrs, StringAttr argAttrsName,
+    StringAttr resAttrsName) {
   auto nonEmptyAttrsFn = [](DictionaryAttr attrs) {
     return attrs && !attrs.empty();
   };
@@ -142,28 +143,28 @@ void mlir::function_interface_impl::addArgAndResultAttrs(
 
   // Add the attributes to the function arguments.
   if (llvm::any_of(argAttrs, nonEmptyAttrsFn))
-    result.addAttribute(function_interface_impl::getArgDictAttrName(),
-                        getArrayAttr(argAttrs));
+    result.addAttribute(argAttrsName, getArrayAttr(argAttrs));
 
   // Add the attributes to the function results.
   if (llvm::any_of(resultAttrs, nonEmptyAttrsFn))
-    result.addAttribute(function_interface_impl::getResultDictAttrName(),
-                        getArrayAttr(resultAttrs));
+    result.addAttribute(resAttrsName, getArrayAttr(resultAttrs));
 }
 
-void mlir::function_interface_impl::addArgAndResultAttrs(
+void function_interface_impl::addArgAndResultAttrs(
     Builder &builder, OperationState &result,
-    ArrayRef<OpAsmParser::Argument> args,
-    ArrayRef<DictionaryAttr> resultAttrs) {
+    ArrayRef<OpAsmParser::Argument> args, ArrayRef<DictionaryAttr> resultAttrs,
+    StringAttr argAttrsName, StringAttr resAttrsName) {
   SmallVector<DictionaryAttr> argAttrs;
   for (const auto &arg : args)
     argAttrs.push_back(arg.attrs);
-  addArgAndResultAttrs(builder, result, argAttrs, resultAttrs);
+  addArgAndResultAttrs(builder, result, argAttrs, resultAttrs, argAttrsName,
+                       resAttrsName);
 }
 
-ParseResult mlir::function_interface_impl::parseFunctionOp(
+ParseResult function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
-    FuncTypeBuilder funcTypeBuilder) {
+    StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder,
+    StringAttr argAttrsName, StringAttr resAttrsName) {
   SmallVector<OpAsmParser::Argument> entryArgs;
   SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
@@ -197,7 +198,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
            << "failed to construct function type"
            << (errorMessage.empty() ? "" : ": ") << errorMessage;
   }
-  result.addAttribute(getTypeAttrName(), TypeAttr::get(type));
+  result.addAttribute(typeAttrName, TypeAttr::get(type));
 
   // If function attributes are present, parse them.
   NamedAttrList parsedAttributes;
@@ -209,7 +210,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   // dictionary.
   for (StringRef disallowed :
        {SymbolTable::getVisibilityAttrName(), SymbolTable::getSymbolAttrName(),
-        getTypeAttrName()}) {
+        typeAttrName.getValue()}) {
     if (parsedAttributes.get(disallowed))
       return parser.emitError(attributeDictLocation, "'")
              << disallowed
@@ -220,7 +221,8 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
 
   // Add the attributes to the function arguments.
   assert(resultAttrs.size() == resultTypes.size());
-  addArgAndResultAttrs(builder, result, entryArgs, resultAttrs);
+  addArgAndResultAttrs(builder, result, entryArgs, resultAttrs, argAttrsName,
+                       resAttrsName);
 
   // Parse the optional function body. The printer will not print the body if
   // its empty, so disallow parsing of empty body in the parser.
@@ -229,7 +231,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   OptionalParseResult parseResult =
       parser.parseOptionalRegion(*body, entryArgs,
                                  /*enableNameShadowing=*/false);
-  if (parseResult.hasValue()) {
+  if (parseResult.has_value()) {
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
@@ -261,14 +263,14 @@ static void printFunctionResultList(OpAsmPrinter &p, ArrayRef<Type> types,
     os << ')';
 }
 
-void mlir::function_interface_impl::printFunctionSignature(
-    OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes, bool isVariadic,
-    ArrayRef<Type> resultTypes) {
+void function_interface_impl::printFunctionSignature(
+    OpAsmPrinter &p, FunctionOpInterface op, ArrayRef<Type> argTypes,
+    bool isVariadic, ArrayRef<Type> resultTypes) {
   Region &body = op->getRegion(0);
   bool isExternal = body.empty();
 
   p << '(';
-  ArrayAttr argAttrs = op->getAttrOfType<ArrayAttr>(getArgDictAttrName());
+  ArrayAttr argAttrs = op.getArgAttrsAttr();
   for (unsigned i = 0, e = argTypes.size(); i < e; ++i) {
     if (i > 0)
       p << ", ";
@@ -295,26 +297,23 @@ void mlir::function_interface_impl::printFunctionSignature(
 
   if (!resultTypes.empty()) {
     p.getStream() << " -> ";
-    auto resultAttrs = op->getAttrOfType<ArrayAttr>(getResultDictAttrName());
+    auto resultAttrs = op.getResAttrsAttr();
     printFunctionResultList(p, resultTypes, resultAttrs);
   }
 }
 
-void mlir::function_interface_impl::printFunctionAttributes(
-    OpAsmPrinter &p, Operation *op, unsigned numInputs, unsigned numResults,
-    ArrayRef<StringRef> elided) {
+void function_interface_impl::printFunctionAttributes(
+    OpAsmPrinter &p, Operation *op, ArrayRef<StringRef> elided) {
   // Print out function attributes, if present.
-  SmallVector<StringRef, 2> ignoredAttrs = {
-      ::mlir::SymbolTable::getSymbolAttrName(), getTypeAttrName(),
-      getArgDictAttrName(), getResultDictAttrName()};
+  SmallVector<StringRef, 8> ignoredAttrs = {SymbolTable::getSymbolAttrName()};
   ignoredAttrs.append(elided.begin(), elided.end());
 
   p.printOptionalAttrDictWithKeyword(op->getAttrs(), ignoredAttrs);
 }
 
-void mlir::function_interface_impl::printFunctionOp(OpAsmPrinter &p,
-                                                    FunctionOpInterface op,
-                                                    bool isVariadic) {
+void function_interface_impl::printFunctionOp(
+    OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
+    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName) {
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
@@ -329,8 +328,8 @@ void mlir::function_interface_impl::printFunctionOp(OpAsmPrinter &p,
   ArrayRef<Type> argTypes = op.getArgumentTypes();
   ArrayRef<Type> resultTypes = op.getResultTypes();
   printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
-  printFunctionAttributes(p, op, argTypes.size(), resultTypes.size(),
-                          {visibilityAttrName});
+  printFunctionAttributes(
+      p, op, {visibilityAttrName, typeAttrName, argAttrsName, resAttrsName});
   // Print the body if this is not an external function.
   Region &body = op->getRegion(0);
   if (!body.empty()) {

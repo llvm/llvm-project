@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
-; RUN: opt < %s -loop-unroll -loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
-; RUN: opt < %s -loop-unroll -unroll-allow-remainder=0 -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,NOREM %s
+; RUN: opt < %s -passes=loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
+; RUN: opt < %s -passes=loop-unroll,loop-unroll -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,REM %s
+; RUN: opt < %s -passes=loop-unroll -unroll-allow-remainder=0 -pragma-unroll-threshold=1024 -S | FileCheck -check-prefixes=CHECK,NOREM %s
 ;
 ; Run loop unrolling twice to verify that loop unrolling metadata is properly
 ; removed and further unrolling is disabled after the pass is run once.
@@ -14,16 +14,16 @@ target triple = "x86_64-unknown-linux-gnu"
 ;
 ; CHECK-LABEL: @loop4(
 ; CHECK-NOT: br i1
-define void @loop4(i32* nocapture %a) {
+define void @loop4(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 4
   br i1 %exitcond, label %for.end, label %for.body
@@ -38,16 +38,16 @@ for.end:                                          ; preds = %for.body
 ; CHECK: store i32
 ; CHECK-NOT: store i32
 ; CHECK: br i1
-define void @loop4_with_disable(i32* nocapture %a) {
+define void @loop4_with_disable(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 4
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !1
@@ -66,16 +66,16 @@ for.end:                                          ; preds = %for.body
 ; CHECK: store i32
 ; CHECK-NOT: store i32
 ; CHECK: br i1
-define void @loop64(i32* nocapture %a) {
+define void @loop64(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 64
   br i1 %exitcond, label %for.end, label %for.body
@@ -89,16 +89,16 @@ for.end:                                          ; preds = %for.body
 ;
 ; CHECK-LABEL: @loop64_with_full(
 ; CHECK-NOT: br i1
-define void @loop64_with_full(i32* nocapture %a) {
+define void @loop64_with_full(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 64
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !3
@@ -119,16 +119,16 @@ for.end:                                          ; preds = %for.body
 ; CHECK: store i32
 ; CHECK-NOT: store i32
 ; CHECK: br i1
-define void @loop64_with_count4(i32* nocapture %a) {
+define void @loop64_with_count4(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 64
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !5
@@ -146,17 +146,17 @@ for.end:                                          ; preds = %for.body
 ; CHECK-LABEL: @runtime_loop_with_full(
 ; CHECK: store i32
 ; CHECK-NOT: store i32
-define void @runtime_loop_with_full(i32* nocapture %a, i32 %b) {
+define void @runtime_loop_with_full(ptr nocapture %a, i32 %b) {
 entry:
   %cmp3 = icmp sgt i32 %b, 0
   br i1 %cmp3, label %for.body, label %for.end, !llvm.loop !8
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %b
@@ -187,17 +187,17 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK-NOT: store
 ; REM: br i1
 ; NOREM-NOT: br i1
-define void @runtime_loop_with_count4(i32* nocapture %a, i32 %b) {
+define void @runtime_loop_with_count4(ptr nocapture %a, i32 %b) {
 entry:
   %cmp3 = icmp sgt i32 %b, 0
   br i1 %cmp3, label %for.body, label %for.end, !llvm.loop !9
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %b
@@ -215,16 +215,16 @@ for.end:                                          ; preds = %for.body, %entry
 ; CHECK: store i32
 ; CHECK-NOT: store i32
 ; CHECK: br i1
-define void @unroll_1(i32* nocapture %a, i32 %b) {
+define void @unroll_1(ptr nocapture %a, i32 %b) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 4
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !10
@@ -240,16 +240,16 @@ for.end:                                          ; preds = %for.body
 ;
 ; CHECK-LABEL: @loop64_with_enable(
 ; CHECK-NOT: br i1
-define void @loop64_with_enable(i32* nocapture %a) {
+define void @loop64_with_enable(ptr nocapture %a) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 64
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !12
@@ -283,17 +283,17 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NOT: store
 ; REM: br i1
 ; NOREM-NOT: br i1
-define void @runtime_loop_with_enable(i32* nocapture %a, i32 %b) {
+define void @runtime_loop_with_enable(ptr nocapture %a, i32 %b) {
 entry:
   %cmp3 = icmp sgt i32 %b, 0
   br i1 %cmp3, label %for.body, label %for.end, !llvm.loop !8
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %b
@@ -322,17 +322,17 @@ for.end:                                          ; preds = %for.body, %entry
 ; NOREM-NOT: store
 ; CHECK-NOT: store
 ; REM: br i1
-define void @runtime_loop_with_count3(i32* nocapture %a, i32 %b) {
+define void @runtime_loop_with_count3(ptr nocapture %a, i32 %b) {
 entry:
   %cmp3 = icmp sgt i32 %b, 0
   br i1 %cmp3, label %for.body, label %for.end, !llvm.loop !16
 
 for.body:                                         ; preds = %entry, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %arrayidx, align 4
+  store i32 %inc, ptr %arrayidx, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %b

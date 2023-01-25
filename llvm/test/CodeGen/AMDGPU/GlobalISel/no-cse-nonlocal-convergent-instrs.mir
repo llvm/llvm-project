@@ -30,7 +30,7 @@
 # CHECK-NEXT: V_ADD_CO_U32_e64 [[SWIZZLE2]], {{%[0-9]+}}, 0, implicit $exec
 
 --- |
-  define amdgpu_kernel void @no_cse(i32 addrspace(1)*, i32, i1) {
+  define amdgpu_kernel void @no_cse(ptr addrspace(1), i32, i1) {
   entry:
     unreachable
   if.then:

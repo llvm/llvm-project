@@ -72,8 +72,8 @@ find $SRCS | grep ".cpp$" | sort | while read file ; do
 
   echo "-----------------------------------"
   echo "-- Apply all checks on file $file"
-  echo "$TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file -fix"
-  $TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file -fix \
+  echo "$TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file -fix -fix-errors"
+  $TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file -fix -fix-errors \
     | grep "warning:.*\]$" | sed -r 's#.*\[(.*)]$#\1#' | sort -u > $tmpfile
   git clang-format -f
   if [[ $(git diff --stat) == '' ]]; then
@@ -89,8 +89,8 @@ find $SRCS | grep ".cpp$" | sort | while read file ; do
 
     echo "-----------------------------------"
     echo "-- Apply check $check on file $file"
-    echo "$TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file --checks="-*,$check" -fix"
-    { $TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file --checks="-*,$check" -fix ; } 2>&1
+    echo "$TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file --checks="-*,$check" -fix -fix-errors"
+    { $TIMING_TIDY $CLANG_TIDY -p $BUILD_DIR $file --checks="-*,$check" -fix -fix-errors ; } 2>&1
     git clang-format -f
     if [[ $(git diff --stat) == '' ]]; then
       echo 'Nothing was applied, skip'

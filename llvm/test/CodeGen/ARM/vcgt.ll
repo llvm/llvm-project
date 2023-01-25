@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=arm-eabi -mattr=+neon | FileCheck %s --check-prefixes=CHECK,ALLOC
 ; RUN: llc < %s -mtriple=arm-eabi -mattr=+neon -regalloc=basic | FileCheck %s --check-prefixes=CHECK,BASIC
 
-define <8 x i8> @vcgts8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vcgts8(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgts8:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -18,14 +18,14 @@ define <8 x i8> @vcgts8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.s8 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
-	%tmp2 = load <8 x i8>, <8 x i8>* %B
+	%tmp1 = load <8 x i8>, ptr %A
+	%tmp2 = load <8 x i8>, ptr %B
 	%tmp3 = icmp sgt <8 x i8> %tmp1, %tmp2
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
 
-define <4 x i16> @vcgts16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vcgts16(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgts16:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -41,14 +41,14 @@ define <4 x i16> @vcgts16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.s16 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
-	%tmp2 = load <4 x i16>, <4 x i16>* %B
+	%tmp1 = load <4 x i16>, ptr %A
+	%tmp2 = load <4 x i16>, ptr %B
 	%tmp3 = icmp sgt <4 x i16> %tmp1, %tmp2
 	%tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
 	ret <4 x i16> %tmp4
 }
 
-define <2 x i32> @vcgts32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vcgts32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgts32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -64,14 +64,14 @@ define <2 x i32> @vcgts32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.s32 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
-	%tmp2 = load <2 x i32>, <2 x i32>* %B
+	%tmp1 = load <2 x i32>, ptr %A
+	%tmp2 = load <2 x i32>, ptr %B
 	%tmp3 = icmp sgt <2 x i32> %tmp1, %tmp2
 	%tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
 
-define <8 x i8> @vcgtu8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vcgtu8(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtu8:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -87,14 +87,14 @@ define <8 x i8> @vcgtu8(<8 x i8>* %A, <8 x i8>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.u8 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
-	%tmp2 = load <8 x i8>, <8 x i8>* %B
+	%tmp1 = load <8 x i8>, ptr %A
+	%tmp2 = load <8 x i8>, ptr %B
 	%tmp3 = icmp ugt <8 x i8> %tmp1, %tmp2
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
 
-define <4 x i16> @vcgtu16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vcgtu16(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtu16:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -110,14 +110,14 @@ define <4 x i16> @vcgtu16(<4 x i16>* %A, <4 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.u16 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i16>, <4 x i16>* %A
-	%tmp2 = load <4 x i16>, <4 x i16>* %B
+	%tmp1 = load <4 x i16>, ptr %A
+	%tmp2 = load <4 x i16>, ptr %B
 	%tmp3 = icmp ugt <4 x i16> %tmp1, %tmp2
 	%tmp4 = sext <4 x i1> %tmp3 to <4 x i16>
 	ret <4 x i16> %tmp4
 }
 
-define <2 x i32> @vcgtu32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vcgtu32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtu32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -133,14 +133,14 @@ define <2 x i32> @vcgtu32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.u32 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <2 x i32>, <2 x i32>* %A
-	%tmp2 = load <2 x i32>, <2 x i32>* %B
+	%tmp1 = load <2 x i32>, ptr %A
+	%tmp2 = load <2 x i32>, ptr %B
 	%tmp3 = icmp ugt <2 x i32> %tmp1, %tmp2
 	%tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
 
-define <2 x i32> @vcgtf32(<2 x float>* %A, <2 x float>* %B) nounwind {
+define <2 x i32> @vcgtf32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtf32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -156,14 +156,14 @@ define <2 x i32> @vcgtf32(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; BASIC-NEXT:    vcgt.f32 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <2 x float>, <2 x float>* %A
-	%tmp2 = load <2 x float>, <2 x float>* %B
+	%tmp1 = load <2 x float>, ptr %A
+	%tmp2 = load <2 x float>, ptr %B
 	%tmp3 = fcmp ogt <2 x float> %tmp1, %tmp2
 	%tmp4 = sext <2 x i1> %tmp3 to <2 x i32>
 	ret <2 x i32> %tmp4
 }
 
-define <16 x i8> @vcgtQs8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
+define <16 x i8> @vcgtQs8(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQs8:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -181,14 +181,14 @@ define <16 x i8> @vcgtQs8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
-	%tmp2 = load <16 x i8>, <16 x i8>* %B
+	%tmp1 = load <16 x i8>, ptr %A
+	%tmp2 = load <16 x i8>, ptr %B
 	%tmp3 = icmp sgt <16 x i8> %tmp1, %tmp2
 	%tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
 	ret <16 x i8> %tmp4
 }
 
-define <8 x i16> @vcgtQs16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vcgtQs16(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQs16:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -206,14 +206,14 @@ define <8 x i16> @vcgtQs16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
-	%tmp2 = load <8 x i16>, <8 x i16>* %B
+	%tmp1 = load <8 x i16>, ptr %A
+	%tmp2 = load <8 x i16>, ptr %B
 	%tmp3 = icmp sgt <8 x i16> %tmp1, %tmp2
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
 	ret <8 x i16> %tmp4
 }
 
-define <4 x i32> @vcgtQs32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vcgtQs32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQs32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -231,14 +231,14 @@ define <4 x i32> @vcgtQs32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
-	%tmp2 = load <4 x i32>, <4 x i32>* %B
+	%tmp1 = load <4 x i32>, ptr %A
+	%tmp2 = load <4 x i32>, ptr %B
 	%tmp3 = icmp sgt <4 x i32> %tmp1, %tmp2
 	%tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
 
-define <16 x i8> @vcgtQu8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
+define <16 x i8> @vcgtQu8(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQu8:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -256,14 +256,14 @@ define <16 x i8> @vcgtQu8(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <16 x i8>, <16 x i8>* %A
-	%tmp2 = load <16 x i8>, <16 x i8>* %B
+	%tmp1 = load <16 x i8>, ptr %A
+	%tmp2 = load <16 x i8>, ptr %B
 	%tmp3 = icmp ugt <16 x i8> %tmp1, %tmp2
 	%tmp4 = sext <16 x i1> %tmp3 to <16 x i8>
 	ret <16 x i8> %tmp4
 }
 
-define <8 x i16> @vcgtQu16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vcgtQu16(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQu16:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -281,14 +281,14 @@ define <8 x i16> @vcgtQu16(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i16>, <8 x i16>* %A
-	%tmp2 = load <8 x i16>, <8 x i16>* %B
+	%tmp1 = load <8 x i16>, ptr %A
+	%tmp2 = load <8 x i16>, ptr %B
 	%tmp3 = icmp ugt <8 x i16> %tmp1, %tmp2
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i16>
 	ret <8 x i16> %tmp4
 }
 
-define <4 x i32> @vcgtQu32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vcgtQu32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQu32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -306,14 +306,14 @@ define <4 x i32> @vcgtQu32(<4 x i32>* %A, <4 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x i32>, <4 x i32>* %A
-	%tmp2 = load <4 x i32>, <4 x i32>* %B
+	%tmp1 = load <4 x i32>, ptr %A
+	%tmp2 = load <4 x i32>, ptr %B
 	%tmp3 = icmp ugt <4 x i32> %tmp1, %tmp2
 	%tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
 
-define <4 x i32> @vcgtQf32(<4 x float>* %A, <4 x float>* %B) nounwind {
+define <4 x i32> @vcgtQf32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgtQf32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -331,14 +331,14 @@ define <4 x i32> @vcgtQf32(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x float>, <4 x float>* %A
-	%tmp2 = load <4 x float>, <4 x float>* %B
+	%tmp1 = load <4 x float>, ptr %A
+	%tmp2 = load <4 x float>, ptr %B
 	%tmp3 = fcmp ogt <4 x float> %tmp1, %tmp2
 	%tmp4 = sext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
 }
 
-define <2 x i32> @vacgtf32(<2 x float>* %A, <2 x float>* %B) nounwind {
+define <2 x i32> @vacgtf32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vacgtf32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vldr d16, [r1]
@@ -354,13 +354,13 @@ define <2 x i32> @vacgtf32(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; BASIC-NEXT:    vacgt.f32 d16, d16, d17
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <2 x float>, <2 x float>* %A
-	%tmp2 = load <2 x float>, <2 x float>* %B
+	%tmp1 = load <2 x float>, ptr %A
+	%tmp2 = load <2 x float>, ptr %B
 	%tmp3 = call <2 x i32> @llvm.arm.neon.vacgt.v2i32.v2f32(<2 x float> %tmp1, <2 x float> %tmp2)
 	ret <2 x i32> %tmp3
 }
 
-define <4 x i32> @vacgtQf32(<4 x float>* %A, <4 x float>* %B) nounwind {
+define <4 x i32> @vacgtQf32(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vacgtQf32:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -378,14 +378,14 @@ define <4 x i32> @vacgtQf32(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x float>, <4 x float>* %A
-	%tmp2 = load <4 x float>, <4 x float>* %B
+	%tmp1 = load <4 x float>, ptr %A
+	%tmp2 = load <4 x float>, ptr %B
 	%tmp3 = call <4 x i32> @llvm.arm.neon.vacgt.v4i32.v4f32(<4 x float> %tmp1, <4 x float> %tmp2)
 	ret <4 x i32> %tmp3
 }
 
 ; rdar://7923010
-define <4 x i32> @vcgt_zext(<4 x float>* %A, <4 x float>* %B) nounwind {
+define <4 x i32> @vcgt_zext(ptr %A, ptr %B) nounwind {
 ; ALLOC-LABEL: vcgt_zext:
 ; ALLOC:       @ %bb.0:
 ; ALLOC-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -407,8 +407,8 @@ define <4 x i32> @vcgt_zext(<4 x float>* %A, <4 x float>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-	%tmp1 = load <4 x float>, <4 x float>* %A
-	%tmp2 = load <4 x float>, <4 x float>* %B
+	%tmp1 = load <4 x float>, ptr %A
+	%tmp2 = load <4 x float>, ptr %B
 	%tmp3 = fcmp ogt <4 x float> %tmp1, %tmp2
 	%tmp4 = zext <4 x i1> %tmp3 to <4 x i32>
 	ret <4 x i32> %tmp4
@@ -417,27 +417,27 @@ define <4 x i32> @vcgt_zext(<4 x float>* %A, <4 x float>* %B) nounwind {
 declare <2 x i32> @llvm.arm.neon.vacgt.v2i32.v2f32(<2 x float>, <2 x float>) nounwind readnone
 declare <4 x i32> @llvm.arm.neon.vacgt.v4i32.v4f32(<4 x float>, <4 x float>) nounwind readnone
 
-define <8 x i8> @vcgti8Z(<8 x i8>* %A) nounwind {
+define <8 x i8> @vcgti8Z(ptr %A) nounwind {
 ; CHECK-LABEL: vcgti8Z:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vcgt.s8 d16, d16, #0
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp3 = icmp sgt <8 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4
 }
 
-define <8 x i8> @vclti8Z(<8 x i8>* %A) nounwind {
+define <8 x i8> @vclti8Z(ptr %A) nounwind {
 ; CHECK-LABEL: vclti8Z:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r0]
 ; CHECK-NEXT:    vclt.s8 d16, d16, #0
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-	%tmp1 = load <8 x i8>, <8 x i8>* %A
+	%tmp1 = load <8 x i8>, ptr %A
 	%tmp3 = icmp slt <8 x i8> %tmp1, <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
 	%tmp4 = sext <8 x i1> %tmp3 to <8 x i8>
 	ret <8 x i8> %tmp4

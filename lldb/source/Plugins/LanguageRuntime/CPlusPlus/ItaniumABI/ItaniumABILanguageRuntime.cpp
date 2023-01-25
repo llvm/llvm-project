@@ -453,6 +453,8 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
     // Apple binaries.
     filter_modules.EmplaceBack("libc++abi.dylib");
     filter_modules.EmplaceBack("libSystem.B.dylib");
+    filter_modules.EmplaceBack("libc++abi.1.0.dylib");
+    filter_modules.EmplaceBack("libc++abi.1.dylib");
   }
   return target.GetSearchFilterForModuleList(&filter_modules);
 }
@@ -523,13 +525,13 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
-  TypeSystemClang *clang_ast_context =
+  TypeSystemClangSP scratch_ts_sp =
       ScratchTypeSystemClang::GetForTarget(m_process->GetTarget());
-  if (!clang_ast_context)
+  if (!scratch_ts_sp)
     return {};
 
   CompilerType voidstar =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
   DiagnosticManager diagnostics;
   ExecutionContext exe_ctx;

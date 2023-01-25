@@ -68,7 +68,7 @@ using namespace lld::elf;
 // 00001002       2 - bytes padding
 // 00001004 __CortexA8657417_00000FFE: B.w func
 
-class elf::Patch657417Section : public SyntheticSection {
+class elf::Patch657417Section final : public SyntheticSection {
 public:
   Patch657417Section(InputSection *p, uint64_t off, uint32_t instr, bool isARM);
 
@@ -181,8 +181,8 @@ void Patch657417Section::writeTo(uint8_t *buf) {
   else
     write32le(buf, 0x9000f000);
   // If we have a relocation then apply it.
-  if (!relocations.empty()) {
-    relocateAlloc(buf, buf + getSize());
+  if (!relocs().empty()) {
+    target->relocateAlloc(*this, buf);
     return;
   }
 
@@ -266,7 +266,7 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
   }
 
   ScanResult scanRes = {0, 0, nullptr};
-  const uint8_t *buf = isec->rawData.begin();
+  const uint8_t *buf = isec->content().begin();
   // ARMv7-A Thumb 32-bit instructions are encoded 2 consecutive
   // little-endian halfwords.
   const ulittle16_t *instBuf = reinterpret_cast<const ulittle16_t *>(buf + off);
@@ -281,12 +281,12 @@ static ScanResult scanCortexA8Errata657417(InputSection *isec, uint64_t &off,
       // Find a relocation for the branch if it exists. This will be used
       // to determine the target.
       uint64_t branchOff = off + 4;
-      auto relIt = llvm::find_if(isec->relocations, [=](const Relocation &r) {
+      auto relIt = llvm::find_if(isec->relocs(), [=](const Relocation &r) {
         return r.offset == branchOff &&
                (r.type == R_ARM_THM_JUMP19 || r.type == R_ARM_THM_JUMP24 ||
                 r.type == R_ARM_THM_CALL);
       });
-      if (relIt != isec->relocations.end())
+      if (relIt != isec->relocs().end())
         scanRes.rel = &(*relIt);
       if (branchDestInFirstRegion(isec, branchOff, instr2, scanRes.rel)) {
         if (patchInRange(isec, branchOff, instr2)) {
@@ -327,7 +327,7 @@ void ARMErr657417Patcher::init() {
   };
 
   // Collect mapping symbols for every executable InputSection.
-  for (ELFFileBase *file : ctx->objectFiles) {
+  for (ELFFileBase *file : ctx.objectFiles) {
     for (Symbol *s : file->getLocalSymbols()) {
       auto *def = dyn_cast<Defined>(s);
       if (!def)
@@ -451,7 +451,7 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       patchRelType = R_ARM_JUMP24;
       patchRelAddend -= 4;
     }
-    psec->relocations.push_back(
+    psec->addReloc(
         Relocation{sr.rel->expr, patchRelType, 0, patchRelAddend, sr.rel->sym});
     // Redirect the existing branch relocation to the patch.
     sr.rel->expr = R_PC;
@@ -470,8 +470,7 @@ static void implementPatch(ScanResult sr, InputSection *isec,
       type = R_ARM_THM_JUMP24;
     else
       type = R_ARM_THM_CALL;
-    isec->relocations.push_back(
-        Relocation{R_PC, type, sr.off, -4, psec->patchSym});
+    isec->addReloc(Relocation{R_PC, type, sr.off, -4, psec->patchSym});
   }
   patches.push_back(psec);
 }
@@ -498,8 +497,8 @@ ARMErr657417Patcher::patchInputSectionDescription(
     while (thumbSym != mapSyms.end()) {
       auto nonThumbSym = std::next(thumbSym);
       uint64_t off = (*thumbSym)->value;
-      uint64_t limit = (nonThumbSym == mapSyms.end()) ? isec->rawData.size()
-                                                      : (*nonThumbSym)->value;
+      uint64_t limit = nonThumbSym == mapSyms.end() ? isec->content().size()
+                                                    : (*nonThumbSym)->value;
 
       while (off < limit) {
         ScanResult sr = scanCortexA8Errata657417(isec, off, limit);

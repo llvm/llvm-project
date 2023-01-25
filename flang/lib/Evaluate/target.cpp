@@ -16,7 +16,6 @@ namespace Fortran::evaluate {
 Rounding TargetCharacteristics::defaultRounding;
 
 TargetCharacteristics::TargetCharacteristics() {
-  // TODO: Fill in the type information from command-line targeting information.
   auto enableCategoryKinds{[this](TypeCategory category) {
     for (int kind{0}; kind < maxKind; ++kind) {
       if (CanSupportType(category, kind)) {

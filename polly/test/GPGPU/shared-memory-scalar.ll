@@ -25,7 +25,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @add(float* %A, float %alpha) {
+define void @add(ptr %A, float %alpha) {
 bb:
   br label %bb2
 
@@ -43,10 +43,10 @@ bb4:                                              ; preds = %bb8, %bb3
   br i1 %exitcond, label %bb5, label %bb10
 
 bb5:                                              ; preds = %bb4
-  %tmp = getelementptr inbounds float, float* %A, i64 %i.0
-  %tmp6 = load float, float* %tmp, align 4
+  %tmp = getelementptr inbounds float, ptr %A, i64 %i.0
+  %tmp6 = load float, ptr %tmp, align 4
   %tmp7 = fadd float %tmp6, %alpha
-  store float %tmp7, float* %tmp, align 4
+  store float %tmp7, ptr %tmp, align 4
   br label %bb8
 
 bb8:                                              ; preds = %bb5

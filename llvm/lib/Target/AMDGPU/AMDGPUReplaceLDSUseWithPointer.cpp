@@ -141,7 +141,7 @@ class ReplaceLDSUseImpl {
   std::vector<GlobalVariable *> collectLDSRequiringPointerReplace() {
     // Collect LDS which requires module lowering.
     std::vector<GlobalVariable *> LDSGlobals =
-        llvm::AMDGPU::findVariablesToLower(M, nullptr);
+        llvm::AMDGPU::findLDSVariablesToLower(M, nullptr);
 
     // Remove LDS which don't qualify for replacement.
     llvm::erase_if(LDSGlobals, [&](GlobalVariable *GV) {
@@ -171,7 +171,7 @@ class ReplaceLDSUseImpl {
   // Insert new global LDS pointer which points to LDS.
   GlobalVariable *createLDSPointer(GlobalVariable *GV) {
     // LDS pointer which points to LDS is already created? Return it.
-    auto PointerEntry = LDSToPointer.insert(std::make_pair(GV, nullptr));
+    auto PointerEntry = LDSToPointer.insert(std::pair(GV, nullptr));
     if (!PointerEntry.second)
       return PointerEntry.first->second;
 
@@ -199,7 +199,7 @@ class ReplaceLDSUseImpl {
   BasicBlock *activateLaneZero(Function *K) {
     // If the entry basic block of kernel K is already split, then return
     // newly created basic block.
-    auto BasicBlockEntry = KernelToInitBB.insert(std::make_pair(K, nullptr));
+    auto BasicBlockEntry = KernelToInitBB.insert(std::pair(K, nullptr));
     if (!BasicBlockEntry.second)
       return BasicBlockEntry.first->second;
 
@@ -227,7 +227,7 @@ class ReplaceLDSUseImpl {
                             GlobalVariable *LDSPointer) {
     // If LDS pointer is already initialized within K, then nothing to do.
     auto PointerEntry = KernelToLDSPointers.insert(
-        std::make_pair(K, SmallPtrSet<GlobalVariable *, 8>()));
+        std::pair(K, SmallPtrSet<GlobalVariable *, 8>()));
     if (!PointerEntry.second)
       if (PointerEntry.first->second.contains(LDSPointer))
         return;
@@ -297,10 +297,10 @@ class ReplaceLDSUseImpl {
     // If the instruction which replaces LDS within F is already created, then
     // return it.
     auto LDSEntry = FunctionToLDSToReplaceInst.insert(
-        std::make_pair(F, DenseMap<GlobalVariable *, Value *>()));
+        std::pair(F, DenseMap<GlobalVariable *, Value *>()));
     if (!LDSEntry.second) {
       auto ReplaceInstEntry =
-          LDSEntry.first->second.insert(std::make_pair(GV, nullptr));
+          LDSEntry.first->second.insert(std::pair(GV, nullptr));
       if (!ReplaceInstEntry.second)
         return ReplaceInstEntry.first->second;
     }
@@ -559,7 +559,7 @@ getFunctionToInstsMap(User *U, bool CollectKernelInsts) {
       }
     }
 
-    FunctionToInsts.insert(std::make_pair(F, SmallPtrSet<Instruction *, 8>()));
+    FunctionToInsts.insert(std::pair(F, SmallPtrSet<Instruction *, 8>()));
     FunctionToInsts[F].insert(I);
   }
 

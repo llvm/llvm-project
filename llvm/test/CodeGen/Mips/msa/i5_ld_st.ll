@@ -9,13 +9,12 @@
 
 define void @llvm_mips_ld_b_test() nounwind {
 entry:
-  %0 = bitcast <16 x i8>* @llvm_mips_ld_b_ARG to i8*
-  %1 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 16)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_ld_b_RES
+  %0 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 16)
+  store <16 x i8> %0, ptr @llvm_mips_ld_b_RES
   ret void
 }
 
-declare <16 x i8> @llvm.mips.ld.b(i8*, i32) nounwind
+declare <16 x i8> @llvm.mips.ld.b(ptr, i32) nounwind
 
 ; CHECK: llvm_mips_ld_b_test:
 ; CHECK: ld.b [[R1:\$w[0-9]+]], 16(
@@ -25,9 +24,8 @@ declare <16 x i8> @llvm.mips.ld.b(i8*, i32) nounwind
 
 define void @llvm_mips_ld_b_unaligned_test() nounwind {
 entry:
-  %0 = bitcast <16 x i8>* @llvm_mips_ld_b_ARG to i8*
-  %1 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 9)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_ld_b_RES
+  %0 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 9)
+  store <16 x i8> %0, ptr @llvm_mips_ld_b_RES
   ret void
 }
 
@@ -39,11 +37,10 @@ entry:
 
 define void @llvm_mips_ld_b_valid_range_tests() nounwind {
 entry:
-  %0 = bitcast <16 x i8>* @llvm_mips_ld_b_ARG to i8*
-  %1 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 -512)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_ld_b_RES
-  %2 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 511)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_ld_b_RES
+  %0 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 -512)
+  store <16 x i8> %0, ptr @llvm_mips_ld_b_RES
+  %1 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 511)
+  store <16 x i8> %1, ptr @llvm_mips_ld_b_RES
   ret void
 }
 
@@ -57,11 +54,10 @@ entry:
 
 define void @llvm_mips_ld_b_invalid_range_tests() nounwind {
 entry:
-  %0 = bitcast <16 x i8>* @llvm_mips_ld_b_ARG to i8*
-  %1 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 -513)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_ld_b_RES
-  %2 = tail call <16 x i8> @llvm.mips.ld.b(i8* %0, i32 512)
-  store <16 x i8> %2, <16 x i8>* @llvm_mips_ld_b_RES
+  %0 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 -513)
+  store <16 x i8> %0, ptr @llvm_mips_ld_b_RES
+  %1 = tail call <16 x i8> @llvm.mips.ld.b(ptr @llvm_mips_ld_b_ARG, i32 512)
+  store <16 x i8> %1, ptr @llvm_mips_ld_b_RES
   ret void
 }
 
@@ -80,13 +76,12 @@ entry:
 
 define void @llvm_mips_ld_h_test() nounwind {
 entry:
-  %0 = bitcast <8 x i16>* @llvm_mips_ld_h_ARG to i8*
-  %1 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 16)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_ld_h_RES
+  %0 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 16)
+  store <8 x i16> %0, ptr @llvm_mips_ld_h_RES
   ret void
 }
 
-declare <8 x i16> @llvm.mips.ld.h(i8*, i32) nounwind
+declare <8 x i16> @llvm.mips.ld.h(ptr, i32) nounwind
 
 ; CHECK: llvm_mips_ld_h_test:
 ; CHECK: ld.h [[R1:\$w[0-9]+]], 16(
@@ -96,9 +91,8 @@ declare <8 x i16> @llvm.mips.ld.h(i8*, i32) nounwind
 
 define void @llvm_mips_ld_h_unaligned_test() nounwind {
 entry:
-  %0 = bitcast <8 x i16>* @llvm_mips_ld_h_ARG to i8*
-  %1 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 9)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_ld_h_RES
+  %0 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 9)
+  store <8 x i16> %0, ptr @llvm_mips_ld_h_RES
   ret void
 }
 
@@ -111,11 +105,10 @@ entry:
 
 define void @llvm_mips_ld_h_valid_range_tests() nounwind {
 entry:
-  %0 = bitcast <8 x i16>* @llvm_mips_ld_h_ARG to i8*
-  %1 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 -1024)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_ld_h_RES
-  %2 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 1022)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_ld_h_RES
+  %0 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 -1024)
+  store <8 x i16> %0, ptr @llvm_mips_ld_h_RES
+  %1 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 1022)
+  store <8 x i16> %1, ptr @llvm_mips_ld_h_RES
   ret void
 }
 
@@ -129,11 +122,10 @@ entry:
 
 define void @llvm_mips_ld_h_invalid_range_tests() nounwind {
 entry:
-  %0 = bitcast <8 x i16>* @llvm_mips_ld_h_ARG to i8*
-  %1 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 -1026)
-  store <8 x i16> %1, <8 x i16>* @llvm_mips_ld_h_RES
-  %2 = tail call <8 x i16> @llvm.mips.ld.h(i8* %0, i32 1024)
-  store <8 x i16> %2, <8 x i16>* @llvm_mips_ld_h_RES
+  %0 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 -1026)
+  store <8 x i16> %0, ptr @llvm_mips_ld_h_RES
+  %1 = tail call <8 x i16> @llvm.mips.ld.h(ptr @llvm_mips_ld_h_ARG, i32 1024)
+  store <8 x i16> %1, ptr @llvm_mips_ld_h_RES
   ret void
 }
 
@@ -152,13 +144,12 @@ entry:
 
 define void @llvm_mips_ld_w_test() nounwind {
 entry:
-  %0 = bitcast <4 x i32>* @llvm_mips_ld_w_ARG to i8*
-  %1 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 16)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_ld_w_RES
+  %0 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 16)
+  store <4 x i32> %0, ptr @llvm_mips_ld_w_RES
   ret void
 }
 
-declare <4 x i32> @llvm.mips.ld.w(i8*, i32) nounwind
+declare <4 x i32> @llvm.mips.ld.w(ptr, i32) nounwind
 
 ; CHECK: llvm_mips_ld_w_test:
 ; CHECK: ld.w [[R1:\$w[0-9]+]], 16(
@@ -170,9 +161,8 @@ declare <4 x i32> @llvm.mips.ld.w(i8*, i32) nounwind
 
 define void @llvm_mips_ld_w_unaligned_test() nounwind {
 entry:
-  %0 = bitcast <4 x i32>* @llvm_mips_ld_w_ARG to i8*
-  %1 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 9)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_ld_w_RES
+  %0 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 9)
+  store <4 x i32> %0, ptr @llvm_mips_ld_w_RES
   ret void
 }
 
@@ -185,11 +175,10 @@ entry:
 
 define void @llvm_mips_ld_w_valid_range_tests() nounwind {
 entry:
-  %0 = bitcast <4 x i32>* @llvm_mips_ld_w_ARG to i8*
-  %1 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 -2048)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_ld_w_RES
-  %2 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 2044)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_ld_w_RES
+  %0 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 -2048)
+  store <4 x i32> %0, ptr @llvm_mips_ld_w_RES
+  %1 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 2044)
+  store <4 x i32> %1, ptr @llvm_mips_ld_w_RES
   ret void
 }
 
@@ -203,11 +192,10 @@ entry:
 
 define void @llvm_mips_ld_w_invalid_range_tests() nounwind {
 entry:
-  %0 = bitcast <4 x i32>* @llvm_mips_ld_w_ARG to i8*
-  %1 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 -2052)
-  store <4 x i32> %1, <4 x i32>* @llvm_mips_ld_w_RES
-  %2 = tail call <4 x i32> @llvm.mips.ld.w(i8* %0, i32 2048)
-  store <4 x i32> %2, <4 x i32>* @llvm_mips_ld_w_RES
+  %0 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 -2052)
+  store <4 x i32> %0, ptr @llvm_mips_ld_w_RES
+  %1 = tail call <4 x i32> @llvm.mips.ld.w(ptr @llvm_mips_ld_w_ARG, i32 2048)
+  store <4 x i32> %1, ptr @llvm_mips_ld_w_RES
   ret void
 }
 
@@ -223,13 +211,12 @@ entry:
 
 define void @llvm_mips_ld_d_test() nounwind {
 entry:
-  %0 = bitcast <2 x i64>* @llvm_mips_ld_d_ARG to i8*
-  %1 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 16)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_ld_d_RES
+  %0 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 16)
+  store <2 x i64> %0, ptr @llvm_mips_ld_d_RES
   ret void
 }
 
-declare <2 x i64> @llvm.mips.ld.d(i8*, i32) nounwind
+declare <2 x i64> @llvm.mips.ld.d(ptr, i32) nounwind
 
 ; CHECK: llvm_mips_ld_d_test:
 ; CHECK: ld.d [[R1:\$w[0-9]+]], 16(
@@ -239,9 +226,8 @@ declare <2 x i64> @llvm.mips.ld.d(i8*, i32) nounwind
 
 define void @llvm_mips_ld_d_unaligned_test() nounwind {
 entry:
-  %0 = bitcast <2 x i64>* @llvm_mips_ld_d_ARG to i8*
-  %1 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 9)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_ld_d_RES
+  %0 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 9)
+  store <2 x i64> %0, ptr @llvm_mips_ld_d_RES
   ret void
 }
 
@@ -254,11 +240,10 @@ entry:
 
 define void @llvm_mips_ld_d_valid_range_tests() nounwind {
 entry:
-  %0 = bitcast <2 x i64>* @llvm_mips_ld_d_ARG to i8*
-  %1 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 -4096)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_ld_d_RES
-  %2 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 4088)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_ld_d_RES
+  %0 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 -4096)
+  store <2 x i64> %0, ptr @llvm_mips_ld_d_RES
+  %1 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 4088)
+  store <2 x i64> %1, ptr @llvm_mips_ld_d_RES
   ret void
 }
 
@@ -272,11 +257,10 @@ entry:
 
 define void @llvm_mips_ld_d_invalid_range_tests() nounwind {
 entry:
-  %0 = bitcast <2 x i64>* @llvm_mips_ld_d_ARG to i8*
-  %1 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 -4104)
-  store <2 x i64> %1, <2 x i64>* @llvm_mips_ld_d_RES
-  %2 = tail call <2 x i64> @llvm.mips.ld.d(i8* %0, i32 4096)
-  store <2 x i64> %2, <2 x i64>* @llvm_mips_ld_d_RES
+  %0 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 -4104)
+  store <2 x i64> %0, ptr @llvm_mips_ld_d_RES
+  %1 = tail call <2 x i64> @llvm.mips.ld.d(ptr @llvm_mips_ld_d_ARG, i32 4096)
+  store <2 x i64> %1, ptr @llvm_mips_ld_d_RES
   ret void
 }
 
@@ -297,13 +281,12 @@ entry:
 
 define void @llvm_mips_st_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_st_b_ARG
-  %1 = bitcast <16 x i8>* @llvm_mips_st_b_RES to i8*
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 16)
+  %0 = load <16 x i8>, ptr @llvm_mips_st_b_ARG
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 16)
   ret void
 }
 
-declare void @llvm.mips.st.b(<16 x i8>, i8*, i32) nounwind
+declare void @llvm.mips.st.b(<16 x i8>, ptr, i32) nounwind
 
 ; CHECK: llvm_mips_st_b_test:
 ; CHECK: ld.b
@@ -313,9 +296,8 @@ declare void @llvm.mips.st.b(<16 x i8>, i8*, i32) nounwind
 
 define void @llvm_mips_st_b_unaligned_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_st_b_ARG
-  %1 = bitcast <16 x i8>* @llvm_mips_st_b_RES to i8*
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 9)
+  %0 = load <16 x i8>, ptr @llvm_mips_st_b_ARG
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 9)
   ret void
 }
 
@@ -327,10 +309,9 @@ entry:
 
 define void @llvm_mips_st_b_valid_range_tests() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_st_b_ARG
-  %1 = bitcast <16 x i8>* @llvm_mips_st_b_RES to i8*
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 -512)
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 511)
+  %0 = load <16 x i8>, ptr @llvm_mips_st_b_ARG
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 -512)
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 511)
   ret void
 }
 
@@ -343,10 +324,9 @@ entry:
 
 define void @llvm_mips_st_b_invalid_range_tests() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_st_b_ARG
-  %1 = bitcast <16 x i8>* @llvm_mips_st_b_RES to i8*
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 -513)
-  tail call void @llvm.mips.st.b(<16 x i8> %0, i8* %1, i32 512)
+  %0 = load <16 x i8>, ptr @llvm_mips_st_b_ARG
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 -513)
+  tail call void @llvm.mips.st.b(<16 x i8> %0, ptr @llvm_mips_st_b_RES, i32 512)
   ret void
 }
 
@@ -364,13 +344,12 @@ entry:
 
 define void @llvm_mips_st_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_st_h_ARG
-  %1 = bitcast <8 x i16>* @llvm_mips_st_h_RES to i8*
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 16)
+  %0 = load <8 x i16>, ptr @llvm_mips_st_h_ARG
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 16)
   ret void
 }
 
-declare void @llvm.mips.st.h(<8 x i16>, i8*, i32) nounwind
+declare void @llvm.mips.st.h(<8 x i16>, ptr, i32) nounwind
 
 ; CHECK: llvm_mips_st_h_test:
 ; CHECK: ld.h
@@ -380,9 +359,8 @@ declare void @llvm.mips.st.h(<8 x i16>, i8*, i32) nounwind
 
 define void @llvm_mips_st_h_unaligned_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_st_h_ARG
-  %1 = bitcast <8 x i16>* @llvm_mips_st_h_RES to i8*
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 9)
+  %0 = load <8 x i16>, ptr @llvm_mips_st_h_ARG
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 9)
   ret void
 }
 
@@ -395,10 +373,9 @@ entry:
 
 define void @llvm_mips_st_h_valid_range_tests() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_st_h_ARG
-  %1 = bitcast <8 x i16>* @llvm_mips_st_h_RES to i8*
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 -1024)
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 1022)
+  %0 = load <8 x i16>, ptr @llvm_mips_st_h_ARG
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 -1024)
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 1022)
   ret void
 }
 
@@ -411,10 +388,9 @@ entry:
 
 define void @llvm_mips_st_h_invalid_range_tests() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_st_h_ARG
-  %1 = bitcast <8 x i16>* @llvm_mips_st_h_RES to i8*
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 -1026)
-  tail call void @llvm.mips.st.h(<8 x i16> %0, i8* %1, i32 1024)
+  %0 = load <8 x i16>, ptr @llvm_mips_st_h_ARG
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 -1026)
+  tail call void @llvm.mips.st.h(<8 x i16> %0, ptr @llvm_mips_st_h_RES, i32 1024)
   ret void
 }
 
@@ -432,13 +408,12 @@ entry:
 
 define void @llvm_mips_st_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_st_w_ARG
-  %1 = bitcast <4 x i32>* @llvm_mips_st_w_RES to i8*
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 16)
+  %0 = load <4 x i32>, ptr @llvm_mips_st_w_ARG
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 16)
   ret void
 }
 
-declare void @llvm.mips.st.w(<4 x i32>, i8*, i32) nounwind
+declare void @llvm.mips.st.w(<4 x i32>, ptr, i32) nounwind
 
 ; CHECK: llvm_mips_st_w_test:
 ; CHECK: ld.w
@@ -448,9 +423,8 @@ declare void @llvm.mips.st.w(<4 x i32>, i8*, i32) nounwind
 
 define void @llvm_mips_st_w_unaligned_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_st_w_ARG
-  %1 = bitcast <4 x i32>* @llvm_mips_st_w_RES to i8*
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 9)
+  %0 = load <4 x i32>, ptr @llvm_mips_st_w_ARG
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 9)
   ret void
 }
 
@@ -463,10 +437,9 @@ entry:
 
 define void @llvm_mips_st_w_valid_range_tests() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_st_w_ARG
-  %1 = bitcast <4 x i32>* @llvm_mips_st_w_RES to i8*
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 -2048)
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 2044)
+  %0 = load <4 x i32>, ptr @llvm_mips_st_w_ARG
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 -2048)
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 2044)
   ret void
 }
 
@@ -479,10 +452,9 @@ entry:
 
 define void @llvm_mips_st_w_invalid_range_tests() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_st_w_ARG
-  %1 = bitcast <4 x i32>* @llvm_mips_st_w_RES to i8*
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 -2052)
-  tail call void @llvm.mips.st.w(<4 x i32> %0, i8* %1, i32 2048)
+  %0 = load <4 x i32>, ptr @llvm_mips_st_w_ARG
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 -2052)
+  tail call void @llvm.mips.st.w(<4 x i32> %0, ptr @llvm_mips_st_w_RES, i32 2048)
   ret void
 }
 
@@ -500,13 +472,12 @@ entry:
 
 define void @llvm_mips_st_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_st_d_ARG
-  %1 = bitcast <2 x i64>* @llvm_mips_st_d_RES to i8*
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 16)
+  %0 = load <2 x i64>, ptr @llvm_mips_st_d_ARG
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 16)
   ret void
 }
 
-declare void @llvm.mips.st.d(<2 x i64>, i8*, i32) nounwind
+declare void @llvm.mips.st.d(<2 x i64>, ptr, i32) nounwind
 
 ; CHECK: llvm_mips_st_d_test:
 ; CHECK: ld.d
@@ -516,9 +487,8 @@ declare void @llvm.mips.st.d(<2 x i64>, i8*, i32) nounwind
 
 define void @llvm_mips_st_d_unaligned_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_st_d_ARG
-  %1 = bitcast <2 x i64>* @llvm_mips_st_d_RES to i8*
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 9)
+  %0 = load <2 x i64>, ptr @llvm_mips_st_d_ARG
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 9)
   ret void
 }
 
@@ -531,10 +501,9 @@ entry:
 
 define void @llvm_mips_st_d_valid_range_tests() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_st_d_ARG
-  %1 = bitcast <2 x i64>* @llvm_mips_st_d_RES to i8*
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 -4096)
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 4088)
+  %0 = load <2 x i64>, ptr @llvm_mips_st_d_ARG
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 -4096)
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 4088)
   ret void
 }
 
@@ -547,10 +516,9 @@ entry:
 
 define void @llvm_mips_st_d_invalid_range_tests() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_st_d_ARG
-  %1 = bitcast <2 x i64>* @llvm_mips_st_d_RES to i8*
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 -4104)
-  tail call void @llvm.mips.st.d(<2 x i64> %0, i8* %1, i32 4096)
+  %0 = load <2 x i64>, ptr @llvm_mips_st_d_ARG
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 -4104)
+  tail call void @llvm.mips.st.d(<2 x i64> %0, ptr @llvm_mips_st_d_RES, i32 4096)
   ret void
 }
 

@@ -143,7 +143,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[PTR_GEP_ARG:%.+]] = getelementptr inbounds [3 x i8*], [3 x i8*]* [[PTR_ARR]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  {{.+}} = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 
-  // TCHECK:  define weak_odr void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], i32** noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[P_IN:%.+]], i{{[0-9]+}} noundef [[GA_IN:%.+]])
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], i32** noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[P_IN:%.+]], i{{[0-9]+}} noundef [[GA_IN:%.+]])
   // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[P_ADDR:%.+]] = alloca i32**,
   // TCHECK:  [[GA_ADDR:%.+]] = alloca i{{64|32}},
@@ -352,7 +352,7 @@ int foo(int n, double *ptr) {
   // CHECK:  [[PTR_GEP_ARG3:%.+]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[PTR_ARR3]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
   // CHECK:  {{.+}} = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 
-  // TCHECK:  define weak_odr void @__omp_offloading_{{.+}}(double* noundef [[PTR_IN:%.+]], [[TTII]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(double* noundef [[PTR_IN:%.+]], [[TTII]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[E:%.+]])
   // TCHECK:  [[PTR_ADDR:%.+]] = alloca double*,
   // TCHECK-NOT: alloca [[TTII]],
   // TCHECK-NOT: alloca double*,
@@ -391,7 +391,7 @@ static int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define weak_odr void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], i{{[0-9]+}} noundef [[A3_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], i{{[0-9]+}} noundef [[A3_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[A3_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
@@ -479,7 +479,7 @@ struct S1 {
   // only check that we use the map types stored in the global variable
   // CHECK:  {{.+}} = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 
-  // TCHECK: define weak_odr void @__omp_offloading_{{.+}}([[S1]]* noundef [[TH:%.+]], i{{[0-9]+}} noundef [[B_IN:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}}{{.+}} [[C_IN:%.+]])
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}([[S1]]* noundef [[TH:%.+]], i{{[0-9]+}} noundef [[B_IN:%.+]], i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], i{{[0-9]+}}{{.+}} [[C_IN:%.+]])
   // TCHECK:  [[TH_ADDR:%.+]] = alloca [[S1]]*,
   // TCHECK:  [[B_ADDR:%.+]] = alloca i{{[0-9]+}},
   // TCHECK:  [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -587,7 +587,7 @@ int bar(int n, double *ptr) {
 
 // CHECK:  {{.+}} = call i32 @__tgt_target_kernel(%struct.ident_t* @{{.+}}, i64 -1, i32 -1, i32 0, i8* @.{{.+}}.region_id, %struct.__tgt_kernel_arguments* [[ARGS:%.+]])
 
-// TCHECK: define weak_odr void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(i{{[0-9]+}} noundef [[A_IN:%.+]], [10 x i{{[0-9]+}}]*{{.+}} [[B_IN:%.+]])
 // TCHECK:  [[A_ADDR:%.+]] = alloca i{{[0-9]+}},
 // TCHECK:  [[B_ADDR:%.+]] = alloca [10 x i{{[0-9]+}}]*,
 // TCHECK-NOT: alloca i{{[0-9]+}},

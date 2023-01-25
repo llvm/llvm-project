@@ -4,8 +4,8 @@
 fadd.d a0, a1, a2 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
 
 # Not support float registers
-flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
-fadd.d fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
+flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
+fadd.d fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
 
 # Invalid instructions
 fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction

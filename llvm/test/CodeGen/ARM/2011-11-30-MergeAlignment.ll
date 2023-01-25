@@ -8,9 +8,9 @@ target triple = "thumbv7-apple-darwin10"
 @x2 = internal global i64 12
 
 define i64 @f() {
-  %ax = load i32, i32* @x1
+  %ax = load i32, ptr @x1
   %a = zext i32 %ax to i64
-  %b = load i64, i64* @x2
+  %b = load i64, ptr @x2
   %c = add i64 %a, %b
   ret i64 %c
 }

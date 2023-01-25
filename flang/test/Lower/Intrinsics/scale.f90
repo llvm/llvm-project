@@ -9,7 +9,7 @@ subroutine scale_test1(x, i)
   ! CHECK: %[[i0:.*]] = fir.load %arg1 : !fir.ref<i32>
     res = scale(x, i)
   ! CHECK: %[[i1:.*]] = fir.convert %[[i0]] : (i32) -> i64
-  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale4(%[[x]], %[[i1]]) : (f32, i64) -> f32
+  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale4(%[[x]], %[[i1]]) {{.*}}: (f32, i64) -> f32
   ! CHECK: fir.store %[[tmp]] to %[[res]] : !fir.ref<f32>
   end subroutine scale_test1
   
@@ -22,7 +22,7 @@ subroutine scale_test1(x, i)
   ! CHECK: %[[i0:.*]] = fir.load %arg1 : !fir.ref<i32>
     res = scale(x, i)
   ! CHECK: %[[i1:.*]] = fir.convert %[[i0]] : (i32) -> i64
-  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale8(%[[x]], %[[i1]]) : (f64, i64) -> f64
+  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale8(%[[x]], %[[i1]]) {{.*}}: (f64, i64) -> f64
   ! CHECK: fir.store %[[tmp]] to %[[res]] : !fir.ref<f64>
   end subroutine scale_test2
   
@@ -35,7 +35,7 @@ subroutine scale_test1(x, i)
   ! CHECK: %[[i0:.*]] = fir.load %arg1 : !fir.ref<i32>
     res = scale(x, i)
   ! CHECK: %[[i1:.*]] = fir.convert %[[i0]] : (i32) -> i64
-  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale10(%[[x]], %[[i1]]) : (f80, i64) -> f80
+  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale10(%[[x]], %[[i1]]) {{.*}}: (f80, i64) -> f80
   ! CHECK: fir.store %[[tmp]] to %[[res]] : !fir.ref<f80>
   end subroutine scale_test3
   
@@ -48,6 +48,6 @@ subroutine scale_test1(x, i)
   ! CHECK: %[[i0:.*]] = fir.load %arg1 : !fir.ref<i32>
     res = scale(x, i)
   ! CHECK: %[[i1:.*]] = fir.convert %[[i0]] : (i32) -> i64
-  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale16(%[[x]], %[[i1]]) : (f128, i64) -> f128
+  ! CHECK: %[[tmp:.*]] = fir.call @_FortranAScale16(%[[x]], %[[i1]]) {{.*}}: (f128, i64) -> f128
   ! CHECK: fir.store %[[tmp]] to %[[res]] : !fir.ref<f128>
   end subroutine scale_test4

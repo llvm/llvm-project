@@ -175,10 +175,16 @@ class ReadElfExtractor(object):
         start = -1
         end = -1
         for i in range(len(lines)):
-            if lines[i].startswith("Symbol table '.dynsym'"):
+            # Accept both GNU and ELF Tool Chain readelf format.  Some versions
+            # of ELF Tool Chain readelf use ( ) around the symbol table name
+            # instead of ' ', and omit the blank line before the heading.
+            if re.match(r"Symbol table ['(].dynsym[')]", lines[i]):
                 start = i + 2
-            if start != -1 and end == -1 and not lines[i].strip():
-                end = i + 1
+            elif start != -1 and end == -1:
+                if not lines[i].strip():
+                    end = i + 1
+                if lines[i].startswith("Symbol table ("):
+                    end = i
         assert start != -1
         if end == -1:
             end = len(lines)

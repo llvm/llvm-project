@@ -13,6 +13,7 @@
 
 #include "ReduceRegisterUses.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -62,6 +63,5 @@ static void removeUsesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceRegisterUsesMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing register uses...\n";
-  runDeltaPass(Test, removeUsesFromModule);
+  runDeltaPass(Test, removeUsesFromModule, "Reducing register uses");
 }

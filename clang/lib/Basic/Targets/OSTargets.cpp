@@ -67,48 +67,23 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     return;
   }
 
-  // Set the appropriate OS version define.
-  if (Triple.isiOS()) {
-    assert(OsVersion < VersionTuple(100) && "Invalid version!");
-    char Str[7];
-    if (OsVersion.getMajor() < 10) {
-      Str[0] = '0' + OsVersion.getMajor();
-      Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[5] = '\0';
-    } else {
-      // Handle versions >= 10.
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[6] = '\0';
-    }
-    if (Triple.isTvOS())
-      Builder.defineMacro("__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__", Str);
-    else
-      Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__",
-                          Str);
-
-  } else if (Triple.isWatchOS()) {
-    assert(OsVersion < VersionTuple(10) && "Invalid version!");
-    char Str[6];
+  assert(OsVersion < VersionTuple(100) && "Invalid version!");
+  char Str[7];
+  if (Triple.isMacOSX() && OsVersion < VersionTuple(10, 10)) {
+    Str[0] = '0' + (OsVersion.getMajor() / 10);
+    Str[1] = '0' + (OsVersion.getMajor() % 10);
+    Str[2] = '0' + std::min(OsVersion.getMinor().value_or(0), 9U);
+    Str[3] = '0' + std::min(OsVersion.getSubminor().value_or(0), 9U);
+    Str[4] = '\0';
+  } else if (!Triple.isMacOSX() && OsVersion.getMajor() < 10) {
     Str[0] = '0' + OsVersion.getMajor();
     Str[1] = '0' + (OsVersion.getMinor().value_or(0) / 10);
     Str[2] = '0' + (OsVersion.getMinor().value_or(0) % 10);
     Str[3] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
     Str[4] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[5] = '\0';
-    Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
-  } else if (Triple.isDriverKit()) {
-    assert(OsVersion.getMajor() < 100 &&
-           OsVersion.getMinor().value_or(0) < 100 &&
-           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
-    char Str[7];
+  } else {
+    // Handle versions >= 10.
     Str[0] = '0' + (OsVersion.getMajor() / 10);
     Str[1] = '0' + (OsVersion.getMajor() % 10);
     Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
@@ -116,30 +91,20 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
     Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
     Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
     Str[6] = '\0';
+  }
+
+  // Set the appropriate OS version define.
+  if (Triple.isTvOS()) {
+    Builder.defineMacro("__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isiOS()) {
+    Builder.defineMacro("__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isWatchOS()) {
+    Builder.defineMacro("__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__", Str);
+  } else if (Triple.isDriverKit()) {
+    assert(OsVersion.getMinor().value_or(0) < 100 &&
+           OsVersion.getSubminor().value_or(0) < 100 && "Invalid version!");
     Builder.defineMacro("__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__", Str);
   } else if (Triple.isMacOSX()) {
-    // Note that the Driver allows versions which aren't representable in the
-    // define (because we only get a single digit for the minor and micro
-    // revision numbers). So, we limit them to the maximum representable
-    // version.
-    assert(OsVersion < VersionTuple(100) && "Invalid version!");
-    char Str[7];
-    if (OsVersion < VersionTuple(10, 10)) {
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + std::min(OsVersion.getMinor().value_or(0), 9U);
-      Str[3] = '0' + std::min(OsVersion.getSubminor().value_or(0), 9U);
-      Str[4] = '\0';
-    } else {
-      // Handle versions > 10.9.
-      Str[0] = '0' + (OsVersion.getMajor() / 10);
-      Str[1] = '0' + (OsVersion.getMajor() % 10);
-      Str[2] = '0' + (OsVersion.getMinor().value_or(0) / 10);
-      Str[3] = '0' + (OsVersion.getMinor().value_or(0) % 10);
-      Str[4] = '0' + (OsVersion.getSubminor().value_or(0) / 10);
-      Str[5] = '0' + (OsVersion.getSubminor().value_or(0) % 10);
-      Str[6] = '\0';
-    }
     Builder.defineMacro("__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__", Str);
   }
 
@@ -178,6 +143,54 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   if (!Opts.CharIsSigned)
     Builder.defineMacro("_CHAR_UNSIGNED");
 
+  // "The /fp:contract option allows the compiler to generate floating-point
+  // contractions [...]"
+  if (Opts.getDefaultFPContractMode() != LangOptions::FPModeKind::FPM_Off)
+    Builder.defineMacro("_M_FP_CONTRACT");
+
+  // "The /fp:except option generates code to ensures that any unmasked
+  // floating-point exceptions are raised at the exact point at which they
+  // occur, and that no other floating-point exceptions are raised."
+  if (Opts.getDefaultExceptionMode() ==
+      LangOptions::FPExceptionModeKind::FPE_Strict)
+    Builder.defineMacro("_M_FP_EXCEPT");
+
+  // "The /fp:fast option allows the compiler to reorder, combine, or simplify
+  // floating-point operations to optimize floating-point code for speed and
+  // space. The compiler may omit rounding at assignment statements,
+  // typecasts, or function calls. It may reorder operations or make algebraic
+  // transforms, for example, by use of associative and distributive laws. It
+  // may reorder code even if such transformations result in observably
+  // different rounding behavior."
+  //
+  // "Under /fp:precise and /fp:strict, the compiler doesn't do any mathematical
+  // transformation unless the transformation is guaranteed to produce a bitwise
+  // identical result."
+  const bool any_imprecise_flags =
+      Opts.FastMath || Opts.FiniteMathOnly || Opts.UnsafeFPMath ||
+      Opts.AllowFPReassoc || Opts.NoHonorNaNs || Opts.NoHonorInfs ||
+      Opts.NoSignedZero || Opts.AllowRecip || Opts.ApproxFunc;
+
+  // "Under both /fp:precise and /fp:fast, the compiler generates code intended
+  // to run in the default floating-point environment."
+  //
+  // "[The] default floating point environment [...] sets the rounding mode
+  // to round to nearest."
+  if (Opts.getDefaultRoundingMode() ==
+      LangOptions::RoundingMode::NearestTiesToEven) {
+    if (any_imprecise_flags) {
+      Builder.defineMacro("_M_FP_FAST");
+    } else {
+      Builder.defineMacro("_M_FP_PRECISE");
+    }
+  } else if (!any_imprecise_flags && Opts.getDefaultRoundingMode() ==
+                                         LangOptions::RoundingMode::Dynamic) {
+    // "Under /fp:strict, the compiler generates code that allows the
+    // program to safely unmask floating-point exceptions, read or write
+    // floating-point status registers, or change rounding modes."
+    Builder.defineMacro("_M_FP_STRICT");
+  }
+
   // FIXME: POSIXThreads isn't exactly the option this should be defined for,
   //        but it works for now.
   if (Opts.POSIXThreads)
@@ -214,6 +227,9 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_NATIVE_NULLPTR_SUPPORTED");
     }
   }
+
+  if (!Opts.MSVolatile)
+    Builder.defineMacro("_ISO_VOLATILE");
 
   if (Opts.Kernel)
     Builder.defineMacro("_KERNEL_MODE");

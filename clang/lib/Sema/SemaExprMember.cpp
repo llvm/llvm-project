@@ -249,7 +249,7 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
   case IMA_Field_Uneval_Context:
     Diag(R.getNameLoc(), diag::warn_cxx98_compat_non_static_member_use)
       << R.getLookupNameInfo().getName();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
   case IMA_Mixed_StaticContext:
@@ -1161,10 +1161,10 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     if (!Var->getTemplateSpecializationKind())
       Var->setTemplateSpecializationKind(TSK_ImplicitInstantiation, MemberLoc);
 
-    return BuildMemberExpr(
-        BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var, FoundDecl,
-        /*HadMultipleCandidates=*/false, MemberNameInfo,
-        Var->getType().getNonReferenceType(), VK_LValue, OK_Ordinary);
+    return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var,
+                           FoundDecl, /*HadMultipleCandidates=*/false,
+                           MemberNameInfo, Var->getType().getNonReferenceType(),
+                           VK_LValue, OK_Ordinary, TemplateArgs);
   }
 
   // We found something that we didn't expect. Complain.
@@ -1621,16 +1621,7 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
   if (BaseType->isExtVectorType()) {
     // FIXME: this expr should store IsArrow.
     IdentifierInfo *Member = MemberName.getAsIdentifierInfo();
-    ExprValueKind VK;
-    if (IsArrow)
-      VK = VK_LValue;
-    else {
-      if (PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(BaseExpr.get()))
-        VK = POE->getSyntacticForm()->getValueKind();
-      else
-        VK = BaseExpr.get()->getValueKind();
-    }
-
+    ExprValueKind VK = (IsArrow ? VK_LValue : BaseExpr.get()->getValueKind());
     QualType ret = CheckExtVectorComponent(S, BaseType, VK, OpLoc,
                                            Member, MemberLoc);
     if (ret.isNull())
@@ -1903,6 +1894,14 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
     baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
+    if (getLangOpts().HLSL && ThisTy.getTypePtr()->isPointerType()) {
+      ThisTy = ThisTy.getTypePtr()->getPointeeType();
+      return BuildMemberReferenceExpr(baseExpr, ThisTy,
+                                      /*OpLoc*/ SourceLocation(),
+                                      /*IsArrow*/ false, SS, TemplateKWLoc,
+                                      /*FirstQualifierInScope*/ nullptr, R,
+                                      TemplateArgs, S);
+    }
   }
 
   return BuildMemberReferenceExpr(baseExpr, ThisTy,

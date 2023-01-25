@@ -10,15 +10,15 @@ define i16 @foo0(i16 %a, i16 %b) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lsl r22
 ; CHECK-NEXT:    rol r23
-; CHECK-NEXT:    subi r22, -lo8(arr0)
-; CHECK-NEXT:    sbci r23, -hi8(arr0)
+; CHECK-NEXT:    subi r22, lo8(-(arr0))
+; CHECK-NEXT:    sbci r23, hi8(-(arr0))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    lpm r18, Z+
 ; CHECK-NEXT:    lpm r19, Z
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    subi r24, -lo8(arr0)
-; CHECK-NEXT:    sbci r25, -hi8(arr0)
+; CHECK-NEXT:    subi r24, lo8(-(arr0))
+; CHECK-NEXT:    sbci r25, hi8(-(arr0))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    lpm r24, Z+
 ; CHECK-NEXT:    lpm r25, Z
@@ -39,22 +39,22 @@ define i16 @foo1(i16 %a, i16 %b) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lsl r22
 ; CHECK-NEXT:    rol r23
-; CHECK-NEXT:    subi r22, -lo8(arr1)
-; CHECK-NEXT:    sbci r23, -hi8(arr1)
+; CHECK-NEXT:    subi r22, lo8(-(arr1))
+; CHECK-NEXT:    sbci r23, hi8(-(arr1))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 1
 ; CHECK-NEXT:    out 59, r18
-; CHECK-NEXT:    elpm r18, Z+
-; CHECK-NEXT:    elpm r19, Z
+; CHECK-NEXT:    elpm r20, Z+
+; CHECK-NEXT:    elpm r21, Z
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    subi r24, -lo8(arr0)
-; CHECK-NEXT:    sbci r25, -hi8(arr0)
+; CHECK-NEXT:    subi r24, lo8(-(arr0))
+; CHECK-NEXT:    sbci r25, hi8(-(arr0))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    lpm r24, Z+
 ; CHECK-NEXT:    lpm r25, Z
-; CHECK-NEXT:    sub r24, r18
-; CHECK-NEXT:    sbc r25, r19
+; CHECK-NEXT:    sub r24, r20
+; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(1)* @arr0, i16 0, i16 %a
@@ -70,17 +70,17 @@ define i16 @foo2(i16 %a, i16 %b) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    subi r24, -lo8(arr2)
-; CHECK-NEXT:    sbci r25, -hi8(arr2)
+; CHECK-NEXT:    subi r24, lo8(-(arr2))
+; CHECK-NEXT:    sbci r25, hi8(-(arr2))
 ; CHECK-NEXT:    movw r30, r24
-; CHECK-NEXT:    ldi r24, 2
-; CHECK-NEXT:    out 59, r24
+; CHECK-NEXT:    ldi r18, 2
+; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r24, Z+
 ; CHECK-NEXT:    elpm r25, Z
 ; CHECK-NEXT:    lsl r22
 ; CHECK-NEXT:    rol r23
-; CHECK-NEXT:    subi r22, -lo8(arr0)
-; CHECK-NEXT:    sbci r23, -hi8(arr0)
+; CHECK-NEXT:    subi r22, lo8(-(arr0))
+; CHECK-NEXT:    sbci r23, hi8(-(arr0))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    lpm r18, Z+
 ; CHECK-NEXT:    lpm r19, Z
@@ -101,24 +101,24 @@ define i16 @foo3(i16 %a, i16 %b) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    lsl r22
 ; CHECK-NEXT:    rol r23
-; CHECK-NEXT:    subi r22, -lo8(arr1)
-; CHECK-NEXT:    sbci r23, -hi8(arr1)
+; CHECK-NEXT:    subi r22, lo8(-(arr1))
+; CHECK-NEXT:    sbci r23, hi8(-(arr1))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 1
 ; CHECK-NEXT:    out 59, r18
-; CHECK-NEXT:    elpm r18, Z+
-; CHECK-NEXT:    elpm r19, Z
+; CHECK-NEXT:    elpm r20, Z+
+; CHECK-NEXT:    elpm r21, Z
 ; CHECK-NEXT:    lsl r24
 ; CHECK-NEXT:    rol r25
-; CHECK-NEXT:    subi r24, -lo8(arr2)
-; CHECK-NEXT:    sbci r25, -hi8(arr2)
+; CHECK-NEXT:    subi r24, lo8(-(arr2))
+; CHECK-NEXT:    sbci r25, hi8(-(arr2))
 ; CHECK-NEXT:    movw r30, r24
-; CHECK-NEXT:    ldi r24, 2
-; CHECK-NEXT:    out 59, r24
+; CHECK-NEXT:    ldi r18, 2
+; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r24, Z+
 ; CHECK-NEXT:    elpm r25, Z
-; CHECK-NEXT:    sub r24, r18
-; CHECK-NEXT:    sbc r25, r19
+; CHECK-NEXT:    sub r24, r20
+; CHECK-NEXT:    sbc r25, r21
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx = getelementptr inbounds [4 x i16], [4 x i16] addrspace(3)* @arr2, i16 0, i16 %a
@@ -136,12 +136,12 @@ entry:
 define signext i8 @foob0(i16 %a, i16 %b) {
 ; CHECK-LABEL: foob0:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    subi r22, -lo8(arrb1)
-; CHECK-NEXT:    sbci r23, -hi8(arrb1)
+; CHECK-NEXT:    subi r22, lo8(-(arrb1))
+; CHECK-NEXT:    sbci r23, hi8(-(arrb1))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    lpm r18, Z
-; CHECK-NEXT:    subi r24, -lo8(arrb1)
-; CHECK-NEXT:    sbci r25, -hi8(arrb1)
+; CHECK-NEXT:    subi r24, lo8(-(arrb1))
+; CHECK-NEXT:    sbci r25, hi8(-(arrb1))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    lpm r24, Z
 ; CHECK-NEXT:    sub r24, r18
@@ -161,14 +161,14 @@ entry:
 define signext i8 @foob1(i16 %a, i16 %b) {
 ; CHECK-LABEL: foob1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    subi r22, -lo8(arrb3)
-; CHECK-NEXT:    sbci r23, -hi8(arrb3)
+; CHECK-NEXT:    subi r22, lo8(-(arrb3))
+; CHECK-NEXT:    sbci r23, hi8(-(arrb3))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 2
 ; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r18, Z
-; CHECK-NEXT:    subi r24, -lo8(arrb1)
-; CHECK-NEXT:    sbci r25, -hi8(arrb1)
+; CHECK-NEXT:    subi r24, lo8(-(arrb1))
+; CHECK-NEXT:    sbci r25, hi8(-(arrb1))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    lpm r24, Z
 ; CHECK-NEXT:    sub r24, r18
@@ -188,14 +188,14 @@ entry:
 define signext i8 @foob2(i16 %a, i16 %b) {
 ; CHECK-LABEL: foob2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    subi r24, -lo8(arrb5)
-; CHECK-NEXT:    sbci r25, -hi8(arrb5)
+; CHECK-NEXT:    subi r24, lo8(-(arrb5))
+; CHECK-NEXT:    sbci r25, hi8(-(arrb5))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    ldi r24, 4
 ; CHECK-NEXT:    out 59, r24
 ; CHECK-NEXT:    elpm r24, Z
-; CHECK-NEXT:    subi r22, -lo8(arrb1)
-; CHECK-NEXT:    sbci r23, -hi8(arrb1)
+; CHECK-NEXT:    subi r22, lo8(-(arrb1))
+; CHECK-NEXT:    sbci r23, hi8(-(arrb1))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    lpm r25, Z
 ; CHECK-NEXT:    sub r24, r25
@@ -215,14 +215,14 @@ entry:
 define signext i8 @foob3(i16 %a, i16 %b) {
 ; CHECK-LABEL: foob3:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    subi r22, -lo8(arrb5)
-; CHECK-NEXT:    sbci r23, -hi8(arrb5)
+; CHECK-NEXT:    subi r22, lo8(-(arrb5))
+; CHECK-NEXT:    sbci r23, hi8(-(arrb5))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 4
 ; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r18, Z
-; CHECK-NEXT:    subi r24, -lo8(arrb3)
-; CHECK-NEXT:    sbci r25, -hi8(arrb3)
+; CHECK-NEXT:    subi r24, lo8(-(arrb3))
+; CHECK-NEXT:    sbci r25, hi8(-(arrb3))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    ldi r24, 2
 ; CHECK-NEXT:    out 59, r24
@@ -244,14 +244,14 @@ entry:
 define signext i8 @foob4(i16 %a, i16 %b) {
 ; CHECK-LABEL: foob4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    subi r22, -lo8(arrb3)
-; CHECK-NEXT:    sbci r23, -hi8(arrb3)
+; CHECK-NEXT:    subi r22, lo8(-(arrb3))
+; CHECK-NEXT:    sbci r23, hi8(-(arrb3))
 ; CHECK-NEXT:    movw r30, r22
 ; CHECK-NEXT:    ldi r18, 2
 ; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r19, Z
-; CHECK-NEXT:    subi r24, -lo8(arrb3)
-; CHECK-NEXT:    sbci r25, -hi8(arrb3)
+; CHECK-NEXT:    subi r24, lo8(-(arrb3))
+; CHECK-NEXT:    sbci r25, hi8(-(arrb3))
 ; CHECK-NEXT:    movw r30, r24
 ; CHECK-NEXT:    out 59, r18
 ; CHECK-NEXT:    elpm r24, Z

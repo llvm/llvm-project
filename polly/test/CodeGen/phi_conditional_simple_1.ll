@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
-; RUN: opt %loadPolly -S -polly-codegen < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s --check-prefix=AST
+; RUN: opt -opaque-pointers=0 %loadPolly -S -polly-codegen < %s | FileCheck %s
 ;
 ;    void jd(int *A, int c) {
 ;      for (int i = 0; i < 1024; i++) {

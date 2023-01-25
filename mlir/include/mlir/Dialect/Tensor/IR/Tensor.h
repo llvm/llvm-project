@@ -16,8 +16,10 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ParallelCombiningOpInterface.h"
+#include "mlir/Interfaces/ShapedOpInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
@@ -110,6 +112,10 @@ bool canFoldIntoProducerOp(CastOp castOp);
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
 
+/// Return the dimensions of the given tensor value.
+SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
+                                        Value value);
+
 /// Create a rank-reducing ExtractSliceOp @[0 .. 0] with strides [1 .. 1] and
 /// appropriate sizes (i.e. `tensor.getSizes()`) to reduce the rank of `tensor`
 /// to that of `targetType`.
@@ -124,10 +130,22 @@ Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
 Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
                                                Value tensor, Value dest);
 
-/// Function to control the folding of constant and extract slice
+/// This is a helper function for DestinationStyleOpInterface. If there is a
+/// destination operand for the given OpResult, return that operand. Otherwise,
+/// return an empty tensor (`tensor.empty`) with the shape of the OpResult.
+/// Dynamic dimensions are queried via ReifyRankedShapedTypeOpInterface.
+FailureOr<Value> getOrCreateDestination(OpBuilder &b, Location loc,
+                                        OpResult opResult);
+
+/// This is a helper function for DestinationStyleOpInterface. Get or create
+/// destinations for every tensor OpResult of the given op.
+LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
+                                      SmallVector<Value> &result);
+
+/// Function to control the folding of constant and extract slice.
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
 
-/// Patterns to fold the extract slice op with its constant operand
+/// Patterns to fold the extract slice op with its constant operand.
 void populateFoldConstantExtractSlicePatterns(
     RewritePatternSet &patterns,
     const ControlConstantExtractSliceFusionFn &controlFn =
@@ -136,6 +154,9 @@ void populateFoldConstantExtractSlicePatterns(
           // constant tensor, which would affect the compile time and storage.
           return false;
         });
+
+/// Patterns to simplify tensor.pack.
+void populateSimplifyTensorPack(RewritePatternSet &patterns);
 
 } // namespace tensor
 } // namespace mlir

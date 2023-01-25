@@ -18,6 +18,11 @@ include "mlir/Dialect/Async/IR/AsyncTypes.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
+include "mlir/IR/FunctionInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
+
 
 //===----------------------------------------------------------------------===//
 // Async op definitions
@@ -76,11 +81,11 @@ def Async_ExecuteOp :
   }];
 
   let arguments = (ins Variadic<Async_TokenType>:$dependencies,
-                       Variadic<Async_AnyValueOrTokenType>:$operands);
+                       Variadic<Async_AnyValueOrTokenType>:$bodyOperands);
 
   let results = (outs Async_TokenType:$token,
-                      Variadic<Async_ValueType>:$results);
-  let regions = (region SizedRegion<1>:$body);
+                      Variadic<Async_ValueType>:$bodyResults);
+  let regions = (region SizedRegion<1>:$bodyRegion);
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
@@ -99,9 +104,194 @@ def Async_ExecuteOp :
   }];
 }
 
+def Async_FuncOp : Async_Op<"func",
+    [CallableOpInterface, FunctionOpInterface,
+     IsolatedFromAbove, OpAsmOpInterface]> {
+  let summary = "async function operation";
+  let description = [{
+    An async function is like a normal function, but supports non-blocking
+    await. Internally, async function is lowered to the LLVM coroutinue with
+    async runtime intrinsic. It can return an async token and/or async values.
+    The token represents the execution state of async function and can be used
+    when users want to express dependencies on some side effects, e.g.,
+    the token becomes available once every thing in the func body is executed.
+
+    Example:
+
+    ```mlir
+    // Async function can't return void, it always must be some async thing.
+    async.func @async.0() -> !async.token {
+      return
+    }
+
+    // Function returns only async value.
+    async.func @async.1() -> !async.value<i32> {
+      %0 = arith.constant 42 : i32
+      return %0 : i32
+    }
+
+    // Implicit token can be added to return types.
+    async.func @async.2() -> !async.token, !async.value<i32> {
+      %0 = arith.constant 42 : i32
+      return %0 : i32
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttrOf<FunctionType>:$function_type,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       OptionalAttr<DictArrayAttr>:$arg_attrs,
+                       OptionalAttr<DictArrayAttr>:$res_attrs);
+
+  let regions = (region AnyRegion:$body);
+
+  let builders = [
+    OpBuilder<(ins "StringRef":$name, "FunctionType":$type,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
+      CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)>
+  ];
+
+  let extraClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // CallableOpInterface
+    //===------------------------------------------------------------------===//
+
+    /// Returns the region on the current operation that is callable. This may
+    /// return null in the case of an external callable object, e.g. an external
+    /// function.
+    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr
+                                                              : &getBody(); }
+
+    /// Returns the results types that the callable region produces when
+    /// executed.
+    ArrayRef<Type> getCallableResults() { return getFunctionType()
+                                                    .getResults(); }
+
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the argument types of this async function.
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
+
+    /// Returns the result types of this async function.
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    /// Returns the number of results of this async function
+    unsigned getNumResults() {return getResultTypes().size();}
+
+    /// Is the async func stateful
+    bool isStateful() { return isa<TokenType>(getFunctionType().getResult(0));}
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Allow the dialect prefix to be omitted.
+    static StringRef getDefaultDialect() { return "async"; }
+
+    //===------------------------------------------------------------------===//
+    // SymbolOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    bool isDeclaration() { return isExternal(); }
+  }];
+  let hasCustomAssemblyFormat = 1;
+
+  let hasVerifier = 1;
+}
+
+def Async_CallOp : Async_Op<"call",
+    [CallOpInterface, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "async call operation";
+  let description = [{
+    The `async.call` operation represents a direct call to an async function
+    that is within the same symbol scope as the call. The operands and result
+    types of the call must match the specified async function type. The callee
+    is encoded as a symbol reference attribute named "callee".
+
+    Example:
+
+    ```mlir
+    %2 = async.call @my_add(%0, %1) : (f32, f32) -> !async.value<f32>
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<Async_AnyValueOrTokenType>);
+
+  let builders = [
+    OpBuilder<(ins "FuncOp":$callee, CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", SymbolRefAttr::get(callee));
+      $_state.addTypes(callee.getFunctionType().getResults());
+    }]>,
+    OpBuilder<(ins "SymbolRefAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      $_state.addOperands(operands);
+      $_state.addAttribute("callee", callee);
+      $_state.addTypes(results);
+    }]>,
+    OpBuilder<(ins "StringAttr":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, SymbolRefAttr::get(callee), results, operands);
+    }]>,
+    OpBuilder<(ins "StringRef":$callee, "TypeRange":$results,
+      CArg<"ValueRange", "{}">:$operands), [{
+      build($_builder, $_state, StringAttr::get($_builder.getContext(), callee),
+            results, operands);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    FunctionType getCalleeType();
+
+    /// Get the argument operands to the called function.
+    operand_range getArgOperands() {
+      return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    operand_iterator arg_operand_begin() { return operand_begin(); }
+    operand_iterator arg_operand_end() { return operand_end(); }
+
+    /// Return the callee of this operation.
+    CallInterfaceCallable getCallableForCallee() {
+      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+  }];
+
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
+
+def Async_ReturnOp : Async_Op<"return",
+    [Pure, HasParent<"FuncOp">, ReturnLike, Terminator]> {
+  let summary = "Async function return operation";
+  let description = [{
+    The `async.return` is a special terminator operation for Async function.
+
+    Example:
+
+    ```mlir
+    async.func @foo() : !async.token {
+      return
+    }
+    ```
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$operands);
+
+  let builders = [OpBuilder<(ins), [{build($_builder, $_state, std::nullopt);}]>];
+
+  let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+  let hasVerifier = 1;
+}
+
 def Async_YieldOp :
     Async_Op<"yield", [
-      HasParent<"ExecuteOp">, NoSideEffect, Terminator,
+      HasParent<"ExecuteOp">, Pure, Terminator,
       DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
   let summary = "terminator for Async execute operation";
   let description = [{
@@ -143,8 +333,8 @@ def Async_AwaitOp : Async_Op<"await"> {
   ];
 
   let extraClassDeclaration = [{
-    Optional<Type> getResultType() {
-      if (getResultTypes().empty()) return None;
+    std::optional<Type> getResultType() {
+      if (getResultTypes().empty()) return std::nullopt;
       return getResultTypes()[0];
     }
   }];
@@ -156,7 +346,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   }];
 }
 
-def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
+def Async_CreateGroupOp : Async_Op<"create_group", [Pure]> {
   let summary = "creates an empty async group";
   let description = [{
     The `async.create_group` allocates an empty async group. Async tokens or
@@ -505,7 +695,7 @@ def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,
-                       Confined<I64Attr, [IntPositive]>:$count);
+                       ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)
@@ -520,7 +710,7 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,
-                       Confined<I64Attr, [IntPositive]>:$count);
+                       ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)

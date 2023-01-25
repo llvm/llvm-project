@@ -14,7 +14,7 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_NOOPANALYSIS_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Stmt.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
@@ -38,7 +38,7 @@ public:
 
   static NoopLattice initialElement() { return {}; }
 
-  void transfer(const Stmt *S, NoopLattice &E, Environment &Env) {}
+  void transfer(const CFGElement *E, NoopLattice &L, Environment &Env) {}
 };
 
 } // namespace dataflow

@@ -1,7 +1,7 @@
 ; RUN: llc < %s
 
 ; NVPTX failed to lower arg i160, as size > 64
-; UNSUPPORTED: nvptx
+; UNSUPPORTED: target=nvptx{{.*}}
 
 @c = external global i32, align 4
 
@@ -13,7 +13,7 @@ entry:
   br i1 %tobool.i, label %if.then.i, label %fn1.exit
 
 if.then.i:
-  store i32 0, i32* @c, align 4
+  store i32 0, ptr @c, align 4
   br label %fn1.exit
 
 fn1.exit:

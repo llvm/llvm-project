@@ -10,14 +10,14 @@ target datalayout = "n8:16:32:64"
 
 ; Verify that identical edges are merged. rdar://problem/6453893
 
-define i8* @test1() {
+define ptr @test1() {
 ;
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV]], i64 1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
@@ -36,10 +36,10 @@ define i8* @test1() {
 ; CHECK:       bbB.bb89_crit_edge:
 ; CHECK-NEXT:    br label [[BB89]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[SCEVGEP]], [[BBA_BB89_CRIT_EDGE]] ], [ [[SCEVGEP]], [[BBB_BB89_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP]], [[BBA_BB89_CRIT_EDGE]] ], [ [[SCEVGEP]], [[BBB_BB89_CRIT_EDGE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i8* [[TMP75PHI]]
+; CHECK-NEXT:    ret ptr [[TMP75PHI]]
 ;
 entry:
   br label %loop
@@ -47,7 +47,7 @@ entry:
 loop:
   %rec = phi i32 [ %next, %loop ], [ 0, %entry ]
   %next = add i32 %rec, 1
-  %tmp75 = getelementptr i8, i8* null, i32 %next
+  %tmp75 = getelementptr i8, ptr null, i32 %next
   br i1 false, label %loop, label %loopexit
 
 loopexit:
@@ -66,22 +66,22 @@ bbB:
   ]
 
 bb89:
-  %tmp75phi = phi i8* [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbB ], [ %tmp75, %bbB ], [ %tmp75, %bbB ]
+  %tmp75phi = phi ptr [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbB ], [ %tmp75, %bbB ], [ %tmp75, %bbB ]
   br label %exit
 
 exit:
-  ret i8* %tmp75phi
+  ret ptr %tmp75phi
 }
 
 ; Handle single-predecessor phis: PR13756
-define i8* @test2() {
+define ptr @test2() {
 ;
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i8* [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, i8* [[LSR_IV]], i64 1
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[LOOP]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 1
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[LOOPEXIT:%.*]]
 ; CHECK:       loopexit:
 ; CHECK-NEXT:    br i1 false, label [[BBA:%.*]], label [[BBB:%.*]]
@@ -98,11 +98,11 @@ define i8* @test2() {
 ; CHECK:       bbB.exit_crit_edge:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       bb89:
-; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi i8* [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ]
+; CHECK-NEXT:    [[TMP75PHI:%.*]] = phi ptr [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ], [ [[SCEVGEP]], [[BBA]] ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i8* [ [[TMP75PHI]], [[BB89]] ], [ [[SCEVGEP]], [[BBB_EXIT_CRIT_EDGE]] ]
-; CHECK-NEXT:    ret i8* [[RESULT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi ptr [ [[TMP75PHI]], [[BB89]] ], [ [[SCEVGEP]], [[BBB_EXIT_CRIT_EDGE]] ]
+; CHECK-NEXT:    ret ptr [[RESULT]]
 ;
 entry:
   br label %loop
@@ -110,7 +110,7 @@ entry:
 loop:
   %rec = phi i32 [ %next, %loop ], [ 0, %entry ]
   %next = add i32 %rec, 1
-  %tmp75 = getelementptr i8, i8* null, i32 %next
+  %tmp75 = getelementptr i8, ptr null, i32 %next
   br i1 false, label %loop, label %loopexit
 
 loopexit:
@@ -129,10 +129,10 @@ bbB:
   ]
 
 bb89:
-  %tmp75phi = phi i8* [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbA ]
+  %tmp75phi = phi ptr [ %tmp75, %bbA ], [ %tmp75, %bbA ], [ %tmp75, %bbA ]
   br label %exit
 
 exit:
-  %result = phi i8* [ %tmp75phi, %bb89 ], [ %tmp75, %bbB ], [ %tmp75, %bbB ], [ %tmp75, %bbB ]
-  ret i8* %result
+  %result = phi ptr [ %tmp75phi, %bb89 ], [ %tmp75, %bbB ], [ %tmp75, %bbB ], [ %tmp75, %bbB ]
+  ret ptr %result
 }

@@ -4,23 +4,17 @@
 define <32 x half> @foo(<32 x half> %a, <32 x half> %b) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    movq %rsp, %rbp
-; CHECK-NEXT:    andq $-64, %rsp
-; CHECK-NEXT:    subq $192, %rsp
-; CHECK-NEXT:    vmovaps %zmm1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    vmovaps %zmm0, (%rsp)
-; CHECK-NEXT:    vcvtph2ps {{[0-9]+}}(%rsp), %zmm0
-; CHECK-NEXT:    vcvtph2ps (%rsp), %zmm1
-; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
+; CHECK-NEXT:    vcvtph2ps %ymm1, %zmm2
+; CHECK-NEXT:    vcvtph2ps %ymm0, %zmm3
+; CHECK-NEXT:    vaddps %zmm2, %zmm3, %zmm2
+; CHECK-NEXT:    vcvtps2ph $4, %zmm2, %ymm2
+; CHECK-NEXT:    vextractf64x4 $1, %zmm1, %ymm1
+; CHECK-NEXT:    vcvtph2ps %ymm1, %zmm1
+; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
+; CHECK-NEXT:    vcvtph2ps %ymm0, %zmm0
+; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vcvtps2ph $4, %zmm0, %ymm0
-; CHECK-NEXT:    vcvtph2ps {{[0-9]+}}(%rsp), %zmm1
-; CHECK-NEXT:    vcvtph2ps {{[0-9]+}}(%rsp), %zmm2
-; CHECK-NEXT:    vaddps %zmm1, %zmm2, %zmm1
-; CHECK-NEXT:    vcvtps2ph $4, %zmm1, %ymm1
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
-; CHECK-NEXT:    movq %rbp, %rsp
-; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %1 = fadd <32 x half> %a, %b
   ret <32 x half> %1

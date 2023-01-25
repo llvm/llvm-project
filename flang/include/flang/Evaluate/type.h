@@ -91,8 +91,11 @@ public:
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   DynamicType(int charKind, const semantics::ParamValue &len);
+  // When a known length is presented, resolve it to its effective
+  // length of zero if it is negative.
   constexpr DynamicType(int k, std::int64_t len)
-      : category_{TypeCategory::Character}, kind_{k}, knownLength_{len} {
+      : category_{TypeCategory::Character}, kind_{k}, knownLength_{
+                                                          len >= 0 ? len : 0} {
     CHECK(IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
@@ -183,8 +186,13 @@ public:
   // 7.3.2.3 & 15.5.2.4 type compatibility.
   // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
   // dummy argument x would be valid.  Be advised, this is not a reflexive
-  // relation.  Kind type parameters must match.
+  // relation.  Kind type parameters must match, but CHARACTER lengths
+  // need not do so.
   bool IsTkCompatibleWith(const DynamicType &) const;
+
+  // A stronger compatibility check that does not allow distinct known
+  // values for CHARACTER lengths for e.g. MOVE_ALLOC().
+  bool IsTkLenCompatibleWith(const DynamicType &) const;
 
   // EXTENDS_TYPE_OF (16.9.76); ignores type parameter values
   std::optional<bool> ExtendsTypeOf(const DynamicType &) const;
@@ -365,7 +373,7 @@ template <TypeCategory CATEGORY> struct SomeKind {
   static constexpr TypeCategory category{CATEGORY};
   constexpr bool operator==(const SomeKind &) const { return true; }
   static std::string AsFortran() {
-    return "Some"s + common::EnumToString(category);
+    return "Some"s + std::string{common::EnumToString(category)};
   }
 };
 

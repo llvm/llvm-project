@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly -S \
+; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly -S \
 ; RUN: -polly-invariant-load-hoisting=true < %s | FileCheck %s
 
 ;#define N 1024
@@ -56,5 +56,5 @@ define i32 @main() nounwind {
 ; CHECK:   %.load = load float, float* getelementptr inbounds ([1024 x float], [1024 x float]* @A, i32 0, i32 0)
 
 ; CHECK: polly.stmt.:                                      ; preds = %polly.start
-; CHECK:   %_p.splatinsert = insertelement <4 x float> poison, float %.load, i32 0
+; CHECK:   %_p.splatinsert = insertelement <4 x float> poison, float %.load, i64 0
 ; CHECK:   %_p.splat = shufflevector <4 x float> %_p.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer

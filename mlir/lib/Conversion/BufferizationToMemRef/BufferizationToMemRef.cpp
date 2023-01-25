@@ -12,13 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTBUFFERIZATIONTOMEMREF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -82,7 +88,7 @@ void mlir::populateBufferizationToMemRefConversionPatterns(
 
 namespace {
 struct BufferizationToMemRefPass
-    : public ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
+    : public impl::ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
   BufferizationToMemRefPass() = default;
 
   void runOnOperation() override {

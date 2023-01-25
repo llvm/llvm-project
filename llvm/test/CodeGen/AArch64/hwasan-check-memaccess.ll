@@ -2,7 +2,7 @@
 
 target triple = "aarch64--linux-android"
 
-define i8* @f1(i8* %x0, i8* %x1) {
+define ptr @f1(ptr %x0, ptr %x1) {
   ; CHECK: f1:
   ; CHECK: str x30, [sp, #-16]!
   ; CHECK-NEXT: .cfi_def_cfa_offset 16
@@ -12,11 +12,11 @@ define i8* @f1(i8* %x0, i8* %x1) {
   ; CHECK-NEXT: bl __hwasan_check_x1_1
   ; CHECK-NEXT: ldr x30, [sp], #16
   ; CHECK-NEXT: ret
-  call void @llvm.hwasan.check.memaccess(i8* %x0, i8* %x1, i32 1)
-  ret i8* %x1
+  call void @llvm.hwasan.check.memaccess(ptr %x0, ptr %x1, i32 1)
+  ret ptr %x1
 }
 
-define i8* @f2(i8* %x0, i8* %x1) {
+define ptr @f2(ptr %x0, ptr %x1) {
   ; CHECK: f2:
   ; CHECK: stp x30, x20, [sp, #-16]!
   ; CHECK-NEXT: .cfi_def_cfa_offset 16
@@ -26,18 +26,18 @@ define i8* @f2(i8* %x0, i8* %x1) {
   ; CHECK-NEXT: bl __hwasan_check_x0_2_short_v2
   ; CHECK-NEXT: ldp x30, x20, [sp], #16
   ; CHECK-NEXT: ret
-  call void @llvm.hwasan.check.memaccess.shortgranules(i8* %x1, i8* %x0, i32 2)
-  ret i8* %x0
+  call void @llvm.hwasan.check.memaccess.shortgranules(ptr %x1, ptr %x0, i32 2)
+  ret ptr %x0
 }
 
-define void @f3(i8* %x0, i8* %x1) {
+define void @f3(ptr %x0, ptr %x1) {
   ; 0x3ff0000 (kernel, match-all = 0xff)
-  call void @llvm.hwasan.check.memaccess(i8* %x0, i8* %x1, i32 67043328)
+  call void @llvm.hwasan.check.memaccess(ptr %x0, ptr %x1, i32 67043328)
   ret void
 }
 
-declare void @llvm.hwasan.check.memaccess(i8*, i8*, i32)
-declare void @llvm.hwasan.check.memaccess.shortgranules(i8*, i8*, i32)
+declare void @llvm.hwasan.check.memaccess(ptr, ptr, i32)
+declare void @llvm.hwasan.check.memaccess.shortgranules(ptr, ptr, i32)
 
 ; CHECK:      .section .text.hot,"axG",@progbits,__hwasan_check_x0_2_short_v2,comdat
 ; CHECK-NEXT: .type __hwasan_check_x0_2_short_v2,@function

@@ -3,18 +3,16 @@
 ; RUN: llc -mtriple=thumbv7m-none-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-T2
 ; RUN: llc -mtriple=armv7a-none-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-ARM
 
-define i8* @i32_0(i8* %p, i32 %v) {
+define ptr @i32_0(ptr %p, i32 %v) {
 ; CHECK-LABEL: i32_0:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    str r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 0
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  store i32 %v, ptr %p, align 4
+  ret ptr %p
 }
 
-define i8* @i32_3(i8* %p, i32 %v) {
+define ptr @i32_3(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #3
@@ -31,13 +29,12 @@ define i8* @i32_3(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #3]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 3
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 3
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_4(i8* %p, i32 %v) {
+define ptr @i32_4(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    str r1, [r0, #4]
@@ -53,13 +50,12 @@ define i8* @i32_4(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_8(i8* %p, i32 %v) {
+define ptr @i32_8(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    str r1, [r0, #8]
@@ -75,13 +71,12 @@ define i8* @i32_8(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 8
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 8
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m1(i8* %p, i32 %v) {
+define ptr @i32_m1(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m1:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #1
@@ -97,13 +92,12 @@ define i8* @i32_m1(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-1]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -1
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -1
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m4(i8* %p, i32 %v) {
+define ptr @i32_m4(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #4
@@ -119,13 +113,12 @@ define i8* @i32_m4(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_252(i8* %p, i32 %v) {
+define ptr @i32_252(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #252
@@ -142,13 +135,12 @@ define i8* @i32_252(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 252
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 252
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_255(i8* %p, i32 %v) {
+define ptr @i32_255(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -165,13 +157,12 @@ define i8* @i32_255(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 255
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 255
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_256(i8* %p, i32 %v) {
+define ptr @i32_256(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -190,13 +181,12 @@ define i8* @i32_256(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #256]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 256
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 256
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m252(i8* %p, i32 %v) {
+define ptr @i32_m252(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #252
@@ -212,13 +202,12 @@ define i8* @i32_m252(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -252
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -252
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m255(i8* %p, i32 %v) {
+define ptr @i32_m255(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #255
@@ -234,13 +223,12 @@ define i8* @i32_m255(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -255
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -255
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m256(i8* %p, i32 %v) {
+define ptr @i32_m256(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -260,13 +248,12 @@ define i8* @i32_m256(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-256]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -256
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -256
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_4095(i8* %p, i32 %v) {
+define ptr @i32_4095(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI12_0
@@ -288,13 +275,12 @@ define i8* @i32_4095(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #4095]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4095
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4095
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_4096(i8* %p, i32 %v) {
+define ptr @i32_4096(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -315,13 +301,12 @@ define i8* @i32_4096(i8* %p, i32 %v) {
 ; CHECK-ARM-NEXT:    mov r2, #4096
 ; CHECK-ARM-NEXT:    str r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4096
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4096
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m4095(i8* %p, i32 %v) {
+define ptr @i32_m4095(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI14_0
@@ -345,13 +330,12 @@ define i8* @i32_m4095(i8* %p, i32 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    str r1, [r0, #-4095]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4095
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4095
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i32_m4096(i8* %p, i32 %v) {
+define ptr @i32_m4096(ptr %p, i32 %v) {
 ; CHECK-T1-LABEL: i32_m4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI15_0
@@ -377,13 +361,12 @@ define i8* @i32_m4096(i8* %p, i32 %v) {
 ; CHECK-ARM-NEXT:    movt r2, #65535
 ; CHECK-ARM-NEXT:    str r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4096
-  %q = bitcast i8* %o to i32*
-  store i32 %v, i32* %q, align 4
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4096
+  store i32 %v, ptr %o, align 4
+  ret ptr %o
 }
 
-define i8* @i64_0(i8* %p, i64 %v) {
+define ptr @i64_0(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_0:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    stm r0!, {r2, r3}
@@ -401,13 +384,11 @@ define i8* @i64_0(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0]
 ; CHECK-ARM-NEXT:    str r1, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 0
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  store i64 %v, ptr %p, align 8
+  ret ptr %p
 }
 
-define i8* @i64_3(i8* %p, i64 %v) {
+define ptr @i64_3(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #3
@@ -427,13 +408,12 @@ define i8* @i64_3(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #3]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 3
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 3
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_4(i8* %p, i64 %v) {
+define ptr @i64_4(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    str r2, [r0, #4]
@@ -452,13 +432,12 @@ define i8* @i64_4(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #4]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_8(i8* %p, i64 %v) {
+define ptr @i64_8(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    str r2, [r0, #8]
@@ -477,13 +456,12 @@ define i8* @i64_8(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #8]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 8
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 8
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m1(i8* %p, i64 %v) {
+define ptr @i64_m1(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m1:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #1
@@ -502,13 +480,12 @@ define i8* @i64_m1(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #-1]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -1
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -1
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m4(i8* %p, i64 %v) {
+define ptr @i64_m4(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    str r3, [r0]
@@ -527,13 +504,12 @@ define i8* @i64_m4(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r3, [r0]
 ; CHECK-ARM-NEXT:    str r2, [r0, #-4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_252(i8* %p, i64 %v) {
+define ptr @i64_252(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #252
@@ -553,13 +529,12 @@ define i8* @i64_252(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #252]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 252
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 252
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_255(i8* %p, i64 %v) {
+define ptr @i64_255(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #255
@@ -579,13 +554,12 @@ define i8* @i64_255(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #255]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 255
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 255
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_256(i8* %p, i64 %v) {
+define ptr @i64_256(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #1
@@ -606,13 +580,12 @@ define i8* @i64_256(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #256]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 256
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 256
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m252(i8* %p, i64 %v) {
+define ptr @i64_m252(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #252
@@ -631,13 +604,12 @@ define i8* @i64_m252(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #-252]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -252
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -252
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m255(i8* %p, i64 %v) {
+define ptr @i64_m255(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #255
@@ -656,13 +628,12 @@ define i8* @i64_m255(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #-255]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -255
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -255
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m256(i8* %p, i64 %v) {
+define ptr @i64_m256(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #255
@@ -685,13 +656,12 @@ define i8* @i64_m256(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #-256]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -256
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -256
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_4095(i8* %p, i64 %v) {
+define ptr @i64_4095(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, .LCPI28_0
@@ -716,13 +686,12 @@ define i8* @i64_4095(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #4095]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4095
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4095
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_4096(i8* %p, i64 %v) {
+define ptr @i64_4096(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #1
@@ -746,13 +715,12 @@ define i8* @i64_4096(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, r1]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4096
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4096
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m4095(i8* %p, i64 %v) {
+define ptr @i64_m4095(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, .LCPI30_0
@@ -779,13 +747,12 @@ define i8* @i64_m4095(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, #-4095]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4095
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4095
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i64_m4096(i8* %p, i64 %v) {
+define ptr @i64_m4096(ptr %p, i64 %v) {
 ; CHECK-T1-LABEL: i64_m4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, .LCPI31_0
@@ -814,13 +781,12 @@ define i8* @i64_m4096(i8* %p, i64 %v) {
 ; CHECK-ARM-NEXT:    str r2, [r0, r1]!
 ; CHECK-ARM-NEXT:    str r3, [r0, #4]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4096
-  %q = bitcast i8* %o to i64*
-  store i64 %v, i64* %q, align 8
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4096
+  store i64 %v, ptr %o, align 8
+  ret ptr %o
 }
 
-define i8* @i128_0(i8* %p, i128 %v) {
+define ptr @i128_0(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_0:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, [sp, #4]
@@ -847,13 +813,11 @@ define i8* @i128_0(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 0
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  store i128 %v, ptr %p, align 16
+  ret ptr %p
 }
 
-define i8* @i128_3(i8* %p, i128 %v) {
+define ptr @i128_3(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r1, #3
@@ -883,13 +847,12 @@ define i8* @i128_3(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 3
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 3
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
-define i8* @i128_4(i8* %p, i128 %v) {
+define ptr @i128_4(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, [sp, #4]
@@ -918,13 +881,12 @@ define i8* @i128_4(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
-define i8* @i128_8(i8* %p, i128 %v) {
+define ptr @i128_8(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, [sp, #4]
@@ -953,13 +915,12 @@ define i8* @i128_8(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 8
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 8
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
-define i8* @i128_16(i8* %p, i128 %v) {
+define ptr @i128_16(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_16:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, [sp, #4]
@@ -988,13 +949,12 @@ define i8* @i128_16(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 16
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 16
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
-define i8* @i128_m1(i8* %p, i128 %v) {
+define ptr @i128_m1(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_m1:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #1
@@ -1023,13 +983,12 @@ define i8* @i128_m1(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    str r1, [r0, #8]
 ; CHECK-ARM-NEXT:    str r12, [r0, #12]
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -1
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -1
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
-define i8* @i128_m4(i8* %p, i128 %v) {
+define ptr @i128_m4(ptr %p, i128 %v) {
 ; CHECK-T1-LABEL: i128_m4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r1, [sp, #4]
@@ -1057,26 +1016,23 @@ define i8* @i128_m4(i8* %p, i128 %v) {
 ; CHECK-ARM-NEXT:    stmib r0, {r1, r12}
 ; CHECK-ARM-NEXT:    str r2, [r0, #-4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4
-  %q = bitcast i8* %o to i128*
-  store i128 %v, i128* %q, align 16
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4
+  store i128 %v, ptr %o, align 16
+  ret ptr %o
 }
 
 ; i16
 
-define i8* @i16_0(i8* %p, i16 %v) {
+define ptr @i16_0(ptr %p, i16 %v) {
 ; CHECK-LABEL: i16_0:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    strh r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 0
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  store i16 %v, ptr %p, align 2
+  ret ptr %p
 }
 
-define i8* @i16_3(i8* %p, i16 %v) {
+define ptr @i16_3(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #3
@@ -1093,13 +1049,12 @@ define i8* @i16_3(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #3]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 3
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 3
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_4(i8* %p, i16 %v) {
+define ptr @i16_4(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    strh r1, [r0, #4]
@@ -1115,13 +1070,12 @@ define i8* @i16_4(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_8(i8* %p, i16 %v) {
+define ptr @i16_8(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    strh r1, [r0, #8]
@@ -1137,13 +1091,12 @@ define i8* @i16_8(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #8]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 8
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 8
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m1(i8* %p, i16 %v) {
+define ptr @i16_m1(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m1:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #1
@@ -1159,13 +1112,12 @@ define i8* @i16_m1(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #-1]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -1
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -1
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m4(i8* %p, i16 %v) {
+define ptr @i16_m4(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #4
@@ -1181,13 +1133,12 @@ define i8* @i16_m4(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #-4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_252(i8* %p, i16 %v) {
+define ptr @i16_252(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #252
@@ -1204,13 +1155,12 @@ define i8* @i16_252(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 252
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 252
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_255(i8* %p, i16 %v) {
+define ptr @i16_255(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -1227,13 +1177,12 @@ define i8* @i16_255(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 255
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 255
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_256(i8* %p, i16 %v) {
+define ptr @i16_256(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -1253,13 +1202,12 @@ define i8* @i16_256(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    mov r2, #256
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 256
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 256
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m252(i8* %p, i16 %v) {
+define ptr @i16_m252(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #252
@@ -1275,13 +1223,12 @@ define i8* @i16_m252(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #-252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -252
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -252
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m255(i8* %p, i16 %v) {
+define ptr @i16_m255(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #255
@@ -1297,13 +1244,12 @@ define i8* @i16_m255(i8* %p, i16 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strh r1, [r0, #-255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -255
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -255
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m256(i8* %p, i16 %v) {
+define ptr @i16_m256(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -1324,13 +1270,12 @@ define i8* @i16_m256(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    mvn r2, #255
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -256
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -256
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_4095(i8* %p, i16 %v) {
+define ptr @i16_4095(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI51_0
@@ -1353,13 +1298,12 @@ define i8* @i16_4095(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    movw r2, #4095
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4095
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4095
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_4096(i8* %p, i16 %v) {
+define ptr @i16_4096(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -1380,13 +1324,12 @@ define i8* @i16_4096(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    mov r2, #4096
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4096
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4096
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m4095(i8* %p, i16 %v) {
+define ptr @i16_m4095(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI53_0
@@ -1412,13 +1355,12 @@ define i8* @i16_m4095(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    movt r2, #65535
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4095
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4095
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
-define i8* @i16_m4096(i8* %p, i16 %v) {
+define ptr @i16_m4096(ptr %p, i16 %v) {
 ; CHECK-T1-LABEL: i16_m4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI54_0
@@ -1444,26 +1386,23 @@ define i8* @i16_m4096(i8* %p, i16 %v) {
 ; CHECK-ARM-NEXT:    movt r2, #65535
 ; CHECK-ARM-NEXT:    strh r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4096
-  %q = bitcast i8* %o to i16*
-  store i16 %v, i16* %q, align 2
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4096
+  store i16 %v, ptr %o, align 2
+  ret ptr %o
 }
 
 ; i8
 
-define i8* @i8_0(i8* %p, i8 %v) {
+define ptr @i8_0(ptr %p, i8 %v) {
 ; CHECK-LABEL: i8_0:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    strb r1, [r0]
 ; CHECK-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 0
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  store i8 %v, ptr %p, align 1
+  ret ptr %p
 }
 
-define i8* @i8_3(i8* %p, i8 %v) {
+define ptr @i8_3(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_3:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    strb r1, [r0, #3]
@@ -1479,13 +1418,12 @@ define i8* @i8_3(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #3]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 3
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 3
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_4(i8* %p, i8 %v) {
+define ptr @i8_4(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    strb r1, [r0, #4]
@@ -1501,13 +1439,12 @@ define i8* @i8_4(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_8(i8* %p, i8 %v) {
+define ptr @i8_8(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_8:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    strb r1, [r0, #8]
@@ -1523,13 +1460,12 @@ define i8* @i8_8(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #8]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 8
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 8
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m1(i8* %p, i8 %v) {
+define ptr @i8_m1(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m1:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #1
@@ -1545,13 +1481,12 @@ define i8* @i8_m1(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-1]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -1
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -1
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m4(i8* %p, i8 %v) {
+define ptr @i8_m4(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m4:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, r0, #4
@@ -1567,13 +1502,12 @@ define i8* @i8_m4(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-4]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_252(i8* %p, i8 %v) {
+define ptr @i8_252(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #252
@@ -1590,13 +1524,12 @@ define i8* @i8_252(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 252
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 252
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_255(i8* %p, i8 %v) {
+define ptr @i8_255(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -1613,13 +1546,12 @@ define i8* @i8_255(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 255
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 255
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_256(i8* %p, i8 %v) {
+define ptr @i8_256(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -1638,13 +1570,12 @@ define i8* @i8_256(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #256]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 256
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 256
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m252(i8* %p, i8 %v) {
+define ptr @i8_m252(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m252:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #252
@@ -1660,13 +1591,12 @@ define i8* @i8_m252(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-252]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -252
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -252
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m255(i8* %p, i8 %v) {
+define ptr @i8_m255(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m255:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    subs r0, #255
@@ -1682,13 +1612,12 @@ define i8* @i8_m255(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-255]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -255
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -255
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m256(i8* %p, i8 %v) {
+define ptr @i8_m256(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m256:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #255
@@ -1708,13 +1637,12 @@ define i8* @i8_m256(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-256]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -256
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -256
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_4095(i8* %p, i8 %v) {
+define ptr @i8_4095(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI67_0
@@ -1736,13 +1664,12 @@ define i8* @i8_4095(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #4095]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4095
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4095
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_4096(i8* %p, i8 %v) {
+define ptr @i8_4096(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    movs r2, #1
@@ -1763,13 +1690,12 @@ define i8* @i8_4096(i8* %p, i8 %v) {
 ; CHECK-ARM-NEXT:    mov r2, #4096
 ; CHECK-ARM-NEXT:    strb r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 4096
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 4096
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m4095(i8* %p, i8 %v) {
+define ptr @i8_m4095(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m4095:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI69_0
@@ -1793,13 +1719,12 @@ define i8* @i8_m4095(i8* %p, i8 %v) {
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    strb r1, [r0, #-4095]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4095
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4095
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }
 
-define i8* @i8_m4096(i8* %p, i8 %v) {
+define ptr @i8_m4096(ptr %p, i8 %v) {
 ; CHECK-T1-LABEL: i8_m4096:
 ; CHECK-T1:       @ %bb.0:
 ; CHECK-T1-NEXT:    ldr r2, .LCPI70_0
@@ -1825,8 +1750,7 @@ define i8* @i8_m4096(i8* %p, i8 %v) {
 ; CHECK-ARM-NEXT:    movt r2, #65535
 ; CHECK-ARM-NEXT:    strb r1, [r0, r2]!
 ; CHECK-ARM-NEXT:    bx lr
-  %o = getelementptr inbounds i8, i8* %p, i32 -4096
-  %q = bitcast i8* %o to i8*
-  store i8 %v, i8* %q, align 1
-  ret i8* %o
+  %o = getelementptr inbounds i8, ptr %p, i32 -4096
+  store i8 %v, ptr %o, align 1
+  ret ptr %o
 }

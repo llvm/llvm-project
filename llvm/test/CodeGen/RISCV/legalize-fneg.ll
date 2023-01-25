@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64 %s
 
-define void @test1(float* %a, float* %b) nounwind {
+define void @test1(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: test1:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a1, 0(a1)
@@ -21,13 +21,13 @@ define void @test1(float* %a, float* %b) nounwind {
 ; RV64-NEXT:    sw a1, 0(a0)
 ; RV64-NEXT:    ret
 entry:
-  %0 = load float, float* %b
+  %0 = load float, ptr %b
   %neg = fneg float %0
-  store float %neg, float* %a
+  store float %neg, ptr %a
   ret void
 }
 
-define void @test2(double* %a, double* %b) nounwind {
+define void @test2(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: test2:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 4(a1)
@@ -47,13 +47,13 @@ define void @test2(double* %a, double* %b) nounwind {
 ; RV64-NEXT:    sd a1, 0(a0)
 ; RV64-NEXT:    ret
 entry:
-  %0 = load double, double* %b
+  %0 = load double, ptr %b
   %neg = fneg double %0
-  store double %neg, double* %a
+  store double %neg, ptr %a
   ret void
 }
 
-define void @test3(fp128* %a, fp128* %b) nounwind {
+define void @test3(ptr %a, ptr %b) nounwind {
 ; RV32-LABEL: test3:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    lw a2, 4(a1)
@@ -79,8 +79,8 @@ define void @test3(fp128* %a, fp128* %b) nounwind {
 ; RV64-NEXT:    sd a2, 8(a0)
 ; RV64-NEXT:    ret
 entry:
-  %0 = load fp128, fp128* %b
+  %0 = load fp128, ptr %b
   %neg = fneg fp128 %0
-  store fp128 %neg, fp128* %a
+  store fp128 %neg, ptr %a
   ret void
 }

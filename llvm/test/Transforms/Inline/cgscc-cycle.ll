@@ -10,115 +10,109 @@
 
 ; The `test1_*` collection of functions form a directly cycling pattern.
 
-define void @test1_a(i8** %ptr) {
+define void @test1_a(ptr %ptr) {
 ; CHECK-LABEL: define void @test1_a(
 entry:
-  call void @test1_b(i8* bitcast (void (i8*, i1, i32)* @test1_b to i8*), i1 false, i32 0)
+  call void @test1_b(ptr @test1_b, i1 false, i32 0)
 ; Inlining and simplifying this call will reliably produce the exact same call,
 ; over and over again. However, each inlining increments the count, and so we
 ; expect this test case to stop after one round of inlining with a final
 ; argument of '1'.
 ; CHECK-NOT:     call
-; CHECK:         call void @test1_b(i8* bitcast (void (i8*, i1, i32)* @test1_b to i8*), i1 false, i32 1)
+; CHECK:         call void @test1_b(ptr nonnull @test1_b, i1 false, i32 1)
 ; CHECK-NOT:     call
 
   ret void
 }
 
-define void @test1_b(i8* %arg, i1 %flag, i32 %inline_count) {
+define void @test1_b(ptr %arg, i1 %flag, i32 %inline_count) {
 ; CHECK-LABEL: define void @test1_b(
 entry:
-  %a = alloca i8*
-  store i8* %arg, i8** %a
+  %a = alloca ptr
+  store ptr %arg, ptr %a
 ; This alloca and store should remain through any optimization.
 ; CHECK:         %[[A:.*]] = alloca
-; CHECK:         store i8* %arg, i8** %[[A]]
+; CHECK:         store ptr %arg, ptr %[[A]]
 
   br i1 %flag, label %bb1, label %bb2
 
 bb1:
-  call void @test1_a(i8** %a) noinline
+  call void @test1_a(ptr %a) noinline
   br label %bb2
 
 bb2:
-  %cast = bitcast i8** %a to void (i8*, i1, i32)**
-  %p = load void (i8*, i1, i32)*, void (i8*, i1, i32)** %cast
+  %p = load ptr, ptr %a
   %inline_count_inc = add i32 %inline_count, 1
-  call void %p(i8* %arg, i1 %flag, i32 %inline_count_inc)
+  call void %p(ptr %arg, i1 %flag, i32 %inline_count_inc)
 ; And we should continue to load and call indirectly through optimization.
-; CHECK:         %[[CAST:.*]] = bitcast i8** %[[A]] to void (i8*, i1, i32)**
-; CHECK:         %[[P:.*]] = load void (i8*, i1, i32)*, void (i8*, i1, i32)** %[[CAST]]
+; CHECK:         %[[P:.*]] = load ptr, ptr %[[A]]
 ; CHECK:         call void %[[P]](
 
   ret void
 }
 
-define void @test2_a(i8** %ptr) {
+define void @test2_a(ptr %ptr) {
 ; CHECK-LABEL: define void @test2_a(
 entry:
-  call void @test2_b(i8* bitcast (void (i8*, i8*, i1, i32)* @test2_b to i8*), i8* bitcast (void (i8*, i8*, i1, i32)* @test2_c to i8*), i1 false, i32 0)
+  call void @test2_b(ptr @test2_b, ptr @test2_c, i1 false, i32 0)
 ; Inlining and simplifying this call will reliably produce the exact same call,
 ; but only after doing two rounds if inlining, first from @test2_b then
 ; @test2_c. We check the exact number of inlining rounds before we cut off to
 ; break the cycle by inspecting the last paramater that gets incremented with
 ; each inlined function body.
 ; CHECK-NOT:     call
-; CHECK:         call void @test2_b(i8* bitcast (void (i8*, i8*, i1, i32)* @test2_b to i8*), i8* bitcast (void (i8*, i8*, i1, i32)* @test2_c to i8*), i1 false, i32 2)
+; CHECK:         call void @test2_b(ptr nonnull @test2_b, ptr nonnull @test2_c, i1 false, i32 2)
 ; CHECK-NOT:     call
   ret void
 }
 
-define void @test2_b(i8* %arg1, i8* %arg2, i1 %flag, i32 %inline_count) {
+define void @test2_b(ptr %arg1, ptr %arg2, i1 %flag, i32 %inline_count) {
 ; CHECK-LABEL: define void @test2_b(
 entry:
-  %a = alloca i8*
-  store i8* %arg2, i8** %a
+  %a = alloca ptr
+  store ptr %arg2, ptr %a
 ; This alloca and store should remain through any optimization.
 ; CHECK:         %[[A:.*]] = alloca
-; CHECK:         store i8* %arg2, i8** %[[A]]
+; CHECK:         store ptr %arg2, ptr %[[A]]
 
   br i1 %flag, label %bb1, label %bb2
 
 bb1:
-  call void @test2_a(i8** %a) noinline
+  call void @test2_a(ptr %a) noinline
   br label %bb2
 
 bb2:
-  %p = load i8*, i8** %a
-  %cast = bitcast i8* %p to void (i8*, i8*, i1, i32)*
+  %p = load ptr, ptr %a
   %inline_count_inc = add i32 %inline_count, 1
-  call void %cast(i8* %arg1, i8* %arg2, i1 %flag, i32 %inline_count_inc)
+  call void %p(ptr %arg1, ptr %arg2, i1 %flag, i32 %inline_count_inc)
 ; And we should continue to load and call indirectly through optimization.
-; CHECK:         %[[CAST:.*]] = bitcast i8** %[[A]] to void (i8*, i8*, i1, i32)**
-; CHECK:         %[[P:.*]] = load void (i8*, i8*, i1, i32)*, void (i8*, i8*, i1, i32)** %[[CAST]]
+; CHECK:         %[[P:.*]] = load ptr, ptr %[[A]]
 ; CHECK:         call void %[[P]](
 
   ret void
 }
 
-define void @test2_c(i8* %arg1, i8* %arg2, i1 %flag, i32 %inline_count) {
+define void @test2_c(ptr %arg1, ptr %arg2, i1 %flag, i32 %inline_count) {
 ; CHECK-LABEL: define void @test2_c(
 entry:
-  %a = alloca i8*
-  store i8* %arg1, i8** %a
+  %a = alloca ptr
+  store ptr %arg1, ptr %a
 ; This alloca and store should remain through any optimization.
 ; CHECK:         %[[A:.*]] = alloca
-; CHECK:         store i8* %arg1, i8** %[[A]]
+; CHECK:         store ptr %arg1, ptr %[[A]]
 
   br i1 %flag, label %bb1, label %bb2
 
 bb1:
-  call void @test2_a(i8** %a) noinline
+  call void @test2_a(ptr %a) noinline
   br label %bb2
 
 bb2:
-  %p = load i8*, i8** %a
-  %cast = bitcast i8* %p to void (i8*, i8*, i1, i32)*
+  %p = load ptr, ptr %a
   %inline_count_inc = add i32 %inline_count, 1
-  call void %cast(i8* %arg1, i8* %arg2, i1 %flag, i32 %inline_count_inc)
+  call void %p(ptr %arg1, ptr %arg2, i1 %flag, i32 %inline_count_inc)
 ; And we should continue to load and call indirectly through optimization.
-; CHECK:         %[[CAST:.*]] = bitcast i8** %[[A]] to void (i8*, i8*, i1, i32)**
-; CHECK:         %[[P:.*]] = load void (i8*, i8*, i1, i32)*, void (i8*, i8*, i1, i32)** %[[CAST]]
+; CHECK:         %[[P:.*]] = load ptr, ptr %[[A]]
 ; CHECK:         call void %[[P]](
 
   ret void
@@ -157,12 +151,12 @@ bb2:
 ; CHECK-LABEL: @test3_a(
 ; CHECK: tail call void @test3_b()
 ; CHECK-NEXT: tail call void @test3_d(i32 5)
-; CHECK-NEXT: %[[LD1:.*]] = load i64, i64* @a
+; CHECK-NEXT: %[[LD1:.*]] = load i64, ptr @a
 ; CHECK-NEXT: %[[ADD1:.*]] = add nsw i64 %[[LD1]], 1
-; CHECK-NEXT: store i64 %[[ADD1]], i64* @a
-; CHECK-NEXT: %[[LD2:.*]] = load i64, i64* @b
+; CHECK-NEXT: store i64 %[[ADD1]], ptr @a
+; CHECK-NEXT: %[[LD2:.*]] = load i64, ptr @b
 ; CHECK-NEXT: %[[ADD2:.*]] = add nsw i64 %[[LD2]], 5
-; CHECK-NEXT: store i64 %[[ADD2]], i64* @b
+; CHECK-NEXT: store i64 %[[ADD2]], ptr @b
 ; CHECK-NEXT: ret void
 
 ; Function Attrs: noinline
@@ -170,9 +164,9 @@ define void @test3_a() #0 {
 entry:
   tail call void @test3_b()
   tail call void @test3_c(i32 5)
-  %t0 = load i64, i64* @b
+  %t0 = load i64, ptr @b
   %add = add nsw i64 %t0, 5
-  store i64 %add, i64* @b
+  store i64 %add, ptr @b
   ret void
 }
 
@@ -180,9 +174,9 @@ entry:
 define void @test3_b() #0 {
 entry:
   tail call void @test3_a()
-  %t0 = load i64, i64* @a
+  %t0 = load i64, ptr @a
   %add = add nsw i64 %t0, 2
-  store i64 %add, i64* @a
+  store i64 %add, ptr @a
   ret void
 }
 
@@ -193,17 +187,17 @@ entry:
 
 if.then:                                          ; preds = %entry
   %call = tail call i64 @random()
-  %t0 = load i64, i64* @a
+  %t0 = load i64, ptr @a
   %add = add nsw i64 %t0, %call
-  store i64 %add, i64* @a
+  store i64 %add, ptr @a
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   tail call void @test3_c(i32 %i)
   tail call void @test3_b()
-  %t6 = load i64, i64* @a
+  %t6 = load i64, ptr @a
   %add79 = add nsw i64 %t6, 3
-  store i64 %add79, i64* @a
+  store i64 %add79, ptr @a
   ret void
 }
 
@@ -214,16 +208,16 @@ entry:
 
 if.then:                                          ; preds = %entry
   %call = tail call i64 @random()
-  %t0 = load i64, i64* @a
+  %t0 = load i64, ptr @a
   %add = add nsw i64 %t0, %call
-  store i64 %add, i64* @a
+  store i64 %add, ptr @a
   br label %if.end
 
 if.end:                                           ; preds = %entry, %if.then
   tail call void @test3_d(i32 %i)
-  %t6 = load i64, i64* @a
+  %t6 = load i64, ptr @a
   %add85 = add nsw i64 %t6, 1
-  store i64 %add85, i64* @a
+  store i64 %add85, ptr @a
   ret void
 }
 

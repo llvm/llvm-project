@@ -57,6 +57,19 @@ define double @t5(float %a) {
   ret double %3
 }
 
+; PR57357
+
+define float @not_maxnum(float %x) {
+; CHECK-LABEL: @not_maxnum(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[SEL]]
+;
+  %cmp = fcmp olt float %x, 0.0
+  %sel = select i1 %cmp, float -0.0, float %x
+  ret float %sel
+}
+
 ; From IEEE754: "Comparisons shall ignore the sign of zero (so +0 = -0)."
 ; So the compare constant may be treated as +0.0, and we sink the fpext.
 
@@ -73,15 +86,15 @@ define double @t6(float %a) {
   ret double %3
 }
 
-; From IEEE754: "Comparisons shall ignore the sign of zero (so +0 = -0)."
-; So the compare constant may be treated as -0.0, and we sink the fpext.
+; TODO: Move the select ahead of the fpext because it's a narrower op.
+; This works as long as the wide constant can be represented exactly in the narrow type.
 
 define double @t7(float %a) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[A]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[TMP1]] to double
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ult float [[A:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[A]] to double
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], double [[TMP2]], double -0.000000e+00
+; CHECK-NEXT:    ret double [[TMP3]]
 ;
   %1 = fcmp ult float %a, 0.0
   %2 = fpext float %a to double
@@ -93,8 +106,8 @@ define double @t7(float %a) {
 
 define float @fmin_fmin_zero_mismatch(float %x) {
 ; CHECK-LABEL: @fmin_fmin_zero_mismatch(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[MIN2:%.*]] = select i1 [[TMP1]], float [[X]], float 0.000000e+00
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[MIN2:%.*]] = select i1 [[CMP1]], float [[X]], float 0.000000e+00
 ; CHECK-NEXT:    ret float [[MIN2]]
 ;
   %cmp1 = fcmp olt float %x, -0.0
@@ -104,13 +117,16 @@ define float @fmin_fmin_zero_mismatch(float %x) {
   ret float %min2
 }
 
+; TODO: We do not recognize these as max ops because of the mismatched zeros.
 ; max(max(x, -0.0), -0.0) --> max(x, -0.0)
 
 define float @fmax_fmax_zero_mismatch(float %x) {
 ; CHECK-LABEL: @fmax_fmax_zero_mismatch(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ogt float [[X:%.*]], -0.000000e+00
-; CHECK-NEXT:    [[MAX11:%.*]] = select i1 [[TMP1]], float [[X]], float -0.000000e+00
-; CHECK-NEXT:    ret float [[MAX11]]
+; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], float [[X]], float -0.000000e+00
+; CHECK-NEXT:    [[CMP2:%.*]] = fcmp olt float [[MAX1]], 0.000000e+00
+; CHECK-NEXT:    [[MAX2:%.*]] = select i1 [[CMP2]], float -0.000000e+00, float [[MAX1]]
+; CHECK-NEXT:    ret float [[MAX2]]
 ;
   %cmp1 = fcmp ogt float %x, 0.0
   %max1 = select i1 %cmp1, float %x, float -0.0

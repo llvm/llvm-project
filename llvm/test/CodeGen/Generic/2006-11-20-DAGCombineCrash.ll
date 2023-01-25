@@ -1,6 +1,6 @@
 ; RUN: llc < %s
 ; PR1011	
-%struct.mng_data = type { i8* (%struct.mng_data*, i32)*, i32, i32, i32, i8, i8, i32, i32, i32, i32, i32 }
+%struct.mng_data = type { ptr, i32, i32, i32, i8, i8, i32, i32, i32, i32, i32 }
 
 define void @mng_display_bgr565() {
 entry:
@@ -10,9 +10,9 @@ bb.preheader:		; preds = %entry
 	br i1 false, label %cond_true48, label %cond_next80
 
 cond_true48:		; preds = %bb.preheader
-	%tmp = load i8, i8* null		; <i8> [#uses=1]
+	%tmp = load i8, ptr null		; <i8> [#uses=1]
 	%tmp51 = zext i8 %tmp to i16		; <i16> [#uses=1]
-	%tmp99 = load i8, i8* null		; <i8> [#uses=1]
+	%tmp99 = load i8, ptr null		; <i8> [#uses=1]
 	%tmp54 = bitcast i8 %tmp99 to i8		; <i8> [#uses=1]
 	%tmp54.upgrd.1 = zext i8 %tmp54 to i32		; <i32> [#uses=1]
 	%tmp55 = lshr i32 %tmp54.upgrd.1, 3		; <i32> [#uses=1]
@@ -30,7 +30,7 @@ cond_true48:		; preds = %bb.preheader
 	%tmp75 = lshr i16 %tmp70.upgrd.3, 8		; <i16> [#uses=1]
 	%tmp75.upgrd.4 = trunc i16 %tmp75 to i8		; <i8> [#uses=1]
 	%tmp76 = lshr i8 %tmp75.upgrd.4, 5		; <i8> [#uses=1]
-	store i8 %tmp76, i8* null
+	store i8 %tmp76, ptr null
 	ret void
 
 cond_next80:		; preds = %bb.preheader

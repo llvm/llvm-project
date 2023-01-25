@@ -159,6 +159,40 @@ void __sanitizer_annotate_contiguous_container(const void *beg,
                                                const void *old_mid,
                                                const void *new_mid);
 
+/// Similar to <c>__sanitizer_annotate_contiguous_container</c>.
+///
+/// Annotates the current state of a contiguous container memory,
+/// such as <c>std::deque</c>'s single chunk, when the boundries are moved.
+///
+/// A contiguous chunk is a chunk that keeps all of its elements
+/// in a contiguous region of memory. The container owns the region of memory
+/// <c>[storage_beg, storage_end)</c>; the memory <c>[container_beg,
+/// container_end)</c> is used to store the current elements, and the memory
+/// <c>[storage_beg, container_beg), [container_end, storage_end)</c> is
+/// reserved for future elements (<c>storage_beg <= container_beg <=
+/// container_end <= storage_end</c>). For example, in <c> std::deque </c>:
+/// - chunk with a frist deques element will have container_beg equal to address
+///  of the first element.
+/// - in every next chunk with elements, true is  <c> container_beg ==
+/// storage_beg </c>.
+///
+/// Argument requirements:
+/// During unpoisoning memory of empty container (before first element is
+/// added):
+/// - old_container_beg_p == old_container_end_p
+/// During poisoning after last element was removed:
+/// - new_container_beg_p == new_container_end_p
+/// \param storage_beg Beginning of memory region.
+/// \param storage_end End of memory region.
+/// \param old_container_beg Old beginning of used region.
+/// \param old_container_end End of used region.
+/// \param new_container_beg New beginning of used region.
+/// \param new_container_end New end of used region.
+void __sanitizer_annotate_double_ended_contiguous_container(
+    const void *storage_beg, const void *storage_end,
+    const void *old_container_beg, const void *old_container_end,
+    const void *new_container_beg, const void *new_container_end);
+
 /// Returns true if the contiguous container <c>[beg, end)</c> is properly
 /// poisoned.
 ///
@@ -178,6 +212,31 @@ void __sanitizer_annotate_contiguous_container(const void *beg,
 int __sanitizer_verify_contiguous_container(const void *beg, const void *mid,
                                             const void *end);
 
+/// Returns true if the double ended contiguous
+/// container <c>[storage_beg, storage_end)</c> is properly poisoned.
+///
+/// Proper poisoning could occur, for example, with
+/// <c>__sanitizer_annotate_double_ended_contiguous_container</c>), that is, if
+/// <c>[storage_beg, container_beg)</c> is not addressable, <c>[container_beg,
+/// container_end)</c> is addressable and <c>[container_end, end)</c> is
+/// unaddressable. Full verification requires O (<c>storage_end -
+/// storage_beg</c>) time; this function tries to avoid such complexity by
+/// touching only parts of the container around <c><i>storage_beg</i></c>,
+/// <c><i>container_beg</i></c>, <c><i>container_end</i></c>, and
+/// <c><i>storage_end</i></c>.
+///
+/// \param storage_beg Beginning of memory region.
+/// \param container_beg Beginning of used region.
+/// \param container_end End of used region.
+/// \param storage_end End of memory region.
+///
+/// \returns True if the double-ended contiguous container <c>[storage_beg,
+/// container_beg, container_end, end)</c> is properly poisoned - only
+/// [container_beg; container_end) is addressable.
+int __sanitizer_verify_double_ended_contiguous_container(
+    const void *storage_beg, const void *container_beg,
+    const void *container_end, const void *storage_end);
+
 /// Similar to <c>__sanitizer_verify_contiguous_container()</c> but also
 /// returns the address of the first improperly poisoned byte.
 ///
@@ -191,6 +250,20 @@ int __sanitizer_verify_contiguous_container(const void *beg, const void *mid,
 const void *__sanitizer_contiguous_container_find_bad_address(const void *beg,
                                                               const void *mid,
                                                               const void *end);
+
+/// returns the address of the first improperly poisoned byte.
+///
+/// Returns NULL if the area is poisoned properly.
+///
+/// \param storage_beg Beginning of memory region.
+/// \param container_beg Beginning of used region.
+/// \param container_end End of used region.
+/// \param storage_end End of memory region.
+///
+/// \returns The bad address or NULL.
+const void *__sanitizer_double_ended_contiguous_container_find_bad_address(
+    const void *storage_beg, const void *container_beg,
+    const void *container_end, const void *storage_end);
 
 /// Prints the stack trace leading to this call (useful for calling from the
 /// debugger).

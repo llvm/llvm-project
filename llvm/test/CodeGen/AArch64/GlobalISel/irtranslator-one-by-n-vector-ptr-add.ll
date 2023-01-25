@@ -6,7 +6,7 @@
 ; We should not create a splat vector for the non-vector index on this
 ; getelementptr. The entire getelementptr should be translated to a scalar
 ; G_PTR_ADD.
-define <1 x i8*> @one_elt_vector_ptr_add_non_vector_idx(<1 x i8*> %vec) {
+define <1 x ptr> @one_elt_vector_ptr_add_non_vector_idx(<1 x ptr> %vec) {
   ; CHECK-LABEL: name: one_elt_vector_ptr_add_non_vector_idx
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $d0
@@ -18,14 +18,14 @@ define <1 x i8*> @one_elt_vector_ptr_add_non_vector_idx(<1 x i8*> %vec) {
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; CHECK:   $d0 = COPY [[COPY2]](p0)
   ; CHECK:   RET_ReallyLR implicit $d0
-  %ptr_add = getelementptr i8, <1 x i8*> %vec, <1 x i32> <i32 1>
-  ret <1 x i8*> %ptr_add
+  %ptr_add = getelementptr i8, <1 x ptr> %vec, <1 x i32> <i32 1>
+  ret <1 x ptr> %ptr_add
 }
 
 ; We should not create a splat vector for the non-vector pointer on this
 ; getelementptr. The entire getelementptr should be translated to a scalar
 ; G_PTR_ADD.
-define <1 x i8*> @one_elt_vector_ptr_add_non_vector_ptr(i8* %vec) {
+define <1 x ptr> @one_elt_vector_ptr_add_non_vector_ptr(ptr %vec) {
   ; CHECK-LABEL: name: one_elt_vector_ptr_add_non_vector_ptr
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK:   liveins: $x0
@@ -37,6 +37,6 @@ define <1 x i8*> @one_elt_vector_ptr_add_non_vector_ptr(i8* %vec) {
   ; CHECK:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; CHECK:   $d0 = COPY [[COPY2]](p0)
   ; CHECK:   RET_ReallyLR implicit $d0
-  %ptr_add = getelementptr i8, i8* %vec, <1 x i32> <i32 1>
-  ret <1 x i8*> %ptr_add
+  %ptr_add = getelementptr i8, ptr %vec, <1 x i32> <i32 1>
+  ret <1 x ptr> %ptr_add
 }

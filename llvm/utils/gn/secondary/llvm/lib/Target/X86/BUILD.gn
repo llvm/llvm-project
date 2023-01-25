@@ -69,6 +69,7 @@ static_library("LLVMX86CodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/CFGuard",
     "//llvm/lib/Transforms/Instrumentation",
   ]
@@ -109,6 +110,7 @@ static_library("LLVMX86CodeGen") {
     "X86InstrInfo.cpp",
     "X86InstructionSelector.cpp",
     "X86InterleavedAccess.cpp",
+    "X86KCFI.cpp",
     "X86LegalizerInfo.cpp",
     "X86LoadValueInjectionLoadHardening.cpp",
     "X86LoadValueInjectionRetHardening.cpp",

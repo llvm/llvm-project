@@ -13,18 +13,18 @@
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK:   br label %do.body
-define void @test1(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test1(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   br i1 %t1, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr1, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr1, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 1, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp = icmp ult i32 %inc, %N
   br i1 %cmp, label %do.body, label %if.end
@@ -37,18 +37,18 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK-NOT: call i1 @llvm.test.set.loop.iterations
 ; CHECK-NOT: call void @llvm.set.loop.iterations
 ; CHECK-NOT: call i32 @llvm.start.loop.iterations
-define void @test2(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test2(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   br i1 %t1, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr1, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr1, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %add, %do.body ], [ 1, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr1 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %add = add i32 %i.0, 2
   %cmp = icmp ult i32 %add, %N
   br i1 %cmp, label %do.body, label %if.end
@@ -65,19 +65,19 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK:   br label %do.body
-define void @test3(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test3(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp = icmp ult i32 %inc, %N
   br i1 %cmp, label %do.body, label %if.end
@@ -95,23 +95,23 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK-EXIT:   [[COUNT:%[^ ]+]] = add i32 %N, 1
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
 ; CHECK-EXIT:   br label %while.cond
-define void @test4(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test4(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %while.cond, label %if.end
 
 while.cond:                                       ; preds = %while.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
   %exitcond = icmp eq i32 %i.0, %N
   br i1 %exitcond, label %if.end, label %while.body
 
 while.body:                                       ; preds = %while.cond
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add i32 %i.0, 1
   br label %while.cond
 
@@ -126,7 +126,7 @@ if.end:                                           ; preds = %while.cond, %entry
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 %N)
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK:   br label %while.body
-define void @test5(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test5(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   %cmp6 = icmp ne i32 %N, 0
@@ -135,12 +135,12 @@ entry:
 
 while.body:                                       ; preds = %while.body, %entry
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %entry ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %entry ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %entry ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %entry ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -159,7 +159,7 @@ if.end:                                           ; preds = %while.body, %entry
 ; CHECK:   br i1 [[TEST]], label %while.body.preheader, label %if.end
 ; CHECK: while.body.preheader:
 ; CHECK:   br label %while.body
-define void @test6(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test6(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %while.preheader, label %if.end
@@ -170,12 +170,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -194,7 +194,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK:   br i1 [[TEST]], label %while.body.preheader, label %if.end
 ; CHECK: while.body.preheader:
 ; CHECK:   br label %while.body
-define void @test7(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test7(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
   br i1 %brmerge.demorgan, label %while.preheader, label %if.end
@@ -205,12 +205,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -230,7 +230,7 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 %N)
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK:   br label %while.body
-define void @test8(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test8(i1 zeroext %t1, i1 zeroext %t2, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
   br i1 %cmp, label %while.preheader, label %if.end
@@ -241,12 +241,12 @@ while.preheader:                                  ; preds = %entry
 
 while.body:                                       ; preds = %while.body, %while.preheader
   %i.09 = phi i32 [ %inc, %while.body ], [ 0, %while.preheader ]
-  %a.addr.08 = phi i32* [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
-  %b.addr.07 = phi i32* [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.07, i32 1
-  %tmp = load i32, i32* %b.addr.07, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.08, i32 1
-  store i32 %tmp, i32* %a.addr.08, align 4
+  %a.addr.08 = phi ptr [ %incdec.ptr3, %while.body ], [ %a, %while.preheader ]
+  %b.addr.07 = phi ptr [ %incdec.ptr, %while.body ], [ %b, %while.preheader ]
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.07, i32 1
+  %tmp = load i32, ptr %b.addr.07, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.08, i32 1
+  store i32 %tmp, ptr %a.addr.08, align 4
   %inc = add nuw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %if.end, label %while.body
@@ -262,20 +262,20 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32 %N)
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32 %N)
 ; CHECK:   br label %do.body
-define void @test9(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test9(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
   %brmerge.demorgan = and i1 %t1, %cmp
   br i1 %brmerge.demorgan, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp.1 = icmp ult i32 %inc, %N
   br i1 %cmp.1, label %do.body, label %if.end
@@ -291,7 +291,7 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK-EXIT:   call void @llvm.set.loop.iterations.i32(i32
 ; CHECK-LATCH:   call i32 @llvm.start.loop.iterations.i32(i32
 ; CHECK:   br label %do.body
-define void @test10(i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test10(ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
   %sub = sub i32 %N, 1
@@ -300,13 +300,13 @@ entry:
   br i1 %cmp.1, label %do.body, label %if.end
 
 do.body:                                          ; preds = %do.body, %entry
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %entry ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %entry ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %entry ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %entry ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %entry ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp.2 = icmp ult i32 %inc, %N
   br i1 %cmp.2, label %do.body, label %if.end
@@ -325,7 +325,7 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK:   br i1 [[TEST]], label %do.body.preheader1, label %if.end
 ; CHECK: do.body.preheader1:
 ; CHECK:   br label %do.body
-define void @test11(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
+define void @test11(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) {
 entry:
   br label %do.body.preheader
 
@@ -334,13 +334,13 @@ do.body.preheader:
   br i1 %cmp, label %do.body, label %if.end
 
 do.body:
-  %b.addr.0 = phi i32* [ %incdec.ptr, %do.body ], [ %b, %do.body.preheader ]
-  %a.addr.0 = phi i32* [ %incdec.ptr3, %do.body ], [ %a, %do.body.preheader ]
+  %b.addr.0 = phi ptr [ %incdec.ptr, %do.body ], [ %b, %do.body.preheader ]
+  %a.addr.0 = phi ptr [ %incdec.ptr3, %do.body ], [ %a, %do.body.preheader ]
   %i.0 = phi i32 [ %inc, %do.body ], [ 0, %do.body.preheader ]
-  %incdec.ptr = getelementptr inbounds i32, i32* %b.addr.0, i32 1
-  %tmp = load i32, i32* %b.addr.0, align 4
-  %incdec.ptr3 = getelementptr inbounds i32, i32* %a.addr.0, i32 1
-  store i32 %tmp, i32* %a.addr.0, align 4
+  %incdec.ptr = getelementptr inbounds i32, ptr %b.addr.0, i32 1
+  %tmp = load i32, ptr %b.addr.0, align 4
+  %incdec.ptr3 = getelementptr inbounds i32, ptr %a.addr.0, i32 1
+  store i32 %tmp, ptr %a.addr.0, align 4
   %inc = add nuw i32 %i.0, 1
   %cmp.1 = icmp ult i32 %inc, %N
   br i1 %cmp.1, label %do.body, label %if.end
@@ -358,7 +358,7 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK: for.body.preheader:
 ; CHECK:   br label %for.body
 
-define void @test12(i32* nocapture %a, i32* nocapture readonly %b, i16 zeroext %length) {
+define void @test12(ptr nocapture %a, ptr nocapture readonly %b, i16 zeroext %length) {
 entry:
   %conv = zext i16 %length to i32
   %cmp8.not = icmp eq i16 %length, 0
@@ -366,10 +366,10 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
-  store i32 %0, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i32 %i.09
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %a, i32 %i.09
+  store i32 %0, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.09, 1
   %exitcond.not = icmp eq i32 %inc, %conv
   br i1 %exitcond.not, label %for.end, label %for.body

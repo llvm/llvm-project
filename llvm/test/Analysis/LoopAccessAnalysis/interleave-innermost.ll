@@ -1,4 +1,4 @@
-; RUN: opt -loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -S < %s | FileCheck %s
 ; CHECK-LABEL: TestFoo
 ; CHECK-NOT: %wide.vec
 
@@ -16,13 +16,13 @@ bb:
   br i1 %X, label %.loopexit5.outer, label %.lr.ph12
 
 .lr.ph12:
-  %f.110 = phi i32* [ %tmp1, %.loopexit ], [ null, %.loopexit5.outer ]
-  %tmp1 = getelementptr inbounds i32, i32* %f.110, i64 -2
+  %f.110 = phi ptr [ %tmp1, %.loopexit ], [ null, %.loopexit5.outer ]
+  %tmp1 = getelementptr inbounds i32, ptr %f.110, i64 -2
   br i1 %Y, label %bb4, label %.loopexit
 
 bb4:
   %j.27 = phi i32 [ 0, %.lr.ph12 ], [ %tmp7, %bb4 ]
-  %tmp5 = load i32, i32* %f.110, align 4
+  %tmp5 = load i32, ptr %f.110, align 4
   %tmp7 = add nsw i32 %j.27, 1
   %exitcond = icmp eq i32 %tmp7, 0
   br i1 %exitcond, label %.loopexit, label %bb4

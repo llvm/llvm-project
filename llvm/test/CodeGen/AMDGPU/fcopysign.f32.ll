@@ -8,20 +8,20 @@ declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>) nounwind read
 
 ; Try to identify arg based on higher address.
 ; FUNC-LABEL: {{^}}test_copysign_f32:
-; SI: s_load_dwordx2 s[[[SMAG:[0-9]+]]:[[SSIGN:[0-9]+]]], {{.*}} 0xb
-; VI: s_load_dwordx2 s[[[SMAG:[0-9]+]]:[[SSIGN:[0-9]+]]], {{.*}} 0x2c
+; SI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], {{.*}} 0x9
+; VI: s_load_dwordx4 s[[[#LOAD:]]:[[#END:]]], {{.*}} 0x24
 
-; GCN-DAG: v_mov_b32_e32 [[VSIGN:v[0-9]+]], s[[SSIGN]]
-; GCN-DAG: v_mov_b32_e32 [[VMAG:v[0-9]+]], s[[SMAG]]
+; GCN-DAG: v_mov_b32_e32 [[VSIGN:v[0-9]+]], s[[#LOAD + 3]]
+; GCN-DAG: v_mov_b32_e32 [[VMAG:v[0-9]+]], s[[#LOAD + 2]]
 ; GCN-DAG: s_brev_b32 [[SCONST:s[0-9]+]], -2
 ; GCN: v_bfi_b32 [[RESULT:v[0-9]+]], [[SCONST]], [[VMAG]], [[VSIGN]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
 
 ; EG: BFI_INT
-define amdgpu_kernel void @test_copysign_f32(float addrspace(1)* %out, float %mag, float %sign) nounwind {
+define amdgpu_kernel void @test_copysign_f32(ptr addrspace(1) %out, float %mag, float %sign) nounwind {
   %result = call float @llvm.copysign.f32(float %mag, float %sign)
-  store float %result, float addrspace(1)* %out, align 4
+  store float %result, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -30,9 +30,9 @@ define amdgpu_kernel void @test_copysign_f32(float addrspace(1)* %out, float %ma
 
 ; EG: BFI_INT
 ; EG: BFI_INT
-define amdgpu_kernel void @test_copysign_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %mag, <2 x float> %sign) nounwind {
+define amdgpu_kernel void @test_copysign_v2f32(ptr addrspace(1) %out, <2 x float> %mag, <2 x float> %sign) nounwind {
   %result = call <2 x float> @llvm.copysign.v2f32(<2 x float> %mag, <2 x float> %sign)
-  store <2 x float> %result, <2 x float> addrspace(1)* %out, align 8
+  store <2 x float> %result, ptr addrspace(1) %out, align 8
   ret void
 }
 
@@ -43,9 +43,9 @@ define amdgpu_kernel void @test_copysign_v2f32(<2 x float> addrspace(1)* %out, <
 ; EG: BFI_INT
 ; EG: BFI_INT
 ; EG: BFI_INT
-define amdgpu_kernel void @test_copysign_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %mag, <4 x float> %sign) nounwind {
+define amdgpu_kernel void @test_copysign_v4f32(ptr addrspace(1) %out, <4 x float> %mag, <4 x float> %sign) nounwind {
   %result = call <4 x float> @llvm.copysign.v4f32(<4 x float> %mag, <4 x float> %sign)
-  store <4 x float> %result, <4 x float> addrspace(1)* %out, align 16
+  store <4 x float> %result, ptr addrspace(1) %out, align 16
   ret void
 }
 

@@ -22,6 +22,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -133,13 +134,18 @@ static OpPrintingFlags adjustPrintingFlags(OpPrintingFlags flags,
 }
 
 /// Stream in an Operation.
-Diagnostic &Diagnostic::operator<<(Operation &val) {
-  return appendOp(val, OpPrintingFlags());
+Diagnostic &Diagnostic::operator<<(Operation &op) {
+  return appendOp(op, OpPrintingFlags());
 }
-Diagnostic &Diagnostic::appendOp(Operation &val, const OpPrintingFlags &flags) {
+
+Diagnostic &Diagnostic::appendOp(Operation &op, const OpPrintingFlags &flags) {
   std::string str;
   llvm::raw_string_ostream os(str);
-  val.print(os, adjustPrintingFlags(flags, severity));
+  op.print(os, adjustPrintingFlags(flags, severity));
+  // Print on a new line for better readability if the op will be printed on
+  // multiple lines.
+  if (str.find('\n') != std::string::npos)
+    *this << '\n';
   return *this << os.str();
 }
 
@@ -168,7 +174,7 @@ std::string Diagnostic::str() const {
 /// Attaches a note to this diagnostic. A new location may be optionally
 /// provided, if not, then the location defaults to the one specified for this
 /// diagnostic. Notes may not be attached to other notes.
-Diagnostic &Diagnostic::attachNote(Optional<Location> noteLoc) {
+Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
   // We don't allow attaching notes to notes.
   assert(severity != DiagnosticSeverity::Note &&
          "cannot attach a note to a note");
@@ -384,34 +390,21 @@ struct SourceMgrDiagnosticHandlerImpl {
 } // namespace detail
 } // namespace mlir
 
-/// Return a processable FileLineColLoc from the given location.
-static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
-  Optional<FileLineColLoc> firstFileLoc;
-  loc->walk([&](Location loc) {
-    if (FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>()) {
-      firstFileLoc = fileLoc;
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-  return firstFileLoc;
-}
-
 /// Return a processable CallSiteLoc from the given location.
-static Optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  if (auto nameLoc = loc.dyn_cast<NameLoc>())
-    return getCallSiteLoc(loc.cast<NameLoc>().getChildLoc());
-  if (auto callLoc = loc.dyn_cast<CallSiteLoc>())
+static std::optional<CallSiteLoc> getCallSiteLoc(Location loc) {
+  if (auto nameLoc = dyn_cast<NameLoc>(loc))
+    return getCallSiteLoc(cast<NameLoc>(loc).getChildLoc());
+  if (auto callLoc = dyn_cast<CallSiteLoc>(loc))
     return callLoc;
-  if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
-    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    for (auto subLoc : cast<FusedLoc>(loc).getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
       }
     }
-    return llvm::None;
+    return std::nullopt;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 /// Given a diagnostic kind, returns the LLVM DiagKind.
@@ -449,7 +442,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
                                                 DiagnosticSeverity kind,
                                                 bool displaySourceLine) {
   // Extract a file location from this loc.
-  auto fileLoc = getFileLineColLoc(loc);
+  auto fileLoc = loc->findInstanceOf<FileLineColLoc>();
 
   // If one doesn't exist, then print the raw message without a source location.
   if (!fileLoc) {
@@ -464,7 +457,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // Otherwise if we are displaying the source line, try to convert the file
   // location to an SMLoc.
   if (displaySourceLine) {
-    auto smloc = convertLocToSMLoc(*fileLoc);
+    auto smloc = convertLocToSMLoc(fileLoc);
     if (smloc.isValid())
       return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
   }
@@ -474,8 +467,8 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // the constructor of SMDiagnostic that takes a location.
   std::string locStr;
   llvm::raw_string_ostream locOS(locStr);
-  locOS << fileLoc->getFilename().getValue() << ":" << fileLoc->getLine() << ":"
-        << fileLoc->getColumn();
+  locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
+        << fileLoc.getColumn();
   llvm::SMDiagnostic diag(locOS.str(), getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
@@ -484,7 +477,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
 void SourceMgrDiagnosticHandler::emitDiagnostic(Diagnostic &diag) {
   SmallVector<std::pair<Location, StringRef>> locationStack;
   auto addLocToStack = [&](Location loc, StringRef locContext) {
-    if (Optional<Location> showableLoc = findLocToShow(loc))
+    if (std::optional<Location> showableLoc = findLocToShow(loc))
       locationStack.emplace_back(*showableLoc, locContext);
   };
 
@@ -534,38 +527,39 @@ SourceMgrDiagnosticHandler::getBufferForFile(StringRef filename) {
   return nullptr;
 }
 
-Optional<Location> SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
+std::optional<Location>
+SourceMgrDiagnosticHandler::findLocToShow(Location loc) {
   if (!shouldShowLocFn)
     return loc;
   if (!shouldShowLocFn(loc))
-    return llvm::None;
+    return std::nullopt;
 
   // Recurse into the child locations of some of location types.
-  return TypeSwitch<LocationAttr, Optional<Location>>(loc)
-      .Case([&](CallSiteLoc callLoc) -> Optional<Location> {
+  return TypeSwitch<LocationAttr, std::optional<Location>>(loc)
+      .Case([&](CallSiteLoc callLoc) -> std::optional<Location> {
         // We recurse into the callee of a call site, as the caller will be
         // emitted in a different note on the main diagnostic.
         return findLocToShow(callLoc.getCallee());
       })
-      .Case([&](FileLineColLoc) -> Optional<Location> { return loc; })
-      .Case([&](FusedLoc fusedLoc) -> Optional<Location> {
+      .Case([&](FileLineColLoc) -> std::optional<Location> { return loc; })
+      .Case([&](FusedLoc fusedLoc) -> std::optional<Location> {
         // Fused location is unique in that we try to find a sub-location to
         // show, rather than the top-level location itself.
         for (Location childLoc : fusedLoc.getLocations())
-          if (Optional<Location> showableLoc = findLocToShow(childLoc))
+          if (std::optional<Location> showableLoc = findLocToShow(childLoc))
             return showableLoc;
-        return llvm::None;
+        return std::nullopt;
       })
-      .Case([&](NameLoc nameLoc) -> Optional<Location> {
+      .Case([&](NameLoc nameLoc) -> std::optional<Location> {
         return findLocToShow(nameLoc.getChildLoc());
       })
-      .Case([&](OpaqueLoc opaqueLoc) -> Optional<Location> {
+      .Case([&](OpaqueLoc opaqueLoc) -> std::optional<Location> {
         // OpaqueLoc always falls back to a different source location.
         return findLocToShow(opaqueLoc.getFallbackLocation());
       })
-      .Case([](UnknownLoc) -> Optional<Location> {
+      .Case([](UnknownLoc) -> std::optional<Location> {
         // Prefer not to show unknown locations.
-        return llvm::None;
+        return std::nullopt;
       });
 }
 
@@ -659,14 +653,15 @@ struct ExpectedDiag {
   StringRef substring;
   /// An optional regex matcher, if the expected diagnostic sub-string was a
   /// regex string.
-  Optional<llvm::Regex> substringRegex;
+  std::optional<llvm::Regex> substringRegex;
 };
 
 struct SourceMgrDiagnosticVerifierHandlerImpl {
   SourceMgrDiagnosticVerifierHandlerImpl() : status(success()) {}
 
   /// Returns the expected diagnostics for the given source file.
-  Optional<MutableArrayRef<ExpectedDiag>> getExpectedDiags(StringRef bufName);
+  std::optional<MutableArrayRef<ExpectedDiag>>
+  getExpectedDiags(StringRef bufName);
 
   /// Computes the expected diagnostics for the given source buffer.
   MutableArrayRef<ExpectedDiag>
@@ -702,12 +697,12 @@ static StringRef getDiagKindStr(DiagnosticSeverity kind) {
   llvm_unreachable("Unknown DiagnosticSeverity");
 }
 
-Optional<MutableArrayRef<ExpectedDiag>>
+std::optional<MutableArrayRef<ExpectedDiag>>
 SourceMgrDiagnosticVerifierHandlerImpl::getExpectedDiags(StringRef bufName) {
   auto expectedDiags = expectedDiagsPerFile.find(bufName);
   if (expectedDiags != expectedDiagsPerFile.end())
     return MutableArrayRef<ExpectedDiag>(expectedDiags->second);
-  return llvm::None;
+  return std::nullopt;
 }
 
 MutableArrayRef<ExpectedDiag>
@@ -715,7 +710,7 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
     raw_ostream &os, llvm::SourceMgr &mgr, const llvm::MemoryBuffer *buf) {
   // If the buffer is invalid, return an empty list.
   if (!buf)
-    return llvm::None;
+    return std::nullopt;
   auto &expectedDiags = expectedDiagsPerFile[buf->getBufferIdentifier()];
 
   // The number of the last line that did not correlate to a designator.
@@ -848,8 +843,8 @@ void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
   auto kind = diag.getSeverity();
 
   // Process a FileLineColLoc.
-  if (auto fileLoc = getFileLineColLoc(diag.getLocation()))
-    return process(*fileLoc, diag.str(), kind);
+  if (auto fileLoc = diag.getLocation()->findInstanceOf<FileLineColLoc>())
+    return process(fileLoc, diag.str(), kind);
 
   emitDiagnostic(diag.getLocation(),
                  "unexpected " + getDiagKindStr(kind) + ": " + diag.str(),

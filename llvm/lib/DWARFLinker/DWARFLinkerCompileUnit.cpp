@@ -8,8 +8,27 @@
 
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace llvm {
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
+  llvm::errs() << "{\n";
+  llvm::errs() << "  AddrAdjust: " << AddrAdjust << '\n';
+  llvm::errs() << "  Ctxt: " << formatv("{0:x}", Ctxt) << '\n';
+  llvm::errs() << "  Clone: " << formatv("{0:x}", Clone) << '\n';
+  llvm::errs() << "  ParentIdx: " << ParentIdx << '\n';
+  llvm::errs() << "  Keep: " << Keep << '\n';
+  llvm::errs() << "  InDebugMap: " << InDebugMap << '\n';
+  llvm::errs() << "  Prune: " << Prune << '\n';
+  llvm::errs() << "  Incomplete: " << Incomplete << '\n';
+  llvm::errs() << "  InModuleScope: " << InModuleScope << '\n';
+  llvm::errs() << "  ODRMarkingDone: " << ODRMarkingDone << '\n';
+  llvm::errs() << "  UnclonedReference: " << UnclonedReference << '\n';
+  llvm::errs() << "}\n";
+}
+#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 /// Check if the DIE at \p Idx is in the scope of a function.
 static bool inFunctionScope(CompileUnit &U, unsigned Idx) {
@@ -52,7 +71,7 @@ void CompileUnit::markEverythingAsKept() {
         DIE.getTag() != dwarf::DW_TAG_constant)
       continue;
 
-    Optional<DWARFFormValue> Value;
+    std::optional<DWARFFormValue> Value;
     if (!(Value = DIE.find(dwarf::DW_AT_location))) {
       if ((Value = DIE.find(dwarf::DW_AT_const_value)) &&
           !inFunctionScope(*this, I.ParentIdx))
@@ -94,8 +113,10 @@ void CompileUnit::fixupForwardReferences() {
       assert(Ctxt->getCanonicalDIEOffset() &&
              "Canonical die offset is not set");
       Attr.set(Ctxt->getCanonicalDIEOffset());
-    } else
+    } else {
+      assert(RefDie->getOffset() && "Referenced die offset is not set");
       Attr.set(RefDie->getOffset() + RefUnit->getStartOffset());
+    }
   }
 }
 
@@ -106,7 +127,10 @@ void CompileUnit::addLabelLowPc(uint64_t LabelLowPc, int64_t PcOffset) {
 void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
                                    int64_t PcOffset) {
   Ranges.insert({FuncLowPc, FuncHighPc}, PcOffset);
-  this->LowPc = std::min(LowPc, FuncLowPc + PcOffset);
+  if (LowPc)
+    LowPc = std::min(*LowPc, FuncLowPc + PcOffset);
+  else
+    LowPc = FuncLowPc + PcOffset;
   this->HighPc = std::max(HighPc, FuncHighPc + PcOffset);
 }
 

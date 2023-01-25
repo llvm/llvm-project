@@ -19,6 +19,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -340,7 +341,7 @@ FilePermissionsApplier::create(StringRef InputFilename) {
 
 Error FilePermissionsApplier::apply(
     StringRef OutputFilename, bool CopyDates,
-    Optional<sys::fs::perms> OverwritePermissions) {
+    std::optional<sys::fs::perms> OverwritePermissions) {
   sys::fs::file_status Status = InputStatus;
 
   if (OverwritePermissions)

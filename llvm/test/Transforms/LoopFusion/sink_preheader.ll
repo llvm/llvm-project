@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s | FileCheck %s
 
 define void @sink_preheader(i32 %N) {
 ; CHECK-LABEL: @sink_preheader(

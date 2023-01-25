@@ -4,7 +4,7 @@
 
 define void @b() {
 entry:
-  %0 = load i8, i8* @a, align 1
+  %0 = load i8, ptr @a, align 1
   %tobool = trunc i8 %0 to i1
   call void asm sideeffect "", "Jr,~{$1}"(i1 %tobool)
   ret void

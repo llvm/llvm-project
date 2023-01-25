@@ -4,7 +4,7 @@
 ; through aliases. If GlobalOpt is never run, we do not see direct
 ; calls,
 
-@alias3 = hidden alias void (), void ()* @aliasee_vgpr256_sgpr102
+@alias3 = hidden alias void (), ptr @aliasee_vgpr256_sgpr102
 
 ; CHECK-LABEL: {{^}}kernel3:
 ; CHECK: .amdhsa_next_free_vgpr 253

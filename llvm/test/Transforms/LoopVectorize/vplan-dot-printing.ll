@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
 
-; RUN: opt -loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -vplan-print-in-dot-format -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -vplan-print-in-dot-format -disable-output %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 ; Verify that -vplan-print-in-dot-format option works.
 
-define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x) nounwind uwtable {
+define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounwind uwtable {
 ; CHECK:      digraph VPlan {
 ; CHECK-NEXT:  graph [labelloc=t, fontsize=30; label="Vectorization Plan\nInitial VPlan for VF=\{4\},UF\>=1"]
 ; CHECK-NEXT:  node [shape=rect, fontname=Courier, fontsize=30]
@@ -23,10 +23,10 @@ define void @print_call_and_memory(i64 %n, float* noalias %y, float* noalias %x)
 ; CHECK-NEXT:    N1 [label =
 ; CHECK-NEXT:    "vector.body:\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV:%.+]]\> = CANONICAL-INDUCTION\l" +
-; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<0\>, ir\<1\>\l" +
+; CHECK-NEXT:    "  vp\<[[STEPS:%.+]]\> = SCALAR-STEPS vp\<[[CAN_IV]]\>, ir\<1\>\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx\> = getelementptr ir\<%y\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  WIDEN ir\<%lv\> = load ir\<%arrayidx\>\l" +
-; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>)\l" +
+; CHECK-NEXT:    "  WIDEN-CALL ir\<%call\> = call @llvm.sqrt.f32(ir\<%lv\>) (using vector intrinsic)\l" +
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  WIDEN store ir\<%arrayidx2\>, ir\<%call\>\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = VF * UF +(nuw) vp\<[[CAN_IV]]\>\l" +
@@ -40,11 +40,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.body
   %iv = phi i64 [ %iv.next, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %y, i64 %iv
-  %lv = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %y, i64 %iv
+  %lv = load float, ptr %arrayidx, align 4
   %call = tail call float @llvm.sqrt.f32(float %lv) nounwind readnone
-  %arrayidx2 = getelementptr inbounds float, float* %x, i64 %iv
-  store float %call, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %arrayidx2, align 4
   %iv.next = add i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %for.end, label %for.body

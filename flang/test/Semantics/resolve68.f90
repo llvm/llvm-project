@@ -21,14 +21,14 @@ contains
     type(t) :: x
     integer :: y
     integer :: z
-    !ERROR: No specific procedure of generic 'g' matches the actual arguments
+    !ERROR: No specific function of generic 'g' matches the actual arguments
     z = x%g(y)
   end
   subroutine test2(x, y, z)
     type(t) :: x
     real :: y
     integer :: z
-    !ERROR: No specific procedure of generic 'g' matches the actual arguments
+    !ERROR: No specific function of generic 'g' matches the actual arguments
     z = x%g(x, y)
   end
 end

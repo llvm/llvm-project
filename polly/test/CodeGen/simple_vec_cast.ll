@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly \
+; RUN: opt -opaque-pointers=0 %loadPolly -basic-aa -polly-codegen -polly-vectorizer=polly \
 ; RUN: -polly-invariant-load-hoisting=true -dce -S < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
@@ -32,7 +32,7 @@ bb4:                                              ; preds = %bb1
 ; CHECK:   %.load = load float, float* getelementptr inbounds ([1024 x float], [1024 x float]* @A, i32 0, i32 0)
 
 ; CHECK: polly.stmt.bb2:                                   ; preds = %polly.start
-; CHECK:   %tmp_p.splatinsert = insertelement <4 x float> poison, float %.load, i32 0
+; CHECK:   %tmp_p.splatinsert = insertelement <4 x float> poison, float %.load, i64 0
 ; CHECK:   %tmp_p.splat = shufflevector <4 x float> %tmp_p.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
 ; CHECK:   %0 = fpext <4 x float> %tmp_p.splat to <4 x double>
 ; CHECK:   store <4 x double> %0, <4 x double>*

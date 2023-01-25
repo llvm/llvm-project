@@ -5,6 +5,6 @@
 ; CHECK: bla [[R0]]
 define void @bl_imm() nounwind {
 entry:
-	tail call void inttoptr (i64 65536 to void ()*)() nounwind
+	tail call void inttoptr (i64 65536 to ptr)() nounwind
 	ret void
 }

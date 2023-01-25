@@ -11,10 +11,11 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include <optional>
 
 namespace llvm {
 
@@ -52,7 +53,7 @@ class TargetLibraryInfoImpl {
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
   static StringLiteral const StandardNames[NumLibFuncs];
-  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param;
+  bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 
   enum AvailabilityState {
@@ -93,7 +94,8 @@ public:
     DarwinLibSystemM, // Use Darwin's libsystem_m.
     LIBMVEC_X86,      // GLIBC Vector Math library.
     MASSV,            // IBM MASS vector library.
-    SVML              // Intel short vector math library.
+    SVML,             // Intel short vector math library.
+    SLEEFGNUABI       // SLEEF - SIMD Library for Evaluating Elementary Functions.
   };
 
   TargetLibraryInfoImpl();
@@ -153,7 +155,8 @@ public:
 
   /// Calls addVectorizableFunctions with a known preset of functions for the
   /// given vector library.
-  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib);
+  void addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
+                                          const llvm::Triple &TargetTriple);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
@@ -189,9 +192,18 @@ public:
     ShouldSignExtI32Param = Val;
   }
 
+  /// Set to true iff i32 results from library functions should have signext
+  /// attribute if they correspond to C-level int or unsigned int.
+  void setShouldSignExtI32Return(bool Val) {
+    ShouldSignExtI32Return = Val;
+  }
+
   /// Returns the size of the wchar_t type in bytes or 0 if the size is unknown.
   /// This queries the 'wchar_size' metadata.
   unsigned getWCharSize(const Module &M) const;
+
+  /// Returns the size of the size_t type in bits.
+  unsigned getSizeTSize(const Module &M) const;
 
   /// Get size of a C-level int or unsigned int, in bits.
   unsigned getIntSize() const {
@@ -232,7 +244,7 @@ class TargetLibraryInfo {
 
 public:
   explicit TargetLibraryInfo(const TargetLibraryInfoImpl &Impl,
-                             Optional<const Function *> F = None)
+                             std::optional<const Function *> F = std::nullopt)
       : Impl(&Impl), OverrideAsUnavailable(NumLibFuncs) {
     if (!F)
       return;
@@ -381,30 +393,115 @@ public:
     return Impl->CustomNames.find(F)->second;
   }
 
+  static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                      bool &ShouldExtI32Return,
+                                      bool &ShouldSignExtI32Param,
+                                      bool &ShouldSignExtI32Return,
+                                      const Triple &T) {
+    ShouldExtI32Param     = ShouldExtI32Return     = false;
+    ShouldSignExtI32Param = ShouldSignExtI32Return = false;
+
+    // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+    // returns corresponding to C-level ints and unsigned ints.
+    if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
+        T.getArch() == Triple::systemz) {
+      ShouldExtI32Param = true;
+      ShouldExtI32Return = true;
+    }
+    // Mips and riscv64, on the other hand, needs signext on i32 parameters
+    // corresponding to both signed and unsigned ints.
+    if (T.isMIPS() || T.isRISCV64()) {
+      ShouldSignExtI32Param = true;
+    }
+    // riscv64 needs signext on i32 returns corresponding to both signed and
+    // unsigned ints.
+    if (T.isRISCV64()) {
+      ShouldSignExtI32Return = true;
+    }
+  }
+
   /// Returns extension attribute kind to be used for i32 parameters
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
   /// or none.
-  Attribute::AttrKind getExtAttrForI32Param(bool Signed = true) const {
-    if (Impl->ShouldExtI32Param)
+private:
+  static Attribute::AttrKind getExtAttrForI32Param(bool ShouldExtI32Param_,
+                                                   bool ShouldSignExtI32Param_,
+                                                   bool Signed = true) {
+    if (ShouldExtI32Param_)
       return Signed ? Attribute::SExt : Attribute::ZExt;
-    if (Impl->ShouldSignExtI32Param)
+    if (ShouldSignExtI32Param_)
       return Attribute::SExt;
     return Attribute::None;
+  }
+
+public:
+  static Attribute::AttrKind getExtAttrForI32Param(const Triple &T,
+                                                   bool Signed = true) {
+    bool ShouldExtI32Param, ShouldExtI32Return;
+    bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+    initExtensionsForTriple(ShouldExtI32Param, ShouldExtI32Return,
+                            ShouldSignExtI32Param, ShouldSignExtI32Return, T);
+    return getExtAttrForI32Param(ShouldExtI32Param, ShouldSignExtI32Param,
+                                 Signed);
+  }
+
+  Attribute::AttrKind getExtAttrForI32Param(bool Signed = true) const {
+    return getExtAttrForI32Param(Impl->ShouldExtI32Param,
+                                 Impl->ShouldSignExtI32Param, Signed);
   }
 
   /// Returns extension attribute kind to be used for i32 return values
   /// corresponding to C-level int or unsigned int.  May be zeroext, signext,
   /// or none.
-  Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
-    if (Impl->ShouldExtI32Return)
+private:
+  static Attribute::AttrKind getExtAttrForI32Return(bool ShouldExtI32Return_,
+                                                    bool ShouldSignExtI32Return_,
+                                                    bool Signed) {
+    if (ShouldExtI32Return_)
       return Signed ? Attribute::SExt : Attribute::ZExt;
+    if (ShouldSignExtI32Return_)
+      return Attribute::SExt;
     return Attribute::None;
+  }
+
+public:
+  static Attribute::AttrKind getExtAttrForI32Return(const Triple &T,
+                                                   bool Signed = true) {
+    bool ShouldExtI32Param, ShouldExtI32Return;
+    bool ShouldSignExtI32Param, ShouldSignExtI32Return;
+    initExtensionsForTriple(ShouldExtI32Param, ShouldExtI32Return,
+                            ShouldSignExtI32Param, ShouldSignExtI32Return, T);
+    return getExtAttrForI32Return(ShouldExtI32Return, ShouldSignExtI32Return,
+                                  Signed);
+  }
+
+  Attribute::AttrKind getExtAttrForI32Return(bool Signed = true) const {
+    return getExtAttrForI32Return(Impl->ShouldExtI32Return,
+                                  Impl->ShouldSignExtI32Return, Signed);
+  }
+
+  // Helper to create an AttributeList for args (and ret val) which all have
+  // the same signedness. Attributes in AL may be passed in to include them
+  // as well in the returned AttributeList.
+  AttributeList getAttrList(LLVMContext *C, ArrayRef<unsigned> ArgNos,
+                            bool Signed, bool Ret = false,
+                            AttributeList AL = AttributeList()) const {
+    if (auto AK = getExtAttrForI32Param(Signed))
+      for (auto ArgNo : ArgNos)
+        AL = AL.addParamAttribute(*C, ArgNo, AK);
+    if (Ret)
+      if (auto AK = getExtAttrForI32Return(Signed))
+        AL = AL.addRetAttribute(*C, AK);
+    return AL;
   }
 
   /// \copydoc TargetLibraryInfoImpl::getWCharSize()
   unsigned getWCharSize(const Module &M) const {
     return Impl->getWCharSize(M);
   }
+
+  /// \copydoc TargetLibraryInfoImpl::getSizeTSize()
+  unsigned getSizeTSize(const Module &M) const { return Impl->getSizeTSize(M); }
 
   /// \copydoc TargetLibraryInfoImpl::getIntSize()
   unsigned getIntSize() const {
@@ -462,12 +559,12 @@ private:
   friend AnalysisInfoMixin<TargetLibraryAnalysis>;
   static AnalysisKey Key;
 
-  Optional<TargetLibraryInfoImpl> BaselineInfoImpl;
+  std::optional<TargetLibraryInfoImpl> BaselineInfoImpl;
 };
 
 class TargetLibraryInfoWrapperPass : public ImmutablePass {
   TargetLibraryAnalysis TLA;
-  Optional<TargetLibraryInfo> TLI;
+  std::optional<TargetLibraryInfo> TLI;
 
   virtual void anchor();
 

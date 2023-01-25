@@ -788,6 +788,8 @@ main = foo
                                 testing::ContainsRegex("line 7, in baz"),
                                 testing::ContainsRegex("ZeroDivisionError")))));
 
+#if !((defined(_WIN32) || defined(_WIN64)) && (defined(__aarch64__) || defined(_M_ARM64)))
+
   static const char script2[] = R"(
 class MyError(Exception):
   def __str__(self):
@@ -804,6 +806,8 @@ def main():
                        llvm::Failed<PythonException>(testing::Property(
                            &PythonException::ReadBacktrace,
                            testing::ContainsRegex("unprintable MyError"))));
+
+#endif
 }
 
 TEST_F(PythonDataObjectsTest, TestRun) {

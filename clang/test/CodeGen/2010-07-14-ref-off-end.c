@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i386-apple-darwin -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple i386-apple-darwin -o - | FileCheck %s
 extern void abort(void);
 extern void exit(int);
 struct T
@@ -14,8 +14,8 @@ return(char)s->c;
 }
 int main(void)
 {
-// CHECK:  getelementptr inbounds [1 x %struct.T], [1 x %struct.T]* %s, i32 0, i32 0
-// CHECK:  getelementptr inbounds [1 x %struct.T], [1 x %struct.T]* %s, i32 0, i32 0
+// CHECK:  getelementptr inbounds [1 x %struct.T], ptr %s, i32 0, i32 0
+// CHECK:  getelementptr inbounds [1 x %struct.T], ptr %s, i32 0, i32 0
 struct T t;
 t.i=0xff;
 t.c=0xffff11;

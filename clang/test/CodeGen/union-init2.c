@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple i686-pc-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple i686-pc-linux-gnu | FileCheck %s
 
 // Make sure we generate something sane instead of a ptrtoint
-// CHECK: bitcast ({ %union.x*, [4 x i8] }* @r to %union.x*), [4 x i8] undef
+// CHECK: @r, [4 x i8] undef
 union x {long long b;union x* a;} r = {.a = &r};
 
 

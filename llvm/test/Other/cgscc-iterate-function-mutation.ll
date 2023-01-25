@@ -2,7 +2,7 @@
 
 declare void @readnone() nofree nosync readnone
 declare void @unknown()
-declare void @reference_function_pointer(void()*) nofree nosync readnone
+declare void @reference_function_pointer(ptr) nofree nosync readnone
 
 ; The @test1_* set of functions checks that when we mutate functions with
 ; simplifycfg to delete call edges and this ends up splitting both the SCCs
@@ -85,7 +85,7 @@ define void @test2_b1() {
 
 ; CHECK: define void @test2_b2() #0 {
 define void @test2_b2() {
-  call void @reference_function_pointer(void()* @test2_a)
+  call void @reference_function_pointer(ptr @test2_a)
   br i1 false, label %dead, label %exit
 
 dead:
@@ -98,7 +98,7 @@ exit:
 
 ; CHECK: define void @test2_b3() {
 define void @test2_b3() {
-  call void @reference_function_pointer(void()* @test2_a)
+  call void @reference_function_pointer(ptr @test2_a)
   call void @unknown()
   br i1 false, label %dead, label %exit
 
@@ -112,7 +112,7 @@ exit:
 
 ; CHECK: define void @test2_b4() #0 {
 define void @test2_b4() {
-  call void @reference_function_pointer(void()* @test2_a)
+  call void @reference_function_pointer(ptr @test2_a)
   br i1 false, label %dead, label %exit
 
 dead:
@@ -276,7 +276,7 @@ define void @test4_b22() {
 
 ; CHECK: define void @test4_b23() #0 {
 define void @test4_b23() {
-  call void @reference_function_pointer(void()* @test4_a)
+  call void @reference_function_pointer(ptr @test4_a)
   br i1 false, label %dead, label %exit
 
 dead:
@@ -301,7 +301,7 @@ define void @test4_b32() {
 
 ; CHECK: define void @test4_b33() {
 define void @test4_b33() {
-  call void @reference_function_pointer(void()* @test4_a)
+  call void @reference_function_pointer(ptr @test4_a)
   call void @unknown()
   br i1 false, label %dead, label %exit
 
@@ -327,7 +327,7 @@ define void @test4_b42() {
 
 ; CHECK: define void @test4_b43() #0 {
 define void @test4_b43() {
-  call void @reference_function_pointer(void()* @test4_a)
+  call void @reference_function_pointer(ptr @test4_a)
   br i1 false, label %dead, label %exit
 
 dead:
@@ -338,4 +338,4 @@ exit:
   ret void
 }
 
-; CHECK: attributes #0 = { nofree nosync readnone }
+; CHECK: attributes #0 = { nofree nosync memory(none) }

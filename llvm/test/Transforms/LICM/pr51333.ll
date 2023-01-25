@@ -4,14 +4,14 @@
 ; This used to assert because was have a MemoryDef for what turns out to be
 ; a readnone call after EarlyCSE.
 
-@fn_ptr = external global void ()*, align 1
+@fn_ptr = external global ptr, align 1
 
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
-; CHECK-NEXT:    store void ()* @readnone_fn, void ()** @fn_ptr, align 8
+; CHECK-NEXT:    store ptr @readnone_fn, ptr @fn_ptr, align 8
 ; CHECK-NEXT:    call void @readnone_fn()
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[DO_BODY]]
@@ -20,8 +20,8 @@ entry:
   br label %do.body
 
 do.body:
-  store void ()* @readnone_fn, void ()** @fn_ptr
-  %fn = load void ()*, void ()** @fn_ptr
+  store ptr @readnone_fn, ptr @fn_ptr
+  %fn = load ptr, ptr @fn_ptr
   call void %fn()
   call void @foo()
   br label %do.body

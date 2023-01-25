@@ -21,8 +21,8 @@ bb3:                                              ; preds = %bb
   br i1 %tmp4, label %bb5, label %bb10
 
 bb5:                                              ; preds = %bb3
-  %tmp6 = getelementptr <{ [4294967295 x i32] }>, <{ [4294967295 x i32] }> addrspace(6)* null, i32 0, i32 0, i32 %arg
-  %tmp7 = load i32, i32 addrspace(6)* %tmp6
+  %tmp6 = getelementptr <{ [4294967295 x i32] }>, ptr addrspace(6) null, i32 0, i32 0, i32 %arg
+  %tmp7 = load i32, ptr addrspace(6) %tmp6
   %tmp8 = icmp eq i32 %tmp7, 1
   br i1 %tmp8, label %bb10, label %bb9
 

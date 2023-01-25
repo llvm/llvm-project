@@ -19,6 +19,7 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 using namespace llvm;
@@ -117,13 +118,11 @@ public:
   Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST);
   template <class T>
   Impl(SyntaxTree *Parent,
-       std::enable_if_t<std::is_base_of<Stmt, T>::value, T> *Node,
-       ASTContext &AST)
+       std::enable_if_t<std::is_base_of_v<Stmt, T>, T> *Node, ASTContext &AST)
       : Impl(Parent, dyn_cast<Stmt>(Node), AST) {}
   template <class T>
   Impl(SyntaxTree *Parent,
-       std::enable_if_t<std::is_base_of<Decl, T>::value, T> *Node,
-       ASTContext &AST)
+       std::enable_if_t<std::is_base_of_v<Decl, T>, T> *Node, ASTContext &AST)
       : Impl(Parent, dyn_cast<Decl>(Node), AST) {}
 
   SyntaxTree *Parent;
@@ -688,20 +687,20 @@ ASTNodeKind Node::getType() const { return ASTNode.getNodeKind(); }
 
 StringRef Node::getTypeLabel() const { return getType().asStringRef(); }
 
-llvm::Optional<std::string> Node::getQualifiedIdentifier() const {
+std::optional<std::string> Node::getQualifiedIdentifier() const {
   if (auto *ND = ASTNode.get<NamedDecl>()) {
     if (ND->getDeclName().isIdentifier())
       return ND->getQualifiedNameAsString();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
-llvm::Optional<StringRef> Node::getIdentifier() const {
+std::optional<StringRef> Node::getIdentifier() const {
   if (auto *ND = ASTNode.get<NamedDecl>()) {
     if (ND->getDeclName().isIdentifier())
       return ND->getName();
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 namespace {

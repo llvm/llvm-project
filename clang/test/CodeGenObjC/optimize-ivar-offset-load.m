@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10  -O0 -emit-llvm %s -o -  | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10  -O0 -emit-llvm %s -o -  | FileCheck %s
 // rdar://16095748
 
 @interface MyNSObject 
@@ -26,11 +26,9 @@ extern void foo(int);
     }
 }
 @end
-// CHECK: [[IVAR:%.*]]  = load i64, i64* @"OBJC_IVAR_$_SampleClass._value", align 8
-// CHECK: [[THREE:%.*]] = bitcast [[ONE:%.*]]* [[CALL:%.*]] to i8*
-// CHECK: [[ADDPTR:%.*]] = getelementptr inbounds i8, i8* [[THREE]], i64 [[IVAR]]
-// CHECK: [[FOUR:%.*]] = bitcast i8* [[ADDPTR]] to i32*
-// CHECK: [[FIVE:%.*]] = load i32, i32* [[FOUR]], align 4
+// CHECK: [[IVAR:%.*]]  = load i64, ptr @"OBJC_IVAR_$_SampleClass._value", align 8
+// CHECK: [[ADDPTR:%.*]] = getelementptr inbounds i8, ptr [[CALL:%.*]], i64 [[IVAR]]
+// CHECK: [[FIVE:%.*]] = load i32, ptr [[ADDPTR]], align 4
 // CHECK:   call void @foo(i32 noundef [[FIVE]])
 
 @implementation SampleClass
@@ -44,8 +42,8 @@ extern void foo(int);
     }
 }
 @end
-// CHECK: [[ZERO:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_, align 8, !invariant.load
-// CHECK: [[IVAR:%.*]] = load i64, i64* @"OBJC_IVAR_$_SampleClass._value", align 8, !invariant.load
+// CHECK: [[ZERO:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_, align 8, !invariant.load
+// CHECK: [[IVAR:%.*]] = load i64, ptr @"OBJC_IVAR_$_SampleClass._value", align 8, !invariant.load
 
 @interface Sample : SampleClass @end
 
@@ -59,6 +57,6 @@ extern void foo(int);
     }
 }
 @end
-// CHECK: [[ZERO:%.*]] = load i8*, i8** @OBJC_SELECTOR_REFERENCES_, align 8, !invariant.load 
-// CHECK: [[IVAR:%.*]] = load i64, i64* @"OBJC_IVAR_$_SampleClass._value", align 8, !invariant.load
+// CHECK: [[ZERO:%.*]] = load ptr, ptr @OBJC_SELECTOR_REFERENCES_, align 8, !invariant.load 
+// CHECK: [[IVAR:%.*]] = load i64, ptr @"OBJC_IVAR_$_SampleClass._value", align 8, !invariant.load
 

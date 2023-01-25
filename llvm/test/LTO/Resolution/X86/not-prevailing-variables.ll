@@ -7,13 +7,13 @@
 ; var2 is not prevailing and here we check it is not inlined.
 
 ; Check 'var2' was not inlined.
-; RUN: llvm-objdump -d -r %t2.o.1 | FileCheck %s
+; RUN: llvm-objdump --no-print-imm-hex -d -r %t2.o.1 | FileCheck %s
 ; CHECK:      <testVar1>:
 ; CHECK-NEXT:   movl $10, %eax
 ; CHECK-NEXT:   retq
 ; CHECK:      <testVar2>:
 ; CHECK-NEXT:   movq  (%rip), %rax
-; CHECK-NEXT:     R_X86_64_GOTPCREL var2-0x4
+; CHECK-NEXT:     R_X86_64_REX_GOTPCRELX var2-0x4
 ; CHECK-NEXT:   movl  (%rax), %eax
 ; CHECK-NEXT:   retq
 
@@ -26,12 +26,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @var1 = global i32 10, align 4
 define i32 @testVar1() {
-  %1 = load i32, i32* @var1, align 4
+  %1 = load i32, ptr @var1, align 4
   ret i32 %1
 }
 
 @var2 = global i32 11, align 4
 define i32 @testVar2() {
-  %1 = load i32, i32* @var2, align 4
+  %1 = load i32, ptr @var2, align 4
   ret i32 %1
 }

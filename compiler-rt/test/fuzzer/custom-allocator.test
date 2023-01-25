@@ -1,4 +1,4 @@
-UNSUPPORTED: darwin, freebsd, windows
+UNSUPPORTED: darwin, target={{.*(freebsd|windows).*}}
 RUN: %cpp_compiler -fno-sanitize=address -fno-builtin %S/CustomAllocator.cpp %S/EmptyTest.cpp -o %t-NoAsanCustomAllocatorTest
 RUN: %run %t-NoAsanCustomAllocatorTest -runs=1 2>&1 | FileCheck %s
 

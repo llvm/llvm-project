@@ -18,6 +18,7 @@
 #include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedThreadPythonInterface.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -34,7 +35,6 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
   if (class_name.empty() && !script_obj)
     return {};
 
-  ProcessSP process_sp = exe_ctx.GetProcessSP();
   StructuredDataImpl args_impl(args_sp);
   std::string error_string;
 
@@ -43,11 +43,13 @@ StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
 
   PythonObject ret_val;
 
-  if (!script_obj)
-    ret_val = LLDBSwigPythonCreateScriptedThread(
-        class_name.str().c_str(), m_interpreter.GetDictionaryName(), process_sp,
-        args_impl, error_string);
-  else
+  if (!script_obj) {
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp =
+        std::make_shared<ExecutionContextRef>(exe_ctx);
+    ret_val = LLDBSwigPythonCreateScriptedObject(
+        class_name.str().c_str(), m_interpreter.GetDictionaryName(),
+        exe_ctx_ref_sp, args_impl, error_string);
+  } else
     ret_val = PythonObject(PyRefType::Borrowed,
                            static_cast<PyObject *>(script_obj->GetValue()));
 
@@ -70,7 +72,7 @@ lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
   return obj->GetIntegerValue(LLDB_INVALID_THREAD_ID);
 }
 
-llvm::Optional<std::string> ScriptedThreadPythonInterface::GetName() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_name", error);
 
@@ -90,7 +92,7 @@ lldb::StateType ScriptedThreadPythonInterface::GetState() {
   return static_cast<StateType>(obj->GetIntegerValue(eStateInvalid));
 }
 
-llvm::Optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_queue", error);
 
@@ -133,8 +135,7 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {
   return dict;
 }
 
-llvm::Optional<std::string>
-ScriptedThreadPythonInterface::GetRegisterContext() {
+std::optional<std::string> ScriptedThreadPythonInterface::GetRegisterContext() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_register_context", error);
 
@@ -142,6 +143,17 @@ ScriptedThreadPythonInterface::GetRegisterContext() {
     return {};
 
   return obj->GetAsString()->GetValue().str();
+}
+
+StructuredData::ArraySP ScriptedThreadPythonInterface::GetExtendedInfo() {
+  Status error;
+  StructuredData::ArraySP arr =
+      Dispatch<StructuredData::ArraySP>("get_extended_info", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+    return {};
+
+  return arr;
 }
 
 #endif

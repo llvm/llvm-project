@@ -112,7 +112,7 @@ void writeAPIFromIndex(APIIndexer &G,
         OS << ", ";
     }
 
-    OS << ");\n\n";
+    OS << ") __NOEXCEPT;\n\n";
   }
 
   // Make another pass over entrypoints to emit object declarations.

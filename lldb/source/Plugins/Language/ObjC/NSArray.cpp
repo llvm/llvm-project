@@ -463,12 +463,12 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::
     NSArrayMSyntheticFrontEndBase(lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+    TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
-    if (clang_ast_context)
+    if (scratch_ts_sp)
       m_id_type = CompilerType(
-          clang_ast_context,
-          clang_ast_context->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
+          scratch_ts_sp->weak_from_this(),
+          scratch_ts_sp->getASTContext().ObjCBuiltinIdTy.getAsOpaquePtr());
     if (valobj_sp->GetProcessSP())
       m_ptr_size = valobj_sp->GetProcessSP()->GetAddressByteSize();
   }
@@ -532,9 +532,8 @@ lldb_private::formatters::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 bool
@@ -610,11 +609,11 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+      TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
-      if (clang_ast_context)
-        m_id_type = clang_ast_context->GetType(
-            clang_ast_context->getASTContext().ObjCBuiltinIdTy);
+      if (scratch_ts_sp)
+        m_id_type = scratch_ts_sp->GetType(
+            scratch_ts_sp->getASTContext().ObjCBuiltinIdTy);
     }
   }
 }
@@ -675,9 +674,8 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+
+  return error.Success();
 }
 
 template <typename D32, typename D64, bool Inline>
@@ -778,11 +776,10 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
   static const ConstString g_zero("[0]");
 
   if (idx == 0) {
-    auto *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(*m_backend.GetTargetSP());
-    if (clang_ast_context) {
-      CompilerType id_type(
-          clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));
+    if (scratch_ts_sp) {
+      CompilerType id_type(scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
       return m_backend.GetSyntheticChildAtOffset(
           m_backend.GetProcessSP()->GetAddressByteSize(), id_type, true,
           g_zero);

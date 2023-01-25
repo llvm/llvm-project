@@ -9,17 +9,17 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -58,8 +58,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
     return rewriter.create<LLVM::InsertElementOp>(loc, llvmType, val1, val2,
                                                   constant);
   }
-  return rewriter.create<LLVM::InsertValueOp>(loc, llvmType, val1, val2,
-                                              rewriter.getI64ArrayAttr(pos));
+  return rewriter.create<LLVM::InsertValueOp>(loc, val1, val2, pos);
 }
 
 // Helper that picks the proper sequence for extracting.
@@ -74,8 +73,7 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
     return rewriter.create<LLVM::ExtractElementOp>(loc, llvmType, val,
                                                    constant);
   }
-  return rewriter.create<LLVM::ExtractValueOp>(loc, llvmType, val,
-                                               rewriter.getI64ArrayAttr(pos));
+  return rewriter.create<LLVM::ExtractValueOp>(loc, val, pos);
 }
 
 // Helper that returns data layout alignment of a memref.
@@ -93,22 +91,26 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
   return success();
 }
 
-// Add an index vector component to a base pointer. This almost always succeeds
-// unless the last stride is non-unit or the memory space is not zero.
-static LogicalResult getIndexedPtrs(ConversionPatternRewriter &rewriter,
-                                    Location loc, Value memref, Value base,
-                                    Value index, MemRefType memRefType,
-                                    VectorType vType, Value &ptrs) {
+// Check if the last stride is non-unit or the memory space is not zero.
+static LogicalResult isMemRefTypeSupported(MemRefType memRefType) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto successStrides = getStridesAndOffset(memRefType, strides, offset);
   if (failed(successStrides) || strides.back() != 1 ||
       memRefType.getMemorySpaceAsInt() != 0)
     return failure();
-  auto pType = MemRefDescriptor(memref).getElementPtrType();
-  auto ptrsType = LLVM::getFixedVectorType(pType, vType.getDimSize(0));
-  ptrs = rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, index);
   return success();
+}
+
+// Add an index vector component to a base pointer.
+static Value getIndexedPtrs(ConversionPatternRewriter &rewriter, Location loc,
+                            MemRefType memRefType, Value llvmMemref, Value base,
+                            Value index, uint64_t vLen) {
+  assert(succeeded(isMemRefTypeSupported(memRefType)) &&
+         "unsupported memref type");
+  auto pType = MemRefDescriptor(llvmMemref).getElementPtrType();
+  auto ptrsType = LLVM::getFixedVectorType(pType, vLen);
+  return rewriter.create<LLVM::GEPOp>(loc, ptrsType, base, index);
 }
 
 // Casts a strided element pointer to a vector pointer.  The vector pointer
@@ -259,28 +261,53 @@ public:
   LogicalResult
   matchAndRewrite(vector::GatherOp gather, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    MemRefType memRefType = gather.getBaseType().dyn_cast<MemRefType>();
+    assert(memRefType && "The base should be bufferized");
+
+    if (failed(isMemRefTypeSupported(memRefType)))
+      return failure();
+
     auto loc = gather->getLoc();
-    MemRefType memRefType = gather.getMemRefType();
 
     // Resolve alignment.
     unsigned align;
     if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
-    // Resolve address.
-    Value ptrs;
-    VectorType vType = gather.getVectorType();
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    if (failed(getIndexedPtrs(rewriter, loc, adaptor.getBase(), ptr,
-                              adaptor.getIndexVec(), memRefType, vType, ptrs)))
-      return failure();
+    Value base = adaptor.getBase();
 
-    // Replace with the gather intrinsic.
-    rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
-        gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
-        adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
-    return success();
+    auto llvmNDVectorTy = adaptor.getIndexVec().getType();
+    // Handle the simple case of 1-D vector.
+    if (!llvmNDVectorTy.isa<LLVM::LLVMArrayType>()) {
+      auto vType = gather.getVectorType();
+      // Resolve address.
+      Value ptrs = getIndexedPtrs(rewriter, loc, memRefType, base, ptr,
+                                  adaptor.getIndexVec(),
+                                  /*vLen=*/vType.getDimSize(0));
+      // Replace with the gather intrinsic.
+      rewriter.replaceOpWithNewOp<LLVM::masked_gather>(
+          gather, typeConverter->convertType(vType), ptrs, adaptor.getMask(),
+          adaptor.getPassThru(), rewriter.getI32IntegerAttr(align));
+      return success();
+    }
+
+    auto callback = [align, memRefType, base, ptr, loc, &rewriter](
+                        Type llvm1DVectorTy, ValueRange vectorOperands) {
+      // Resolve address.
+      Value ptrs = getIndexedPtrs(
+          rewriter, loc, memRefType, base, ptr, /*index=*/vectorOperands[0],
+          LLVM::getVectorNumElements(llvm1DVectorTy).getFixedValue());
+      // Create the gather intrinsic.
+      return rewriter.create<LLVM::masked_gather>(
+          loc, llvm1DVectorTy, ptrs, /*mask=*/vectorOperands[1],
+          /*passThru=*/vectorOperands[2], rewriter.getI32IntegerAttr(align));
+    };
+    SmallVector<Value> vectorOperands = {
+        adaptor.getIndexVec(), adaptor.getMask(), adaptor.getPassThru()};
+    return LLVM::detail::handleMultidimensionalVectors(
+        gather, vectorOperands, *getTypeConverter(), callback, rewriter);
   }
 };
 
@@ -296,19 +323,21 @@ public:
     auto loc = scatter->getLoc();
     MemRefType memRefType = scatter.getMemRefType();
 
+    if (failed(isMemRefTypeSupported(memRefType)))
+      return failure();
+
     // Resolve alignment.
     unsigned align;
     if (failed(getMemRefAlignment(*getTypeConverter(), memRefType, align)))
       return failure();
 
     // Resolve address.
-    Value ptrs;
     VectorType vType = scatter.getVectorType();
     Value ptr = getStridedElementPtr(loc, memRefType, adaptor.getBase(),
                                      adaptor.getIndices(), rewriter);
-    if (failed(getIndexedPtrs(rewriter, loc, adaptor.getBase(), ptr,
-                              adaptor.getIndexVec(), memRefType, vType, ptrs)))
-      return failure();
+    Value ptrs =
+        getIndexedPtrs(rewriter, loc, memRefType, adaptor.getBase(), ptr,
+                       adaptor.getIndexVec(), /*vLen=*/vType.getDimSize(0));
 
     // Replace with the scatter intrinsic.
     rewriter.replaceOpWithNewOp<LLVM::masked_scatter>(
@@ -566,20 +595,26 @@ public:
 
     // Get rank and dimension sizes.
     int64_t rank = vectorType.getRank();
-    assert(v1Type.getRank() == rank);
-    assert(v2Type.getRank() == rank);
-    int64_t v1Dim = v1Type.getDimSize(0);
+#ifndef NDEBUG
+    bool wellFormed0DCase =
+        v1Type.getRank() == 0 && v2Type.getRank() == 0 && rank == 1;
+    bool wellFormedNDCase =
+        v1Type.getRank() == rank && v2Type.getRank() == rank;
+    assert((wellFormed0DCase || wellFormedNDCase) && "op is not well-formed");
+#endif
 
-    // For rank 1, where both operands have *exactly* the same vector type,
-    // there is direct shuffle support in LLVM. Use it!
-    if (rank == 1 && v1Type == v2Type) {
+    // For rank 0 and 1, where both operands have *exactly* the same vector
+    // type, there is direct shuffle support in LLVM. Use it!
+    if (rank <= 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
-          loc, adaptor.getV1(), adaptor.getV2(), maskArrayAttr);
+          loc, adaptor.getV1(), adaptor.getV2(),
+          LLVM::convertArrayToIndices<int32_t>(maskArrayAttr));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
       return success();
     }
 
     // For all other cases, insert the individual values individually.
+    int64_t v1Dim = v1Type.getDimSize(0);
     Type eltType;
     if (auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>())
       eltType = arrayType.getElementType();
@@ -646,7 +681,6 @@ public:
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = extractOp->getLoc();
-    auto vectorType = extractOp.getVectorType();
     auto resultType = extractOp.getResult().getType();
     auto llvmResultType = typeConverter->convertType(resultType);
     auto positionArrayAttr = extractOp.getPosition();
@@ -663,23 +697,24 @@ public:
 
     // One-shot extraction of vector from array (only requires extractvalue).
     if (resultType.isa<VectorType>()) {
+      SmallVector<int64_t> indices;
+      for (auto idx : positionArrayAttr.getAsRange<IntegerAttr>())
+        indices.push_back(idx.getInt());
       Value extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, llvmResultType, adaptor.getVector(), positionArrayAttr);
+          loc, adaptor.getVector(), indices);
       rewriter.replaceOp(extractOp, extracted);
       return success();
     }
 
     // Potential extraction of 1-D vector from array.
-    auto *context = extractOp->getContext();
     Value extracted = adaptor.getVector();
     auto positionAttrs = positionArrayAttr.getValue();
     if (positionAttrs.size() > 1) {
-      auto oneDVectorType = reducedVectorTypeBack(vectorType);
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
-      extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, typeConverter->convertType(oneDVectorType), extracted,
-          nMinusOnePositionAttrs);
+      SmallVector<int64_t> nMinusOnePosition;
+      for (auto idx : positionAttrs.drop_back())
+        nMinusOnePosition.push_back(idx.cast<IntegerAttr>().getInt());
+      extracted = rewriter.create<LLVM::ExtractValueOp>(loc, extracted,
+                                                        nMinusOnePosition);
     }
 
     // Remaining extraction of element from 1-D LLVM vector
@@ -716,7 +751,7 @@ public:
   matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vType = fmaOp.getVectorType();
-    if (vType.getRank() != 1)
+    if (vType.getRank() > 1)
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());
@@ -785,25 +820,22 @@ public:
     // One-shot insertion of a vector into an array (only requires insertvalue).
     if (sourceType.isa<VectorType>()) {
       Value inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, llvmResultType, adaptor.getDest(), adaptor.getSource(),
-          positionArrayAttr);
+          loc, adaptor.getDest(), adaptor.getSource(),
+          LLVM::convertArrayToIndices(positionArrayAttr));
       rewriter.replaceOp(insertOp, inserted);
       return success();
     }
 
     // Potential extraction of 1-D vector from array.
-    auto *context = insertOp->getContext();
     Value extracted = adaptor.getDest();
     auto positionAttrs = positionArrayAttr.getValue();
     auto position = positionAttrs.back().cast<IntegerAttr>();
     auto oneDVectorType = destVectorType;
     if (positionAttrs.size() > 1) {
       oneDVectorType = reducedVectorTypeBack(destVectorType);
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
       extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, typeConverter->convertType(oneDVectorType), extracted,
-          nMinusOnePositionAttrs);
+          loc, extracted,
+          LLVM::convertArrayToIndices(positionAttrs.drop_back()));
     }
 
     // Insertion of an element into a 1-D LLVM vector.
@@ -815,14 +847,43 @@ public:
 
     // Potential insertion of resulting 1-D vector into array.
     if (positionAttrs.size() > 1) {
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
       inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, llvmResultType, adaptor.getDest(), inserted,
-          nMinusOnePositionAttrs);
+          loc, adaptor.getDest(), inserted,
+          LLVM::convertArrayToIndices(positionAttrs.drop_back()));
     }
 
     rewriter.replaceOp(insertOp, inserted);
+    return success();
+  }
+};
+
+/// Lower vector.scalable.insert ops to LLVM vector.insert
+struct VectorScalableInsertOpLowering
+    : public ConvertOpToLLVMPattern<vector::ScalableInsertOp> {
+  using ConvertOpToLLVMPattern<
+      vector::ScalableInsertOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ScalableInsertOp insOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::vector_insert>(
+        insOp, adaptor.getSource(), adaptor.getDest(), adaptor.getPos());
+    return success();
+  }
+};
+
+/// Lower vector.scalable.extract ops to LLVM vector.extract
+struct VectorScalableExtractOpLowering
+    : public ConvertOpToLLVMPattern<vector::ScalableExtractOp> {
+  using ConvertOpToLLVMPattern<
+      vector::ScalableExtractOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ScalableExtractOp extOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<LLVM::vector_extract>(
+        extOp, typeConverter->convertType(extOp.getResultVectorType()),
+        adaptor.getSource(), adaptor.getPos());
     return success();
   }
 };
@@ -883,14 +944,14 @@ public:
 
 /// Returns the strides if the memory underlying `memRefType` has a contiguous
 /// static layout.
-static llvm::Optional<SmallVector<int64_t, 4>>
+static std::optional<SmallVector<int64_t, 4>>
 computeContiguousStrides(MemRefType memRefType) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   if (failed(getStridesAndOffset(memRefType, strides, offset)))
-    return None;
+    return std::nullopt;
   if (!strides.empty() && strides.back() != 1)
-    return None;
+    return std::nullopt;
   // If no layout or identity layout, this is contiguous by definition.
   if (memRefType.getLayout().isIdentity())
     return strides;
@@ -902,11 +963,11 @@ computeContiguousStrides(MemRefType memRefType) {
   auto sizes = memRefType.getShape();
   for (int index = 0, e = strides.size() - 1; index < e; ++index) {
     if (ShapedType::isDynamic(sizes[index + 1]) ||
-        ShapedType::isDynamicStrideOrOffset(strides[index]) ||
-        ShapedType::isDynamicStrideOrOffset(strides[index + 1]))
-      return None;
+        ShapedType::isDynamic(strides[index]) ||
+        ShapedType::isDynamic(strides[index + 1]))
+      return std::nullopt;
     if (strides[index] != strides[index + 1] * sizes[index + 1])
-      return None;
+      return std::nullopt;
   }
   return strides;
 }
@@ -948,7 +1009,7 @@ public:
     if (!targetStrides)
       return failure();
     // Only support static strides for now, regardless of contiguity.
-    if (llvm::any_of(*targetStrides, ShapedType::isDynamicStrideOrOffset))
+    if (llvm::any_of(*targetStrides, ShapedType::isDynamic))
       return failure();
 
     auto int64Ty = IntegerType::get(rewriter.getContext(), 64);
@@ -1216,12 +1277,11 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
         splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
 
     int64_t width = splatOp.getType().cast<VectorType>().getDimSize(0);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
+    SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
     rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, undef,
-                                                       zeroAttrs);
+                                                       zeroValues);
     return success();
   }
 };
@@ -1262,15 +1322,13 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
 
     // Shuffle the value across the desired number of elements.
     int64_t width = resultType.getDimSize(resultType.getRank() - 1);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
-    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroAttrs);
+    SmallVector<int32_t> zeroValues(width, 0);
+    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroValues);
 
     // Iterate of linear index, convert to coords space and insert splatted 1-D
     // vector in each position.
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmNDVectorTy, desc, v,
-                                                  position);
+    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
+      desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, v, position);
     });
     rewriter.replaceOp(splatOp, desc);
     return success();
@@ -1302,7 +1360,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
                                      vector::MaskedStoreOpAdaptor>,
            VectorGatherOpConversion, VectorScatterOpConversion,
            VectorExpandLoadOpConversion, VectorCompressStoreOpConversion,
-           VectorSplatOpLowering, VectorSplatNdOpLowering>(converter);
+           VectorSplatOpLowering, VectorSplatNdOpLowering,
+           VectorScalableInsertOpLowering, VectorScalableExtractOpLowering>(
+          converter);
   // Transfer ops with rank > 1 are handled by VectorToSCF.
   populateVectorTransferLoweringPatterns(patterns, /*maxTransferRank=*/1);
 }

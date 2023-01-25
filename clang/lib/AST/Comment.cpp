@@ -29,7 +29,7 @@ namespace comments {
 #undef ABSTRACT_COMMENT
 
 // DeclInfo is also allocated with a BumpPtrAllocator.
-static_assert(std::is_trivially_destructible<DeclInfo>::value,
+static_assert(std::is_trivially_destructible_v<DeclInfo>,
               "DeclInfo should be trivially destructible!");
 
 const char *Comment::getCommentKindName() const {
@@ -206,7 +206,7 @@ void DeclInfo::fill() {
   IsInstanceMethod = false;
   IsClassMethod = false;
   IsVariadic = false;
-  ParamVars = None;
+  ParamVars = std::nullopt;
   TemplateParameters = nullptr;
 
   if (!CommentDecl) {
@@ -301,7 +301,7 @@ void DeclInfo::fill() {
       TemplateKind = TemplateSpecialization;
       TemplateParameters = VTD->getTemplateParameters();
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Decl::Field:
   case Decl::EnumConstant:
   case Decl::ObjCIvar:

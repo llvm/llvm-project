@@ -1,7 +1,6 @@
 """Test that a dSYM can be found when a binary is in a deep bundle with multiple pathname components."""
 
 
-#import unittest2
 from time import sleep
 
 import lldb
@@ -67,7 +66,7 @@ class DeepBundleTestCase(TestBase):
             if mod.GetFileSpec().GetFilename() == 'MyFramework':
                 found_module = True
                 dsym_name = mod.GetSymbolFileSpec().GetFilename()
-                self.assertTrue (dsym_name == 'MyFramework', "Check that we found the dSYM for the bundle that was loaded")
+                self.assertEqual(dsym_name, 'MyFramework', "Check that we found the dSYM for the bundle that was loaded")
             i=i+1
 
         self.assertTrue(found_module, "Check that we found the framework loaded in lldb's image list")

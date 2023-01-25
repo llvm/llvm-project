@@ -16,6 +16,7 @@ static_library("Frontend") {
     "//llvm/lib/Option",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ASTConsumers.cpp",
@@ -41,6 +42,8 @@ static_library("Frontend") {
     "MultiplexConsumer.cpp",
     "PrecompiledPreamble.cpp",
     "PrintPreprocessedOutput.cpp",
+    "SARIFDiagnostic.cpp",
+    "SARIFDiagnosticPrinter.cpp",
     "SerializedDiagnosticPrinter.cpp",
     "SerializedDiagnosticReader.cpp",
     "TestModuleFileExtension.cpp",

@@ -14,7 +14,7 @@ loop:
 
 ; CHECK-LABEL: Determining loop execution counts for: @u_0
 ; CHECK-NEXT: Loop %loop: backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) umax %rhs))
-; CHECK-NEXT: Loop %loop: max backedge-taken count is -100, actual taken count either this or zero.
+; CHECK-NEXT: Loop %loop: constant max backedge-taken count is -100, actual taken count either this or zero.
 
 leave:
   ret void
@@ -34,7 +34,7 @@ loop:
 
 ; CHECK-LABEL: Determining loop execution counts for: @u_1
 ; CHECK-NEXT: Loop %loop: backedge-taken count is ((-1 * %start) + ((-100 + %start) umax %start))
-; CHECK-NEXT: Loop %loop: max backedge-taken count is -100, actual taken count either this or zero.
+; CHECK-NEXT: Loop %loop: constant max backedge-taken count is -100, actual taken count either this or zero.
 
 leave:
   ret void
@@ -54,7 +54,7 @@ loop:
 
 ; CHECK-LABEL: Determining loop execution counts for: @s_0
 ; CHECK-NEXT: Loop %loop: backedge-taken count is (-100 + (-1 * %rhs) + ((100 + %rhs) smax %rhs))
-; CHECK-NEXT: Loop %loop: max backedge-taken count is -100, actual taken count either this or zero.
+; CHECK-NEXT: Loop %loop: constant max backedge-taken count is -100, actual taken count either this or zero.
 
 leave:
   ret void
@@ -74,7 +74,7 @@ loop:
 
 ; CHECK-LABEL: Determining loop execution counts for: @s_1
 ; CHECK-NEXT: Loop %loop: backedge-taken count is ((-1 * %start) + ((-100 + %start) smax %start))
-; CHECK-NEXT: Loop %loop: max backedge-taken count is -100, actual taken count either this or zero.
+; CHECK-NEXT: Loop %loop: constant max backedge-taken count is -100, actual taken count either this or zero.
 
 leave:
   ret void
@@ -93,7 +93,7 @@ loop:
 
 ; CHECK-LABEL: Determining loop execution counts for: @s_2
 ; CHECK-NEXT: Loop %loop: backedge-taken count is ((-1 * ((-100 + %start) smin %start)) + %start)
-; CHECK-NEXT: Loop %loop: max backedge-taken count is -1
+; CHECK-NEXT: Loop %loop: constant max backedge-taken count is -1
 
 leave:
   ret void

@@ -49,6 +49,7 @@ __umoddi3 U
 _exit U
 abort U
 access U
+aligned_alloc U
 bcmp U
 calloc U
 catclose U
@@ -114,6 +115,7 @@ munmap U
 newlocale U
 perror U
 posix_madvise U
+posix_memalign U
 posix_spawn U
 posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
@@ -162,6 +164,8 @@ strtoull_l U
 syscall U
 sysconf U
 tcgetattr U
+tolower U
+toupper U
 uname U
 ungetc U
 unlink U

@@ -18,8 +18,11 @@
 namespace mlir {
 class ModuleOp;
 
+#define GEN_PASS_DECL_SCFTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Creates a pass to convert SCF ops into SPIR-V ops.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertSCFToSPIRVPass();
+std::unique_ptr<OperationPass<>> createConvertSCFToSPIRVPass();
 
 } // namespace mlir
 

@@ -1,4 +1,3 @@
-; RUN: opt -always-inline -S < %s | FileCheck %s
 ; RUN: opt -passes=always-inline -S < %s | FileCheck %s
 
 ; We used to misclassify inalloca as a static alloca in the inliner. This only
@@ -23,11 +22,11 @@ target triple = "i386-pc-windows-msvc19.0.24210"
 
 %struct.Foo = type { i32 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
 
-declare x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* returned) unnamed_addr
-declare x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo*) unnamed_addr
+declare x86_thiscallcc ptr @"\01??0Foo@@QAE@XZ"(ptr returned) unnamed_addr
+declare x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(ptr) unnamed_addr
 
 define void @f() {
 entry:
@@ -37,29 +36,25 @@ entry:
 
 define internal void @g() alwaysinline {
 entry:
-  %inalloca.save = call i8* @llvm.stacksave()
+  %inalloca.save = call ptr @llvm.stacksave()
   %argmem = alloca inalloca <{ %struct.Foo }>, align 4
-  %0 = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %argmem, i32 0, i32 0
-  %call = call x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* %0)
-  call void @h(<{ %struct.Foo }>* inalloca(<{ %struct.Foo }>) %argmem)
-  call void @llvm.stackrestore(i8* %inalloca.save)
+  %call = call x86_thiscallcc ptr @"\01??0Foo@@QAE@XZ"(ptr %argmem)
+  call void @h(ptr inalloca(<{ %struct.Foo }>) %argmem)
+  call void @llvm.stackrestore(ptr %inalloca.save)
   ret void
 }
 
 ; Function Attrs: alwaysinline inlinehint nounwind
-define internal void @h(<{ %struct.Foo }>* inalloca(<{ %struct.Foo }>)) alwaysinline {
+define internal void @h(ptr inalloca(<{ %struct.Foo }>)) alwaysinline {
 entry:
-  %o = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %0, i32 0, i32 0
-  call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo* %o)
+  call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(ptr %0)
   ret void
 }
 
 ; CHECK: define void @f()
-; CHECK:   %[[STACKSAVE:.*]] = call i8* @llvm.stacksave()
+; CHECK:   %[[STACKSAVE:.*]] = call ptr @llvm.stacksave()
 ; CHECK:   %[[ARGMEM:.*]] = alloca inalloca <{ %struct.Foo }>, align 4
-; CHECK:   %[[GEP1:.*]] = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %[[ARGMEM]], i32 0, i32 0
-; CHECK:   %[[CALL:.*]] = call x86_thiscallcc %struct.Foo* @"\01??0Foo@@QAE@XZ"(%struct.Foo* %[[GEP1]])
-; CHECK:   %[[GEP2:.*]] = getelementptr inbounds <{ %struct.Foo }>, <{ %struct.Foo }>* %[[ARGMEM]], i32 0, i32 0
-; CHECK:   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(%struct.Foo* %[[GEP2]])
-; CHECK:   call void @llvm.stackrestore(i8* %[[STACKSAVE]])
+; CHECK:   %[[CALL:.*]] = call x86_thiscallcc ptr @"\01??0Foo@@QAE@XZ"(ptr %[[ARGMEM]])
+; CHECK:   call x86_thiscallcc void @"\01??1Foo@@QAE@XZ"(ptr %[[ARGMEM]])
+; CHECK:   call void @llvm.stackrestore(ptr %[[STACKSAVE]])
 ; CHECK:   ret void

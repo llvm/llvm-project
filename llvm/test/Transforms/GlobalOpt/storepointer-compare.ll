@@ -4,20 +4,20 @@
 ; Check that a comparison does not prevent an indirect call from being made 
 ; direct.  The global will still remain, but indirect call elim is still good.
 
-@G = internal global void ()* null              ; <void ()**> [#uses=2]
+@G = internal global ptr null              ; <ptr> [#uses=2]
 
 define internal void @Actual() {
         ret void
 }
 
 define void @init() {
-        store void ()* @Actual, void ()** @G
+        store ptr @Actual, ptr @G
         ret void
 }
 
 define void @doit() {
-        %FP = load void ()*, void ()** @G         ; <void ()*> [#uses=2]
-        %CC = icmp eq void ()* %FP, null                ; <i1> [#uses=1]
+        %FP = load ptr, ptr @G         ; <ptr> [#uses=2]
+        %CC = icmp eq ptr %FP, null                ; <i1> [#uses=1]
         br i1 %CC, label %isNull, label %DoCall
 
 DoCall:         ; preds = %0

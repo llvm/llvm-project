@@ -54,7 +54,7 @@ define i32 @e(i32 %c1) !prof !24 {
 
 cond_false:
   call void @ext()
-  %c2 = load i32, i32* @data, align 4
+  %c2 = load i32, ptr @data, align 4
   %c3 = add i32 %c1, %c2
   %c4 = mul i32 %c3, %c2
   %c5 = add i32 %c4, %c2

@@ -287,4 +287,14 @@ TEST(QualTypeNameTest, AnonStrucs) {
                         } anon_st;)");
 }
 
+TEST(QualTypeNameTest, ConstUsing) {
+  TypeNameVisitor ConstUsing;
+  ConstUsing.ExpectedQualTypeNames["param1"] = "const A::S &";
+  ConstUsing.ExpectedQualTypeNames["param2"] = "const A::S";
+  ConstUsing.runOver(R"(namespace A {
+                          class S {};
+                        }
+                        using ::A::S;
+                        void foo(const S& param1, const S param2);)");
+}
 }  // end anonymous namespace

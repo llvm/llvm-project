@@ -13,7 +13,6 @@ define dso_local signext i32 @test(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) loc
 ; CHECK-NEXT:    vcmpgtsw. 2, 4, 3
 ; CHECK-NEXT:    mfocrf 3, 2
 ; CHECK-NEXT:    rlwinm 3, 3, 25, 31, 31
-; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    li 3, 0
@@ -27,7 +26,6 @@ define dso_local signext i32 @test(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) loc
 ; CHECK-AIX-64-NEXT:    vcmpgtsw. 2, 4, 3
 ; CHECK-AIX-64-NEXT:    mfocrf 3, 2
 ; CHECK-AIX-64-NEXT:    rlwinm 3, 3, 25, 31, 31
-; CHECK-AIX-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-AIX-64-NEXT:    blr
 ; CHECK-AIX-64-NEXT:  L..BB0_2:
 ; CHECK-AIX-64-NEXT:    li 3, 0

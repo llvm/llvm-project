@@ -15,7 +15,8 @@ set(mlir_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir
 set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
   "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
+set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
 
 get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
 export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
@@ -40,6 +41,10 @@ set(MLIR_CONFIG_PDLL_TABLEGEN_EXE "${MLIR_PDLL_TABLEGEN_EXE}")
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${mlir_cmake_builddir}/MLIRConfig.cmake
+  @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${mlir_cmake_builddir}/MLIRConfigVersion.cmake
   @ONLY)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
@@ -75,6 +80,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
+  @ONLY)
 set(MLIR_CONFIG_CODE)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
@@ -87,6 +96,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake

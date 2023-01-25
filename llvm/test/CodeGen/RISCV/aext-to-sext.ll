@@ -11,24 +11,21 @@
 define void @quux(i32 signext %arg, i32 signext %arg1) nounwind {
 ; RV64I-LABEL: quux:
 ; RV64I:       # %bb.0: # %bb
-; RV64I-NEXT:    addi sp, sp, -32
-; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    beq a0, a1, .LBB0_3
 ; RV64I-NEXT:  # %bb.1: # %bb2.preheader
-; RV64I-NEXT:    mv s0, a1
-; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    subw s0, a1, a0
 ; RV64I-NEXT:  .LBB0_2: # %bb2
 ; RV64I-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64I-NEXT:    call hoge@plt
-; RV64I-NEXT:    addiw s1, s1, 1
-; RV64I-NEXT:    bne s1, s0, .LBB0_2
+; RV64I-NEXT:    addiw s0, s0, -1
+; RV64I-NEXT:    bnez s0, .LBB0_2
 ; RV64I-NEXT:  .LBB0_3: # %bb6
-; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 bb:
   %tmp = icmp eq i32 %arg, %arg1
@@ -51,10 +48,9 @@ declare void @hoge()
 ; Because custom type legalization for i32 is enabled, this resulted in
 ; LowerOperation being called for the amount. This was not expected and
 ; triggered an assert.
-define i32 @crash(i32 %x, i32 %y, i32 %z) {
+define i32 @crash(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; RV64I-LABEL: crash:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a3, a0
 ; RV64I-NEXT:    addw a0, a1, a2
 ; RV64I-NEXT:    slli a1, a3, 3

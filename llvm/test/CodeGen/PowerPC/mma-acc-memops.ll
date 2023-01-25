@@ -377,8 +377,8 @@ define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv v3, g@PCREL+32(0), 1
 ; LE-PAIRED-NEXT:    plxv v2, g@PCREL+48(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+80(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+64(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdStPair:
@@ -544,8 +544,8 @@ define dso_local void @testUnalignedLdStPair() {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv v3, g@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv v2, g@PCREL+27(0), 1
-; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    pstxv v2, g@PCREL+35(0), 1
+; LE-PAIRED-NEXT:    pstxv v3, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testUnalignedLdStPair:

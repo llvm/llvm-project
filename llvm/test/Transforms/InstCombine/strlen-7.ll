@@ -3,7 +3,7 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i64 @strlen(i8*)
+declare i64 @strlen(ptr)
 
 %struct.A = type { [4 x i8], [5 x i8] }
 
@@ -13,152 +13,150 @@ declare i64 @strlen(i8*)
 ; Fold strlen(a[I].a + J) and strlen(a[I].b + J) with constant I and J
 ; to constants.
 
-define void @fold_strlen_A(i64* %plen) {
+define void @fold_strlen_A(ptr %plen) {
 ; CHECK-LABEL: @fold_strlen_A(
-; CHECK-NEXT:    store i64 1, i64* [[PLEN:%.*]], align 4
-; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, i64* [[PLEN]], i64 1
-; CHECK-NEXT:    store i64 0, i64* [[PLEN1]], align 4
-; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, i64* [[PLEN]], i64 2
-; CHECK-NEXT:    store i64 0, i64* [[PLEN2]], align 4
-; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, i64* [[PLEN]], i64 3
-; CHECK-NEXT:    store i64 0, i64* [[PLEN3]], align 4
-; CHECK-NEXT:    [[PLEN4:%.*]] = getelementptr i64, i64* [[PLEN]], i64 4
-; CHECK-NEXT:    store i64 2, i64* [[PLEN4]], align 4
-; CHECK-NEXT:    [[PLEN5:%.*]] = getelementptr i64, i64* [[PLEN]], i64 5
-; CHECK-NEXT:    store i64 1, i64* [[PLEN5]], align 4
-; CHECK-NEXT:    [[PLEN6:%.*]] = getelementptr i64, i64* [[PLEN]], i64 6
-; CHECK-NEXT:    store i64 0, i64* [[PLEN6]], align 4
-; CHECK-NEXT:    [[PLEN7:%.*]] = getelementptr i64, i64* [[PLEN]], i64 7
-; CHECK-NEXT:    store i64 0, i64* [[PLEN7]], align 4
-; CHECK-NEXT:    [[PLEN8:%.*]] = getelementptr i64, i64* [[PLEN]], i64 8
-; CHECK-NEXT:    store i64 0, i64* [[PLEN8]], align 4
-; CHECK-NEXT:    [[PLEN9:%.*]] = getelementptr i64, i64* [[PLEN]], i64 9
-; CHECK-NEXT:    store i64 3, i64* [[PLEN9]], align 4
-; CHECK-NEXT:    [[PLEN10:%.*]] = getelementptr i64, i64* [[PLEN]], i64 10
-; CHECK-NEXT:    store i64 2, i64* [[PLEN10]], align 4
-; CHECK-NEXT:    [[PLEN11:%.*]] = getelementptr i64, i64* [[PLEN]], i64 11
-; CHECK-NEXT:    store i64 1, i64* [[PLEN11]], align 4
-; CHECK-NEXT:    [[PLEN12:%.*]] = getelementptr i64, i64* [[PLEN]], i64 12
-; CHECK-NEXT:    store i64 0, i64* [[PLEN12]], align 4
-; CHECK-NEXT:    [[PLEN14:%.*]] = getelementptr i64, i64* [[PLEN]], i64 14
-; CHECK-NEXT:    store i64 4, i64* [[PLEN14]], align 4
-; CHECK-NEXT:    [[PLEN15:%.*]] = getelementptr i64, i64* [[PLEN]], i64 15
-; CHECK-NEXT:    store i64 3, i64* [[PLEN15]], align 4
-; CHECK-NEXT:    [[PLEN16:%.*]] = getelementptr i64, i64* [[PLEN]], i64 16
-; CHECK-NEXT:    store i64 2, i64* [[PLEN16]], align 4
-; CHECK-NEXT:    [[PLEN17:%.*]] = getelementptr i64, i64* [[PLEN]], i64 17
-; CHECK-NEXT:    store i64 1, i64* [[PLEN17]], align 4
-; CHECK-NEXT:    [[PLEN18:%.*]] = getelementptr i64, i64* [[PLEN]], i64 18
-; CHECK-NEXT:    store i64 0, i64* [[PLEN18]], align 4
+; CHECK-NEXT:    store i64 1, ptr [[PLEN:%.*]], align 4
+; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, ptr [[PLEN]], i64 1
+; CHECK-NEXT:    store i64 0, ptr [[PLEN1]], align 4
+; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, ptr [[PLEN]], i64 2
+; CHECK-NEXT:    store i64 0, ptr [[PLEN2]], align 4
+; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, ptr [[PLEN]], i64 3
+; CHECK-NEXT:    store i64 0, ptr [[PLEN3]], align 4
+; CHECK-NEXT:    [[PLEN4:%.*]] = getelementptr i64, ptr [[PLEN]], i64 4
+; CHECK-NEXT:    store i64 2, ptr [[PLEN4]], align 4
+; CHECK-NEXT:    [[PLEN5:%.*]] = getelementptr i64, ptr [[PLEN]], i64 5
+; CHECK-NEXT:    store i64 1, ptr [[PLEN5]], align 4
+; CHECK-NEXT:    [[PLEN6:%.*]] = getelementptr i64, ptr [[PLEN]], i64 6
+; CHECK-NEXT:    store i64 0, ptr [[PLEN6]], align 4
+; CHECK-NEXT:    [[PLEN7:%.*]] = getelementptr i64, ptr [[PLEN]], i64 7
+; CHECK-NEXT:    store i64 0, ptr [[PLEN7]], align 4
+; CHECK-NEXT:    [[PLEN8:%.*]] = getelementptr i64, ptr [[PLEN]], i64 8
+; CHECK-NEXT:    store i64 0, ptr [[PLEN8]], align 4
+; CHECK-NEXT:    [[PLEN9:%.*]] = getelementptr i64, ptr [[PLEN]], i64 9
+; CHECK-NEXT:    store i64 3, ptr [[PLEN9]], align 4
+; CHECK-NEXT:    [[PLEN10:%.*]] = getelementptr i64, ptr [[PLEN]], i64 10
+; CHECK-NEXT:    store i64 2, ptr [[PLEN10]], align 4
+; CHECK-NEXT:    [[PLEN11:%.*]] = getelementptr i64, ptr [[PLEN]], i64 11
+; CHECK-NEXT:    store i64 1, ptr [[PLEN11]], align 4
+; CHECK-NEXT:    [[PLEN12:%.*]] = getelementptr i64, ptr [[PLEN]], i64 12
+; CHECK-NEXT:    store i64 0, ptr [[PLEN12]], align 4
+; CHECK-NEXT:    [[PLEN14:%.*]] = getelementptr i64, ptr [[PLEN]], i64 14
+; CHECK-NEXT:    store i64 4, ptr [[PLEN14]], align 4
+; CHECK-NEXT:    [[PLEN15:%.*]] = getelementptr i64, ptr [[PLEN]], i64 15
+; CHECK-NEXT:    store i64 3, ptr [[PLEN15]], align 4
+; CHECK-NEXT:    [[PLEN16:%.*]] = getelementptr i64, ptr [[PLEN]], i64 16
+; CHECK-NEXT:    store i64 2, ptr [[PLEN16]], align 4
+; CHECK-NEXT:    [[PLEN17:%.*]] = getelementptr i64, ptr [[PLEN]], i64 17
+; CHECK-NEXT:    store i64 1, ptr [[PLEN17]], align 4
+; CHECK-NEXT:    [[PLEN18:%.*]] = getelementptr i64, ptr [[PLEN]], i64 18
+; CHECK-NEXT:    store i64 0, ptr [[PLEN18]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strlen(a[0].a) to 1.
-  %pa0a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 0
-  %lena0a = call i64 @strlen(i8* %pa0a)
-  %plen0 = getelementptr i64, i64* %plen, i32 0
-  store i64 %lena0a, i64* %plen0
+  %lena0a = call i64 @strlen(ptr @a)
+  store i64 %lena0a, ptr %plen
 
 ; Fold strlen(a[0].a + 1) to 0.
-  %pa0ap1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 1
-  %lena0ap1 = call i64 @strlen(i8* %pa0ap1)
-  %plen1 = getelementptr i64, i64* %plen, i32 1
-  store i64 %lena0ap1, i64* %plen1
+  %pa0ap1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 1
+  %lena0ap1 = call i64 @strlen(ptr %pa0ap1)
+  %plen1 = getelementptr i64, ptr %plen, i32 1
+  store i64 %lena0ap1, ptr %plen1
 
 ; Fold strlen(a[0].a + 2) to 0.
-  %pa0ap2 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 2
-  %lena0ap2 = call i64 @strlen(i8* %pa0ap2)
-  %plen2 = getelementptr i64, i64* %plen, i32 2
-  store i64 %lena0ap2, i64* %plen2
+  %pa0ap2 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 2
+  %lena0ap2 = call i64 @strlen(ptr %pa0ap2)
+  %plen2 = getelementptr i64, ptr %plen, i32 2
+  store i64 %lena0ap2, ptr %plen2
 
 ; Fold strlen(a[0].a + 3) to 0.
-  %pa0ap3 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 3
-  %lena0ap3 = call i64 @strlen(i8* %pa0ap3)
-  %plen3 = getelementptr i64, i64* %plen, i32 3
-  store i64 %lena0ap3, i64* %plen3
+  %pa0ap3 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 3
+  %lena0ap3 = call i64 @strlen(ptr %pa0ap3)
+  %plen3 = getelementptr i64, ptr %plen, i32 3
+  store i64 %lena0ap3, ptr %plen3
 
 ; Fold strlen(a[0].b) to 2.
-  %pa0b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 0
-  %lena0b = call i64 @strlen(i8* %pa0b)
-  %plen4 = getelementptr i64, i64* %plen, i32 4
-  store i64 %lena0b, i64* %plen4
+  %pa0b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 0
+  %lena0b = call i64 @strlen(ptr %pa0b)
+  %plen4 = getelementptr i64, ptr %plen, i32 4
+  store i64 %lena0b, ptr %plen4
 
 ; Fold strlen(a[0].b + 1) to 1.
-  %pa0bp1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 1
-  %lena0bp1 = call i64 @strlen(i8* %pa0bp1)
-  %plen5 = getelementptr i64, i64* %plen, i32 5
-  store i64 %lena0bp1, i64* %plen5
+  %pa0bp1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 1
+  %lena0bp1 = call i64 @strlen(ptr %pa0bp1)
+  %plen5 = getelementptr i64, ptr %plen, i32 5
+  store i64 %lena0bp1, ptr %plen5
 
 ; Fold strlen(a[0].b + 2) to 0.
-  %pa0bp2 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 2
-  %lena0bp2 = call i64 @strlen(i8* %pa0bp2)
-  %plen6 = getelementptr i64, i64* %plen, i32 6
-  store i64 %lena0bp2, i64* %plen6
+  %pa0bp2 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 2
+  %lena0bp2 = call i64 @strlen(ptr %pa0bp2)
+  %plen6 = getelementptr i64, ptr %plen, i32 6
+  store i64 %lena0bp2, ptr %plen6
 
 ; Fold strlen(a[0].b + 3) to 0.
-  %pa0bp3 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 3
-  %lena0bp3 = call i64 @strlen(i8* %pa0bp3)
-  %plen7 = getelementptr i64, i64* %plen, i32 7
-  store i64 %lena0bp3, i64* %plen7
+  %pa0bp3 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 3
+  %lena0bp3 = call i64 @strlen(ptr %pa0bp3)
+  %plen7 = getelementptr i64, ptr %plen, i32 7
+  store i64 %lena0bp3, ptr %plen7
 
 ; Fold strlen(a[0].b + 4) to 0.
-  %pa0bp4 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 4
-  %lena0bp4 = call i64 @strlen(i8* %pa0bp4)
-  %plen8 = getelementptr i64, i64* %plen, i32 8
-  store i64 %lena0bp4, i64* %plen8
+  %pa0bp4 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 4
+  %lena0bp4 = call i64 @strlen(ptr %pa0bp4)
+  %plen8 = getelementptr i64, ptr %plen, i32 8
+  store i64 %lena0bp4, ptr %plen8
 
 ; Fold strlen(a[1].a) to 3.
-  %pa1a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 0
-  %lena1a = call i64 @strlen(i8* %pa1a)
-  %plen9 = getelementptr i64, i64* %plen, i32 9
-  store i64 %lena1a, i64* %plen9
+  %pa1a = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 0
+  %lena1a = call i64 @strlen(ptr %pa1a)
+  %plen9 = getelementptr i64, ptr %plen, i32 9
+  store i64 %lena1a, ptr %plen9
 
 ; Fold strlen(a[1].a + 1) to 2.
-  %pa1ap1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 1
-  %lena1ap1 = call i64 @strlen(i8* %pa1ap1)
-  %plen10 = getelementptr i64, i64* %plen, i32 10
-  store i64 %lena1ap1, i64* %plen10
+  %pa1ap1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 1
+  %lena1ap1 = call i64 @strlen(ptr %pa1ap1)
+  %plen10 = getelementptr i64, ptr %plen, i32 10
+  store i64 %lena1ap1, ptr %plen10
 
 ; Fold strlen(a[1].a + 2) to 1.
-  %pa1ap2 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 2
-  %lena1ap2 = call i64 @strlen(i8* %pa1ap2)
-  %plen11 = getelementptr i64, i64* %plen, i32 11
-  store i64 %lena1ap2, i64* %plen11
+  %pa1ap2 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 2
+  %lena1ap2 = call i64 @strlen(ptr %pa1ap2)
+  %plen11 = getelementptr i64, ptr %plen, i32 11
+  store i64 %lena1ap2, ptr %plen11
 
 ; Fold strlen(a[1].a + 3) to 0.
-  %pa1ap3 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 3
-  %lena1ap3 = call i64 @strlen(i8* %pa1ap3)
-  %plen12 = getelementptr i64, i64* %plen, i32 12
-  store i64 %lena1ap3, i64* %plen12
+  %pa1ap3 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 3
+  %lena1ap3 = call i64 @strlen(ptr %pa1ap3)
+  %plen12 = getelementptr i64, ptr %plen, i32 12
+  store i64 %lena1ap3, ptr %plen12
 
 ; Fold strlen(a[1].b) to 4.
-  %pa1b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 0
-  %lena1b = call i64 @strlen(i8* %pa1b)
-  %plen14 = getelementptr i64, i64* %plen, i32 14
-  store i64 %lena1b, i64* %plen14
+  %pa1b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 0
+  %lena1b = call i64 @strlen(ptr %pa1b)
+  %plen14 = getelementptr i64, ptr %plen, i32 14
+  store i64 %lena1b, ptr %plen14
 
 ; Fold strlen(a[1].b + 1) to 3.
-  %pa1bp1 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 1
-  %lena1bp1 = call i64 @strlen(i8* %pa1bp1)
-  %plen15 = getelementptr i64, i64* %plen, i32 15
-  store i64 %lena1bp1, i64* %plen15
+  %pa1bp1 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 1
+  %lena1bp1 = call i64 @strlen(ptr %pa1bp1)
+  %plen15 = getelementptr i64, ptr %plen, i32 15
+  store i64 %lena1bp1, ptr %plen15
 
 ; Fold strlen(a[1].b + 2) to 2.
-  %pa1bp2 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 2
-  %lena1bp2 = call i64 @strlen(i8* %pa1bp2)
-  %plen16 = getelementptr i64, i64* %plen, i32 16
-  store i64 %lena1bp2, i64* %plen16
+  %pa1bp2 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 2
+  %lena1bp2 = call i64 @strlen(ptr %pa1bp2)
+  %plen16 = getelementptr i64, ptr %plen, i32 16
+  store i64 %lena1bp2, ptr %plen16
 
 ; Fold strlen(a[1].b + 3) to 1.
-  %pa1bp3 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 3
-  %lena1bp3 = call i64 @strlen(i8* %pa1bp3)
-  %plen17 = getelementptr i64, i64* %plen, i32 17
-  store i64 %lena1bp3, i64* %plen17
+  %pa1bp3 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 3
+  %lena1bp3 = call i64 @strlen(ptr %pa1bp3)
+  %plen17 = getelementptr i64, ptr %plen, i32 17
+  store i64 %lena1bp3, ptr %plen17
 
 ; Fold strlen(a[1].b + 4) to 0.
-  %pa1bp4 = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 4
-  %lena1bp4 = call i64 @strlen(i8* %pa1bp4)
-  %plen18 = getelementptr i64, i64* %plen, i32 18
-  store i64 %lena1bp4, i64* %plen18
+  %pa1bp4 = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 4
+  %lena1bp4 = call i64 @strlen(ptr %pa1bp4)
+  %plen18 = getelementptr i64, ptr %plen, i32 18
+  store i64 %lena1bp4, ptr %plen18
 
   ret void
 }
@@ -167,44 +165,43 @@ define void @fold_strlen_A(i64* %plen) {
 ; TODO: Fold strlen(a[I].a + X) and strlen(a[I].b + X) with constant I and
 ; variable X to (X - strlen(a[I].a)) and (X - strlen(a[I].b)) respectively.
 
-define void @fold_strlen_A_pI(i64* %plen, i64 %I) {
+define void @fold_strlen_A_pI(ptr %plen, i64 %I) {
 ; CHECK-LABEL: @fold_strlen_A_pI(
-; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LENA0A:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PA0A]])
-; CHECK-NEXT:    store i64 [[LENA0A]], i64* [[PLEN:%.*]], align 4
-; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 [[I]]
-; CHECK-NEXT:    [[LENA0B:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PA0B]])
-; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, i64* [[PLEN]], i64 1
-; CHECK-NEXT:    store i64 [[LENA0B]], i64* [[PLEN1]], align 4
-; CHECK-NEXT:    [[PA1A:%.*]] = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 [[I]]
-; CHECK-NEXT:    [[LENA1A:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PA1A]])
-; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, i64* [[PLEN]], i64 2
-; CHECK-NEXT:    store i64 [[LENA1A]], i64* [[PLEN2]], align 4
-; CHECK-NEXT:    [[PA1B:%.*]] = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 [[I]]
-; CHECK-NEXT:    [[LENA1B:%.*]] = call i64 @strlen(i8* noundef nonnull dereferenceable(1) [[PA1B]])
-; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, i64* [[PLEN]], i64 3
-; CHECK-NEXT:    store i64 [[LENA1B]], i64* [[PLEN3]], align 4
+; CHECK-NEXT:    [[PA0A:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[LENA0A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0A]])
+; CHECK-NEXT:    store i64 [[LENA0A]], ptr [[PLEN:%.*]], align 4
+; CHECK-NEXT:    [[PA0B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 [[I]]
+; CHECK-NEXT:    [[LENA0B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA0B]])
+; CHECK-NEXT:    [[PLEN1:%.*]] = getelementptr i64, ptr [[PLEN]], i64 1
+; CHECK-NEXT:    store i64 [[LENA0B]], ptr [[PLEN1]], align 4
+; CHECK-NEXT:    [[PA1A:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 [[I]]
+; CHECK-NEXT:    [[LENA1A:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1A]])
+; CHECK-NEXT:    [[PLEN2:%.*]] = getelementptr i64, ptr [[PLEN]], i64 2
+; CHECK-NEXT:    store i64 [[LENA1A]], ptr [[PLEN2]], align 4
+; CHECK-NEXT:    [[PA1B:%.*]] = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 [[I]]
+; CHECK-NEXT:    [[LENA1B:%.*]] = call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[PA1B]])
+; CHECK-NEXT:    [[PLEN3:%.*]] = getelementptr i64, ptr [[PLEN]], i64 3
+; CHECK-NEXT:    store i64 [[LENA1B]], ptr [[PLEN3]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %pa0a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 0, i64 %I
-  %lena0a = call i64 @strlen(i8* %pa0a)
-  %plen0 = getelementptr i64, i64* %plen, i32 0
-  store i64 %lena0a, i64* %plen0
+  %pa0a = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 0, i64 %I
+  %lena0a = call i64 @strlen(ptr %pa0a)
+  store i64 %lena0a, ptr %plen
 
-  %pa0b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 0, i32 1, i64 %I
-  %lena0b = call i64 @strlen(i8* %pa0b)
-  %plen1 = getelementptr i64, i64* %plen, i32 1
-  store i64 %lena0b, i64* %plen1
+  %pa0b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 0, i32 1, i64 %I
+  %lena0b = call i64 @strlen(ptr %pa0b)
+  %plen1 = getelementptr i64, ptr %plen, i32 1
+  store i64 %lena0b, ptr %plen1
 
-  %pa1a = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 0, i64 %I
-  %lena1a = call i64 @strlen(i8* %pa1a)
-  %plen2 = getelementptr i64, i64* %plen, i32 2
-  store i64 %lena1a, i64* %plen2
+  %pa1a = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 0, i64 %I
+  %lena1a = call i64 @strlen(ptr %pa1a)
+  %plen2 = getelementptr i64, ptr %plen, i32 2
+  store i64 %lena1a, ptr %plen2
 
-  %pa1b = getelementptr [2 x %struct.A], [2 x %struct.A]* @a, i64 0, i64 1, i32 1, i64 %I
-  %lena1b = call i64 @strlen(i8* %pa1b)
-  %plen3 = getelementptr i64, i64* %plen, i32 3
-  store i64 %lena1b, i64* %plen3
+  %pa1b = getelementptr [2 x %struct.A], ptr @a, i64 0, i64 1, i32 1, i64 %I
+  %lena1b = call i64 @strlen(ptr %pa1b)
+  %plen3 = getelementptr i64, ptr %plen, i32 3
+  store i64 %lena1b, ptr %plen3
 
   ret void
 }

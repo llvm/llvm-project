@@ -187,6 +187,7 @@ void MachineFunction::init() {
     RegInfo = nullptr;
 
   MFInfo = nullptr;
+
   // We can realign the stack if the target supports it and the user hasn't
   // explicitly asked us not to.
   bool CanRealignSP = STI->getFrameLowering()->isStackRealignable() &&
@@ -230,6 +231,12 @@ void MachineFunction::init() {
          "Target-incompatible DataLayout attached\n");
 
   PSVManager = std::make_unique<PseudoSourceValueManager>(getTarget());
+}
+
+void MachineFunction::initTargetMachineFunctionInfo(
+    const TargetSubtargetInfo &STI) {
+  assert(!MFInfo && "MachineFunctionInfo already set");
+  MFInfo = Target.createMachineFunctionInfo(Allocator, F, &STI);
 }
 
 MachineFunction::~MachineFunction() {
@@ -306,7 +313,7 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
-LLVM_NODISCARD unsigned
+[[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
@@ -437,8 +444,16 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
 MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
-  return new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-             MachineBasicBlock(*this, bb);
+  MachineBasicBlock *MBB =
+      new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
+          MachineBasicBlock(*this, bb);
+  // Set BBID for `-basic-block=sections=labels` and
+  // `-basic-block-sections=list` to allow robust mapping of profiles to basic
+  // blocks.
+  if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
+      Target.getBBSectionsType() == BasicBlockSection::List)
+    MBB->setBBID(NextBBID++);
+  return MBB;
 }
 
 /// Delete the given MachineBasicBlock.
@@ -530,9 +545,11 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
-    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
+    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
+    uint32_t CFIType) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
-                                         PostInstrSymbol, HeapAllocMarker);
+                                         PostInstrSymbol, HeapAllocMarker,
+                                         PCSections, CFIType);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
@@ -750,12 +767,10 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
 
   const Instruction *FirstI = LandingPad->getBasicBlock()->getFirstNonPHI();
   if (const auto *LPI = dyn_cast<LandingPadInst>(FirstI)) {
-    if (const auto *PF =
-            dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts()))
-      getMMI().addPersonality(PF);
-
-    if (LPI->isCleanup())
-      addCleanup(LandingPad);
+    // If there's no typeid list specified, then "cleanup" is implicit.
+    // Otherwise, id 0 is reserved for the cleanup action.
+    if (LPI->isCleanup() && LPI->getNumClauses() != 0)
+      LP.TypeIds.push_back(0);
 
     // FIXME: New EH - Add the clauses in reverse order. This isn't 100%
     //        correct, but we need to do it this way because of how the DWARF EH
@@ -763,23 +778,25 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
     for (unsigned I = LPI->getNumClauses(); I != 0; --I) {
       Value *Val = LPI->getClause(I - 1);
       if (LPI->isCatch(I - 1)) {
-        addCatchTypeInfo(LandingPad,
-                         dyn_cast<GlobalValue>(Val->stripPointerCasts()));
+        LP.TypeIds.push_back(
+            getTypeIDFor(dyn_cast<GlobalValue>(Val->stripPointerCasts())));
       } else {
         // Add filters in a list.
         auto *CVal = cast<Constant>(Val);
-        SmallVector<const GlobalValue *, 4> FilterList;
+        SmallVector<unsigned, 4> FilterList;
         for (const Use &U : CVal->operands())
-          FilterList.push_back(cast<GlobalValue>(U->stripPointerCasts()));
+          FilterList.push_back(
+              getTypeIDFor(cast<GlobalValue>(U->stripPointerCasts())));
 
-        addFilterTypeInfo(LandingPad, FilterList);
+        LP.TypeIds.push_back(getFilterIDFor(FilterList));
       }
     }
 
   } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
-    for (unsigned I = CPI->getNumArgOperands(); I != 0; --I) {
-      Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
-      addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
+    for (unsigned I = CPI->arg_size(); I != 0; --I) {
+      auto *TypeInfo =
+          dyn_cast<GlobalValue>(CPI->getArgOperand(I - 1)->stripPointerCasts());
+      LP.TypeIds.push_back(getTypeIDFor(TypeInfo));
     }
 
   } else {
@@ -787,73 +804,6 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
   }
 
   return LandingPadLabel;
-}
-
-void MachineFunction::addCatchTypeInfo(MachineBasicBlock *LandingPad,
-                                       ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  for (const GlobalValue *GV : llvm::reverse(TyInfo))
-    LP.TypeIds.push_back(getTypeIDFor(GV));
-}
-
-void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,
-                                        ArrayRef<const GlobalValue *> TyInfo) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  std::vector<unsigned> IdsInFilter(TyInfo.size());
-  for (unsigned I = 0, E = TyInfo.size(); I != E; ++I)
-    IdsInFilter[I] = getTypeIDFor(TyInfo[I]);
-  LP.TypeIds.push_back(getFilterIDFor(IdsInFilter));
-}
-
-void MachineFunction::tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap,
-                                      bool TidyIfNoBeginLabels) {
-  for (unsigned i = 0; i != LandingPads.size(); ) {
-    LandingPadInfo &LandingPad = LandingPads[i];
-    if (LandingPad.LandingPadLabel &&
-        !LandingPad.LandingPadLabel->isDefined() &&
-        (!LPMap || (*LPMap)[LandingPad.LandingPadLabel] == 0))
-      LandingPad.LandingPadLabel = nullptr;
-
-    // Special case: we *should* emit LPs with null LP MBB. This indicates
-    // "nounwind" case.
-    if (!LandingPad.LandingPadLabel && LandingPad.LandingPadBlock) {
-      LandingPads.erase(LandingPads.begin() + i);
-      continue;
-    }
-
-    if (TidyIfNoBeginLabels) {
-      for (unsigned j = 0, e = LandingPads[i].BeginLabels.size(); j != e; ++j) {
-        MCSymbol *BeginLabel = LandingPad.BeginLabels[j];
-        MCSymbol *EndLabel = LandingPad.EndLabels[j];
-        if ((BeginLabel->isDefined() || (LPMap && (*LPMap)[BeginLabel] != 0)) &&
-            (EndLabel->isDefined() || (LPMap && (*LPMap)[EndLabel] != 0)))
-          continue;
-
-        LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
-        LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
-        --j;
-        --e;
-      }
-
-      // Remove landing pads with no try-ranges.
-      if (LandingPads[i].BeginLabels.empty()) {
-        LandingPads.erase(LandingPads.begin() + i);
-        continue;
-      }
-    }
-
-    // If there is no landing pad, ensure that the list of typeids is empty.
-    // If the only typeid is a cleanup, this is the same as having no typeids.
-    if (!LandingPad.LandingPadBlock ||
-        (LandingPad.TypeIds.size() == 1 && !LandingPad.TypeIds[0]))
-      LandingPad.TypeIds.clear();
-    ++i;
-  }
-}
-
-void MachineFunction::addCleanup(MachineBasicBlock *LandingPad) {
-  LandingPadInfo &LP = getOrCreateLandingPadInfo(LandingPad);
-  LP.TypeIds.push_back(0);
 }
 
 void MachineFunction::setCallSiteLandingPad(MCSymbol *Sym,
@@ -869,7 +819,7 @@ unsigned MachineFunction::getTypeIDFor(const GlobalValue *TI) {
   return TypeInfos.size();
 }
 
-int MachineFunction::getFilterIDFor(std::vector<unsigned> &TyIds) {
+int MachineFunction::getFilterIDFor(ArrayRef<unsigned> TyIds) {
   // If the new filter coincides with the tail of an existing filter, then
   // re-use the existing filter.  Folding filters more than this requires
   // re-ordering filters and/or their elements - probably not worth it.
@@ -1187,58 +1137,65 @@ void MachineFunction::finalizeDebugInstrRefs() {
   auto *TII = getSubtarget().getInstrInfo();
 
   auto MakeUndefDbgValue = [&](MachineInstr &MI) {
-    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE);
+    const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_VALUE_LIST);
     MI.setDesc(RefII);
-    MI.getOperand(0).setReg(0);
-    MI.getOperand(1).ChangeToRegister(0, false);
+    MI.setDebugValueUndef();
   };
 
   DenseMap<Register, DebugInstrOperandPair> ArgDbgPHIs;
   for (auto &MBB : *this) {
     for (auto &MI : MBB) {
-      if (!MI.isDebugRef() || !MI.getOperand(0).isReg())
+      if (!MI.isDebugRef())
         continue;
 
-      Register Reg = MI.getOperand(0).getReg();
+      bool IsValidRef = true;
 
-      // Some vregs can be deleted as redundant in the meantime. Mark those
-      // as DBG_VALUE $noreg. Additionally, some normal instructions are
-      // quickly deleted, leaving dangling references to vregs with no def.
-      if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
-        MakeUndefDbgValue(MI);
-        continue;
-      }
+      for (MachineOperand &MO : MI.debug_operands()) {
+        if (!MO.isReg())
+          continue;
 
-      assert(Reg.isVirtual());
-      MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
+        Register Reg = MO.getReg();
 
-      // If we've found a copy-like instruction, follow it back to the
-      // instruction that defines the source value, see salvageCopySSA docs
-      // for why this is important.
-      if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
-        auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
-        MI.getOperand(0).ChangeToImmediate(Result.first);
-        MI.getOperand(1).setImm(Result.second);
-      } else {
-        // Otherwise, identify the operand number that the VReg refers to.
-        unsigned OperandIdx = 0;
-        for (const auto &MO : DefMI.operands()) {
-          if (MO.isReg() && MO.isDef() && MO.getReg() == Reg)
-            break;
-          ++OperandIdx;
+        // Some vregs can be deleted as redundant in the meantime. Mark those
+        // as DBG_VALUE $noreg. Additionally, some normal instructions are
+        // quickly deleted, leaving dangling references to vregs with no def.
+        if (Reg == 0 || !RegInfo->hasOneDef(Reg)) {
+          IsValidRef = false;
+          break;
         }
-        assert(OperandIdx < DefMI.getNumOperands());
 
-        // Morph this instr ref to point at the given instruction and operand.
-        unsigned ID = DefMI.getDebugInstrNum();
-        MI.getOperand(0).ChangeToImmediate(ID);
-        MI.getOperand(1).setImm(OperandIdx);
+        assert(Reg.isVirtual());
+        MachineInstr &DefMI = *RegInfo->def_instr_begin(Reg);
+
+        // If we've found a copy-like instruction, follow it back to the
+        // instruction that defines the source value, see salvageCopySSA docs
+        // for why this is important.
+        if (DefMI.isCopyLike() || TII->isCopyInstr(DefMI)) {
+          auto Result = salvageCopySSA(DefMI, ArgDbgPHIs);
+          MO.ChangeToDbgInstrRef(Result.first, Result.second);
+        } else {
+          // Otherwise, identify the operand number that the VReg refers to.
+          unsigned OperandIdx = 0;
+          for (const auto &DefMO : DefMI.operands()) {
+            if (DefMO.isReg() && DefMO.isDef() && DefMO.getReg() == Reg)
+              break;
+            ++OperandIdx;
+          }
+          assert(OperandIdx < DefMI.getNumOperands());
+
+          // Morph this instr ref to point at the given instruction and operand.
+          unsigned ID = DefMI.getDebugInstrNum();
+          MO.ChangeToDbgInstrRef(ID, OperandIdx);
+        }
       }
+
+      if (!IsValidRef)
+        MakeUndefDbgValue(MI);
     }
   }
 }
 
-bool MachineFunction::useDebugInstrRef() const {
+bool MachineFunction::shouldUseDebugInstrRef() const {
   // Disable instr-ref at -O0: it's very slow (in compile time). We can still
   // have optimized code inlined into this unoptimized code, however with
   // fewer and less aggressive optimizations happening, coverage and accuracy
@@ -1254,6 +1211,14 @@ bool MachineFunction::useDebugInstrRef() const {
     return true;
 
   return false;
+}
+
+bool MachineFunction::useDebugInstrRef() const {
+  return UseDebugInstrRef;
+}
+
+void MachineFunction::setUseDebugInstrRef(bool Use) {
+  UseDebugInstrRef = Use;
 }
 
 // Use one million as a high / reserved number.

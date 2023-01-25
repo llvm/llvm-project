@@ -12,6 +12,7 @@
 #include "llvm/FuzzMutate/Random.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 
@@ -26,7 +27,8 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
 Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
                                            ArrayRef<Instruction *> Insts,
                                            ArrayRef<Value *> Srcs,
-                                           SourcePred Pred) {
+                                           SourcePred Pred,
+                                           bool allowConstant) {
   auto MatchesPred = [&Srcs, &Pred](Instruction *Inst) {
     return Pred.matches(Srcs, Inst);
   };
@@ -35,11 +37,12 @@ Value *RandomIRBuilder::findOrCreateSource(BasicBlock &BB,
   RS.sample(nullptr, /*Weight=*/1);
   if (Instruction *Src = RS.getSelection())
     return Src;
-  return newSource(BB, Insts, Srcs, Pred);
+  return newSource(BB, Insts, Srcs, Pred, allowConstant);
 }
 
 Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
-                                  ArrayRef<Value *> Srcs, SourcePred Pred) {
+                                  ArrayRef<Value *> Srcs, SourcePred Pred,
+                                  bool allowConstant) {
   // Generate some constants to choose from.
   auto RS = makeSampler<Value *>(Rand);
   RS.sample(Pred.generate(Srcs, KnownTypes));
@@ -66,12 +69,31 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
       NewLoad->eraseFromParent();
   }
 
-  assert(!RS.isEmpty() && "Failed to generate sources");
-  return RS.getSelection();
+  Value *newSrc = RS.getSelection();
+  // Generate a stack alloca and store the constant to it if constant is not
+  // allowed, our hope is that later mutations can generate some values and
+  // store to this placeholder.
+  if (!allowConstant && isa<Constant>(newSrc)) {
+    Type *Ty = newSrc->getType();
+    Function *F = BB.getParent();
+    BasicBlock *EntryBB = &F->getEntryBlock();
+    /// TODO: For all Allocas, maybe allocate an array.
+    DataLayout DL(BB.getParent()->getParent());
+    AllocaInst *Alloca = new AllocaInst(Ty, DL.getProgramAddressSpace(), "A",
+                                        EntryBB->getTerminator());
+    new StoreInst(newSrc, Alloca, EntryBB->getTerminator());
+    if (BB.getTerminator()) {
+      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", BB.getTerminator());
+    } else {
+      newSrc = new LoadInst(Ty, Alloca, /*ArrLen,*/ "L", &BB);
+    }
+  }
+  return newSrc;
 }
 
 static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
                                     const Value *Replacement) {
+  unsigned int OperandNo = Operand.getOperandNo();
   if (Operand->getType() != Replacement->getType())
     return false;
   switch (I->getOpcode()) {
@@ -80,13 +102,21 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
   case Instruction::ExtractValue:
     // TODO: We could potentially validate these, but for now just leave indices
     // alone.
-    if (Operand.getOperandNo() >= 1)
+    if (OperandNo >= 1)
       return false;
     break;
   case Instruction::InsertValue:
   case Instruction::InsertElement:
   case Instruction::ShuffleVector:
-    if (Operand.getOperandNo() >= 2)
+    if (OperandNo >= 2)
+      return false;
+    break;
+  // For Br/Switch, we only try to modify the 1st Operand (condition).
+  // Modify other operands, like switch case may accidently change case from
+  // ConstantInt to a register, which is illegal.
+  case Instruction::Switch:
+  case Instruction::Br:
+    if (OperandNo >= 1)
       return false;
     break;
   default:
@@ -159,4 +189,9 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
   if (auto RS = makeSampler(Rand, make_filter_range(Insts, IsMatchingPtr)))
     return RS.getSelection();
   return nullptr;
+}
+
+Type *RandomIRBuilder::randomType() {
+  uint64_t TyIdx = uniform<uint64_t>(Rand, 0, KnownTypes.size() - 1);
+  return KnownTypes[TyIdx];
 }

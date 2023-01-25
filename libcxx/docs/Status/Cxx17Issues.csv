@@ -176,7 +176,7 @@
 "`2720 <https://wg21.link/LWG2720>`__","permissions function incorrectly specified for symlinks","Oulu","|Complete|",""
 "`2721 <https://wg21.link/LWG2721>`__","remove_all has incorrect post conditions","Oulu","|Complete|",""
 "`2723 <https://wg21.link/LWG2723>`__","Do directory_iterator and recursive_directory_iterator become the end iterator upon error?","Oulu","|Complete|",""
-"`2724 <https://wg21.link/LWG2724>`__","The protected virtual member functions of memory_resource should be private","Oulu","",""
+"`2724 <https://wg21.link/LWG2724>`__","The protected virtual member functions of memory_resource should be private","Oulu","|Complete|","16.0"
 "`2725 <https://wg21.link/LWG2725>`__","filesystem::exists(const path&, error_code&) error reporting","Oulu","|Complete|",""
 "`2726 <https://wg21.link/LWG2726>`__","``[recursive_]directory_iterator::increment(error_code&)`` is underspecified","Oulu","|Complete|",""
 "`2727 <https://wg21.link/LWG2727>`__","Parallel algorithms with constexpr specifier","Oulu","",""

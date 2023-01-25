@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <thread>
 
 namespace clang {
@@ -20,7 +21,7 @@ TEST(CancellationTest, CancellationTest) {
 }
 
 TEST(CancellationTest, CancelerDiesContextLives) {
-  llvm::Optional<WithContext> ContextWithCancellation;
+  std::optional<WithContext> ContextWithCancellation;
   {
     auto Task = cancelableTask();
     ContextWithCancellation.emplace(std::move(Task.first));

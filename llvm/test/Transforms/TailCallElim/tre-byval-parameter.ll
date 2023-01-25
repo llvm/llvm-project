@@ -23,7 +23,7 @@
 %struct.B = type { i32, float }
 
 ; Function Attrs: uwtable
-define dso_local i32 @_Z3fooi1S(i32 %count, %struct.S* nocapture readonly byval(%struct.S) align 8 %p1) local_unnamed_addr #0 {
+define dso_local i32 @_Z3fooi1S(i32 %count, ptr nocapture readonly byval(%struct.S) align 8 %p1) local_unnamed_addr #0 {
 ; CHECK-LABEL: @_Z3fooi1S(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP_I1:%.*]] = alloca [[STRUCT_S:%.*]], align 8
@@ -37,30 +37,20 @@ define dso_local i32 @_Z3fooi1S(i32 %count, %struct.S* nocapture readonly byval(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[COUNT_TR]], 10
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %struct.S* [[AGG_TMP]] to i8*
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast %struct.S* [[P1:%.*]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[TMP0]], i8* nonnull align 8 dereferenceable(20) [[TMP1]], i64 20, i1 false)
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z3zoo1S(%struct.S* nonnull byval(%struct.S) align 8 [[AGG_TMP]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP]], ptr nonnull align 8 dereferenceable(20) [[P1:%.*]], i64 20, i1 false)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @_Z3zoo1S(ptr nonnull byval(%struct.S) align 8 [[AGG_TMP]])
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[COUNT_TR]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %struct.S* [[AGG_TMP1]] to i8*
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast %struct.S* [[P1]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[TMP2]], i8* nonnull align 8 dereferenceable(20) [[TMP3]], i64 20, i1 false)
-; CHECK-NEXT:    [[AGG_TMP14_0__SROA_CAST:%.*]] = bitcast %struct.S* [[AGG_TMP14]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull [[AGG_TMP14_0__SROA_CAST]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.S* [[AGG_TMP_I]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull [[TMP4]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[AGG_TMP14_0__SROA_CAST]], i8* nonnull align 8 dereferenceable(20) [[TMP2]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) [[TMP4]], i8* nonnull align 8 dereferenceable(20) [[AGG_TMP14_0__SROA_CAST]], i64 20, i1 false)
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast %struct.S* [[AGG_TMP_I1]] to i8*
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast %struct.S* [[AGG_TMP_I]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP5]], i8* align 8 [[TMP6]], i64 20, i1 false)
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast %struct.S* [[P1]] to i8*
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast %struct.S* [[AGG_TMP_I1]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 [[TMP7]], i8* align 8 [[TMP8]], i64 20, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull [[AGG_TMP14_0__SROA_CAST]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull [[TMP4]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], ptr nonnull align 8 dereferenceable(20) [[P1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP14]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) [[AGG_TMP_I]], ptr nonnull align 8 dereferenceable(20) [[AGG_TMP14]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TMP_I1]], ptr align 8 [[AGG_TMP_I]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[P1]], ptr align 8 [[AGG_TMP_I1]], i64 20, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP14]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 20, ptr nonnull [[AGG_TMP_I]])
 ; CHECK-NEXT:    br label [[TAILRECURSE]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret i32 [[CALL]]
@@ -74,26 +64,20 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %0 = bitcast %struct.S* %agg.tmp to i8*
-  %1 = bitcast %struct.S* %p1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) %0, i8* nonnull align 8 dereferenceable(20) %1, i64 20, i1 false)
-  %call = call i32 @_Z3zoo1S(%struct.S* nonnull byval(%struct.S) align 8 %agg.tmp)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp, ptr nonnull align 8 dereferenceable(20) %p1, i64 20, i1 false)
+  %call = call i32 @_Z3zoo1S(ptr nonnull byval(%struct.S) align 8 %agg.tmp)
   br label %return
 
 if.end:                                           ; preds = %entry
   %add = add nsw i32 %count, 1
-  %2 = bitcast %struct.S* %agg.tmp1 to i8*
-  %3 = bitcast %struct.S* %p1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) %2, i8* nonnull align 8 dereferenceable(20) %3, i64 20, i1 false)
-  %agg.tmp14.0..sroa_cast = bitcast %struct.S* %agg.tmp14 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull %agg.tmp14.0..sroa_cast)
-  %4 = bitcast %struct.S* %agg.tmp.i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull %4)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) %agg.tmp14.0..sroa_cast, i8* nonnull align 8 dereferenceable(20) %2, i64 20, i1 false)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(20) %4, i8* nonnull align 8 dereferenceable(20) %agg.tmp14.0..sroa_cast, i64 20, i1 false)
-  %call.i = call i32 @_Z3fooi1S(i32 %add, %struct.S* nonnull byval(%struct.S) align 8 %agg.tmp.i)
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull %agg.tmp14.0..sroa_cast)
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull %4)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp1, ptr nonnull align 8 dereferenceable(20) %p1, i64 20, i1 false)
+  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %agg.tmp14)
+  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %agg.tmp.i)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp14, ptr nonnull align 8 dereferenceable(20) %agg.tmp1, i64 20, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(20) %agg.tmp.i, ptr nonnull align 8 dereferenceable(20) %agg.tmp14, i64 20, i1 false)
+  %call.i = call i32 @_Z3fooi1S(i32 %add, ptr nonnull byval(%struct.S) align 8 %agg.tmp.i)
+  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %agg.tmp14)
+  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %agg.tmp.i)
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
@@ -101,16 +85,16 @@ return:                                           ; preds = %if.end, %if.then
   ret i32 %retval.0
 }
 
-declare dso_local i32 @_Z3zoo1S(%struct.S* byval(%struct.S) align 8) local_unnamed_addr #1
+declare dso_local i32 @_Z3zoo1S(ptr byval(%struct.S) align 8) local_unnamed_addr #1
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
 
 attributes #0 = { uwtable }
 attributes #1 = { uwtable }

@@ -23,6 +23,8 @@
 // template <class P1, class P2, class U1, class U2>
 // void polymorphic_allocator<T>::construct(pair<P1, P2>*, pair<U1, U2> const&)
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <type_traits>
 #include <utility>

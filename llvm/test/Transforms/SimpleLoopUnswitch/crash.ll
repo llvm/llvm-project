@@ -1,6 +1,6 @@
-; RUN: opt < %s -simple-loop-unswitch -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=simple-loop-unswitch -verify-memoryssa -disable-output
 
-define void @test1(i32* %S2) {
+define void @test1(ptr %S2) {
 entry:
 	br i1 false, label %list_Length.exit, label %cond_true.i
 cond_true.i:		; preds = %entry
@@ -20,7 +20,7 @@ bb62:		; preds = %bb62.loopexit, %bb44
 cond_next68:		; preds = %bb62
 	br i1 false, label %return.loopexit, label %bb44
 bb78:		; preds = %list_Length.exit9
-	%tmp49.not = icmp eq i32* %S2, null		; <i1> [#uses=1]
+	%tmp49.not = icmp eq ptr %S2, null		; <i1> [#uses=1]
 	br label %bb44
 return.loopexit:		; preds = %cond_next68, %bb62
 	%retval.0.ph = phi i32 [ 1, %cond_next68 ], [ 0, %bb62 ]		; <i32> [#uses=1]
@@ -47,7 +47,7 @@ for.end:                                          ; preds = %for.body, %entry
 }
 
 ; PR6879
-define i32* @test3(i32** %p_45, i16 zeroext %p_46, i64 %p_47, i64 %p_48, i16 signext %p_49) nounwind {
+define ptr @test3(ptr %p_45, i16 zeroext %p_46, i64 %p_47, i64 %p_48, i16 signext %p_49) nounwind {
 entry:
   br label %for.cond
 
@@ -62,5 +62,5 @@ for.cond4:                                        ; preds = %for.cond
   br label %for.cond
 
 for.end88:                                        ; preds = %for.cond
-  ret i32* undef
+  ret ptr undef
 }

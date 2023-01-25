@@ -231,7 +231,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   // a function call is present until a better alternative becomes
   // available. This is similar to the conservative treatment of
   // convergent function calls in GVNHoist and JumpThreading.
-  for (auto BB : L->blocks()) {
+  for (auto *BB : L->blocks()) {
     for (auto &II : *BB) {
       if (auto CI = dyn_cast<CallBase>(&II)) {
         if (CI->isConvergent()) {
@@ -392,7 +392,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
 
   // Move the new backedge block to right after the last backedge block.
   Function::iterator InsertPos = ++BackedgeBlocks.back()->getIterator();
-  F->getBasicBlockList().splice(InsertPos, F->getBasicBlockList(), BEBlock);
+  F->splice(InsertPos, F, BEBlock->getIterator());
 
   // Now that the block has been inserted into the function, create PHI nodes in
   // the backedge block which correspond to any PHI nodes in the header block.
@@ -440,7 +440,7 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
     // eliminate the PHI Node.
     if (HasUniqueIncomingValue) {
       NewPN->replaceAllUsesWith(UniqueValue);
-      BEBlock->getInstList().erase(NewPN);
+      NewPN->eraseFromParent();
     }
   }
 
@@ -450,8 +450,8 @@ static BasicBlock *insertUniqueBackedgeBlock(Loop *L, BasicBlock *Preheader,
   // it from the backedge and add it to BEBlock.
   unsigned LoopMDKind = BEBlock->getContext().getMDKindID("llvm.loop");
   MDNode *LoopMD = nullptr;
-  for (unsigned i = 0, e = BackedgeBlocks.size(); i != e; ++i) {
-    Instruction *TI = BackedgeBlocks[i]->getTerminator();
+  for (BasicBlock *BB : BackedgeBlocks) {
+    Instruction *TI = BB->getTerminator();
     if (!LoopMD)
       LoopMD = TI->getMetadata(LoopMDKind);
     TI->setMetadata(LoopMDKind, nullptr);
@@ -649,18 +649,13 @@ ReprocessLoop:
           continue;
         if (!L->makeLoopInvariant(
                 Inst, AnyInvariant,
-                Preheader ? Preheader->getTerminator() : nullptr, MSSAU)) {
+                Preheader ? Preheader->getTerminator() : nullptr, MSSAU, SE)) {
           AllInvariant = false;
           break;
         }
       }
-      if (AnyInvariant) {
+      if (AnyInvariant)
         Changed = true;
-        // The loop disposition of all SCEV expressions that depend on any
-        // hoisted values have also changed.
-        if (SE)
-          SE->forgetLoopDispositions(L);
-      }
       if (!AllInvariant) continue;
 
       // The block has now been cleared of all instructions except for

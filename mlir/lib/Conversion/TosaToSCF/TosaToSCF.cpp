@@ -14,7 +14,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -35,8 +35,7 @@ static void inlineIfCase(Region &srcRegion, Region &dstRegion,
   rewriter.create<scf::YieldOp>(yield.getLoc(), yield.getInputs());
   rewriter.eraseOp(yield);
 
-  headBlock->eraseArguments(
-      llvm::to_vector<4>(llvm::seq<unsigned>(0, headBlock->getNumArguments())));
+  headBlock->eraseArguments(0, headBlock->getNumArguments());
 }
 
 static void inlineWhileCase(Region &srcRegion, Region &dstRegion,

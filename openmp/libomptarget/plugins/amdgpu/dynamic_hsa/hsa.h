@@ -63,6 +63,7 @@ typedef enum {
 typedef enum {
   HSA_AGENT_INFO_NAME = 0,
   HSA_AGENT_INFO_VENDOR_NAME = 1,
+  HSA_AGENT_INFO_FEATURE = 2,
   HSA_AGENT_INFO_PROFILE = 4,
   HSA_AGENT_INFO_WAVEFRONT_SIZE = 6,
   HSA_AGENT_INFO_WORKGROUP_MAX_DIM = 7,
@@ -82,6 +83,11 @@ typedef enum {
   HSA_SYSTEM_INFO_VERSION_MAJOR = 0,
   HSA_SYSTEM_INFO_VERSION_MINOR = 1,
 } hsa_system_info_t;
+
+typedef enum {
+  HSA_AGENT_FEATURE_KERNEL_DISPATCH = 1,
+  HSA_AGENT_FEATURE_AGENT_DISPATCH = 2,
+} hsa_agent_feature_t;
 
 typedef struct hsa_region_s {
   uint64_t handle;
@@ -123,11 +129,21 @@ hsa_status_t hsa_signal_create(hsa_signal_value_t initial_value,
                                const hsa_agent_t *consumers,
                                hsa_signal_t *signal);
 
+hsa_status_t hsa_amd_signal_create(hsa_signal_value_t initial_value,
+                                   uint32_t num_consumers,
+                                   const hsa_agent_t *consumers,
+                                   uint64_t attributes, hsa_signal_t *signal);
+
 hsa_status_t hsa_signal_destroy(hsa_signal_t signal);
 
 void hsa_signal_store_relaxed(hsa_signal_t signal, hsa_signal_value_t value);
 
 void hsa_signal_store_screlease(hsa_signal_t signal, hsa_signal_value_t value);
+
+hsa_signal_value_t hsa_signal_load_scacquire(hsa_signal_t signal);
+
+void hsa_signal_subtract_screlease(hsa_signal_t signal,
+                                   hsa_signal_value_t value);
 
 typedef enum {
   HSA_SIGNAL_CONDITION_EQ = 0,
@@ -149,6 +165,11 @@ typedef enum {
   HSA_QUEUE_TYPE_MULTI = 0,
   HSA_QUEUE_TYPE_SINGLE = 1,
 } hsa_queue_type_t;
+
+typedef enum {
+  HSA_QUEUE_FEATURE_KERNEL_DISPATCH = 1,
+  HSA_QUEUE_FEATURE_AGENT_DISPATCH = 2
+} hsa_queue_feature_t;
 
 typedef uint32_t hsa_queue_type32_t;
 
@@ -187,6 +208,7 @@ uint64_t hsa_queue_add_write_index_relaxed(const hsa_queue_t *queue,
 
 typedef enum {
   HSA_PACKET_TYPE_KERNEL_DISPATCH = 2,
+  HSA_PACKET_TYPE_BARRIER_AND = 3,
 } hsa_packet_type_t;
 
 typedef enum { HSA_FENCE_SCOPE_SYSTEM = 2 } hsa_fence_scope_t;
@@ -231,6 +253,15 @@ typedef struct hsa_kernel_dispatch_packet_s {
   hsa_signal_t completion_signal;
 } hsa_kernel_dispatch_packet_t;
 
+typedef struct hsa_barrier_and_packet_s {
+  uint16_t header;
+  uint16_t reserved0;
+  uint32_t reserved1;
+  hsa_signal_t dep_signal[5];
+  uint64_t reserved2;
+  hsa_signal_t completion_signal;
+} hsa_barrier_and_packet_t;
+
 typedef enum { HSA_PROFILE_BASE = 0, HSA_PROFILE_FULL = 1 } hsa_profile_t;
 
 typedef enum {
@@ -268,6 +299,12 @@ typedef enum {
   HSA_SYMBOL_KIND_INDIRECT_FUNCTION = 2
 } hsa_symbol_kind_t;
 
+typedef enum {
+  HSA_DEFAULT_FLOAT_ROUNDING_MODE_DEFAULT = 0,
+  HSA_DEFAULT_FLOAT_ROUNDING_MODE_ZERO = 1,
+  HSA_DEFAULT_FLOAT_ROUNDING_MODE_NEAR = 2,
+} hsa_default_float_rounding_mode_t;
+
 hsa_status_t hsa_memory_copy(void *dst, const void *src, size_t size);
 
 hsa_status_t hsa_executable_create(hsa_profile_t profile,
@@ -275,10 +312,18 @@ hsa_status_t hsa_executable_create(hsa_profile_t profile,
                                    const char *options,
                                    hsa_executable_t *executable);
 
+hsa_status_t hsa_executable_create_alt(
+    hsa_profile_t profile,
+    hsa_default_float_rounding_mode_t default_float_rounding_mode,
+    const char *options, hsa_executable_t *executable);
+
 hsa_status_t hsa_executable_destroy(hsa_executable_t executable);
 
 hsa_status_t hsa_executable_freeze(hsa_executable_t executable,
                                    const char *options);
+
+hsa_status_t hsa_executable_validate(hsa_executable_t executable,
+                                     uint32_t *result);
 
 hsa_status_t
 hsa_executable_symbol_get_info(hsa_executable_symbol_t executable_symbol,
@@ -291,6 +336,11 @@ hsa_status_t hsa_executable_iterate_symbols(
                              hsa_executable_symbol_t symbol, void *data),
     void *data);
 
+hsa_status_t hsa_executable_get_symbol_by_name(hsa_executable_t executable,
+                                               const char *symbol_name,
+                                               const hsa_agent_t *agent,
+                                               hsa_executable_symbol_t *symbol);
+
 hsa_status_t hsa_code_object_deserialize(void *serialized_code_object,
                                          size_t serialized_code_object_size,
                                          const char *options,
@@ -300,6 +350,16 @@ hsa_status_t hsa_executable_load_code_object(hsa_executable_t executable,
                                              hsa_agent_t agent,
                                              hsa_code_object_t code_object,
                                              const char *options);
+
+hsa_status_t hsa_code_object_destroy(hsa_code_object_t code_object);
+
+typedef bool (*hsa_amd_signal_handler)(hsa_signal_value_t value, void *arg);
+
+hsa_status_t hsa_amd_signal_async_handler(hsa_signal_t signal,
+                                          hsa_signal_condition_t cond,
+                                          hsa_signal_value_t value,
+                                          hsa_amd_signal_handler handler,
+                                          void *arg);
 
 #ifdef __cplusplus
 }

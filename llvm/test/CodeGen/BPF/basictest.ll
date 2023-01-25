@@ -10,17 +10,17 @@ define i32 @test0(i32 %X) {
 ; CHECK-LABEL: store_imm:
 ; CHECK: *(u32 *)(r1 + 0) = r{{[03]}}
 ; CHECK: *(u32 *)(r2 + 4) = r{{[03]}}
-define i32 @store_imm(i32* %a, i32* %b) {
+define i32 @store_imm(ptr %a, ptr %b) {
 entry:
-  store i32 0, i32* %a, align 4
-  %0 = getelementptr inbounds i32, i32* %b, i32 1
-  store i32 0, i32* %0, align 4
+  store i32 0, ptr %a, align 4
+  %0 = getelementptr inbounds i32, ptr %b, i32 1
+  store i32 0, ptr %0, align 4
   ret i32 0
 }
 
 @G = external global i8
 define zeroext i8 @loadG() {
-  %tmp = load i8, i8* @G
+  %tmp = load i8, ptr @G
   ret i8 %tmp
 ; CHECK-LABEL: loadG:
 ; CHECK: r1 =

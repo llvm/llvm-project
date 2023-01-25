@@ -5,7 +5,7 @@
 
 declare void @foo()
 
-define i32 @f1(i32 %a, i32 %b, i32* %v) {
+define i32 @f1(i32 %a, i32 %b, ptr %v) {
 entry:
 ; CHECK-LABEL: f1:
 ; CHECK: bne LBB
@@ -14,7 +14,7 @@ entry:
 
 cond_true:              ; preds = %entry
         call void @foo()
-        store i32 0, i32* %v
+        store i32 0, ptr %v
         ret i32 0
 
 return:         ; preds = %entry
@@ -22,7 +22,7 @@ return:         ; preds = %entry
         ret i32 1
 }
 
-define i32 @f2(i32 %a, i32 %b, i32* %v) {
+define i32 @f2(i32 %a, i32 %b, ptr %v) {
 entry:
 ; CHECK-LABEL: f2:
 ; CHECK: bge LBB
@@ -31,7 +31,7 @@ entry:
 
 cond_true:              ; preds = %entry
         call void @foo()
-        store i32 0, i32* %v
+        store i32 0, ptr %v
         ret i32 0
 
 return:         ; preds = %entry
@@ -39,7 +39,7 @@ return:         ; preds = %entry
         ret i32 1
 }
 
-define i32 @f3(i32 %a, i32 %b, i32* %v) {
+define i32 @f3(i32 %a, i32 %b, ptr %v) {
 entry:
 ; CHECK-LABEL: f3:
 ; CHECK: bhs LBB
@@ -48,7 +48,7 @@ entry:
 
 cond_true:              ; preds = %entry
         call void @foo()
-        store i32 0, i32* %v
+        store i32 0, ptr %v
         ret i32 0
 
 return:         ; preds = %entry
@@ -56,7 +56,7 @@ return:         ; preds = %entry
         ret i32 1
 }
 
-define i32 @f4(i32 %a, i32 %b, i32* %v) {
+define i32 @f4(i32 %a, i32 %b, ptr %v) {
 entry:
 ; CHECK-LABEL: f4:
 ; CHECK: blo LBB
@@ -65,7 +65,7 @@ entry:
 
 cond_true:              ; preds = %entry
         call void @foo()
-        store i32 0, i32* %v
+        store i32 0, ptr %v
         ret i32 0
 
 return:         ; preds = %entry

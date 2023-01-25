@@ -47,6 +47,13 @@ public:
   fir::CharBoxValue createSubstring(const fir::CharBoxValue &str,
                                     llvm::ArrayRef<mlir::Value> bounds);
 
+  /// Compute substring base address given the raw address (not fir.boxchar) of
+  /// a scalar string, a substring / lower bound, and the substring type.
+  mlir::Value genSubstringBase(mlir::Value stringRawAddr,
+                               mlir::Value lowerBound,
+                               mlir::Type substringAddrType,
+                               mlir::Value one = {});
+
   /// Return blank character of given \p type !fir.char<kind>
   mlir::Value createBlankConstant(fir::CharacterType type);
 
@@ -175,6 +182,9 @@ public:
   /// It adjusts the length from the number of bytes per the descriptor
   /// to the number of characters per the Fortran KIND.
   mlir::Value readLengthFromBox(mlir::Value box);
+
+  /// Same as readLengthFromBox but the CharacterType is provided.
+  mlir::Value readLengthFromBox(mlir::Value box, fir::CharacterType charTy);
 
 private:
   /// FIXME: the implementation also needs a clean-up now that

@@ -13,10 +13,10 @@
 #include "TestTU.h"
 #include "index/MemIndex.h"
 #include "support/Path.h"
-#include "llvm/ADT/None.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -31,14 +31,14 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
   FS.Files[FooCpp];
   FS.Files[FooH];
   FS.Files[Invalid];
-  Optional<Path> PathResult =
-      getCorrespondingHeaderOrSource(FooCpp, FS.view(llvm::None));
+  std::optional<Path> PathResult =
+      getCorrespondingHeaderOrSource(FooCpp, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.value(), FooH);
+  ASSERT_EQ(*PathResult, FooH);
 
-  PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(llvm::None));
+  PathResult = getCorrespondingHeaderOrSource(FooH, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.value(), FooCpp);
+  ASSERT_EQ(*PathResult, FooCpp);
 
   // Test with header file in capital letters and different extension, source
   // file with different extension
@@ -47,18 +47,18 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[FooC];
   FS.Files[FooHH];
-  PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(llvm::None));
+  PathResult = getCorrespondingHeaderOrSource(FooC, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.value(), FooHH);
+  ASSERT_EQ(*PathResult, FooHH);
 
   // Test with both capital letters
   auto Foo2C = testPath("foo2.C");
   auto Foo2HH = testPath("foo2.HH");
   FS.Files[Foo2C];
   FS.Files[Foo2HH];
-  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(llvm::None));
+  PathResult = getCorrespondingHeaderOrSource(Foo2C, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.value(), Foo2HH);
+  ASSERT_EQ(*PathResult, Foo2HH);
 
   // Test with source file as capital letter and .hxx header file
   auto Foo3C = testPath("foo3.C");
@@ -66,13 +66,13 @@ TEST(HeaderSourceSwitchTest, FileHeuristic) {
 
   FS.Files[Foo3C];
   FS.Files[Foo3HXX];
-  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(llvm::None));
+  PathResult = getCorrespondingHeaderOrSource(Foo3C, FS.view(std::nullopt));
   EXPECT_TRUE(PathResult.has_value());
-  ASSERT_EQ(PathResult.value(), Foo3HXX);
+  ASSERT_EQ(*PathResult, Foo3HXX);
 
   // Test if asking for a corresponding file that doesn't exist returns an empty
   // string.
-  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(llvm::None));
+  PathResult = getCorrespondingHeaderOrSource(Invalid, FS.view(std::nullopt));
   EXPECT_FALSE(PathResult.has_value());
 }
 
@@ -142,14 +142,14 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
   // Test for switch from .h header to .cc source
   struct {
     llvm::StringRef HeaderCode;
-    llvm::Optional<std::string> ExpectedSource;
+    std::optional<std::string> ExpectedSource;
   } TestCases[] = {
-      {"// empty, no header found", llvm::None},
+      {"// empty, no header found", std::nullopt},
       {R"cpp(
          // no definition found in the index.
          void NonDefinition();
        )cpp",
-       llvm::None},
+       std::nullopt},
       {R"cpp(
          void A_Sym1();
        )cpp",
@@ -168,11 +168,11 @@ TEST(HeaderSourceSwitchTest, FromHeaderToSource) {
        )cpp",
        testPath("a.cpp")},
 
-       {R"cpp(
+      {R"cpp(
           // We don't have definition in the index, so stay in the header.
           void B_Sym3_NoDef();
        )cpp",
-       None},
+       std::nullopt},
   };
   for (const auto &Case : TestCases) {
     TestTU TU = TestTU::withCode(Case.HeaderCode);
@@ -211,14 +211,14 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
   // Test for switching from .cc source file to .h header.
   struct {
     llvm::StringRef SourceCode;
-    llvm::Optional<std::string> ExpectedResult;
+    std::optional<std::string> ExpectedResult;
   } TestCases[] = {
-      {"// empty, no header found", llvm::None},
+      {"// empty, no header found", std::nullopt},
       {R"cpp(
          // symbol not in index, no header found
          void Local() {}
        )cpp",
-       llvm::None},
+       std::nullopt},
 
       {R"cpp(
          // a.h wins.

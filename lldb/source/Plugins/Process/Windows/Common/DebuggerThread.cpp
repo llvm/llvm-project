@@ -30,6 +30,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <optional>
 #include <psapi.h>
 
 #ifndef STATUS_WX86_BREAKPOINT
@@ -412,34 +413,34 @@ DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
   return DBG_CONTINUE;
 }
 
-static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
+static std::optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
   // Check that file is not empty as we cannot map a file with zero length.
   DWORD dwFileSizeHi = 0;
   DWORD dwFileSizeLo = ::GetFileSize(hFile, &dwFileSizeHi);
   if (dwFileSizeLo == 0 && dwFileSizeHi == 0)
-    return llvm::None;
+    return std::nullopt;
 
   AutoHandle filemap(
       ::CreateFileMappingW(hFile, nullptr, PAGE_READONLY, 0, 1, NULL), nullptr);
   if (!filemap.IsValid())
-    return llvm::None;
+    return std::nullopt;
 
   auto view_deleter = [](void *pMem) { ::UnmapViewOfFile(pMem); };
   std::unique_ptr<void, decltype(view_deleter)> pMem(
       ::MapViewOfFile(filemap.get(), FILE_MAP_READ, 0, 0, 1), view_deleter);
   if (!pMem)
-    return llvm::None;
+    return std::nullopt;
 
   std::array<wchar_t, MAX_PATH + 1> mapped_filename;
   if (!::GetMappedFileNameW(::GetCurrentProcess(), pMem.get(),
                             mapped_filename.data(), mapped_filename.size()))
-    return llvm::None;
+    return std::nullopt;
 
   // A series of null-terminated strings, plus an additional null character
   std::array<wchar_t, 512> drive_strings;
   drive_strings[0] = L'\0';
   if (!::GetLogicalDriveStringsW(drive_strings.size(), drive_strings.data()))
-    return llvm::None;
+    return std::nullopt;
 
   std::array<wchar_t, 3> drive = {L"_:"};
   for (const wchar_t *it = drive_strings.data(); *it != L'\0';
@@ -464,7 +465,7 @@ static llvm::Optional<std::string> GetFileNameFromHandleFallback(HANDLE hFile) {
       }
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 DWORD
@@ -504,7 +505,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
       path += 4;
 
     on_load_dll(path);
-  } else if (llvm::Optional<std::string> path =
+  } else if (std::optional<std::string> path =
                  GetFileNameFromHandleFallback(info.hFile)) {
     on_load_dll(*path);
   } else {

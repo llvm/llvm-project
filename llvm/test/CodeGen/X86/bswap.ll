@@ -355,13 +355,13 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %rdi, %rax
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r11
-; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
 ; CHECK64-NEXT:    bswapq %rdi
-; CHECK64-NEXT:    shrdq $48, %rdi, %r10
+; CHECK64-NEXT:    bswapq %r10
+; CHECK64-NEXT:    shrdq $48, %r10, %rdi
 ; CHECK64-NEXT:    bswapq %r11
-; CHECK64-NEXT:    shrdq $48, %r11, %rdi
+; CHECK64-NEXT:    shrdq $48, %r11, %r10
 ; CHECK64-NEXT:    bswapq %rbx
 ; CHECK64-NEXT:    shrdq $48, %rbx, %r11
 ; CHECK64-NEXT:    bswapq %r9
@@ -381,8 +381,8 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; CHECK64-NEXT:    movq %r9, 32(%rax)
 ; CHECK64-NEXT:    movq %rbx, 24(%rax)
 ; CHECK64-NEXT:    movq %r11, 16(%rax)
-; CHECK64-NEXT:    movq %rdi, 8(%rax)
-; CHECK64-NEXT:    movq %r10, (%rax)
+; CHECK64-NEXT:    movq %r10, 8(%rax)
+; CHECK64-NEXT:    movq %rdi, (%rax)
 ; CHECK64-NEXT:    movw %si, 64(%rax)
 ; CHECK64-NEXT:    popq %rbx
 ; CHECK64-NEXT:    retq

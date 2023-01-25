@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize --split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -canonicalize="test-convergence" --split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // Fold all the gpu.wait ops as they are redundant.
 // CHECK-LABEL: func @fold_wait_op_test1

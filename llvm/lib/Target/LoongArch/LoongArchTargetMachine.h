@@ -15,6 +15,7 @@
 
 #include "LoongArchSubtarget.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 namespace llvm {
 
@@ -25,9 +26,9 @@ class LoongArchTargetMachine : public LLVMTargetMachine {
 public:
   LoongArchTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                          StringRef FS, const TargetOptions &Options,
-                         Optional<Reloc::Model> RM,
-                         Optional<CodeModel::Model> CM, CodeGenOpt::Level OL,
-                         bool JIT);
+                         std::optional<Reloc::Model> RM,
+                         std::optional<CodeModel::Model> CM,
+                         CodeGenOpt::Level OL, bool JIT);
   ~LoongArchTargetMachine() override;
 
   const LoongArchSubtarget *getSubtargetImpl(const Function &F) const override;
@@ -39,6 +40,10 @@ public:
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }
+
+  MachineFunctionInfo *
+  createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
+                            const TargetSubtargetInfo *STI) const override;
 };
 
 } // end namespace llvm

@@ -13,6 +13,7 @@
 
 #include "ReduceRegisterDefs.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
@@ -117,6 +118,5 @@ static void removeDefsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceRegisterDefsMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing register defs...\n";
-  runDeltaPass(Test, removeDefsFromModule);
+  runDeltaPass(Test, removeDefsFromModule, "Reducing register defs");
 }

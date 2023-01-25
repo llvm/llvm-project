@@ -2,9 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
-declare void @foo(i8* nocapture, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @foo(ptr nocapture, ptr nocapture)
 
 define void @bar(i1 %flag) #0 !dbg !4 {
 ; CHECK-LABEL: @bar(
@@ -17,16 +17,14 @@ define void @bar(i1 %flag) #0 !dbg !4 {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata [1 x i8]* [[TEXT]], metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG24:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata ptr [[TEXT]], metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    br label [[FIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[TEXT]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[BUFF]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP0]])
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP1]])
-; CHECK-NEXT:    call void @foo(i8* [[TMP1]], i8* [[TMP0]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[TMP1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* [[TMP0]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[TEXT]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[BUFF]])
+; CHECK-NEXT:    call void @foo(ptr nonnull [[BUFF]], ptr nonnull [[TEXT]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[BUFF]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[TEXT]])
 ; CHECK-NEXT:    br label [[FIN]]
 ; CHECK:       fin:
 ; CHECK-NEXT:    ret void
@@ -34,36 +32,34 @@ define void @bar(i1 %flag) #0 !dbg !4 {
 entry:
   %text = alloca [1 x i8], align 1
   %buff = alloca [1 x i8], align 1
-  %0 = getelementptr inbounds [1 x i8], [1 x i8]* %text, i64 0, i64 0
-  %1 = getelementptr inbounds [1 x i8], [1 x i8]* %buff, i64 0, i64 0
   br i1 %flag, label %if, label %else
 
 if:
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %buff)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %buff)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
   br label %bb2
 
 bb2:
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %buff)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %buff)
   br label %bb3
 
 bb3:
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
-  call void @llvm.dbg.declare(metadata [1 x i8]* %text, metadata !14, metadata !25), !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
+  call void @llvm.dbg.declare(metadata ptr %text, metadata !14, metadata !25), !dbg !26
+  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
   br label %fin
 
 else:
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %1)
-  call void @foo(i8* %1, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %text)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %buff)
+  call void @foo(ptr %buff, ptr %text)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %buff)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %text)
   br  label %fin
 
 fin:

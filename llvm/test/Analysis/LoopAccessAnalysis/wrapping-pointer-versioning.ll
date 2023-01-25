@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s --check-prefix=LAA
+; RUN: opt -passes='print<access-info>' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s --check-prefix=LAA
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -30,13 +30,13 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; We have added the nusw flag to turn this expression into the SCEV expression:
 ;    i64 {0,+,2}<%for.body>
 
-; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA: [PSE]  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
 ; LAA-NEXT: ((2 * (zext i32 {0,+,2}<%for.body> to i64))<nuw><nsw> + %a)
 ; LAA-NEXT: --> {%a,+,4}<%for.body>
 
 
-define void @f1(i16* noalias %a,
-                i16* noalias %b, i64 %N) {
+define void @f1(ptr noalias %a,
+                ptr noalias %b, i64 %N) {
 entry:
   br label %for.body
 
@@ -47,15 +47,15 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ind1, 2
   %mul_ext = zext i32 %mul to i64
 
-  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %inc1 = add i32 %ind1, 1
@@ -97,12 +97,12 @@ for.end:                                          ; preds = %for.body
 ; We have added the nusw flag to turn this expression into the following SCEV:
 ;     i64 {zext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
 
-; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA: [PSE]  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
 ; LAA-NEXT: ((2 * (zext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nuw><nsw> + %a)
 ; LAA-NEXT: --> {((4 * (zext i31 (trunc i64 %N to i31) to i64))<nuw><nsw> + %a),+,-4}<%for.body>
 
-define void @f2(i16* noalias %a,
-                i16* noalias %b, i64 %N) {
+define void @f2(ptr noalias %a,
+                ptr noalias %b, i64 %N) {
 entry:
   %TruncN = trunc i64 %N to i32
   br label %for.body
@@ -114,15 +114,15 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ind1, 2
   %mul_ext = zext i32 %mul to i64
 
-  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %dec = sub i32 %ind1, 1
@@ -148,12 +148,12 @@ for.end:                                          ; preds = %for.body
 ; We have added the nssw flag to turn this expression into the following SCEV:
 ;     i64 {0,+,2}<%for.body>
 
-; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA: [PSE]  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
 ; LAA-NEXT: ((2 * (sext i32 {0,+,2}<%for.body> to i64))<nsw> + %a)
 ; LAA-NEXT: --> {%a,+,4}<%for.body>
 
-define void @f3(i16* noalias %a,
-                i16* noalias %b, i64 %N) {
+define void @f3(ptr noalias %a,
+                ptr noalias %b, i64 %N) {
 entry:
   br label %for.body
 
@@ -164,15 +164,15 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ind1, 2
   %mul_ext = sext i32 %mul to i64
 
-  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %inc1 = add i32 %ind1, 1
@@ -195,12 +195,12 @@ for.end:                                          ; preds = %for.body
 ; We have added the nssw flag to turn this expression into the following SCEV:
 ;     i64 {sext i32 (2 * (trunc i64 %N to i32)) to i64,+,-2}<%for.body>
 
-; LAA: [PSE]  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext:
+; LAA: [PSE]  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext:
 ; LAA-NEXT: ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
 ; LAA-NEXT: --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body>
 
-define void @f4(i16* noalias %a,
-                i16* noalias %b, i64 %N) {
+define void @f4(ptr noalias %a,
+                ptr noalias %b, i64 %N) {
 entry:
   %TruncN = trunc i64 %N to i32
   br label %for.body
@@ -212,15 +212,15 @@ for.body:                                         ; preds = %for.body, %entry
   %mul = mul i32 %ind1, 2
   %mul_ext = sext i32 %mul to i64
 
-  %arrayidxA = getelementptr i16, i16* %a, i64 %mul_ext
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr i16, ptr %a, i64 %mul_ext
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %dec = sub i32 %ind1, 1
@@ -245,12 +245,12 @@ for.end:                                          ; preds = %for.body
 ; LAA-NEXT: {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> Added Flags: <nssw>
 ; LAA-NEXT: {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body> Added Flags: <nusw>
 
-; LAA: [PSE]  %arrayidxA = getelementptr inbounds i16, i16* %a, i32 %mul:
+; LAA: [PSE]  %arrayidxA = getelementptr inbounds i16, ptr %a, i32 %mul:
 ; LAA-NEXT: ((2 * (sext i32 {(2 * (trunc i64 %N to i32)),+,-2}<%for.body> to i64))<nsw> + %a)
 ; LAA-NEXT: --> {((2 * (sext i32 (2 * (trunc i64 %N to i32)) to i64))<nsw> + %a),+,-4}<%for.body>
 
-define void @f5(i16* noalias %a,
-                i16* noalias %b, i64 %N) {
+define void @f5(ptr noalias %a,
+                ptr noalias %b, i64 %N) {
 entry:
   %TruncN = trunc i64 %N to i32
   br label %for.body
@@ -261,15 +261,15 @@ for.body:                                         ; preds = %for.body, %entry
 
   %mul = mul i32 %ind1, 2
 
-  %arrayidxA = getelementptr inbounds i16, i16* %a, i32 %mul
-  %loadA = load i16, i16* %arrayidxA, align 2
+  %arrayidxA = getelementptr inbounds i16, ptr %a, i32 %mul
+  %loadA = load i16, ptr %arrayidxA, align 2
 
-  %arrayidxB = getelementptr inbounds i16, i16* %b, i64 %ind
-  %loadB = load i16, i16* %arrayidxB, align 2
+  %arrayidxB = getelementptr inbounds i16, ptr %b, i64 %ind
+  %loadB = load i16, ptr %arrayidxB, align 2
 
   %add = mul i16 %loadA, %loadB
 
-  store i16 %add, i16* %arrayidxA, align 2
+  store i16 %add, ptr %arrayidxA, align 2
 
   %inc = add nuw nsw i64 %ind, 1
   %dec = sub i32 %ind1, 1

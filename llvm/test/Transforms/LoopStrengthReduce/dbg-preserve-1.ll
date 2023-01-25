@@ -3,7 +3,7 @@
 ; Test that LSR avoids crashing on very large integer inputs. It should
 ; discard the variable location by creating an undef dbg.value.
 ;
-; CHECK: call void @llvm.dbg.value(metadata i128 undef,
+; CHECK: call void @llvm.dbg.value(metadata i128 poison,
 
 source_filename = "<stdin>"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -20,7 +20,7 @@ for.body:                                         ; preds = %for.body.for.body_c
   br label %for.body.for.body_crit_edge
 
 for.body.for.body_crit_edge:                      ; preds = %for.body
-  %.pre8 = load i128, i128* undef, align 16, !dbg !19, !tbaa !37
+  %.pre8 = load i128, ptr undef, align 16, !dbg !19, !tbaa !37
   br label %for.body, !dbg !17
 }
 

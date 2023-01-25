@@ -9,7 +9,7 @@
 ;      }
 ;    }
 ;
-define void @func(i32* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -44,8 +44,8 @@ outer.for:
       br i1 %i.cmp, label %reduction.for, label %reduction.exit
 
     reduction.exit:
-      %A_idx = getelementptr inbounds i32, i32* %A, i32 %j
-      store i32 %mul, i32* %A_idx
+      %A_idx = getelementptr inbounds i32, ptr %A, i32 %j
+      store i32 %mul, ptr %A_idx
       br label %outer.inc
 
 

@@ -1,12 +1,5 @@
-; Legacy pass manager
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-legacy-before-early.ll --disable-output < %s && FileCheck --input-file=%t-legacy-before-early.ll --check-prefix=EARLY  %s
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=before-vectorizer -polly-dump-before-file=%t-legacy-before-late.ll  --disable-output < %s && FileCheck --input-file=%t-legacy-before-late.ll  --check-prefix=LATE   %s
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=early             -polly-dump-after-file=%t-legacy-after-early.ll   --disable-output < %s && FileCheck --input-file=%t-legacy-after-early.ll  --check-prefix=EARLY --check-prefix=AFTEREARLY %s
-; RUN: opt %loadPolly -enable-new-pm=0 -O3 -polly -polly-position=before-vectorizer -polly-dump-after-file=%t-legacy-after-late.ll    --disable-output < %s && FileCheck --input-file=%t-legacy-after-late.ll   --check-prefix=LATE  --check-prefix=AFTERLATE  %s
-;
-; New pass manager
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-before-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-before-early.ll    --check-prefix=EARLY %s
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=early             -polly-dump-after-file=%t-npm-after-early.ll      --disable-output < %s && FileCheck --input-file=%t-npm-after-early.ll     --check-prefix=EARLY --check-prefix=AFTEREARLY %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early             -polly-dump-before-file=%t-npm-before-early.ll    --disable-output < %s && FileCheck --input-file=%t-npm-before-early.ll    --check-prefix=EARLY %s
+; RUN: opt %loadNPMPolly -O3 -polly -polly-position=early             -polly-dump-after-file=%t-npm-after-early.ll      --disable-output < %s && FileCheck --input-file=%t-npm-after-early.ll     --check-prefix=EARLY --check-prefix=AFTEREARLY %s
 ;
 ; Check the module dumping before Polly at specific positions in the
 ; pass pipeline.
@@ -22,7 +15,7 @@
 ; }
 
 
-define internal void @callee(i32 %n, double* noalias nonnull %A, i32 %i) {
+define internal void @callee(i32 %n, ptr noalias nonnull %A, i32 %i) {
 entry:
   br label %for
 
@@ -33,8 +26,8 @@ for:
 
     body:
       %idx = add i32 %i, %j
-      %arrayidx = getelementptr inbounds double, double* %A, i32 %idx
-      store double 42.0, double* %arrayidx
+      %arrayidx = getelementptr inbounds double, ptr %A, i32 %idx
+      store double 42.0, ptr %arrayidx
       br label %inc
 
 inc:
@@ -49,7 +42,7 @@ return:
 }
 
 
-define void @caller(i32 %n, double* noalias nonnull %A) {
+define void @caller(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -59,7 +52,7 @@ for:
   br i1 %i.cmp, label %body, label %exit
 
     body:
-      call void @callee(i32 %n, double* %A, i32 %i)
+      call void @callee(i32 %n, ptr %A, i32 %i)
       br label %inc
 
 inc:
@@ -76,10 +69,10 @@ return:
 
 ; EARLY-LABEL: @callee(
 ; AFTEREARLY:  polly.split_new_and_old:
-; EARLY:         store double 4.200000e+01, double* %arrayidx
+; EARLY:         store double 4.200000e+01, ptr %arrayidx
 ; EARLY-LABEL: @caller(
 ; EARLY:         call void @callee(
 
 ; LATE-LABEL: @caller(
 ; AFTERLATE:  polly.split_new_and_old:
-; LATE:          store double 4.200000e+01, double* %arrayidx
+; LATE:          store double 4.200000e+01, ptr %arrayidx

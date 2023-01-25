@@ -35,25 +35,25 @@
 ; BAR:	    ; Exit blocks
 ; BAR:	     end:
 
-; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}%loop
+; FOO-MODULE: IR Dump After {{Unroll|LoopFullUnrollPass}} {{.*}}loop
 ; FOO-MODULE-NEXT: ModuleID =
 ; FOO-MODULE: define void @foo
 ; FOO-MODULE: define void @bar
 
 define void @foo(){
   %idx = alloca i32, align 4
-  store i32 0, i32* %idx, align 4
+  store i32 0, ptr %idx, align 4
   br label %loop
 
 loop:
-  %1 = load i32, i32* %idx, align 4
+  %1 = load i32, ptr %idx, align 4
   %2 = icmp slt i32 %1, 10
   br i1 %2, label %cont, label %done
 
 cont:
-  %3 = load i32, i32* %idx, align 4
+  %3 = load i32, ptr %idx, align 4
   %4 = add nsw i32 %3, 1
-  store i32 %4, i32* %idx, align 4
+  store i32 %4, ptr %idx, align 4
   br label %loop
 
 done:

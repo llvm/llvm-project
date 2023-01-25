@@ -19,9 +19,9 @@ body:             |
     %2:sgpr_256 = IMPLICIT_DEF
     %3:sgpr_128 = IMPLICIT_DEF
 
-    %4:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx90a %0.sub1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
-    $vgpr0 = IMAGE_SAMPLE_V1_V1_gfx90a $vgpr1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from custom "ImageResource")
-    %5:vgpr_32 = IMAGE_LOAD_V1_V1_gfx90a %0.sub1, %2, 8, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from custom "ImageResource")
-    IMAGE_STORE_V1_V1_gfx90a $vgpr1, %5, %2, 2, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32) into custom "ImageResource")
-    %6:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a %6:vgpr_32, $vgpr1, %2, 1, -1, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32) on custom "ImageResource")
+    %4:vgpr_32 = IMAGE_SAMPLE_V1_V1_gfx90a %0.sub1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    $vgpr0 = IMAGE_SAMPLE_V1_V1_gfx90a $vgpr1, %2, %3, 1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    %5:vgpr_32 = IMAGE_LOAD_V1_V1_gfx90a %0.sub1, %2, 8, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 7)
+    IMAGE_STORE_V1_V1_gfx90a $vgpr1, %5, %2, 2, -1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s32), addrspace 7)
+    %6:vgpr_32 = IMAGE_ATOMIC_SWAP_V1_V1_gfx90a %6:vgpr_32, $vgpr1, %2, 1, -1, 1, 0, 0, 0, implicit $exec :: (volatile dereferenceable load store (s32), addrspace 7)
 ...

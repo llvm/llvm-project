@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple=x86_64-pc-windows-msvc18.0.0 -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-pc-windows-msvc18.0.0 -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
 // -triple=x86_64-unknown-linux-gnu
 
 #include "Inputs/coroutine.h"
@@ -28,7 +28,7 @@ coro_t f() {
 
 // CHECK-LABEL: define dso_local void @"?f@@YA?AUcoro_t@@XZ"(
 
-// CHECK:  invoke noundef %"struct.coro_t::promise_type"* @"??0promise_type@coro_t@@QEAA@XZ"(
+// CHECK:  invoke noundef ptr @"??0promise_type@coro_t@@QEAA@XZ"(
 // CHECK:  invoke void @"?get_return_object@promise_type@coro_t@@QEAA?AU2@XZ"(
 
 // CHECK:  call void @"??1promise_type@coro_t@@QEAA@XZ"

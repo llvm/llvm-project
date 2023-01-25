@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void ThrownExceptionTypeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -34,6 +32,4 @@ void ThrownExceptionTypeCheck::check(const MatchFinder::MatchResult &Result) {
        "thrown exception type is not nothrow copy constructible");
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

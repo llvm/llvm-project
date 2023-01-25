@@ -43,33 +43,32 @@ target triple = "x86_64-unknown-linux-gnu"
 %class.Class = type { i8 }
 
 ; Function Attrs: mustprogress uwtable
-define dso_local void @_Z4FuncP5Class(%class.Class* noundef %c) local_unnamed_addr !dbg !7 {
+define dso_local void @_Z4FuncP5Class(ptr noundef %c) local_unnamed_addr !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %class.Class* %c, metadata !15, metadata !DIExpression()), !dbg !16
-  %tobool.not = icmp eq %class.Class* %c, null, !dbg !17
+  call void @llvm.dbg.value(metadata ptr %c, metadata !15, metadata !DIExpression()), !dbg !16
+  %tobool.not = icmp eq ptr %c, null, !dbg !17
   br i1 %tobool.not, label %land.lhs.true, label %if.end, !dbg !19
 
 land.lhs.true:                                    ; preds = %entry
   %call = call noundef zeroext i1 @_Z4Condv(), !dbg !20
   call void @llvm.assume(i1 %call), !dbg !21
-  %call1 = call noalias noundef nonnull dereferenceable(1) i8* @_Znwm(i64 noundef 1), !dbg !22, !heapallocsite !12
-  %0 = bitcast i8* %call1 to %class.Class*, !dbg !22
-  call void @llvm.dbg.value(metadata %class.Class* %0, metadata !15, metadata !DIExpression()), !dbg !16
+  %call1 = call noalias noundef nonnull dereferenceable(1) ptr @_Znwm(i64 noundef 1), !dbg !22, !heapallocsite !12
+  call void @llvm.dbg.value(metadata ptr %call1, metadata !15, metadata !DIExpression()), !dbg !16
   br label %if.end, !dbg !23
 
 if.end:                                           ; preds = %land.lhs.true, %entry
-  %c.addr.0 = phi %class.Class* [ %c, %entry ], [ %0, %land.lhs.true ]
-  call void @llvm.dbg.value(metadata %class.Class* %c.addr.0, metadata !15, metadata !DIExpression()), !dbg !16
-  call void @_Z11DoSomethingR5Class(%class.Class* noundef nonnull align 1 dereferenceable(1) %c.addr.0), !dbg !24
+  %c.addr.0 = phi ptr [ %c, %entry ], [ %call1, %land.lhs.true ]
+  call void @llvm.dbg.value(metadata ptr %c.addr.0, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @_Z11DoSomethingR5Class(ptr noundef nonnull align 1 dereferenceable(1) %c.addr.0), !dbg !24
   ret void, !dbg !25
 }
 
 declare !dbg !26 dso_local noundef zeroext i1 @_Z4Condv() local_unnamed_addr
 
 ; Function Attrs: nobuiltin allocsize(0)
-declare dso_local noundef nonnull i8* @_Znwm(i64 noundef) local_unnamed_addr
+declare dso_local noundef nonnull ptr @_Znwm(i64 noundef) local_unnamed_addr
 
-declare !dbg !30 dso_local void @_Z11DoSomethingR5Class(%class.Class* noundef nonnull align 1 dereferenceable(1)) local_unnamed_addr
+declare !dbg !30 dso_local void @_Z11DoSomethingR5Class(ptr noundef nonnull align 1 dereferenceable(1)) local_unnamed_addr
 
 ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)

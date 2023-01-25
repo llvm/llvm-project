@@ -40,12 +40,12 @@ entry:
         ret float %tmp
 }
 
-define double @h(double* %v) {
+define double @h(ptr %v) {
 ;CHECK-LABEL: h:
 ;CHECK: vldr
 ;CHECK-NEXT: vmov
 entry:
-        %tmp = load double, double* %v          ; <double> [#uses=1]
+        %tmp = load double, ptr %v          ; <double> [#uses=1]
         ret double %tmp
 }
 

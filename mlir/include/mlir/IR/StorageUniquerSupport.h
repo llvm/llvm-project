@@ -138,9 +138,9 @@ public:
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
-    (void)std::initializer_list<int>{
-        (checkInterfaceTarget<IfaceModels>(), 0)...};
-    abstract->interfaceMap.template insert<IfaceModels...>();
+
+    (checkInterfaceTarget<IfaceModels>(), ...);
+    abstract->interfaceMap.template insertModels<IfaceModels...>();
   }
 
   /// Get or create a new ConcreteT instance within the ctx. This
@@ -180,6 +180,9 @@ public:
     return ConcreteT((const typename BaseT::ImplType *)ptr);
   }
 
+  /// Utility for easy access to the storage instance.
+  ImplType *getImpl() const { return static_cast<ImplType *>(this->impl); }
+
 protected:
   /// Mutate the current storage instance. This will not change the unique key.
   /// The arguments are forwarded to 'ConcreteT::mutate'.
@@ -198,9 +201,6 @@ protected:
   static LogicalResult verify(Args... args) {
     return success();
   }
-
-  /// Utility for easy access to the storage instance.
-  ImplType *getImpl() const { return static_cast<ImplType *>(this->impl); }
 
 private:
   /// Trait to check if T provides a 'ConcreteEntity' type alias.

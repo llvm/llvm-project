@@ -30,7 +30,7 @@ define void @f4(i8 inreg %0)
 }
 
 define void @f5(i8* sret(i8) %0)
-; CHECK: define void @f5(i8* sret(i8) %0)
+; CHECK: define void @f5(ptr sret(i8) %0)
 {
         ret void;
 }
@@ -42,19 +42,19 @@ define void @f6() nounwind
 }
 
 define void @f7(i8* noalias %0)
-; CHECK: define void @f7(i8* noalias %0)
+; CHECK: define void @f7(ptr noalias %0)
 {
         ret void;
 }
 
 define void @f8(i8* byval(i8) %0)
-; CHECK: define void @f8(i8* byval(i8) %0)
+; CHECK: define void @f8(ptr byval(i8) %0)
 {
         ret void;
 }
 
 define void @f9(i8* nest %0)
-; CHECK: define void @f9(i8* nest %0)
+; CHECK: define void @f9(ptr nest %0)
 {
         ret void;
 }
@@ -108,7 +108,7 @@ define void @f17(i8 align 4 %0)
 }
 
 define void @f18(i8* nocapture %0)
-; CHECK: define void @f18(i8* nocapture %0)
+; CHECK: define void @f18(ptr nocapture %0)
 {
         ret void;
 }
@@ -213,8 +213,8 @@ define void @f34()
 
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
-; CHECK: attributes #2 = { readnone }
-; CHECK: attributes #3 = { readonly }
+; CHECK: attributes #2 = { memory(none) }
+; CHECK: attributes #3 = { memory(read) }
 ; CHECK: attributes #4 = { noinline }
 ; CHECK: attributes #5 = { alwaysinline }
 ; CHECK: attributes #6 = { optsize }

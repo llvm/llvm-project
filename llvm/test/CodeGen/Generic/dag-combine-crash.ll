@@ -5,7 +5,7 @@ if.end:
   br label %block.i.i
 
 block.i.i:
-  %tmpbb = load i8, i8* undef
+  %tmpbb = load i8, ptr undef
   %tmp54 = zext i8 %tmpbb to i64
   %tmp59 = and i64 %tmp54, 8
   %tmp60 = add i64 %tmp59, 3691045929300498764
@@ -16,6 +16,6 @@ block.i.i:
   %tmp71 = xor i64 %tmp67, 6781485823212740913
   %tmp72 = trunc i64 %tmp71 to i32
   %tmp74 = lshr i32 2, %tmp72
-  store i32 %tmp74, i32* undef
+  store i32 %tmp74, ptr undef
   br label %block.i.i
 }

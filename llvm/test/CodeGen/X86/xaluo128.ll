@@ -24,13 +24,13 @@ define zeroext i1 @saddoi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    seto %al
 ; X86-NEXT:    movl %edi, (%ecx)
 ; X86-NEXT:    movl %ebx, 4(%ecx)
-; X86-NEXT:    movl %esi, 8(%ecx)
-; X86-NEXT:    movl %edx, 12(%ecx)
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %esi, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -64,13 +64,13 @@ define zeroext i1 @uaddoi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movl %edi, (%ecx)
 ; X86-NEXT:    movl %ebx, 4(%ecx)
-; X86-NEXT:    movl %esi, 8(%ecx)
-; X86-NEXT:    movl %edx, 12(%ecx)
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %esi, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -105,13 +105,13 @@ define zeroext i1 @ssuboi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    seto %al
 ; X86-NEXT:    movl %edi, (%ecx)
 ; X86-NEXT:    movl %ebx, 4(%ecx)
-; X86-NEXT:    movl %esi, 8(%ecx)
-; X86-NEXT:    movl %edx, 12(%ecx)
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %esi, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
@@ -145,13 +145,13 @@ define zeroext i1 @usuboi128(i128 %v1, i128 %v2, ptr %res) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    subl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    movl %edi, (%ecx)
 ; X86-NEXT:    movl %ebx, 4(%ecx)
-; X86-NEXT:    movl %esi, 8(%ecx)
-; X86-NEXT:    movl %edx, 12(%ecx)
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    movl %esi, 12(%ecx)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

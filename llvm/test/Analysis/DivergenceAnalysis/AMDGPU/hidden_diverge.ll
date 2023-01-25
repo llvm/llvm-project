@@ -1,11 +1,13 @@
 ; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<divergence>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgcn-unknown-amdhsa -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 define amdgpu_kernel void @hidden_diverge(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: 'Divergence Analysis' for function 'hidden_diverge'
+; CHECK-LABEL: for function 'hidden_diverge'
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cond.var = icmp slt i32 %tid, 0
   br i1 %cond.var, label %B, label %C ; divergent
+; CHECK:  DIVERGENT: %cond.var =
 ; CHECK: DIVERGENT: br i1 %cond.var,
 B:
   %cond.uni = icmp slt i32 %n, 0
@@ -22,7 +24,7 @@ merge:
 }
 
 define amdgpu_kernel void @hidden_loop_ipd(i32 %n, i32 %a, i32 %b) #0 {
-; CHECK-LABEL: 'Divergence Analysis' for function 'hidden_loop_ipd'
+; CHECK-LABEL: for function 'hidden_loop_ipd'
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cond.var = icmp slt i32 %tid, 0

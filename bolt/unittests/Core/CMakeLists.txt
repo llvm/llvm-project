@@ -9,6 +9,8 @@ add_bolt_unittest(CoreTests
   BinaryContext.cpp
   MCPlusBuilder.cpp
   DynoStats.cpp
+
+  DISABLE_LLVM_LINK_LLVM_DYLIB
   )
 
 target_link_libraries(CoreTests

@@ -22,7 +22,7 @@ namespace clang {
 namespace interp {
 
 /// Wrapper around boolean types.
-class Boolean {
+class Boolean final {
  private:
   /// Underlying boolean.
   bool V;
@@ -46,9 +46,15 @@ class Boolean {
   Boolean operator-() const { return Boolean(V); }
   Boolean operator~() const { return Boolean(true); }
 
-  explicit operator unsigned() const { return V; }
+  explicit operator int8_t() const { return V; }
+  explicit operator uint8_t() const { return V; }
+  explicit operator int16_t() const { return V; }
+  explicit operator uint16_t() const { return V; }
+  explicit operator int32_t() const { return V; }
+  explicit operator uint32_t() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator bool() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(1, static_cast<uint64_t>(V), false), true);
@@ -84,9 +90,10 @@ class Boolean {
   static Boolean min(unsigned NumBits) { return Boolean(false); }
   static Boolean max(unsigned NumBits) { return Boolean(true); }
 
-  template <typename T>
-  static std::enable_if_t<std::is_integral<T>::value, Boolean> from(T Value) {
-    return Boolean(Value != 0);
+  template <typename T> static Boolean from(T Value) {
+    if constexpr (std::is_integral<T>::value)
+      return Boolean(Value != 0);
+    return Boolean(static_cast<decltype(Boolean::V)>(Value) != 0);
   }
 
   template <unsigned SrcBits, bool SrcSign>
@@ -132,6 +139,16 @@ class Boolean {
 
   static bool mul(Boolean A, Boolean B, unsigned OpBits, Boolean *R) {
     *R = Boolean(A.V && B.V);
+    return false;
+  }
+
+  static bool inv(Boolean A, Boolean *R) {
+    *R = Boolean(!A.V);
+    return false;
+  }
+
+  static bool neg(Boolean A, Boolean *R) {
+    *R = Boolean(A.V);
     return false;
   }
 };

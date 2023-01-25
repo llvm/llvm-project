@@ -262,6 +262,11 @@ void Fuzzer::MaybeExitGracefully() {
   _Exit(0);
 }
 
+int Fuzzer::InterruptExitCode() {
+  assert(F);
+  return F->Options.InterruptExitCode;
+}
+
 void Fuzzer::InterruptCallback() {
   Printf("==%lu== libFuzzer: run interrupted; exiting\n", GetPid());
   PrintFinalStats();

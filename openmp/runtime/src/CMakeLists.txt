@@ -60,6 +60,7 @@ endif()
 # Getting correct source files to build library
 set(LIBOMP_CXXFILES)
 set(LIBOMP_ASMFILES)
+set(LIBOMP_GNUASMFILES)
 if(STUBS_LIBRARY)
   set(LIBOMP_CXXFILES kmp_stub.cpp)
 else()
@@ -94,12 +95,18 @@ else()
     libomp_append(LIBOMP_CXXFILES z_Windows_NT-586_util.cpp)
     if(${LIBOMP_ARCH} STREQUAL "i386" OR ${LIBOMP_ARCH} STREQUAL "x86_64")
       libomp_append(LIBOMP_ASMFILES z_Windows_NT-586_asm.asm) # Windows assembly file
+    elseif((${LIBOMP_ARCH} STREQUAL "aarch64" OR ${LIBOMP_ARCH} STREQUAL "arm") AND (NOT MSVC OR CMAKE_C_COMPILER_ID STREQUAL "Clang"))
+      # z_Linux_asm.S works for AArch64 and ARM Windows too.
+      libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S)
+    else()
+      # AArch64 with MSVC gets implementations of the functions from
+      # ifdeffed sections in z_Windows_NT-586_util.cpp.
     endif()
   else()
     # Unix specific files
     libomp_append(LIBOMP_CXXFILES z_Linux_util.cpp)
     libomp_append(LIBOMP_CXXFILES kmp_gsupport.cpp)
-    libomp_append(LIBOMP_ASMFILES z_Linux_asm.S) # Unix assembly file
+    libomp_append(LIBOMP_GNUASMFILES z_Linux_asm.S) # Unix assembly file
   endif()
   libomp_append(LIBOMP_CXXFILES thirdparty/ittnotify/ittnotify_static.cpp LIBOMP_USE_ITT_NOTIFY)
   libomp_append(LIBOMP_CXXFILES kmp_debugger.cpp LIBOMP_USE_DEBUGGER)
@@ -115,7 +122,7 @@ libomp_append(LIBOMP_CXXFILES kmp_version.cpp)
 libomp_append(LIBOMP_CXXFILES ompt-general.cpp IF_TRUE LIBOMP_OMPT_SUPPORT)
 libomp_append(LIBOMP_CXXFILES ompd-specific.cpp IF_TRUE LIBOMP_OMPD_SUPPORT)
 
-set(LIBOMP_SOURCE_FILES ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES})
+set(LIBOMP_SOURCE_FILES ${LIBOMP_CXXFILES} ${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES})
 # For Windows, there is a resource file (.rc -> .res) that is also compiled
 libomp_append(LIBOMP_SOURCE_FILES libomp.rc WIN32)
 
@@ -124,11 +131,9 @@ libomp_get_cxxflags(LIBOMP_CONFIGURED_CXXFLAGS)
 libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 # Set the compiler flags for each type of source
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
-set_source_files_properties(${LIBOMP_ASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
-# Let the compiler handle the assembly files on Unix-like systems
-if(NOT WIN32)
-  set_source_files_properties(${LIBOMP_ASMFILES} PROPERTIES LANGUAGE C)
-endif()
+set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
+# Let the compiler handle the GNU assembly files
+set_source_files_properties(${LIBOMP_GNUASMFILES} PROPERTIES LANGUAGE C)
 
 # Remove any cmake-automatic linking of the standard C++ library.
 # We neither need (nor want) the standard C++ library dependency even though we compile c++ files.
@@ -139,6 +144,10 @@ else()
   set(LIBOMP_LINKER_LANGUAGE CXX)
 endif()
 
+if(UNIX)
+  set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
+endif()
+
 # Add the OpenMP library
 libomp_get_ldflags(LIBOMP_CONFIGURED_LDFLAGS)
 
@@ -147,10 +156,10 @@ libomp_get_libflags(LIBOMP_CONFIGURED_LIBFLAGS)
 if(OPENMP_STANDALONE_BUILD OR (NOT OPENMP_ENABLE_LIBOMP_PROFILING))
   add_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES})
   # Linking command will include libraries in LIBOMP_CONFIGURED_LIBFLAGS
-  target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${CMAKE_DL_LIBS})
+  target_link_libraries(omp ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS})
 else()
   add_llvm_library(omp ${LIBOMP_LIBRARY_KIND} ${LIBOMP_SOURCE_FILES} PARTIAL_SOURCES_INTENDED
-    LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${CMAKE_DL_LIBS}
+    LINK_LIBS ${LIBOMP_CONFIGURED_LIBFLAGS} ${LIBOMP_DL_LIBS}
     LINK_COMPONENTS Support
     )
   # libomp must be a C++ library such that it can link libLLVMSupport
@@ -351,12 +360,6 @@ add_dependencies(libomp-micro-tests libomp-test-deps)
 # Install rules
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
-if(${OPENMP_STANDALONE_BUILD})
-  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
-else()
-  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION ${PACKAGE_VERSION})
-  set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
-endif()
 if(WIN32)
   install(TARGETS omp RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}")
@@ -393,6 +396,7 @@ if(${LIBOMP_OMPT_SUPPORT})
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
   # install under legacy name ompt.h
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/omp-tools.h DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH} RENAME ompt.h)
+  set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR} PARENT_SCOPE)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   install(FILES

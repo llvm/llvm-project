@@ -7,6 +7,6 @@
 @cv = constant i32 0
 
 define i32 @foo() {
-  %v = load i32, i32* @cv
+  %v = load i32, ptr @cv
   ret i32 %v
 }

@@ -562,8 +562,8 @@ define <8 x float> @PR41512_v8f32(float %x, float %y) {
 ; AVX-LABEL: PR41512_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %ins1 = insertelement <8 x float> zeroinitializer, float %x, i32 0

@@ -4,22 +4,22 @@
 ; Make sure shaders with uniform, unmodified global address space
 ; loads are accessed with scalar loads.
 
-define amdgpu_ps i32 @ps_load_uniform_global_i32_align4(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_ps i32 @ps_load_uniform_global_i32_align4(ptr addrspace(1) inreg %ptr) {
 ; GCN-LABEL: ps_load_uniform_global_i32_align4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
-  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %load = load i32, ptr addrspace(1) %ptr, align 4
   ret i32 %load
 }
 
-define amdgpu_cs i32 @cs_load_uniform_global_i32_align4(i32 addrspace(1)* inreg %ptr) {
+define amdgpu_cs i32 @cs_load_uniform_global_i32_align4(ptr addrspace(1) inreg %ptr) {
 ; GCN-LABEL: cs_load_uniform_global_i32_align4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[2:3], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
-  %load = load i32, i32 addrspace(1)* %ptr, align 4
+  %load = load i32, ptr addrspace(1) %ptr, align 4
   ret i32 %load
 }

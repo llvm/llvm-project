@@ -45,7 +45,7 @@ body:             |
 
     $x25 = COPY $x10
     SD renamable $x25, %stack.0, 0 :: (store (s64) into %stack.0)
-    PseudoVSPILL_M2 renamable $v30m2, %stack.1 :: (store unknown-size into %stack.1, align 8)
+    VS2R_V renamable $v30m2, %stack.1 :: (store unknown-size into %stack.1, align 8)
     PseudoRET
 
 ...

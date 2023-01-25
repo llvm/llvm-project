@@ -19,37 +19,37 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; Don't use SVE for 64-bit vectors.
-define void @store_v2f32(<2 x float>* %a) #0 {
+define void @store_v2f32(ptr %a) #0 {
 ; CHECK-LABEL: store_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str xzr, [x0]
 ; CHECK-NEXT:    ret
-  store <2 x float> zeroinitializer, <2 x float>* %a
+  store <2 x float> zeroinitializer, ptr %a
   ret void
 }
 
 ; Don't use SVE for 128-bit vectors.
-define void @store_v4f32(<4 x float>* %a) #0 {
+define void @store_v4f32(ptr %a) #0 {
 ; CHECK-LABEL: store_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp xzr, xzr, [x0]
 ; CHECK-NEXT:    ret
-  store <4 x float> zeroinitializer, <4 x float>* %a
+  store <4 x float> zeroinitializer, ptr %a
   ret void
 }
 
-define void @store_v8f32(<8 x float>* %a) #0 {
+define void @store_v8f32(ptr %a) #0 {
 ; CHECK-LABEL: store_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
 ; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  store <8 x float> zeroinitializer, <8 x float>* %a
+  store <8 x float> zeroinitializer, ptr %a
   ret void
 }
 
-define void @store_v16f32(<16 x float>* %a) #0 {
+define void @store_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -79,11 +79,11 @@ define void @store_v16f32(<16 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    mov z0.s, #0 // =0x0
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    ret
-  store <16 x float> zeroinitializer, <16 x float>* %a
+  store <16 x float> zeroinitializer, ptr %a
   ret void
 }
 
-define void @store_v32f32(<32 x float>* %a) #0 {
+define void @store_v32f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v32f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #24
@@ -119,11 +119,11 @@ define void @store_v32f32(<32 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    mov z0.s, #0 // =0x0
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    ret
-  store <32 x float> zeroinitializer, <32 x float>* %a
+  store <32 x float> zeroinitializer, ptr %a
   ret void
 }
 
-define void @store_v64f32(<64 x float>* %a) #0 {
+define void @store_v64f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v64f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #56
@@ -173,7 +173,7 @@ define void @store_v64f32(<64 x float>* %a) #0 {
 ; VBITS_GE_2048-NEXT:    mov z0.s, #0 // =0x0
 ; VBITS_GE_2048-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_2048-NEXT:    ret
-  store <64 x float> zeroinitializer, <64 x float>* %a
+  store <64 x float> zeroinitializer, ptr %a
   ret void
 }
 

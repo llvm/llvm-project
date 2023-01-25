@@ -57,6 +57,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -126,12 +127,12 @@ namespace HexagonFUnits {
 }
 }
 
-static bool isIntRegForSubInst(unsigned Reg) {
+static bool isIntRegForSubInst(Register Reg) {
   return (Reg >= Hexagon::R0 && Reg <= Hexagon::R7) ||
          (Reg >= Hexagon::R16 && Reg <= Hexagon::R23);
 }
 
-static bool isDblRegForSubInst(unsigned Reg, const HexagonRegisterInfo &HRI) {
+static bool isDblRegForSubInst(Register Reg, const HexagonRegisterInfo &HRI) {
   return isIntRegForSubInst(HRI.getSubReg(Reg, Hexagon::isub_lo)) &&
          isIntRegForSubInst(HRI.getSubReg(Reg, Hexagon::isub_hi));
 }
@@ -233,7 +234,7 @@ MachineInstr *HexagonInstrInfo::findLoopInstr(MachineBasicBlock *BB,
 /// This treats possible (predicated) defs as actually happening ones
 /// (conservatively).
 static inline void parseOperands(const MachineInstr &MI,
-      SmallVector<unsigned, 4> &Defs, SmallVector<unsigned, 8> &Uses) {
+      SmallVectorImpl<Register> &Defs, SmallVectorImpl<Register> &Uses) {
   Defs.clear();
   Uses.clear();
 
@@ -750,12 +751,12 @@ public:
     return MI == EndLoop;
   }
 
-  Optional<bool>
-  createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
-                                  SmallVectorImpl<MachineOperand> &Cond) override {
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &Cond) override {
     if (TripCount == -1) {
       // Check if we're done with the loop.
-      unsigned Done = TII->createVR(MF, MVT::i1);
+      Register Done = TII->createVR(MF, MVT::i1);
       MachineInstr *NewCmp = BuildMI(&MBB, DL,
                                      TII->get(Hexagon::C2_cmpgtui), Done)
                                  .addReg(LoopCount)
@@ -953,8 +954,11 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I, Register SrcReg, bool isKill, int FI,
-      const TargetRegisterClass *RC, const TargetRegisterInfo *TRI) const {
+                                           MachineBasicBlock::iterator I,
+                                           Register SrcReg, bool isKill, int FI,
+                                           const TargetRegisterClass *RC,
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -997,10 +1001,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void HexagonInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI) const {
+void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            Register DestReg, int FI,
+                                            const TargetRegisterClass *RC,
+                                            const TargetRegisterInfo *TRI,
+                                            Register VReg) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1052,7 +1058,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   auto RealCirc = [&](unsigned Opc, bool HasImm, unsigned MxOp) {
     Register Mx = MI.getOperand(MxOp).getReg();
-    unsigned CSx = (Mx == Hexagon::M0 ? Hexagon::CS0 : Hexagon::CS1);
+    Register CSx = (Mx == Hexagon::M0 ? Hexagon::CS0 : Hexagon::CS1);
     BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrrcr), CSx)
         .add(MI.getOperand((HasImm ? 5 : 4)));
     auto MIB = BuildMI(MBB, MI, DL, get(Opc)).add(MI.getOperand(0))
@@ -1690,7 +1696,8 @@ bool HexagonInstrInfo::PredicateInstruction(
     NOp++;
   }
 
-  unsigned PredReg, PredRegPos, PredRegFlags;
+  Register PredReg;
+  unsigned PredRegPos, PredRegFlags;
   bool GotPredReg = getPredReg(Cond, PredReg, PredRegPos, PredRegFlags);
   (void)GotPredReg;
   assert(GotPredReg);
@@ -1734,7 +1741,7 @@ bool HexagonInstrInfo::ClobbersPredicate(MachineInstr &MI,
       }
       continue;
     } else if (MO.isRegMask()) {
-      for (unsigned PR : Hexagon::PredRegsRegClass) {
+      for (Register PR : Hexagon::PredRegsRegClass) {
         if (!MI.modifiesRegister(PR, &HRI))
           continue;
         Pred.push_back(MO);
@@ -1800,7 +1807,7 @@ bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
       return true;
     // If any of the block's successors is a landing pad, this could be a
     // throwing call.
-    for (auto I : MBB->successors())
+    for (auto *I : MBB->successors())
       if (I->isEHPad())
         return true;
   }
@@ -2076,7 +2083,7 @@ HexagonInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
     {MO_IEGOT,  "hexagon-iegot"},
     {MO_TPREL,  "hexagon-tprel"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
 ArrayRef<std::pair<unsigned, const char*>>
@@ -2086,10 +2093,10 @@ HexagonInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   static const std::pair<unsigned, const char*> Flags[] = {
     {HMOTF_ConstExtended, "hexagon-ext"}
   };
-  return makeArrayRef(Flags);
+  return ArrayRef(Flags);
 }
 
-unsigned HexagonInstrInfo::createVR(MachineFunction *MF, MVT VT) const {
+Register HexagonInstrInfo::createVR(MachineFunction *MF, MVT VT) const {
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const TargetRegisterClass *TRC;
   if (VT == MVT::i1) {
@@ -2127,7 +2134,7 @@ bool HexagonInstrInfo::isComplex(const MachineInstr &MI) const {
          !isMemOp(MI) && !MI.isBranch() && !MI.isReturn() && !MI.isCall();
 }
 
-// Return true if the instruction is a compund branch instruction.
+// Return true if the instruction is a compound branch instruction.
 bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr &MI) const {
   return getType(MI) == HexagonII::TypeCJ && MI.isBranch();
 }
@@ -2198,10 +2205,10 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
     return false;
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
-  SmallVector<unsigned, 4> DefsA;
-  SmallVector<unsigned, 4> DefsB;
-  SmallVector<unsigned, 8> UsesA;
-  SmallVector<unsigned, 8> UsesB;
+  SmallVector<Register, 4> DefsA;
+  SmallVector<Register, 4> DefsB;
+  SmallVector<Register, 8> UsesA;
+  SmallVector<Register, 8> UsesB;
 
   parseOperands(ProdMI, DefsA, UsesA);
   parseOperands(ConsMI, DefsB, UsesB);
@@ -2212,12 +2219,12 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
       if (RegA == RegB)
         return true;
 
-      if (Register::isPhysicalRegister(RegA))
+      if (RegA.isPhysical())
         for (MCSubRegIterator SubRegs(RegA, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegB == *SubRegs)
             return true;
 
-      if (Register::isPhysicalRegister(RegB))
+      if (RegB.isPhysical())
         for (MCSubRegIterator SubRegs(RegB, &HRI); SubRegs.isValid(); ++SubRegs)
           if (RegA == *SubRegs)
             return true;
@@ -3188,7 +3195,7 @@ bool HexagonInstrInfo::producesStall(const MachineInstr &MI,
 }
 
 bool HexagonInstrInfo::predCanBeUsedAsDotNew(const MachineInstr &MI,
-      unsigned PredReg) const {
+      Register PredReg) const {
   for (const MachineOperand &MO : MI.operands()) {
     // Predicate register must be explicitly defined.
     if (MO.isRegMask() && MO.clobbersPhysReg(PredReg))
@@ -3385,7 +3392,7 @@ unsigned HexagonInstrInfo::getCExtOpNum(const MachineInstr &MI) const {
 // If so, return its group. Zero otherwise.
 HexagonII::CompoundGroup HexagonInstrInfo::getCompoundCandidateGroup(
       const MachineInstr &MI) const {
-  unsigned DstReg, SrcReg, Src1Reg, Src2Reg;
+  Register DstReg, SrcReg, Src1Reg, Src2Reg;
 
   switch (MI.getOpcode()) {
   default:
@@ -3883,7 +3890,7 @@ int HexagonInstrInfo::getDotOldOp(const MachineInstr &MI) const {
 // If so, return its group. Zero otherwise.
 HexagonII::SubInstructionGroup HexagonInstrInfo::getDuplexCandidateGroup(
       const MachineInstr &MI) const {
-  unsigned DstReg, SrcReg, Src1Reg, Src2Reg;
+  Register DstReg, SrcReg, Src1Reg, Src2Reg;
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
 
   switch (MI.getOpcode()) {
@@ -4295,7 +4302,7 @@ int HexagonInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   // Get DefIdx and UseIdx for super registers.
   const MachineOperand &DefMO = DefMI.getOperand(DefIdx);
 
-  if (DefMO.isReg() && Register::isPhysicalRegister(DefMO.getReg())) {
+  if (DefMO.isReg() && DefMO.getReg().isPhysical()) {
     if (DefMO.isImplicit()) {
       for (MCSuperRegIterator SR(DefMO.getReg(), &HRI); SR.isValid(); ++SR) {
         int Idx = DefMI.findRegisterDefOperandIdx(*SR, false, false, &HRI);
@@ -4510,7 +4517,7 @@ short HexagonInstrInfo::getNonExtOpcode(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
-      unsigned &PredReg, unsigned &PredRegPos, unsigned &PredRegFlags) const {
+      Register &PredReg, unsigned &PredRegPos, unsigned &PredRegFlags) const {
   if (Cond.empty())
     return false;
   assert(Cond.size() == 2);

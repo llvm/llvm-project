@@ -9,10 +9,10 @@
 ; CHECK:         .size   .L__llvm_rtti_proxy, 8
 
 @i = linkonce_odr constant i32 1
-@__llvm_rtti_proxy = private unnamed_addr constant i32* @i
+@__llvm_rtti_proxy = private unnamed_addr constant ptr @i
 
 define dso_local void @_Z3funv() !func_sanitize !0 {
   ret void
 }
 
-!0 = !{i32 846595819, i32** @__llvm_rtti_proxy}
+!0 = !{i32 846595819, ptr @__llvm_rtti_proxy}

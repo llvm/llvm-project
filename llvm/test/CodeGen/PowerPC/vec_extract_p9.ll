@@ -5,13 +5,15 @@
 define zeroext i8 @test1(<16 x i8> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test1:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    vextubrx 3, 5, 2
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    vextubrx 3, 3, 2
 ; CHECK-LE-NEXT:    clrldi 3, 3, 56
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vextublx 3, 5, 2
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    vextublx 3, 3, 2
 ; CHECK-BE-NEXT:    clrldi 3, 3, 56
 ; CHECK-BE-NEXT:    blr
 
@@ -23,13 +25,15 @@ entry:
 define signext i8 @test2(<16 x i8> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test2:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    vextubrx 3, 5, 2
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    vextubrx 3, 3, 2
 ; CHECK-LE-NEXT:    extsb 3, 3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test2:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    vextublx 3, 5, 2
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    vextublx 3, 3, 2
 ; CHECK-BE-NEXT:    extsb 3, 3
 ; CHECK-BE-NEXT:    blr
 
@@ -41,14 +45,16 @@ entry:
 define zeroext i16 @test3(<8 x i16> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test3:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    rlwinm 3, 5, 1, 28, 30
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-LE-NEXT:    vextuhrx 3, 3, 2
 ; CHECK-LE-NEXT:    clrldi 3, 3, 48
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test3:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    rlwinm 3, 5, 1, 28, 30
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-BE-NEXT:    vextuhlx 3, 3, 2
 ; CHECK-BE-NEXT:    clrldi 3, 3, 48
 ; CHECK-BE-NEXT:    blr
@@ -61,14 +67,16 @@ entry:
 define signext i16 @test4(<8 x i16> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test4:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    rlwinm 3, 5, 1, 28, 30
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-LE-NEXT:    vextuhrx 3, 3, 2
 ; CHECK-LE-NEXT:    extsh 3, 3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test4:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    rlwinm 3, 5, 1, 28, 30
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-BE-NEXT:    vextuhlx 3, 3, 2
 ; CHECK-BE-NEXT:    extsh 3, 3
 ; CHECK-BE-NEXT:    blr
@@ -81,13 +89,15 @@ entry:
 define zeroext i32 @test5(<4 x i32> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test5:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-LE-NEXT:    vextuwrx 3, 3, 2
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test5:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-BE-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-BE-NEXT:    blr
 
@@ -99,14 +109,16 @@ entry:
 define signext i32 @test6(<4 x i32> %a, i32 signext %index) {
 ; CHECK-LE-LABEL: test6:
 ; CHECK-LE:       # %bb.0: # %entry
-; CHECK-LE-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-LE-NEXT:    clrldi 3, 5, 32
+; CHECK-LE-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-LE-NEXT:    vextuwrx 3, 3, 2
 ; CHECK-LE-NEXT:    extsw 3, 3
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test6:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    rlwinm 3, 5, 2, 28, 29
+; CHECK-BE-NEXT:    clrldi 3, 5, 32
+; CHECK-BE-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-BE-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-BE-NEXT:    extsw 3, 3
 ; CHECK-BE-NEXT:    blr
@@ -180,21 +192,22 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; CHECK-LE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
-; CHECK-LE-NEXT:    lxv 36, 0(3)
-; CHECK-LE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
-; CHECK-LE-NEXT:    lfs 0, .LCPI9_1@toc@l(3)
-; CHECK-LE-NEXT:    vperm 2, 3, 2, 4
-; CHECK-LE-NEXT:    xsadddp 1, 34, 0
+; CHECK-LE-NEXT:    lxv 0, 0(3)
+; CHECK-LE-NEXT:    xxperm 35, 34, 0
+; CHECK-LE-NEXT:    vspltisw 2, 1
+; CHECK-LE-NEXT:    xvcvsxwdp 1, 34
+; CHECK-LE-NEXT:    xxswapd 0, 35
+; CHECK-LE-NEXT:    xsadddp 1, 0, 1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test10:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; CHECK-BE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
-; CHECK-BE-NEXT:    lxv 36, 0(3)
-; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
-; CHECK-BE-NEXT:    lfs 0, .LCPI9_1@toc@l(3)
-; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
+; CHECK-BE-NEXT:    lxv 0, 0(3)
+; CHECK-BE-NEXT:    xxperm 34, 35, 0
+; CHECK-BE-NEXT:    vspltisw 3, 1
+; CHECK-BE-NEXT:    xvcvsxwdp 0, 35
 ; CHECK-BE-NEXT:    xsadddp 1, 34, 0
 ; CHECK-BE-NEXT:    blr
 entry:

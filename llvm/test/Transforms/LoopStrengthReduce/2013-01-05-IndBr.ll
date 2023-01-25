@@ -18,27 +18,27 @@ bb8:                                              ; preds = %bb190, %bb11
   %tmp = phi i8 [ %tmp14, %bb11 ], [ 25, %bb190 ]
   %tmp9 = phi i8 [ %tmp12, %bb11 ], [ 25, %bb190 ]
   %tmp10 = add i8 %tmp, -5
-  indirectbr i8* undef, [label %bb11, label %bb15]
+  indirectbr ptr undef, [label %bb11, label %bb15]
 
 bb11:                                             ; preds = %bb8
   %tmp12 = add i8 %tmp9, 1
   %tmp13 = add i8 %tmp9, -19
   %tmp14 = add i8 %tmp, 1
-  indirectbr i8* undef, [label %bb8]
+  indirectbr ptr undef, [label %bb8]
 
 bb15:                                             ; preds = %bb8
-  indirectbr i8* undef, [label %bb16]
+  indirectbr ptr undef, [label %bb16]
 
 bb16:                                             ; preds = %bb16, %bb15
-  indirectbr i8* undef, [label %bb37, label %bb190]
+  indirectbr ptr undef, [label %bb37, label %bb190]
 
 
 bb37:                                             ; preds = %bb190
-  indirectbr i8* undef, [label %bb38]
+  indirectbr ptr undef, [label %bb38]
 
 bb38:                                             ; preds = %bb37, %bb5
   ret void
 
 bb190:                                            ; preds = %bb189, %bb187
-  indirectbr i8* undef, [label %bb37, label %bb8]
+  indirectbr ptr undef, [label %bb37, label %bb8]
 }

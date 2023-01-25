@@ -61,7 +61,6 @@ def CH : X86Reg<"ch", 5>;
 def BH : X86Reg<"bh", 7>;
 
 // X86-64 only, requires REX.
-let CostPerUse = [1] in {
 def SIL  : X86Reg<"sil",   6>;
 def DIL  : X86Reg<"dil",   7>;
 def BPL  : X86Reg<"bpl",   5>;
@@ -74,7 +73,6 @@ def R12B : X86Reg<"r12b", 12>;
 def R13B : X86Reg<"r13b", 13>;
 def R14B : X86Reg<"r14b", 14>;
 def R15B : X86Reg<"r15b", 15>;
-}
 
 let isArtificial = 1 in {
 // High byte of the low 16 bits of the super-register:
@@ -126,8 +124,7 @@ def SP : X86Reg<"sp", 4, [SPL,SPH]>;
 def IP : X86Reg<"ip", 0>;
 
 // X86-64 only, requires REX.
-let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CostPerUse = [1],
-    CoveredBySubRegs = 1 in {
+let SubRegIndices = [sub_8bit, sub_8bit_hi_phony], CoveredBySubRegs = 1 in {
 def R8W  : X86Reg<"r8w",   8, [R8B,R8BH]>;
 def R9W  : X86Reg<"r9w",   9, [R9B,R9BH]>;
 def R10W : X86Reg<"r10w", 10, [R10B,R10BH]>;
@@ -152,8 +149,7 @@ def EIP : X86Reg<"eip", 0, [IP, HIP]>, DwarfRegNum<[-2, 8, 8]>;
 }
 
 // X86-64 only, requires REX
-let SubRegIndices = [sub_16bit, sub_16bit_hi], CostPerUse = [1],
-    CoveredBySubRegs = 1 in {
+let SubRegIndices = [sub_16bit, sub_16bit_hi], CoveredBySubRegs = 1 in {
 def R8D  : X86Reg<"r8d",   8, [R8W,R8WH]>;
 def R9D  : X86Reg<"r9d",   9, [R9W,R9WH]>;
 def R10D : X86Reg<"r10d", 10, [R10W,R10WH]>;
@@ -176,7 +172,6 @@ def RBP : X86Reg<"rbp", 5, [EBP]>, DwarfRegNum<[6, -2, -2]>;
 def RSP : X86Reg<"rsp", 4, [ESP]>, DwarfRegNum<[7, -2, -2]>;
 
 // These also require REX.
-let CostPerUse = [1] in {
 def R8  : X86Reg<"r8",   8, [R8D]>,  DwarfRegNum<[ 8, -2, -2]>;
 def R9  : X86Reg<"r9",   9, [R9D]>,  DwarfRegNum<[ 9, -2, -2]>;
 def R10 : X86Reg<"r10", 10, [R10D]>, DwarfRegNum<[10, -2, -2]>;
@@ -186,7 +181,7 @@ def R13 : X86Reg<"r13", 13, [R13D]>, DwarfRegNum<[13, -2, -2]>;
 def R14 : X86Reg<"r14", 14, [R14D]>, DwarfRegNum<[14, -2, -2]>;
 def R15 : X86Reg<"r15", 15, [R15D]>, DwarfRegNum<[15, -2, -2]>;
 def RIP : X86Reg<"rip",  0, [EIP]>,  DwarfRegNum<[16, -2, -2]>;
-}}
+}
 
 // MMX Registers. These are actually aliased to ST0 .. ST7
 def MM0 : X86Reg<"mm0", 0>, DwarfRegNum<[41, 29, 29]>;
@@ -219,7 +214,6 @@ def XMM6: X86Reg<"xmm6", 6>, DwarfRegNum<[23, 27, 27]>;
 def XMM7: X86Reg<"xmm7", 7>, DwarfRegNum<[24, 28, 28]>;
 
 // X86-64 only
-let CostPerUse = [1] in {
 def XMM8:  X86Reg<"xmm8",   8>, DwarfRegNum<[25, -2, -2]>;
 def XMM9:  X86Reg<"xmm9",   9>, DwarfRegNum<[26, -2, -2]>;
 def XMM10: X86Reg<"xmm10", 10>, DwarfRegNum<[27, -2, -2]>;
@@ -245,8 +239,6 @@ def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[79, -2, -2]>;
 def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[80, -2, -2]>;
 def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[81, -2, -2]>;
 def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[82, -2, -2]>;
-
-} // CostPerUse
 
 // YMM0-15 registers, used by AVX instructions and
 // YMM16-31 registers, used by AVX-512 instructions.
@@ -319,7 +311,9 @@ def MXCSR : X86Reg<"mxcsr", 0>;
 // reading and updating those flags independently of all the others. We don't
 // want to create false dependencies between these instructions and so we use
 // a separate register to model them.
-def EFLAGS : X86Reg<"flags", 0>;
+def EFLAGS : X86Reg<"flags", 0>, DwarfRegNum<[49, 9, 9]>;
+def _EFLAGS : X86Reg<"eflags", 0>, DwarfRegAlias<EFLAGS>;
+def RFLAGS : X86Reg<"rflags", 0>, DwarfRegNum<[49, -2, -2]>;
 
 // The direction flag.
 def DF : X86Reg<"dirflag", 0>;
@@ -332,6 +326,9 @@ def SS : X86Reg<"ss", 2>;
 def ES : X86Reg<"es", 0>;
 def FS : X86Reg<"fs", 4>;
 def GS : X86Reg<"gs", 5>;
+
+def FS_BASE : X86Reg<"fs.base", 0>, DwarfRegNum<[58, -2, -2]>;
+def GS_BASE : X86Reg<"gs.base", 0>, DwarfRegNum<[59, -2, -2]>;
 
 // Debug registers
 def DR0  : X86Reg<"dr0",   0>;
@@ -569,9 +566,9 @@ def RSTi : RegisterOperand<RST, "printSTiRegOperand">;
 // Generic vector registers: VR64 and VR128.
 // Ensure that float types are declared first - only float is legal on SSE1.
 def VR64: RegisterClass<"X86", [x86mmx], 64, (sequence "MM%u", 0, 7)>;
-def VR128 : RegisterClass<"X86", [v4f32, v2f64, v8f16, v16i8, v8i16, v4i32, v2i64, f128],
+def VR128 : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
                           128, (add FR32)>;
-def VR256 : RegisterClass<"X86", [v8f32, v4f64, v16f16, v32i8, v16i16, v8i32, v4i64],
+def VR256 : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
                           256, (sequence "YMM%u", 0, 15)>;
 
 // Status flags registers.
@@ -589,7 +586,7 @@ def DFCCR : RegisterClass<"X86", [i32], 32, (add DF)> {
 }
 
 // AVX-512 vector/mask registers.
-def VR512 : RegisterClass<"X86", [v16f32, v8f64, v32f16, v64i8, v32i16, v16i32, v8i64],
+def VR512 : RegisterClass<"X86", [v16f32, v8f64, v32f16, v32bf16, v64i8, v32i16, v16i32, v8i64],
                           512, (sequence "ZMM%u", 0, 31)>;
 
 // Represents the lower 16 registers that have VEX/legacy encodable subregs.
@@ -604,9 +601,9 @@ def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
 def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)> {let Size = 32;}
 
 // Extended VR128 and VR256 for AVX-512 instructions
-def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v16i8, v8i16, v4i32, v2i64, f128],
+def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
                            128, (add FR32X)>;
-def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v32i8, v16i16, v8i32, v4i64],
+def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
                            256, (sequence "YMM%u", 0, 31)>;
 
 // Mask registers

@@ -1,16 +1,16 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 ; RUN: opt < %s -passes=simplifycfg -S | FileCheck %s
 
 define i32 @foo(i32 %x) optforfuzzing {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   %cmp = icmp sgt i32 %0, 16
   br i1 %cmp, label %land.rhs, label %land.end
 
 land.rhs:
-  %1 = load i32, i32* %x.addr, align 4
+  %1 = load i32, ptr %x.addr, align 4
   %cmp1 = icmp slt i32 %1, 32
   br label %land.end
 
@@ -30,13 +30,13 @@ land.end:
 define i32 @bar(i32 %x) {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4
   %cmp = icmp sgt i32 %0, 16
   br i1 %cmp, label %land.rhs, label %land.end
 
 land.rhs:
-  %1 = load i32, i32* %x.addr, align 4
+  %1 = load i32, ptr %x.addr, align 4
   %cmp1 = icmp slt i32 %1, 32
   br label %land.end
 

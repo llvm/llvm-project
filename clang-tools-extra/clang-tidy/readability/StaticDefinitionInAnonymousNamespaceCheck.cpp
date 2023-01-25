@@ -13,13 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
-
-AST_MATCHER(NamedDecl, isInAnonymousNamespace) {
-  return Node.isInAnonymousNamespace();
-}
+namespace clang::tidy::readability {
 
 void StaticDefinitionInAnonymousNamespaceCheck::registerMatchers(
     MatchFinder *Finder) {
@@ -64,6 +58,4 @@ void StaticDefinitionInAnonymousNamespaceCheck::check(
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

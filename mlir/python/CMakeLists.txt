@@ -121,6 +121,7 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/_transform_ops_ext.py
     dialects/transform/__init__.py
+    _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform)
 
 declare_mlir_dialect_extension_python_bindings(
@@ -153,7 +154,7 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/ArithmeticOps.td
+  TD_FILE dialects/ArithOps.td
   SOURCES
     dialects/arith.py
     dialects/_arith_ops_ext.py
@@ -222,7 +223,9 @@ declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/TensorOps.td
-  SOURCES dialects/tensor.py
+  SOURCES
+    dialects/tensor.py
+    dialects/_tensor_ops_ext.py
   DIALECT_NAME tensor)
 
 declare_mlir_dialect_python_bindings(
@@ -351,6 +354,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
     MLIRCAPISparseTensor
 )
 
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
+  MODULE_NAME _mlirDialectsTransform
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectTransform.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPITransformDialect
+)
+
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
   MODULE_NAME _mlirAsyncPasses
   ADD_TO_PARENT MLIRPythonSources.Dialects.async_dialect
@@ -363,8 +379,7 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
     MLIRCAPIAsync
 )
 
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
     MODULE_NAME _mlirExecutionEngine
     ADD_TO_PARENT MLIRPythonSources.ExecutionEngine

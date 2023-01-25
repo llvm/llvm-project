@@ -7,62 +7,60 @@
 
 target triple = "hexagon"
 
-%struct.A = type { %struct.B*, %struct.B* }
-%struct.B = type { i8*, %struct.B*, %struct.B* }
+%struct.A = type { ptr, ptr }
+%struct.B = type { ptr, ptr, ptr }
 
 @.str.4 = external hidden unnamed_addr constant [41 x i8], align 1
 @__func__.fred = external hidden unnamed_addr constant [16 x i8], align 1
 @.str.5 = external hidden unnamed_addr constant [43 x i8], align 1
 
 ; Function Attrs: nounwind
-declare void @_Assert(i8*, i8*) #0
+declare void @_Assert(ptr, ptr) #0
 
 ; Function Attrs: nounwind
-define void @fred(%struct.A* %pA, %struct.B* %p) #0 !dbg !6 {
+define void @fred(ptr %pA, ptr %p) #0 !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.A* %pA, i64 0, metadata !26, metadata !28), !dbg !29
-  tail call void @llvm.dbg.value(metadata %struct.B* %p, i64 0, metadata !27, metadata !28), !dbg !30
-  %cmp = icmp eq %struct.B* %p, null, !dbg !31
+  tail call void @llvm.dbg.value(metadata ptr %pA, i64 0, metadata !26, metadata !28), !dbg !29
+  tail call void @llvm.dbg.value(metadata ptr %p, i64 0, metadata !27, metadata !28), !dbg !30
+  %cmp = icmp eq ptr %p, null, !dbg !31
   br i1 %cmp, label %cond.false, label %cond.end, !dbg !31
 
 cond.false:                                       ; preds = %entry
-  tail call void @_Assert(i8* getelementptr inbounds ([41 x i8], [41 x i8]* @.str.4, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__func__.fred, i32 0, i32 0)) #0, !dbg !32
+  tail call void @_Assert(ptr @.str.4, ptr @__func__.fred) #0, !dbg !32
   br label %cond.end, !dbg !32
 
 cond.end:                                         ; preds = %cond.false, %entry
-  %cmp1 = icmp eq %struct.A* %pA, null, !dbg !34
+  %cmp1 = icmp eq ptr %pA, null, !dbg !34
   br i1 %cmp1, label %cond.false3, label %cond.end4, !dbg !34
 
 cond.false3:                                      ; preds = %cond.end
-  tail call void @_Assert(i8* getelementptr inbounds ([43 x i8], [43 x i8]* @.str.5, i32 0, i32 0), i8* getelementptr inbounds ([16 x i8], [16 x i8]* @__func__.fred, i32 0, i32 0)) #0, !dbg !35
+  tail call void @_Assert(ptr @.str.5, ptr @__func__.fred) #0, !dbg !35
   br label %cond.end4, !dbg !35
 
 cond.end4:                                        ; preds = %cond.false3, %cond.end
-  %p2 = getelementptr inbounds %struct.A, %struct.A* %pA, i32 0, i32 0, !dbg !36
-  %0 = load %struct.B*, %struct.B** %p2, align 4, !dbg !38, !tbaa !39
-  %cmp5 = icmp eq %struct.B* %0, null, !dbg !44
+  %0 = load ptr, ptr %pA, align 4, !dbg !38, !tbaa !39
+  %cmp5 = icmp eq ptr %0, null, !dbg !44
   br i1 %cmp5, label %if.then, label %if.end, !dbg !45
 
 if.then:                                          ; preds = %cond.end4
-  %p1 = getelementptr inbounds %struct.A, %struct.A* %pA, i32 0, i32 1, !dbg !46
-  store %struct.B* %p, %struct.B** %p1, align 4, !dbg !48, !tbaa !49
-  store %struct.B* %p, %struct.B** %p2, align 4, !dbg !50, !tbaa !39
-  %p4 = getelementptr inbounds %struct.B, %struct.B* %p, i32 0, i32 1, !dbg !51
-  store %struct.B* null, %struct.B** %p4, align 4, !dbg !52, !tbaa !53
-  %p5 = getelementptr inbounds %struct.B, %struct.B* %p, i32 0, i32 2, !dbg !55
-  store %struct.B* null, %struct.B** %p5, align 4, !dbg !56, !tbaa !57
+  %p1 = getelementptr inbounds %struct.A, ptr %pA, i32 0, i32 1, !dbg !46
+  store ptr %p, ptr %p1, align 4, !dbg !48, !tbaa !49
+  store ptr %p, ptr %pA, align 4, !dbg !50, !tbaa !39
+  %p4 = getelementptr inbounds %struct.B, ptr %p, i32 0, i32 1, !dbg !51
+  store ptr null, ptr %p4, align 4, !dbg !52, !tbaa !53
+  %p5 = getelementptr inbounds %struct.B, ptr %p, i32 0, i32 2, !dbg !55
+  store ptr null, ptr %p5, align 4, !dbg !56, !tbaa !57
   br label %return, !dbg !58
 
 if.end:                                           ; preds = %cond.end4
-  %1 = ptrtoint %struct.B* %0 to i32, !dbg !59
-  %p57 = getelementptr inbounds %struct.B, %struct.B* %p, i32 0, i32 2, !dbg !60
-  store %struct.B* null, %struct.B** %p57, align 4, !dbg !61, !tbaa !57
-  %p49 = getelementptr inbounds %struct.B, %struct.B* %p, i32 0, i32 1, !dbg !62
-  %2 = bitcast %struct.B** %p49 to i32*, !dbg !63
-  store i32 %1, i32* %2, align 4, !dbg !63, !tbaa !53
-  %p511 = getelementptr inbounds %struct.B, %struct.B* %0, i32 0, i32 2, !dbg !64
-  store %struct.B* %p, %struct.B** %p511, align 4, !dbg !65, !tbaa !57
-  store %struct.B* %p, %struct.B** %p2, align 4, !dbg !66, !tbaa !39
+  %1 = ptrtoint ptr %0 to i32, !dbg !59
+  %p57 = getelementptr inbounds %struct.B, ptr %p, i32 0, i32 2, !dbg !60
+  store ptr null, ptr %p57, align 4, !dbg !61, !tbaa !57
+  %p49 = getelementptr inbounds %struct.B, ptr %p, i32 0, i32 1, !dbg !62
+  store i32 %1, ptr %p49, align 4, !dbg !63, !tbaa !53
+  %p511 = getelementptr inbounds %struct.B, ptr %0, i32 0, i32 2, !dbg !64
+  store ptr %p, ptr %p511, align 4, !dbg !65, !tbaa !57
+  store ptr %p, ptr %pA, align 4, !dbg !66, !tbaa !39
   br label %return, !dbg !67
 
 return:                                           ; preds = %if.end, %if.then

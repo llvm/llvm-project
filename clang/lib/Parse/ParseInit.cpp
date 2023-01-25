@@ -451,7 +451,7 @@ ExprResult Parser::ParseBraceInitializer() {
     if (!getLangOpts().CPlusPlus)
       Diag(LBraceLoc, diag::ext_gnu_empty_initializer);
     // Match the '}'.
-    return Actions.ActOnInitList(LBraceLoc, None, ConsumeBrace());
+    return Actions.ActOnInitList(LBraceLoc, std::nullopt, ConsumeBrace());
   }
 
   // Enter an appropriate expression evaluation context for an initializer list.
@@ -565,7 +565,7 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
       << Result.IsIfExists;
     // Fall through to skip.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case IEB_Skip:
     Braces.skipToEnd();

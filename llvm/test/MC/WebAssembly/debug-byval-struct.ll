@@ -20,26 +20,23 @@ target triple = "wasm32-unknown-unknown"
 %struct.s = type { i32, float }
 
 ; Function Attrs: noinline nounwind optnone
-define hidden i32 @some_func(i32 %x, %union.u* byval(%union.u) align 4 %some_union, %struct.s* byval(%struct.s) align 4 %some_struct, i32* %a) #0 !dbg !7 {
+define hidden i32 @some_func(i32 %x, ptr byval(%union.u) align 4 %some_union, ptr byval(%struct.s) align 4 %some_struct, ptr %a) #0 !dbg !7 {
 entry:
   %x.addr = alloca i32, align 4
-  %a.addr = alloca i32*, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata %union.u* %some_union, metadata !25, metadata !DIExpression()), !dbg !26
-  call void @llvm.dbg.declare(metadata %struct.s* %some_struct, metadata !27, metadata !DIExpression()), !dbg !28
-  store i32* %a, i32** %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32** %a.addr, metadata !29, metadata !DIExpression()), !dbg !30
-  %0 = load i32, i32* %x.addr, align 4, !dbg !31
-  %x1 = bitcast %union.u* %some_union to i32*, !dbg !32
-  %1 = load i32, i32* %x1, align 4, !dbg !32
+  %a.addr = alloca ptr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %some_union, metadata !25, metadata !DIExpression()), !dbg !26
+  call void @llvm.dbg.declare(metadata ptr %some_struct, metadata !27, metadata !DIExpression()), !dbg !28
+  store ptr %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !29, metadata !DIExpression()), !dbg !30
+  %0 = load i32, ptr %x.addr, align 4, !dbg !31
+  %1 = load i32, ptr %some_union, align 4, !dbg !32
   %add = add nsw i32 %0, %1, !dbg !33
-  %x2 = getelementptr inbounds %struct.s, %struct.s* %some_struct, i32 0, i32 0, !dbg !34
-  %2 = load i32, i32* %x2, align 4, !dbg !34
+  %2 = load i32, ptr %some_struct, align 4, !dbg !34
   %add3 = add nsw i32 %add, %2, !dbg !35
-  %3 = load i32*, i32** %a.addr, align 4, !dbg !36
-  %arrayidx = getelementptr inbounds i32, i32* %3, i32 0, !dbg !36
-  %4 = load i32, i32* %arrayidx, align 4, !dbg !36
+  %3 = load ptr, ptr %a.addr, align 4, !dbg !36
+  %4 = load i32, ptr %3, align 4, !dbg !36
   %add4 = add nsw i32 %add3, %4, !dbg !37
   ret i32 %add4, !dbg !38
 }

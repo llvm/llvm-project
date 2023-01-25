@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -16,6 +16,11 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace fir {
+#define GEN_PASS_DEF_EXTERNALNAMECONVERSION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 using namespace mlir;
 
@@ -117,7 +122,7 @@ public:
 };
 
 class ExternalNameConversionPass
-    : public fir::ExternalNameConversionBase<ExternalNameConversionPass> {
+    : public fir::impl::ExternalNameConversionBase<ExternalNameConversionPass> {
 public:
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;

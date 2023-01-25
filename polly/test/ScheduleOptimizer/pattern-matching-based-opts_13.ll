@@ -86,7 +86,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, [2000 x double]* %C, [2000 x double]* %A, [2000 x double]* %B) {
+define internal void @kernel_gemm(i32 %ni, i32 %nj, i32 %nk, double %alpha, double %beta, ptr %C, ptr %A, ptr %B) {
 entry:
   br label %entry.split
 
@@ -103,15 +103,15 @@ for.body3:                                        ; preds = %for.inc17, %for.bod
 
 for.body6:                                        ; preds = %for.body6, %for.body3
   %indvars.iv = phi i64 [ 0, %for.body3 ], [ %indvars.iv.next, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [2000 x double], [2000 x double]* %A, i64 %indvars.iv41, i64 %indvars.iv
-  %tmp = load double, double* %arrayidx8, align 8
-  %arrayidx12 = getelementptr inbounds [2000 x double], [2000 x double]* %B, i64 %indvars.iv, i64 %indvars.iv38
-  %tmp1 = load double, double* %arrayidx12, align 8
+  %arrayidx8 = getelementptr inbounds [2000 x double], ptr %A, i64 %indvars.iv41, i64 %indvars.iv
+  %tmp = load double, ptr %arrayidx8, align 8
+  %arrayidx12 = getelementptr inbounds [2000 x double], ptr %B, i64 %indvars.iv, i64 %indvars.iv38
+  %tmp1 = load double, ptr %arrayidx12, align 8
   %mul = fmul double %tmp, %tmp1
-  %arrayidx16 = getelementptr inbounds [2000 x double], [2000 x double]* %C, i64 %indvars.iv41, i64 %indvars.iv38
-  %tmp2 = load double, double* %arrayidx16, align 8
+  %arrayidx16 = getelementptr inbounds [2000 x double], ptr %C, i64 %indvars.iv41, i64 %indvars.iv38
+  %tmp2 = load double, ptr %arrayidx16, align 8
   %add = fadd double %tmp2, %mul
-  store double %add, double* %arrayidx16, align 8
+  store double %add, ptr %arrayidx16, align 8
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, 2000
   br i1 %exitcond, label %for.body6, label %for.inc17

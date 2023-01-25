@@ -188,7 +188,7 @@ define <4 x i32> @extend_lowish_i16x8_s(<8 x i16> %v) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 2, 3, 0, 0, 4, 5, 0, 0, 6, 7, 0, 0, 8, 9, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 2, 3, 0, 1, 4, 5, 0, 1, 6, 7, 0, 1, 8, 9, 0, 1
 ; CHECK-NEXT:    i32.const 16
 ; CHECK-NEXT:    i32x4.shl
 ; CHECK-NEXT:    i32.const 16

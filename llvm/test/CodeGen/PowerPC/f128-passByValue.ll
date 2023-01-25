@@ -39,8 +39,8 @@ define fp128 @loadConstant2(fp128 %a, fp128 %b) {
 ; CHECK-P8-LABEL: loadConstant2:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __addkf3
@@ -74,8 +74,8 @@ define signext i32 @fp128Param(fp128 %a) {
 ; CHECK-P8-LABEL: fp128Param:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __fixkfsi
@@ -101,8 +101,8 @@ define fp128 @fp128Return(fp128 %a, fp128 %b) {
 ; CHECK-P8-LABEL: fp128Return:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl __addkf3
@@ -118,7 +118,7 @@ entry:
 
 ; array of float128 types
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @fp128Array(fp128* nocapture readonly %farray,
+define fp128 @fp128Array(ptr nocapture readonly %farray,
 ; CHECK-LABEL: fp128Array:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sldi r4, r4, 4
@@ -131,8 +131,8 @@ define fp128 @fp128Array(fp128* nocapture readonly %farray,
 ; CHECK-P8-LABEL: fp128Array:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -32(r1)
+; CHECK-P8-NEXT:    std r0, 48(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    sldi r4, r4, 4
@@ -148,13 +148,13 @@ define fp128 @fp128Array(fp128* nocapture readonly %farray,
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                         i32 signext %loopcnt, fp128* nocapture readnone %sum) {
+                         i32 signext %loopcnt, ptr nocapture readnone %sum) {
 entry:
-  %0 = load fp128, fp128* %farray, align 16
+  %0 = load fp128, ptr %farray, align 16
   %sub = add nsw i32 %loopcnt, -1
   %idxprom = sext i32 %sub to i64
-  %arrayidx1 = getelementptr inbounds fp128, fp128* %farray, i64 %idxprom
-  %1 = load fp128, fp128* %arrayidx1, align 16
+  %arrayidx1 = getelementptr inbounds fp128, ptr %farray, i64 %idxprom
+  %1 = load fp128, ptr %arrayidx1, align 16
   %add = fadd fp128 %0, %1
   ret fp128 %add
 }
@@ -183,8 +183,8 @@ define fp128 @maxVecParam(fp128 %p1, fp128 %p2, fp128 %p3, fp128 %p4, fp128 %p5,
 ; CHECK-P8-LABEL: maxVecParam:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -224(r1)
+; CHECK-P8-NEXT:    std r0, 240(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset v21, -176
@@ -326,8 +326,8 @@ define fp128 @mixParam_01(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-P8-LABEL: mixParam_01:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -372,8 +372,8 @@ define fastcc fp128 @mixParam_01f(fp128 %a, i32 signext %i, fp128 %b) {
 ; CHECK-P8-LABEL: mixParam_01f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -407,7 +407,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
+define fp128 @mixParam_02(fp128 %p1, double %p2, ptr nocapture %p3,
 ; CHECK-LABEL: mixParam_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 96(r1)
@@ -426,8 +426,8 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-LABEL: mixParam_02:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset f31, -8
@@ -463,7 +463,7 @@ define fp128 @mixParam_02(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                          i16 signext %p4, fp128* nocapture readonly %p5,
+                          i16 signext %p4, ptr nocapture readonly %p5,
                           i32 signext %p6, i8 zeroext %p7, i32 zeroext %p8) {
 entry:
   %conv = sext i16 %p4 to i32
@@ -472,8 +472,8 @@ entry:
   %add2 = add nsw i32 %add, %conv1
   %add3 = add i32 %add2, %p8
   %conv4 = zext i32 %add3 to i64
-  store i64 %conv4, i64* %p3, align 8
-  %0 = load fp128, fp128* %p5, align 16
+  store i64 %conv4, ptr %p3, align 8
+  %0 = load fp128, ptr %p5, align 16
   %add5 = fadd fp128 %0, %p1
   %conv6 = fpext double %p2 to fp128
   %add7 = fadd fp128 %add5, %conv6
@@ -481,7 +481,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
+define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, ptr nocapture %p3,
 ; CHECK-LABEL: mixParam_02f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    add r4, r4, r6
@@ -499,8 +499,8 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-LABEL: mixParam_02f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset f31, -8
@@ -535,7 +535,7 @@ define fastcc fp128 @mixParam_02f(fp128 %p1, double %p2, i64* nocapture %p3,
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                                  i16 signext %p4, fp128* nocapture readonly %p5,
+                                  i16 signext %p4, ptr nocapture readonly %p5,
                                   i32 signext %p6, i8 zeroext %p7, i32 zeroext %p8) {
 entry:
   %conv = sext i16 %p4 to i32
@@ -544,8 +544,8 @@ entry:
   %add2 = add nsw i32 %add, %conv1
   %add3 = add i32 %add2, %p8
   %conv4 = zext i32 %add3 to i64
-  store i64 %conv4, i64* %p3, align 8
-  %0 = load fp128, fp128* %p5, align 16
+  store i64 %conv4, ptr %p3, align 8
+  %0 = load fp128, ptr %p5, align 16
   %add5 = fadd fp128 %0, %p1
   %conv6 = fpext double %p2 to fp128
   %add7 = fadd fp128 %add5, %conv6
@@ -554,7 +554,7 @@ entry:
 
 ; Passing a mix of float128 and vector parameters.
 ; Function Attrs: norecurse nounwind
-define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
+define void @mixParam_03(fp128 %f1, ptr nocapture %d1, <4 x i32> %vec1,
 ; CHECK-LABEL: mixParam_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 104(r1)
@@ -571,8 +571,8 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-P8-LABEL: mixParam_03:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -605,21 +605,21 @@ define void @mixParam_03(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                         fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
-                         <4 x i32>* nocapture %vec2) {
+                         ptr nocapture %f2, i32 signext %i1, i8 zeroext %c1,
+                         ptr nocapture %vec2) {
 entry:
-  store fp128 %f1, fp128* %f2, align 16
-  store <4 x i32> %vec1, <4 x i32>* %vec2, align 16
-  %0 = load fp128, fp128* %f2, align 16
+  store fp128 %f1, ptr %f2, align 16
+  store <4 x i32> %vec1, ptr %vec2, align 16
+  %0 = load fp128, ptr %f2, align 16
   %conv = sitofp i32 %i1 to fp128
   %add = fadd fp128 %0, %conv
   %conv1 = fptrunc fp128 %add to double
-  store double %conv1, double* %d1, align 8
+  store double %conv1, ptr %d1, align 8
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %vec1,
+define fastcc void @mixParam_03f(fp128 %f1, ptr nocapture %d1, <4 x i32> %vec1,
 ; CHECK-LABEL: mixParam_03f:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxv v2, 0(r4)
@@ -635,8 +635,8 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-P8-LABEL: mixParam_03f:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -80(r1)
+; CHECK-P8-NEXT:    std r0, 96(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    .cfi_offset r30, -16
@@ -668,16 +668,16 @@ define fastcc void @mixParam_03f(fp128 %f1, double* nocapture %d1, <4 x i32> %ve
 ; CHECK-P8-NEXT:    ld r0, 16(r1)
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
-                                 fp128* nocapture %f2, i32 signext %i1, i8 zeroext %c1,
-                                 <4 x i32>* nocapture %vec2) {
+                                 ptr nocapture %f2, i32 signext %i1, i8 zeroext %c1,
+                                 ptr nocapture %vec2) {
 entry:
-  store fp128 %f1, fp128* %f2, align 16
-  store <4 x i32> %vec1, <4 x i32>* %vec2, align 16
-  %0 = load fp128, fp128* %f2, align 16
+  store fp128 %f1, ptr %f2, align 16
+  store <4 x i32> %vec1, ptr %vec2, align 16
+  %0 = load fp128, ptr %f2, align 16
   %conv = sitofp i32 %i1 to fp128
   %add = fadd fp128 %0, %conv
   %conv1 = fptrunc fp128 %add to double
-  store double %conv1, double* %d1, align 8
+  store double %conv1, ptr %d1, align 8
   ret void
 }
 
@@ -686,8 +686,8 @@ define signext i32 @noopt_call_crash() #0 {
 ; CHECK-LABEL: noopt_call_crash:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -96(r1)
+; CHECK-NEXT:    std r0, 112(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl in
@@ -703,8 +703,8 @@ define signext i32 @noopt_call_crash() #0 {
 ; CHECK-P8-LABEL: noopt_call_crash:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    mflr r0
-; CHECK-P8-NEXT:    std r0, 16(r1)
 ; CHECK-P8-NEXT:    stdu r1, -96(r1)
+; CHECK-P8-NEXT:    std r0, 112(r1)
 ; CHECK-P8-NEXT:    .cfi_def_cfa_offset 96
 ; CHECK-P8-NEXT:    .cfi_offset lr, 16
 ; CHECK-P8-NEXT:    bl in

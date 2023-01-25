@@ -69,24 +69,24 @@ define i32 @_Z3barv() #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %y, metadata !18, metadata !19), !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %y, metadata !18, metadata !19), !dbg !20
   br label %while.cond, !dbg !21
 
 while.cond:                                       ; preds = %entry
-  %0 = load i32, i32* %y, align 4, !dbg !22
+  %0 = load i32, ptr %y, align 4, !dbg !22
   %cmp = icmp slt i32 %0, 0, !dbg !22
   br i1 %cmp, label %while.body, label %while.end, !dbg !22
 
 while.body:                                       ; preds = %while.cond
-  store i32 2, i32* %retval, align 4, !dbg !24
+  store i32 2, ptr %retval, align 4, !dbg !24
   br label %return, !dbg !24
 
 while.end:                                        ; preds = %while.cond
-  store i32 0, i32* %retval, align 4, !dbg !26
+  store i32 0, ptr %retval, align 4, !dbg !26
   br label %return, !dbg !26
 
 return:                                           ; preds = %while.end, %while.body
-  %1 = load i32, i32* %retval, align 4, !dbg !27
+  %1 = load i32, ptr %retval, align 4, !dbg !27
   ret i32 %1, !dbg !27
 }
 
@@ -98,21 +98,21 @@ define i32 @_Z3foov() #2 !dbg !8 {
 entry:
   %retval.i = alloca i32, align 4
   %y.i = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %y.i, metadata !18, metadata !19), !dbg !29
-  %0 = load i32, i32* %y.i, align 4, !dbg !31
+  call void @llvm.dbg.declare(metadata ptr %y.i, metadata !18, metadata !19), !dbg !29
+  %0 = load i32, ptr %y.i, align 4, !dbg !31
   %cmp.i = icmp slt i32 %0, 0, !dbg !31
   br i1 %cmp.i, label %while.body.i, label %while.end.i, !dbg !31
 
 while.body.i:                                     ; preds = %entry
-  store i32 2, i32* %retval.i, align 4, !dbg !32
+  store i32 2, ptr %retval.i, align 4, !dbg !32
   br label %_Z3barv.exit, !dbg !32
 
 while.end.i:                                      ; preds = %entry
-  store i32 0, i32* %retval.i, align 4, !dbg !33
+  store i32 0, ptr %retval.i, align 4, !dbg !33
   br label %_Z3barv.exit, !dbg !33
 
 _Z3barv.exit:                                     ; preds = %while.end.i, %while.body.i
-  %1 = load i32, i32* %retval.i, align 4, !dbg !34
+  %1 = load i32, ptr %retval.i, align 4, !dbg !34
   ret i32 %1, !dbg !35
 }
 

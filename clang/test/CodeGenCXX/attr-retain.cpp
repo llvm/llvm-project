@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -triple x86_64 -Werror %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple x86_64 -Werror %s -o - | FileCheck %s
 
-// CHECK:      @llvm.used = appending global [7 x i8*]
+// CHECK:      @llvm.used = appending global [7 x ptr]
 // CHECK-SAME:   @_ZN2X0C2Ev
 // CHECK-SAME:   @_ZN2X0C1Ev
 // CHECK-SAME:   @_ZN2X0D2Ev

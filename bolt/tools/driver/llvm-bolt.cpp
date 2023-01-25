@@ -49,7 +49,7 @@ static cl::OptionCategory *Perf2BoltCategories[] = {&AggregatorCategory,
 static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<executable>"),
                                           cl::Required, cl::cat(BoltCategory),
-                                          cl::sub(*cl::AllSubCommands));
+                                          cl::sub(cl::SubCommand::getAll()));
 
 static cl::opt<std::string>
 InputDataFilename("data",
@@ -98,7 +98,7 @@ static void printBoltRevision(llvm::raw_ostream &OS) {
 }
 
 void perf2boltMode(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(opts::Perf2BoltCategories));
+  cl::HideUnrelatedOptions(ArrayRef(opts::Perf2BoltCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::ParseCommandLineOptions(
       argc, argv,
@@ -127,7 +127,7 @@ void perf2boltMode(int argc, char **argv) {
 }
 
 void boltDiffMode(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(opts::BoltDiffCategories));
+  cl::HideUnrelatedOptions(ArrayRef(opts::BoltDiffCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::ParseCommandLineOptions(
       argc, argv,
@@ -153,7 +153,7 @@ void boltDiffMode(int argc, char **argv) {
 }
 
 void boltMode(int argc, char **argv) {
-  cl::HideUnrelatedOptions(makeArrayRef(opts::BoltCategories));
+  cl::HideUnrelatedOptions(ArrayRef(opts::BoltCategories));
   // Register the target printer for --version.
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);

@@ -43,9 +43,12 @@ class BinaryData;
 class BinarySection {
   friend class BinaryContext;
 
+  /// Count the number of sections created.
+  static uint64_t Count;
+
   BinaryContext &BC;           // Owning BinaryContext
   std::string Name;            // Section name
-  const SectionRef Section;    // SectionRef (may be null)
+  const SectionRef Section;    // SectionRef for input binary sections.
   StringRef Contents;          // Input section contents
   const uint64_t Address;      // Address of section in input binary (may be 0)
   const uint64_t Size;         // Input section size
@@ -86,6 +89,7 @@ class BinarySection {
   uint64_t OutputSize{0};          // Section size in the rewritten binary.
   uint64_t OutputFileOffset{0};    // File offset in the rewritten binary file.
   StringRef OutputContents;        // Rewritten section contents.
+  const uint64_t SectionNumber;    // Order in which the section was created.
   unsigned SectionID{-1u};         // Unique ID used for address mapping.
                                    // Set by ExecutableFileMemoryManager.
   uint32_t Index{0};               // Section index in the output file.
@@ -140,20 +144,21 @@ class BinarySection {
 
 public:
   /// Copy a section.
-  explicit BinarySection(BinaryContext &BC, StringRef Name,
+  explicit BinarySection(BinaryContext &BC, const Twine &Name,
                          const BinarySection &Section)
-      : BC(BC), Name(Name), Section(Section.getSectionRef()),
+      : BC(BC), Name(Name.str()), Section(SectionRef()),
         Contents(Section.getContents()), Address(Section.getAddress()),
         Size(Section.getSize()), Alignment(Section.getAlignment()),
         ELFType(Section.getELFType()), ELFFlags(Section.getELFFlags()),
         Relocations(Section.Relocations),
-        PendingRelocations(Section.PendingRelocations), OutputName(Name) {}
+        PendingRelocations(Section.PendingRelocations), OutputName(Name.str()),
+        SectionNumber(++Count) {}
 
   BinarySection(BinaryContext &BC, SectionRef Section)
       : BC(BC), Name(getName(Section)), Section(Section),
         Contents(getContents(Section)), Address(Section.getAddress()),
-        Size(Section.getSize()), Alignment(Section.getAlignment()),
-        OutputName(Name) {
+        Size(Section.getSize()), Alignment(Section.getAlignment().value()),
+        OutputName(Name), SectionNumber(++Count) {
     if (isELF()) {
       ELFType = ELFSectionRef(Section).getType();
       ELFFlags = ELFSectionRef(Section).getFlags();
@@ -167,13 +172,14 @@ public:
   }
 
   // TODO: pass Data as StringRef/ArrayRef? use StringRef::copy method.
-  BinarySection(BinaryContext &BC, StringRef Name, uint8_t *Data, uint64_t Size,
-                unsigned Alignment, unsigned ELFType, unsigned ELFFlags)
-      : BC(BC), Name(Name),
+  BinarySection(BinaryContext &BC, const Twine &Name, uint8_t *Data,
+                uint64_t Size, unsigned Alignment, unsigned ELFType,
+                unsigned ELFFlags)
+      : BC(BC), Name(Name.str()),
         Contents(reinterpret_cast<const char *>(Data), Data ? Size : 0),
         Address(0), Size(Size), Alignment(Alignment), ELFType(ELFType),
-        ELFFlags(ELFFlags), IsFinalized(true), OutputName(Name),
-        OutputSize(Size), OutputContents(Contents) {
+        ELFFlags(ELFFlags), IsFinalized(true), OutputName(Name.str()),
+        OutputSize(Size), OutputContents(Contents), SectionNumber(++Count) {
     assert(Alignment > 0 && "section alignment must be > 0");
   }
 
@@ -207,10 +213,34 @@ public:
 
   // Order sections by their immutable properties.
   bool operator<(const BinarySection &Other) const {
-    return (getAddress() < Other.getAddress() ||
-            (getAddress() == Other.getAddress() &&
-             (getSize() < Other.getSize() ||
-              (getSize() == Other.getSize() && getName() < Other.getName()))));
+    // Allocatable before non-allocatable.
+    if (isAllocatable() != Other.isAllocatable())
+      return isAllocatable() > Other.isAllocatable();
+
+    // Input sections take precedence.
+    if (hasSectionRef() != Other.hasSectionRef())
+      return hasSectionRef() > Other.hasSectionRef();
+
+    // Compare allocatable input sections by their address.
+    if (hasSectionRef() && getAddress() != Other.getAddress())
+      return getAddress() < Other.getAddress();
+    if (hasSectionRef() && getAddress() && getSize() != Other.getSize())
+      return getSize() < Other.getSize();
+
+    // Code before data.
+    if (isText() != Other.isText())
+      return isText() > Other.isText();
+
+    // Read-only before writable.
+    if (isWritable() != Other.isWritable())
+      return isWritable() < Other.isWritable();
+
+    // BSS at the end.
+    if (isBSS() != Other.isBSS())
+      return isBSS() < Other.isBSS();
+
+    // Otherwise, preserve the order of creation.
+    return SectionNumber < Other.SectionNumber;
   }
 
   ///
@@ -224,17 +254,18 @@ public:
   uint64_t getEndAddress() const { return Address + Size; }
   uint64_t getSize() const { return Size; }
   uint64_t getInputFileOffset() const { return InputFileOffset; }
+  Align getAlign() const { return Align(Alignment); }
   uint64_t getAlignment() const { return Alignment; }
   bool isText() const {
     if (isELF())
       return (ELFFlags & ELF::SHF_EXECINSTR);
-    return getSectionRef().isText();
+    return hasSectionRef() && getSectionRef().isText();
   }
   bool isData() const {
     if (isELF())
       return (ELFType == ELF::SHT_PROGBITS &&
               (ELFFlags & (ELF::SHF_ALLOC | ELF::SHF_WRITE)));
-    return getSectionRef().isData();
+    return hasSectionRef() && getSectionRef().isData();
   }
   bool isBSS() const {
     return (ELFType == ELF::SHT_NOBITS &&
@@ -244,10 +275,7 @@ public:
   bool isTBSS() const { return isBSS() && isTLS(); }
   bool isVirtual() const { return ELFType == ELF::SHT_NOBITS; }
   bool isRela() const { return ELFType == ELF::SHT_RELA; }
-  bool isReadOnly() const {
-    return ((ELFFlags & ELF::SHF_ALLOC) && !(ELFFlags & ELF::SHF_WRITE) &&
-            ELFType == ELF::SHT_PROGBITS);
-  }
+  bool isWritable() const { return (ELFFlags & ELF::SHF_WRITE); }
   bool isAllocatable() const {
     if (isELF()) {
       return (ELFFlags & ELF::SHF_ALLOC) && !isTBSS();
@@ -406,6 +434,7 @@ public:
     return SectionID;
   }
   bool hasValidSectionID() const { return SectionID != -1u; }
+  bool hasValidIndex() { return Index != 0; }
   uint32_t getIndex() const { return Index; }
 
   // mutation
@@ -416,12 +445,12 @@ public:
     SectionID = ID;
   }
   void setIndex(uint32_t I) { Index = I; }
-  void setOutputName(StringRef Name) { OutputName = std::string(Name); }
+  void setOutputName(const Twine &Name) { OutputName = Name.str(); }
   void setAnonymous(bool Flag) { IsAnonymous = Flag; }
 
-  /// Emit the section as data, possibly with relocations. Use name \p NewName
-  //  for the section during emission if non-empty.
-  void emitAsData(MCStreamer &Streamer, StringRef NewName = StringRef()) const;
+  /// Emit the section as data, possibly with relocations.
+  /// Use name \p SectionName for the section during the emission.
+  void emitAsData(MCStreamer &Streamer, const Twine &SectionName) const;
 
   using SymbolResolverFuncTy = llvm::function_ref<uint64_t(const MCSymbol *)>;
 
@@ -429,6 +458,13 @@ public:
   /// that were not emitted via MCStreamer.
   void flushPendingRelocations(raw_pwrite_stream &OS,
                                SymbolResolverFuncTy Resolver);
+
+  /// Change contents of the section.
+  void updateContents(const uint8_t *Data, size_t NewSize) {
+    OutputContents = StringRef(reinterpret_cast<const char *>(Data), NewSize);
+    OutputSize = NewSize;
+    IsFinalized = true;
+  }
 
   /// Reorder the contents of this section according to /p Order.  If
   /// /p Inplace is true, the entire contents of the section is reordered,

@@ -1,16 +1,16 @@
-; RUN: opt -S -verify-memoryssa -loop-sink < %s | FileCheck %s
+; RUN: opt -S -verify-memoryssa -passes=loop-sink < %s | FileCheck %s
 ; RUN: opt -S -verify-memoryssa -aa-pipeline=basic-aa -passes=loop-sink < %s | FileCheck %s
 
 ; The load instruction should not be sunk into following loop.
 ; CHECK:      @foo
 ; CHECK-NEXT: entry
-; CHECK-NEXT: %ptr = load i8*, i8** %pp, align 8
-; CHECK-NEXT: store i8* null, i8** %pp, align 8
+; CHECK-NEXT: %ptr = load ptr, ptr %pp, align 8
+; CHECK-NEXT: store ptr null, ptr %pp, align 8
 
-define i32 @foo(i32 %n, i8** %pp) !prof !0 {
+define i32 @foo(i32 %n, ptr %pp) !prof !0 {
 entry:
-  %ptr = load i8*, i8** %pp, align 8
-  store i8* null, i8** %pp, align 8
+  %ptr = load ptr, ptr %pp, align 8
+  store ptr null, ptr %pp, align 8
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -20,8 +20,8 @@ for.cond:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %0 = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %ptr, i64 %0
-  %1 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %ptr, i64 %0
+  %1 = load i8, ptr %arrayidx, align 1
   %or19 = call i8 @llvm.bitreverse.i8(i8 %1)
   %v = sext i8 %or19 to i32
   %inc = add i32 %i.0, %v

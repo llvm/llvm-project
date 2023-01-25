@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-unroll -disable-output
+; RUN: opt < %s -passes=loop-unroll -disable-output
 
 define void @"f_fu___REFUf[]REFUf[]Uf"() nounwind {
 allocas:
@@ -16,7 +16,7 @@ pl_loop.i964:                                     ; preds = %pl_loopend.i973, %c
 
 pl_dolane.i970:                                   ; preds = %pl_loop.i964
   %storeval.i.i969 = extractelement <4 x i8> <i8 0, i8 1, i8 2, i8 3>, i32 %0
-  store i8 %storeval.i.i969, i8* undef, align 1
+  store i8 %storeval.i.i969, ptr undef, align 1
   br label %pl_loopend.i973
 
 pl_loopend.i973:                                  ; preds = %pl_dolane.i970, %pl_loop.i964

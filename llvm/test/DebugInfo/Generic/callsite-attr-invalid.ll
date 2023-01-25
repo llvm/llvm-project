@@ -1,4 +1,4 @@
-; RUN: opt -verify < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=verify < %s 2>&1 | FileCheck %s
 
 ; CHECK: DIFlagAllCallsDescribed must be attached to a definition
 ; CHECK: warning: ignoring invalid debug info
@@ -12,14 +12,14 @@
 define void @_Z3foov() !dbg !8 {
 entry:
   %x = alloca %struct.A, align 1
-  call void @llvm.dbg.declare(metadata %struct.A* %x, metadata !12, metadata !DIExpression()), !dbg !19
-  call void @_ZN1AD1Ev(%struct.A* %x) #3, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %x, metadata !12, metadata !DIExpression()), !dbg !19
+  call void @_ZN1AD1Ev(ptr %x) #3, !dbg !20
   ret void, !dbg !20
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-declare void @_ZN1AD1Ev(%struct.A*)
+declare void @_ZN1AD1Ev(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

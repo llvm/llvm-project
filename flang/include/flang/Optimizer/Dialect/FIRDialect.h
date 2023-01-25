@@ -16,7 +16,7 @@
 #include "mlir/IR/Dialect.h"
 
 namespace mlir {
-class BlockAndValueMapping;
+class IRMapping;
 } // namespace mlir
 
 namespace fir {
@@ -56,7 +56,7 @@ public:
 
 /// Support for inlining on FIR.
 bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,
-                      mlir::BlockAndValueMapping &map);
+                      mlir::IRMapping &map);
 bool canLegallyInline(mlir::Operation *, mlir::Operation *, bool);
 
 } // namespace fir

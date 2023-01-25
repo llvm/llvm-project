@@ -2,9 +2,6 @@
 Test lldb-vscode setBreakpoints request
 """
 
-from __future__ import print_function
-
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -76,7 +73,6 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr49418")
     def test_compile_units(self):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
@@ -89,7 +85,5 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         moduleId = self.vscode.get_modules()['a.out']['id']
         response = self.vscode.request_compileUnits(moduleId)
         self.assertTrue(response['body'])
-        self.assertEqual(len(response['body']['compileUnits']), 1,
-                        'Only one source file should exist')
-        self.assertEqual(response['body']['compileUnits'][0]['compileUnitPath'], main_source_path,
-                        'Real path to main.cpp matches')
+        cu_paths = [cu['compileUnitPath'] for cu in response['body']['compileUnits']]
+        self.assertIn(main_source_path, cu_paths, 'Real path to main.cpp matches')

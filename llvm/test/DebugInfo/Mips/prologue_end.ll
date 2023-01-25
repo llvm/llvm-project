@@ -44,11 +44,11 @@ entry:
 ; PIC-FP:	.loc	1 2 3 prologue_end
 ; PIC-FP:	lw	$[[R2:[0-9]+]], %got($.str)($[[R1]])
 
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str, i32 0, i32 0)), !dbg !10
+  %call = call i32 (ptr, ...) @printf(ptr @.str), !dbg !10
   ret void, !dbg !11
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 attributes #0 = { nounwind }
 

@@ -20,6 +20,7 @@
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -46,13 +47,6 @@ fir::ExtendedValue createSomeExtendedExpression(mlir::Location loc,
                                                 const SomeExpr &expr,
                                                 SymMap &symMap,
                                                 StatementContext &stmtCtx);
-
-/// Create a global array symbol with the Dense attribute
-fir::GlobalOp createDenseGlobal(mlir::Location loc, mlir::Type symTy,
-                                llvm::StringRef globalName,
-                                mlir::StringAttr linkage, bool isConst,
-                                const SomeExpr &expr,
-                                Fortran::lower::AbstractConverter &converter);
 
 /// Create the IR for the expression \p expr in an initialization context.
 /// Expressions that appear in initializers may not allocate temporaries, do not
@@ -182,7 +176,7 @@ void createArrayOfPointerAssignment(
     AbstractConverter &converter, const SomeExpr &lhs, const SomeExpr &rhs,
     ExplicitIterSpace &explicitIterSpace, ImplicitIterSpace &implicitIterSpace,
     const llvm::SmallVector<mlir::Value> &lbounds,
-    llvm::Optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
+    std::optional<llvm::SmallVector<mlir::Value>> ubounds, SymMap &symMap,
     StatementContext &stmtCtx);
 
 /// Lower an array expression with "parallel" semantics. Such a rhs expression

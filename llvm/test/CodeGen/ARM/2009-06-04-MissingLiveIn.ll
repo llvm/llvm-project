@@ -1,16 +1,16 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin -mattr=+v6
 
 	%struct.anon = type { i16, i16 }
-	%struct.cab_archive = type { i32, i16, i16, i16, i16, i8, %struct.cab_folder*, %struct.cab_file* }
-	%struct.cab_file = type { i32, i16, i64, i8*, i32, i32, i32, %struct.cab_folder*, %struct.cab_file*, %struct.cab_archive*, %struct.cab_state* }
-	%struct.cab_folder = type { i16, i16, %struct.cab_archive*, i64, %struct.cab_folder* }
-	%struct.cab_state = type { i8*, i8*, [38912 x i8], i16, i16, i8*, i16 }
-	%struct.qtm_model = type { i32, i32, %struct.anon* }
-	%struct.qtm_stream = type { i32, i32, i8, i8*, i32, i32, i32, i16, i16, i16, i8, i32, i8*, i8*, i8*, i8*, i8*, i32, i32, i8, [42 x i32], [42 x i8], [27 x i8], [27 x i8], %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, [65 x %struct.anon], [65 x %struct.anon], [65 x %struct.anon], [65 x %struct.anon], [25 x %struct.anon], [37 x %struct.anon], [43 x %struct.anon], [28 x %struct.anon], [8 x %struct.anon], %struct.cab_file*, i32 (%struct.cab_file*, i8*, i32)* }
+	%struct.cab_archive = type { i32, i16, i16, i16, i16, i8, ptr, ptr }
+	%struct.cab_file = type { i32, i16, i64, ptr, i32, i32, i32, ptr, ptr, ptr, ptr }
+	%struct.cab_folder = type { i16, i16, ptr, i64, ptr }
+	%struct.cab_state = type { ptr, ptr, [38912 x i8], i16, i16, ptr, i16 }
+	%struct.qtm_model = type { i32, i32, ptr }
+	%struct.qtm_stream = type { i32, i32, i8, ptr, i32, i32, i32, i16, i16, i16, i8, i32, ptr, ptr, ptr, ptr, ptr, i32, i32, i8, [42 x i32], [42 x i8], [27 x i8], [27 x i8], %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, %struct.qtm_model, [65 x %struct.anon], [65 x %struct.anon], [65 x %struct.anon], [65 x %struct.anon], [25 x %struct.anon], [37 x %struct.anon], [43 x %struct.anon], [28 x %struct.anon], [8 x %struct.anon], ptr, ptr }
 
-declare fastcc i32 @qtm_read_input(%struct.qtm_stream* nocapture) nounwind
+declare fastcc i32 @qtm_read_input(ptr nocapture) nounwind
 
-define fastcc i32 @qtm_decompress(%struct.qtm_stream* %qtm, i64 %out_bytes) nounwind {
+define fastcc i32 @qtm_decompress(ptr %qtm, i64 %out_bytes) nounwind {
 entry:
 	br i1 undef, label %bb245, label %bb3
 
@@ -136,7 +136,7 @@ bb138:		; preds = %bb77
 	br label %bb141
 
 bb139:		; preds = %bb141
-	%scevgep441442881 = load i16, i16* undef		; <i16> [#uses=1]
+	%scevgep441442881 = load i16, ptr undef		; <i16> [#uses=1]
 	%1 = icmp ugt i16 %scevgep441442881, %0		; <i1> [#uses=1]
 	br i1 %1, label %bb141, label %bb142
 
@@ -225,7 +225,7 @@ bb187:		; preds = %bb195
 	br i1 undef, label %bb193, label %bb189
 
 bb189:		; preds = %bb187
-	%2 = tail call fastcc i32 @qtm_read_input(%struct.qtm_stream* %qtm) nounwind		; <i32> [#uses=0]
+	%2 = tail call fastcc i32 @qtm_read_input(ptr %qtm) nounwind		; <i32> [#uses=0]
 	ret i32 undef
 
 bb193:		; preds = %bb187

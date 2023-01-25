@@ -52,7 +52,7 @@ define double @f6(i8 %r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2) {
 ; fp128s are passed indirectly.  Do some arithmetic so that the value
 ; must be interpreted as a float, rather than as a block of memory to
 ; be copied.
-define void @f7(fp128 *%r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
+define void @f7(ptr %r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
                 fp128 %r6) {
 ; CHECK-LABEL: f7:
 ; CHECK: ld %f0, 0(%r6)
@@ -62,7 +62,7 @@ define void @f7(fp128 *%r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %y = fadd fp128 %r6, %r6
-  store fp128 %y, fp128 *%r2
+  store fp128 %y, ptr %r2
   ret void
 }
 
@@ -109,7 +109,7 @@ define float @f12(i8 %r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
 }
 
 ; Test a case where the fp128 address is passed on the stack.
-define void @f13(fp128 *%r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
+define void @f13(ptr %r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
                  fp128 %r6, i64 %s1, float %f4, double %f6, i64 %s2,
                  float %s3, fp128 %s4) {
 ; CHECK-LABEL: f13:
@@ -121,7 +121,7 @@ define void @f13(fp128 *%r2, i16 %r3, i32 %r4, i64 %r5, float %f0, double %f2,
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
   %y = fadd fp128 %s4, %s4
-  store fp128 %y, fp128 *%r2
+  store fp128 %y, ptr %r2
   ret void
 }
 

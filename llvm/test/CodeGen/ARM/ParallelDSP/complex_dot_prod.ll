@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumbv7em -mcpu=cortex-m4 -O3 %s -o - | FileCheck %s --check-prefix=CHECK-LLC
 ; RUN: opt -S -mtriple=armv7-a -arm-parallel-dsp -dce %s -o - | FileCheck %s --check-prefix=CHECK-OPT
 
-define dso_local arm_aapcscc void @complex_dot_prod(i16* nocapture readonly %pSrcA, i16* nocapture readonly %pSrcB, i32* nocapture %realResult, i32* nocapture %imagResult) {
+define dso_local arm_aapcscc void @complex_dot_prod(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSrcB, ptr nocapture %realResult, ptr nocapture %imagResult) {
 ; CHECK-LLC-LABEL: complex_dot_prod:
 ; CHECK-LLC:       @ %bb.0: @ %entry
 ; CHECK-LLC-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -49,83 +49,75 @@ define dso_local arm_aapcscc void @complex_dot_prod(i16* nocapture readonly %pSr
 ;
 ; CHECK-OPT-LABEL: @complex_dot_prod(
 ; CHECK-OPT-NEXT:  entry:
-; CHECK-OPT-NEXT:    [[TMP0:%.*]] = bitcast i16* [[PSRCA:%.*]] to i32*
-; CHECK-OPT-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 2
+; CHECK-OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PSRCA:%.*]], align 2
 ; CHECK-OPT-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-OPT-NEXT:    [[TMP3:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-OPT-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP1]], 16
 ; CHECK-OPT-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
 ; CHECK-OPT-NEXT:    [[TMP6:%.*]] = sext i16 [[TMP5]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i16, i16* [[PSRCA]], i32 2
-; CHECK-OPT-NEXT:    [[TMP7:%.*]] = bitcast i16* [[PSRCB:%.*]] to i32*
-; CHECK-OPT-NEXT:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 2
+; CHECK-OPT-NEXT:    [[INCDEC_PTR1:%.*]] = getelementptr inbounds i16, ptr [[PSRCA]], i32 2
+; CHECK-OPT-NEXT:    [[TMP8:%.*]] = load i32, ptr [[PSRCB:%.*]], align 2
 ; CHECK-OPT-NEXT:    [[TMP9:%.*]] = trunc i32 [[TMP8]] to i16
 ; CHECK-OPT-NEXT:    [[TMP10:%.*]] = call i64 @llvm.arm.smlaldx(i32 [[TMP1]], i32 [[TMP8]], i64 0)
 ; CHECK-OPT-NEXT:    [[TMP11:%.*]] = sext i16 [[TMP9]] to i32
 ; CHECK-OPT-NEXT:    [[TMP12:%.*]] = lshr i32 [[TMP8]], 16
 ; CHECK-OPT-NEXT:    [[TMP13:%.*]] = trunc i32 [[TMP12]] to i16
 ; CHECK-OPT-NEXT:    [[TMP14:%.*]] = sext i16 [[TMP13]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i16, i16* [[PSRCB]], i32 2
+; CHECK-OPT-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds i16, ptr [[PSRCB]], i32 2
 ; CHECK-OPT-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], [[TMP3]]
 ; CHECK-OPT-NEXT:    [[CONV5:%.*]] = sext i32 [[MUL]] to i64
 ; CHECK-OPT-NEXT:    [[MUL13:%.*]] = mul nsw i32 [[TMP14]], [[TMP6]]
 ; CHECK-OPT-NEXT:    [[CONV14:%.*]] = sext i32 [[MUL13]] to i64
 ; CHECK-OPT-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CONV5]], [[CONV14]]
-; CHECK-OPT-NEXT:    [[TMP15:%.*]] = bitcast i16* [[INCDEC_PTR1]] to i32*
-; CHECK-OPT-NEXT:    [[TMP16:%.*]] = load i32, i32* [[TMP15]], align 2
+; CHECK-OPT-NEXT:    [[TMP16:%.*]] = load i32, ptr [[INCDEC_PTR1]], align 2
 ; CHECK-OPT-NEXT:    [[TMP17:%.*]] = trunc i32 [[TMP16]] to i16
 ; CHECK-OPT-NEXT:    [[TMP18:%.*]] = sext i16 [[TMP17]] to i32
 ; CHECK-OPT-NEXT:    [[TMP19:%.*]] = lshr i32 [[TMP16]], 16
 ; CHECK-OPT-NEXT:    [[TMP20:%.*]] = trunc i32 [[TMP19]] to i16
 ; CHECK-OPT-NEXT:    [[TMP21:%.*]] = sext i16 [[TMP20]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR21:%.*]] = getelementptr inbounds i16, i16* [[PSRCA]], i32 4
-; CHECK-OPT-NEXT:    [[TMP22:%.*]] = bitcast i16* [[INCDEC_PTR3]] to i32*
-; CHECK-OPT-NEXT:    [[TMP23:%.*]] = load i32, i32* [[TMP22]], align 2
+; CHECK-OPT-NEXT:    [[INCDEC_PTR21:%.*]] = getelementptr inbounds i16, ptr [[PSRCA]], i32 4
+; CHECK-OPT-NEXT:    [[TMP23:%.*]] = load i32, ptr [[INCDEC_PTR3]], align 2
 ; CHECK-OPT-NEXT:    [[TMP24:%.*]] = trunc i32 [[TMP23]] to i16
 ; CHECK-OPT-NEXT:    [[TMP25:%.*]] = call i64 @llvm.arm.smlaldx(i32 [[TMP16]], i32 [[TMP23]], i64 [[TMP10]])
 ; CHECK-OPT-NEXT:    [[TMP26:%.*]] = sext i16 [[TMP24]] to i32
 ; CHECK-OPT-NEXT:    [[TMP27:%.*]] = lshr i32 [[TMP23]], 16
 ; CHECK-OPT-NEXT:    [[TMP28:%.*]] = trunc i32 [[TMP27]] to i16
 ; CHECK-OPT-NEXT:    [[TMP29:%.*]] = sext i16 [[TMP28]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR23:%.*]] = getelementptr inbounds i16, i16* [[PSRCB]], i32 4
+; CHECK-OPT-NEXT:    [[INCDEC_PTR23:%.*]] = getelementptr inbounds i16, ptr [[PSRCB]], i32 4
 ; CHECK-OPT-NEXT:    [[MUL26:%.*]] = mul nsw i32 [[TMP26]], [[TMP18]]
 ; CHECK-OPT-NEXT:    [[CONV27:%.*]] = sext i32 [[MUL26]] to i64
 ; CHECK-OPT-NEXT:    [[ADD28:%.*]] = add nsw i64 [[SUB]], [[CONV27]]
 ; CHECK-OPT-NEXT:    [[MUL36:%.*]] = mul nsw i32 [[TMP29]], [[TMP21]]
 ; CHECK-OPT-NEXT:    [[CONV37:%.*]] = sext i32 [[MUL36]] to i64
 ; CHECK-OPT-NEXT:    [[SUB38:%.*]] = sub nsw i64 [[ADD28]], [[CONV37]]
-; CHECK-OPT-NEXT:    [[TMP30:%.*]] = bitcast i16* [[INCDEC_PTR21]] to i32*
-; CHECK-OPT-NEXT:    [[TMP31:%.*]] = load i32, i32* [[TMP30]], align 2
+; CHECK-OPT-NEXT:    [[TMP31:%.*]] = load i32, ptr [[INCDEC_PTR21]], align 2
 ; CHECK-OPT-NEXT:    [[TMP32:%.*]] = trunc i32 [[TMP31]] to i16
 ; CHECK-OPT-NEXT:    [[TMP33:%.*]] = sext i16 [[TMP32]] to i32
 ; CHECK-OPT-NEXT:    [[TMP34:%.*]] = lshr i32 [[TMP31]], 16
 ; CHECK-OPT-NEXT:    [[TMP35:%.*]] = trunc i32 [[TMP34]] to i16
 ; CHECK-OPT-NEXT:    [[TMP36:%.*]] = sext i16 [[TMP35]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR45:%.*]] = getelementptr inbounds i16, i16* [[PSRCA]], i32 6
-; CHECK-OPT-NEXT:    [[TMP37:%.*]] = bitcast i16* [[INCDEC_PTR23]] to i32*
-; CHECK-OPT-NEXT:    [[TMP38:%.*]] = load i32, i32* [[TMP37]], align 2
+; CHECK-OPT-NEXT:    [[INCDEC_PTR45:%.*]] = getelementptr inbounds i16, ptr [[PSRCA]], i32 6
+; CHECK-OPT-NEXT:    [[TMP38:%.*]] = load i32, ptr [[INCDEC_PTR23]], align 2
 ; CHECK-OPT-NEXT:    [[TMP39:%.*]] = trunc i32 [[TMP38]] to i16
 ; CHECK-OPT-NEXT:    [[TMP40:%.*]] = call i64 @llvm.arm.smlaldx(i32 [[TMP31]], i32 [[TMP38]], i64 [[TMP25]])
 ; CHECK-OPT-NEXT:    [[TMP41:%.*]] = sext i16 [[TMP39]] to i32
 ; CHECK-OPT-NEXT:    [[TMP42:%.*]] = lshr i32 [[TMP38]], 16
 ; CHECK-OPT-NEXT:    [[TMP43:%.*]] = trunc i32 [[TMP42]] to i16
 ; CHECK-OPT-NEXT:    [[TMP44:%.*]] = sext i16 [[TMP43]] to i32
-; CHECK-OPT-NEXT:    [[INCDEC_PTR47:%.*]] = getelementptr inbounds i16, i16* [[PSRCB]], i32 6
+; CHECK-OPT-NEXT:    [[INCDEC_PTR47:%.*]] = getelementptr inbounds i16, ptr [[PSRCB]], i32 6
 ; CHECK-OPT-NEXT:    [[MUL50:%.*]] = mul nsw i32 [[TMP41]], [[TMP33]]
 ; CHECK-OPT-NEXT:    [[CONV51:%.*]] = sext i32 [[MUL50]] to i64
 ; CHECK-OPT-NEXT:    [[ADD52:%.*]] = add nsw i64 [[SUB38]], [[CONV51]]
 ; CHECK-OPT-NEXT:    [[MUL60:%.*]] = mul nsw i32 [[TMP44]], [[TMP36]]
 ; CHECK-OPT-NEXT:    [[CONV61:%.*]] = sext i32 [[MUL60]] to i64
 ; CHECK-OPT-NEXT:    [[SUB62:%.*]] = sub nsw i64 [[ADD52]], [[CONV61]]
-; CHECK-OPT-NEXT:    [[TMP45:%.*]] = bitcast i16* [[INCDEC_PTR45]] to i32*
-; CHECK-OPT-NEXT:    [[TMP46:%.*]] = load i32, i32* [[TMP45]], align 2
+; CHECK-OPT-NEXT:    [[TMP46:%.*]] = load i32, ptr [[INCDEC_PTR45]], align 2
 ; CHECK-OPT-NEXT:    [[TMP47:%.*]] = trunc i32 [[TMP46]] to i16
 ; CHECK-OPT-NEXT:    [[TMP48:%.*]] = sext i16 [[TMP47]] to i32
 ; CHECK-OPT-NEXT:    [[TMP49:%.*]] = lshr i32 [[TMP46]], 16
 ; CHECK-OPT-NEXT:    [[TMP50:%.*]] = trunc i32 [[TMP49]] to i16
 ; CHECK-OPT-NEXT:    [[TMP51:%.*]] = sext i16 [[TMP50]] to i32
-; CHECK-OPT-NEXT:    [[TMP52:%.*]] = bitcast i16* [[INCDEC_PTR47]] to i32*
-; CHECK-OPT-NEXT:    [[TMP53:%.*]] = load i32, i32* [[TMP52]], align 2
+; CHECK-OPT-NEXT:    [[TMP53:%.*]] = load i32, ptr [[INCDEC_PTR47]], align 2
 ; CHECK-OPT-NEXT:    [[TMP54:%.*]] = trunc i32 [[TMP53]] to i16
 ; CHECK-OPT-NEXT:    [[TMP55:%.*]] = call i64 @llvm.arm.smlaldx(i32 [[TMP46]], i32 [[TMP53]], i64 [[TMP40]])
 ; CHECK-OPT-NEXT:    [[TMP56:%.*]] = sext i16 [[TMP54]] to i32
@@ -140,20 +132,20 @@ define dso_local arm_aapcscc void @complex_dot_prod(i16* nocapture readonly %pSr
 ; CHECK-OPT-NEXT:    [[SUB86:%.*]] = sub nsw i64 [[ADD76]], [[CONV85]]
 ; CHECK-OPT-NEXT:    [[TMP60:%.*]] = lshr i64 [[SUB86]], 6
 ; CHECK-OPT-NEXT:    [[CONV92:%.*]] = trunc i64 [[TMP60]] to i32
-; CHECK-OPT-NEXT:    store i32 [[CONV92]], i32* [[REALRESULT:%.*]], align 4
+; CHECK-OPT-NEXT:    store i32 [[CONV92]], ptr [[REALRESULT:%.*]], align 4
 ; CHECK-OPT-NEXT:    [[TMP61:%.*]] = lshr i64 [[TMP55]], 6
 ; CHECK-OPT-NEXT:    [[CONV94:%.*]] = trunc i64 [[TMP61]] to i32
-; CHECK-OPT-NEXT:    store i32 [[CONV94]], i32* [[IMAGRESULT:%.*]], align 4
+; CHECK-OPT-NEXT:    store i32 [[CONV94]], ptr [[IMAGRESULT:%.*]], align 4
 ; CHECK-OPT-NEXT:    ret void
 entry:
-  %incdec.ptr = getelementptr inbounds i16, i16* %pSrcA, i32 1
-  %0 = load i16, i16* %pSrcA, align 2
-  %incdec.ptr1 = getelementptr inbounds i16, i16* %pSrcA, i32 2
-  %1 = load i16, i16* %incdec.ptr, align 2
-  %incdec.ptr2 = getelementptr inbounds i16, i16* %pSrcB, i32 1
-  %2 = load i16, i16* %pSrcB, align 2
-  %incdec.ptr3 = getelementptr inbounds i16, i16* %pSrcB, i32 2
-  %3 = load i16, i16* %incdec.ptr2, align 2
+  %incdec.ptr = getelementptr inbounds i16, ptr %pSrcA, i32 1
+  %0 = load i16, ptr %pSrcA, align 2
+  %incdec.ptr1 = getelementptr inbounds i16, ptr %pSrcA, i32 2
+  %1 = load i16, ptr %incdec.ptr, align 2
+  %incdec.ptr2 = getelementptr inbounds i16, ptr %pSrcB, i32 1
+  %2 = load i16, ptr %pSrcB, align 2
+  %incdec.ptr3 = getelementptr inbounds i16, ptr %pSrcB, i32 2
+  %3 = load i16, ptr %incdec.ptr2, align 2
   %conv = sext i16 %0 to i32
   %conv4 = sext i16 %2 to i32
   %mul = mul nsw i32 %conv4, %conv
@@ -168,14 +160,14 @@ entry:
   %mul17 = mul nsw i32 %conv4, %conv11
   %conv18 = sext i32 %mul17 to i64
   %add19 = add nsw i64 %conv9, %conv18
-  %incdec.ptr20 = getelementptr inbounds i16, i16* %pSrcA, i32 3
-  %4 = load i16, i16* %incdec.ptr1, align 2
-  %incdec.ptr21 = getelementptr inbounds i16, i16* %pSrcA, i32 4
-  %5 = load i16, i16* %incdec.ptr20, align 2
-  %incdec.ptr22 = getelementptr inbounds i16, i16* %pSrcB, i32 3
-  %6 = load i16, i16* %incdec.ptr3, align 2
-  %incdec.ptr23 = getelementptr inbounds i16, i16* %pSrcB, i32 4
-  %7 = load i16, i16* %incdec.ptr22, align 2
+  %incdec.ptr20 = getelementptr inbounds i16, ptr %pSrcA, i32 3
+  %4 = load i16, ptr %incdec.ptr1, align 2
+  %incdec.ptr21 = getelementptr inbounds i16, ptr %pSrcA, i32 4
+  %5 = load i16, ptr %incdec.ptr20, align 2
+  %incdec.ptr22 = getelementptr inbounds i16, ptr %pSrcB, i32 3
+  %6 = load i16, ptr %incdec.ptr3, align 2
+  %incdec.ptr23 = getelementptr inbounds i16, ptr %pSrcB, i32 4
+  %7 = load i16, ptr %incdec.ptr22, align 2
   %conv24 = sext i16 %4 to i32
   %conv25 = sext i16 %6 to i32
   %mul26 = mul nsw i32 %conv25, %conv24
@@ -192,14 +184,14 @@ entry:
   %conv42 = sext i32 %mul41 to i64
   %add33 = add nsw i64 %add19, %conv42
   %add43 = add nsw i64 %add33, %conv32
-  %incdec.ptr44 = getelementptr inbounds i16, i16* %pSrcA, i32 5
-  %8 = load i16, i16* %incdec.ptr21, align 2
-  %incdec.ptr45 = getelementptr inbounds i16, i16* %pSrcA, i32 6
-  %9 = load i16, i16* %incdec.ptr44, align 2
-  %incdec.ptr46 = getelementptr inbounds i16, i16* %pSrcB, i32 5
-  %10 = load i16, i16* %incdec.ptr23, align 2
-  %incdec.ptr47 = getelementptr inbounds i16, i16* %pSrcB, i32 6
-  %11 = load i16, i16* %incdec.ptr46, align 2
+  %incdec.ptr44 = getelementptr inbounds i16, ptr %pSrcA, i32 5
+  %8 = load i16, ptr %incdec.ptr21, align 2
+  %incdec.ptr45 = getelementptr inbounds i16, ptr %pSrcA, i32 6
+  %9 = load i16, ptr %incdec.ptr44, align 2
+  %incdec.ptr46 = getelementptr inbounds i16, ptr %pSrcB, i32 5
+  %10 = load i16, ptr %incdec.ptr23, align 2
+  %incdec.ptr47 = getelementptr inbounds i16, ptr %pSrcB, i32 6
+  %11 = load i16, ptr %incdec.ptr46, align 2
   %conv48 = sext i16 %8 to i32
   %conv49 = sext i16 %10 to i32
   %mul50 = mul nsw i32 %conv49, %conv48
@@ -216,12 +208,12 @@ entry:
   %conv66 = sext i32 %mul65 to i64
   %add57 = add nsw i64 %add43, %conv66
   %add67 = add nsw i64 %add57, %conv56
-  %incdec.ptr68 = getelementptr inbounds i16, i16* %pSrcA, i32 7
-  %12 = load i16, i16* %incdec.ptr45, align 2
-  %13 = load i16, i16* %incdec.ptr68, align 2
-  %incdec.ptr70 = getelementptr inbounds i16, i16* %pSrcB, i32 7
-  %14 = load i16, i16* %incdec.ptr47, align 2
-  %15 = load i16, i16* %incdec.ptr70, align 2
+  %incdec.ptr68 = getelementptr inbounds i16, ptr %pSrcA, i32 7
+  %12 = load i16, ptr %incdec.ptr45, align 2
+  %13 = load i16, ptr %incdec.ptr68, align 2
+  %incdec.ptr70 = getelementptr inbounds i16, ptr %pSrcB, i32 7
+  %14 = load i16, ptr %incdec.ptr47, align 2
+  %15 = load i16, ptr %incdec.ptr70, align 2
   %conv72 = sext i16 %12 to i32
   %conv73 = sext i16 %14 to i32
   %mul74 = mul nsw i32 %conv73, %conv72
@@ -240,9 +232,9 @@ entry:
   %add91 = add nsw i64 %add81, %conv80
   %16 = lshr i64 %sub86, 6
   %conv92 = trunc i64 %16 to i32
-  store i32 %conv92, i32* %realResult, align 4
+  store i32 %conv92, ptr %realResult, align 4
   %17 = lshr i64 %add91, 6
   %conv94 = trunc i64 %17 to i32
-  store i32 %conv94, i32* %imagResult, align 4
+  store i32 %conv94, ptr %imagResult, align 4
   ret void
 }

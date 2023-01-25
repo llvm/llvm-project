@@ -66,17 +66,31 @@ bool FunctionCaller::WriteFunctionWrapper(
     ExecutionContext &exe_ctx, DiagnosticManager &diagnostic_manager) {
   Process *process = exe_ctx.GetProcessPtr();
 
-  if (!process)
+  if (!process) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError, "no process.");
     return false;
-
+  }
+  
   lldb::ProcessSP jit_process_sp(m_jit_process_wp.lock());
 
-  if (process != jit_process_sp.get())
+  if (process != jit_process_sp.get()) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError,
+                             "process does not match the stored process.");
     return false;
-
-  if (!m_compiled)
+  }
+    
+  if (process->GetState() != lldb::eStateStopped) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError, 
+                              "process is not stopped");
     return false;
+  }
 
+  if (!m_compiled) {
+    diagnostic_manager.Printf(eDiagnosticSeverityError, 
+                              "function not compiled");
+    return false;
+  }
+  
   if (m_JITted)
     return true;
 
@@ -213,6 +227,17 @@ bool FunctionCaller::WriteFunctionArguments(
 bool FunctionCaller::InsertFunction(ExecutionContext &exe_ctx,
                                     lldb::addr_t &args_addr_ref,
                                     DiagnosticManager &diagnostic_manager) {
+  // Since we might need to call allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  Process *process = exe_ctx.GetProcessPtr();
+  if (!process) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError, "no process");
+    return false;
+  }
+  if (process->GetState() != lldb::eStateStopped) {
+    diagnostic_manager.PutString(eDiagnosticSeverityError, "process running");
+    return false;
+  }
   if (CompileFunction(exe_ctx.GetThreadSP(), diagnostic_manager) != 0)
     return false;
   if (!WriteFunctionWrapper(exe_ctx, diagnostic_manager))

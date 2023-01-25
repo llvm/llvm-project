@@ -179,7 +179,7 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
   Function::iterator FBBI = TIBB->getIterator();
-  F.getBasicBlockList().insert(++FBBI, NewBB);
+  F.insert(++FBBI, NewBB);
 
   // Branch to the new block, breaking the edge.
   TI->setSuccessor(SuccNum, NewBB);

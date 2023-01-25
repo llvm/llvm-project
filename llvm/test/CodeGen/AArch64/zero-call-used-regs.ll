@@ -220,14 +220,6 @@ define dso_local i32 @all(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_
 ; DEFAULT-NEXT:    movi v5.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v6.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v7.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v8.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v9.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v10.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v11.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v12.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v13.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v14.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v15.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v16.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v17.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v18.2d, #0000000000000000
@@ -276,14 +268,6 @@ define dso_local i32 @all(i32 noundef %a, i32 noundef %b, i32 noundef %c) local_
 ; SVE-NEXT:    mov z5.d, #0 // =0x0
 ; SVE-NEXT:    mov z6.d, #0 // =0x0
 ; SVE-NEXT:    mov z7.d, #0 // =0x0
-; SVE-NEXT:    mov z8.d, #0 // =0x0
-; SVE-NEXT:    mov z9.d, #0 // =0x0
-; SVE-NEXT:    mov z10.d, #0 // =0x0
-; SVE-NEXT:    mov z11.d, #0 // =0x0
-; SVE-NEXT:    mov z12.d, #0 // =0x0
-; SVE-NEXT:    mov z13.d, #0 // =0x0
-; SVE-NEXT:    mov z14.d, #0 // =0x0
-; SVE-NEXT:    mov z15.d, #0 // =0x0
 ; SVE-NEXT:    mov z16.d, #0 // =0x0
 ; SVE-NEXT:    mov z17.d, #0 // =0x0
 ; SVE-NEXT:    mov z18.d, #0 // =0x0
@@ -548,14 +532,6 @@ define dso_local double @all_float(double noundef %a, float noundef %b) local_un
 ; DEFAULT-NEXT:    movi v5.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v6.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v7.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v8.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v9.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v10.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v11.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v12.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v13.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v14.2d, #0000000000000000
-; DEFAULT-NEXT:    movi v15.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v16.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v17.2d, #0000000000000000
 ; DEFAULT-NEXT:    movi v18.2d, #0000000000000000
@@ -604,14 +580,6 @@ define dso_local double @all_float(double noundef %a, float noundef %b) local_un
 ; SVE-NEXT:    mov z5.d, #0 // =0x0
 ; SVE-NEXT:    mov z6.d, #0 // =0x0
 ; SVE-NEXT:    mov z7.d, #0 // =0x0
-; SVE-NEXT:    mov z8.d, #0 // =0x0
-; SVE-NEXT:    mov z9.d, #0 // =0x0
-; SVE-NEXT:    mov z10.d, #0 // =0x0
-; SVE-NEXT:    mov z11.d, #0 // =0x0
-; SVE-NEXT:    mov z12.d, #0 // =0x0
-; SVE-NEXT:    mov z13.d, #0 // =0x0
-; SVE-NEXT:    mov z14.d, #0 // =0x0
-; SVE-NEXT:    mov z15.d, #0 // =0x0
 ; SVE-NEXT:    mov z16.d, #0 // =0x0
 ; SVE-NEXT:    mov z17.d, #0 // =0x0
 ; SVE-NEXT:    mov z18.d, #0 // =0x0

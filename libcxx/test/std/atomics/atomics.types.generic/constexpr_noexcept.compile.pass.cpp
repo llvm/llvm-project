@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 #include <atomic>
+#include <type_traits>
 
 #include "test_macros.h"
 

@@ -1,4 +1,4 @@
-//===- Delta.h - Delta Debugging Algorithm Implementation -----------------===//
+//===- Delta.h - Delta Debugging Algorithm Implementation -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,13 +15,17 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_DELTA_H
 
-#include "TestRunner.h"
+#include "ReducerWorkItem.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <utility>
 #include <vector>
 
 namespace llvm {
+
+class TestRunner;
 
 struct Chunk {
   int Begin;
@@ -31,10 +35,10 @@ struct Chunk {
   bool contains(int Index) const { return Index >= Begin && Index <= End; }
 
   void print() const {
-    errs() << "[" << Begin;
+    errs() << '[' << Begin;
     if (End - Begin != 0)
-      errs() << "," << End;
-    errs() << "]";
+      errs() << ',' << End;
+    errs() << ']';
   }
 
   /// Operator when populating CurrentChunks in Generic Delta Pass
@@ -42,11 +46,38 @@ struct Chunk {
     return C1.Begin != C2.Begin || C1.End != C2.End;
   }
 
+  friend bool operator==(const Chunk &C1, const Chunk &C2) {
+    return C1.Begin == C2.Begin && C1.End == C2.End;
+  }
+
   /// Operator used for sets
   friend bool operator<(const Chunk &C1, const Chunk &C2) {
     return std::tie(C1.Begin, C1.End) < std::tie(C2.Begin, C2.End);
   }
 };
+
+template<>
+struct DenseMapInfo<Chunk> {
+  static inline Chunk getEmptyKey() {
+    return {DenseMapInfo<int>::getEmptyKey(),
+            DenseMapInfo<int>::getEmptyKey()};
+  }
+
+  static inline Chunk getTombstoneKey() {
+    return {DenseMapInfo<int>::getTombstoneKey(),
+            DenseMapInfo<int>::getTombstoneKey()};
+  }
+
+  static unsigned getHashValue(const Chunk Val) {
+    std::pair<int, int> PairVal = std::make_pair(Val.Begin, Val.End);
+    return DenseMapInfo<std::pair<int, int>>::getHashValue(PairVal);
+  }
+
+  static bool isEqual(const Chunk LHS, const Chunk RHS) {
+    return LHS == RHS;
+  }
+};
+
 
 /// Provides opaque interface for querying into ChunksToKeep without having to
 /// actually understand what is going on.
@@ -105,7 +136,8 @@ using ReductionFunc = function_ref<void(Oracle &, ReducerWorkItem &)>;
 ///
 /// Other implementations of the Delta Debugging algorithm can also be found in
 /// the CReduce, Delta, and Lithium projects.
-void runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule);
+void runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
+                  StringRef Message);
 } // namespace llvm
 
 #endif

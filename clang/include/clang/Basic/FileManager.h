@@ -102,7 +102,7 @@ class FileManager : public RefCountedBase<FileManager> {
       SeenBypassFileEntries;
 
   /// The file entry for stdin, if it has been accessed through the FileManager.
-  Optional<FileEntryRef> STDIN;
+  OptionalFileEntryRef STDIN;
 
   /// The canonical names of files and directories .
   llvm::DenseMap<const void *, llvm::StringRef> CanonicalNames;
@@ -166,8 +166,8 @@ public:
                                                     bool CacheFailure = true);
 
   /// Get a \c DirectoryEntryRef if it exists, without doing anything on error.
-  llvm::Optional<DirectoryEntryRef>
-  getOptionalDirectoryRef(StringRef DirName, bool CacheFailure = true) {
+  OptionalDirectoryEntryRef getOptionalDirectoryRef(StringRef DirName,
+                                                    bool CacheFailure = true) {
     return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
   }
 
@@ -231,9 +231,9 @@ public:
   llvm::Expected<FileEntryRef> getSTDIN();
 
   /// Get a FileEntryRef if it exists, without doing anything on error.
-  llvm::Optional<FileEntryRef> getOptionalFileRef(StringRef Filename,
-                                                  bool OpenFile = false,
-                                                  bool CacheFailure = true) {
+  OptionalFileEntryRef getOptionalFileRef(StringRef Filename,
+                                          bool OpenFile = false,
+                                          bool CacheFailure = true) {
     return llvm::expectedToOptional(
         getFileRef(Filename, OpenFile, CacheFailure));
   }
@@ -243,6 +243,10 @@ public:
   const FileSystemOptions &getFileSystemOpts() const { return FileSystemOpts; }
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+  getVirtualFileSystemPtr() const {
+    return FS;
+  }
 
   void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
     this->FS = std::move(FS);
@@ -266,7 +270,7 @@ public:
   /// bypasses all mapping and uniquing, blindly creating a new FileEntry.
   /// There is no attempt to deduplicate these; if you bypass the same file
   /// twice, you get two new file entries.
-  llvm::Optional<FileEntryRef> getBypassFile(FileEntryRef VFE);
+  OptionalFileEntryRef getBypassFile(FileEntryRef VFE);
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.

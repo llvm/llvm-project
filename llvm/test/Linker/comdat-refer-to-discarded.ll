@@ -9,8 +9,8 @@
 
 $foo = comdat any
 @foo = internal global i8 0, comdat
-define i8* @bar() {
-       ret i8* @foo
+define ptr @bar() {
+       ret ptr @foo
 }
 
 ; CHECK: $foo = comdat any
@@ -18,13 +18,13 @@ define i8* @bar() {
 ; CHECK: @foo = internal global i8 0, comdat
 ; CHECK: @foo.1 = internal global i8 1, comdat($foo)
 
-; CHECK:      define i8* @bar() {
-; CHECK-NEXT:   ret i8* @foo
+; CHECK:      define ptr @bar() {
+; CHECK-NEXT:   ret ptr @foo
 ; CHECK-NEXT: }
 
-; CHECK:      define i8* @zed() {
+; CHECK:      define ptr @zed() {
 ; CHECK-NEXT:   call void @bax()
-; CHECK-NEXT:   ret i8* @foo.1
+; CHECK-NEXT:   ret ptr @foo.1
 ; CHECK-NEXT: }
 
 ; CHECK:      define internal void @bax() comdat($foo) {
@@ -34,9 +34,9 @@ define i8* @bar() {
 ;--- 1-aux.ll
 $foo = comdat any
 @foo = internal global i8 1, comdat
-define i8* @zed() {
+define ptr @zed() {
   call void @bax()
-  ret i8* @foo
+  ret ptr @foo
 }
 define internal void @bax() comdat($foo) {
   ret void

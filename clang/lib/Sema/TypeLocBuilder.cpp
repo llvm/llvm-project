@@ -41,6 +41,29 @@ void TypeLocBuilder::pushFullCopy(TypeLoc L) {
   }
 }
 
+void TypeLocBuilder::pushTrivial(ASTContext &Context, QualType T,
+                                 SourceLocation Loc) {
+  auto L = TypeLoc(T, nullptr);
+  reserve(L.getFullDataSize());
+
+  SmallVector<TypeLoc, 4> TypeLocs;
+  for (auto CurTL = L; CurTL; CurTL = CurTL.getNextTypeLoc())
+    TypeLocs.push_back(CurTL);
+
+  for (const auto &CurTL : llvm::reverse(TypeLocs)) {
+    switch (CurTL.getTypeLocClass()) {
+#define ABSTRACT_TYPELOC(CLASS, PARENT)
+#define TYPELOC(CLASS, PARENT)                                                 \
+  case TypeLoc::CLASS: {                                                       \
+    auto NewTL = push<class CLASS##TypeLoc>(CurTL.getType());                  \
+    NewTL.initializeLocal(Context, Loc);                                       \
+    break;                                                                     \
+  }
+#include "clang/AST/TypeLocNodes.def"
+    }
+  }
+}
+
 void TypeLocBuilder::grow(size_t NewCapacity) {
   assert(NewCapacity > Capacity);
 

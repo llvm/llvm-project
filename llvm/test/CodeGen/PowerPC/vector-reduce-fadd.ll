@@ -3493,8 +3493,8 @@ define dso_local ppc_fp128 @v2ppcf128(<2 x ppc_fp128> %a) local_unnamed_addr #0 
 ; PWR9LE-LABEL: v2ppcf128:
 ; PWR9LE:       # %bb.0: # %entry
 ; PWR9LE-NEXT:    mflr r0
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -32(r1)
+; PWR9LE-NEXT:    std r0, 48(r1)
 ; PWR9LE-NEXT:    bl __gcc_qadd
 ; PWR9LE-NEXT:    nop
 ; PWR9LE-NEXT:    addi r1, r1, 32
@@ -3505,8 +3505,8 @@ define dso_local ppc_fp128 @v2ppcf128(<2 x ppc_fp128> %a) local_unnamed_addr #0 
 ; PWR9BE-LABEL: v2ppcf128:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -112(r1)
+; PWR9BE-NEXT:    std r0, 128(r1)
 ; PWR9BE-NEXT:    bl __gcc_qadd
 ; PWR9BE-NEXT:    nop
 ; PWR9BE-NEXT:    addi r1, r1, 112
@@ -3547,7 +3547,6 @@ define dso_local ppc_fp128 @v2ppcf128_b(<2 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9LE-NEXT:    mflr r0
 ; PWR9LE-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -48(r1)
 ; PWR9LE-NEXT:    fmr f31, f4
 ; PWR9LE-NEXT:    fmr f30, f3
@@ -3555,6 +3554,7 @@ define dso_local ppc_fp128 @v2ppcf128_b(<2 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9LE-NEXT:    fmr f3, f1
 ; PWR9LE-NEXT:    fmr f1, f5
 ; PWR9LE-NEXT:    fmr f2, f6
+; PWR9LE-NEXT:    std r0, 64(r1)
 ; PWR9LE-NEXT:    bl __gcc_qadd
 ; PWR9LE-NEXT:    nop
 ; PWR9LE-NEXT:    fmr f3, f30
@@ -3571,8 +3571,8 @@ define dso_local ppc_fp128 @v2ppcf128_b(<2 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9BE-LABEL: v2ppcf128_b:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -128(r1)
+; PWR9BE-NEXT:    std r0, 144(r1)
 ; PWR9BE-NEXT:    stfd f30, 112(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    stfd f31, 120(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    fmr f31, f4
@@ -3652,8 +3652,8 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR9LE-LABEL: v2ppcf128_fast:
 ; PWR9LE:       # %bb.0: # %entry
 ; PWR9LE-NEXT:    mflr r0
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -64(r1)
+; PWR9LE-NEXT:    std r0, 80(r1)
 ; PWR9LE-NEXT:    bl __gcc_qadd
 ; PWR9LE-NEXT:    nop
 ; PWR9LE-NEXT:    stfd f2, 40(r1)
@@ -3670,8 +3670,8 @@ define dso_local ppc_fp128 @v2ppcf128_fast(<2 x ppc_fp128> %a) local_unnamed_add
 ; PWR9BE-LABEL: v2ppcf128_fast:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -144(r1)
+; PWR9BE-NEXT:    std r0, 160(r1)
 ; PWR9BE-NEXT:    bl __gcc_qadd
 ; PWR9BE-NEXT:    nop
 ; PWR9BE-NEXT:    stfd f2, 120(r1)
@@ -3732,8 +3732,8 @@ define dso_local ppc_fp128 @v4ppcf128(<4 x ppc_fp128> %a) local_unnamed_addr #0 
 ; PWR9LE-NEXT:    stfd f29, -24(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -64(r1)
+; PWR9LE-NEXT:    std r0, 80(r1)
 ; PWR9LE-NEXT:    fmr f31, f8
 ; PWR9LE-NEXT:    fmr f30, f7
 ; PWR9LE-NEXT:    fmr f29, f6
@@ -3760,8 +3760,8 @@ define dso_local ppc_fp128 @v4ppcf128(<4 x ppc_fp128> %a) local_unnamed_addr #0 
 ; PWR9BE-LABEL: v4ppcf128:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -144(r1)
+; PWR9BE-NEXT:    std r0, 160(r1)
 ; PWR9BE-NEXT:    stfd f28, 112(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    stfd f29, 120(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    stfd f30, 128(r1) # 8-byte Folded Spill
@@ -3864,7 +3864,6 @@ define dso_local ppc_fp128 @v4ppcf128_b(<4 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9LE-NEXT:    stfd f29, -24(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -80(r1)
 ; PWR9LE-NEXT:    fmr f27, f4
 ; PWR9LE-NEXT:    fmr f26, f3
@@ -3872,6 +3871,7 @@ define dso_local ppc_fp128 @v4ppcf128_b(<4 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9LE-NEXT:    fmr f3, f1
 ; PWR9LE-NEXT:    fmr f1, f9
 ; PWR9LE-NEXT:    fmr f2, f10
+; PWR9LE-NEXT:    std r0, 96(r1)
 ; PWR9LE-NEXT:    fmr f31, f8
 ; PWR9LE-NEXT:    fmr f30, f7
 ; PWR9LE-NEXT:    fmr f29, f6
@@ -3904,8 +3904,8 @@ define dso_local ppc_fp128 @v4ppcf128_b(<4 x ppc_fp128> %a, ppc_fp128 %b) local_
 ; PWR9BE-LABEL: v4ppcf128_b:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -160(r1)
+; PWR9BE-NEXT:    std r0, 176(r1)
 ; PWR9BE-NEXT:    stfd f26, 112(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    stfd f27, 120(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    fmr f27, f4
@@ -4049,12 +4049,12 @@ define dso_local ppc_fp128 @v4ppcf128_fast(<4 x ppc_fp128> %a) local_unnamed_add
 ; PWR9LE-NEXT:    stfd f29, -24(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f30, -16(r1) # 8-byte Folded Spill
 ; PWR9LE-NEXT:    stfd f31, -8(r1) # 8-byte Folded Spill
-; PWR9LE-NEXT:    std r0, 16(r1)
 ; PWR9LE-NEXT:    stdu r1, -96(r1)
 ; PWR9LE-NEXT:    fmr f29, f4
 ; PWR9LE-NEXT:    fmr f28, f3
 ; PWR9LE-NEXT:    fmr f3, f5
 ; PWR9LE-NEXT:    fmr f4, f6
+; PWR9LE-NEXT:    std r0, 112(r1)
 ; PWR9LE-NEXT:    fmr f31, f8
 ; PWR9LE-NEXT:    fmr f30, f7
 ; PWR9LE-NEXT:    bl __gcc_qadd
@@ -4093,8 +4093,8 @@ define dso_local ppc_fp128 @v4ppcf128_fast(<4 x ppc_fp128> %a) local_unnamed_add
 ; PWR9BE-LABEL: v4ppcf128_fast:
 ; PWR9BE:       # %bb.0: # %entry
 ; PWR9BE-NEXT:    mflr r0
-; PWR9BE-NEXT:    std r0, 16(r1)
 ; PWR9BE-NEXT:    stdu r1, -176(r1)
+; PWR9BE-NEXT:    std r0, 192(r1)
 ; PWR9BE-NEXT:    stfd f28, 144(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    stfd f29, 152(r1) # 8-byte Folded Spill
 ; PWR9BE-NEXT:    fmr f29, f4

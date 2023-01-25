@@ -10,7 +10,7 @@
 ;     A[0] = val;
 ; }
 
-define void @partial_write_mapped_vector(double* noalias nonnull %A) {
+define void @partial_write_mapped_vector(ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -25,8 +25,8 @@ for:
       br i1 %if.cond, label %user, label %inc
 
     user:
-      %elt= getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %elt
+      %elt= getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %elt
       br label %inc
 
 inc:
@@ -50,8 +50,8 @@ return:
 ; CHECK-NEXT:    br i1 %polly.Stmt_body_Write0.cond, label %polly.stmt.body.Stmt_body_Write0.partial, label %polly.stmt.body.cont
 
 ; CHECK-LABEL:  polly.stmt.body.Stmt_body_Write0.partial:
-; CHECK-NEXT:    %polly.access.A = getelementptr double, double* %A, i64 1
-; CHECK-NEXT:    store double %p_val, double* %polly.access.A
+; CHECK-NEXT:    %polly.access.A = getelementptr double, ptr %A, i64 1
+; CHECK-NEXT:    store double %p_val, ptr %polly.access.A
 ; CHECK-NEXT:    br label %polly.stmt.body.cont
 
 ; CHECK-LABEL:  polly.stmt.body.cont:

@@ -16,26 +16,26 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-NEXT:    movq (%rdx), %rax
 ; CHECK-NEXT:    movswl 8(%rdi), %edx
 ; CHECK-NEXT:    movswl (%rax,%rsi,2), %eax
-; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    imull %edx, %eax
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
-; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
-; CHECK-NEXT:    movslq %eax, %rdi
-; CHECK-NEXT:    setl %dl
 ; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
-; CHECK-NEXT:    movq %rdi, %r8
-; CHECK-NEXT:    leal -1(%rdx,%rdx), %edx
-; CHECK-NEXT:    cmovll %edx, %esi
-; CHECK-NEXT:    subq %rax, %r8
+; CHECK-NEXT:    setl %dl
+; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
+; CHECK-NEXT:    setge %sil
+; CHECK-NEXT:    andb %dl, %sil
+; CHECK-NEXT:    movzbl %sil, %edx
+; CHECK-NEXT:    movslq %eax, %rsi
+; CHECK-NEXT:    movq %rsi, %rdi
+; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpl $1, %esi
-; CHECK-NEXT:    cmovneq %rax, %r8
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovnsq %rax, %r8
+; CHECK-NEXT:    testl $-2, %edx
+; CHECK-NEXT:    cmovneq %rax, %rdi
+; CHECK-NEXT:    testl %esi, %esi
+; CHECK-NEXT:    cmovnsq %rax, %rdi
 ; CHECK-NEXT:    movq (%rcx), %rax
-; CHECK-NEXT:    subq %r8, %rdi
-; CHECK-NEXT:    leaq -2138875574(%rax,%rdi), %rax
+; CHECK-NEXT:    subq %rdi, %rsi
+; CHECK-NEXT:    leaq -2138875574(%rax,%rsi), %rax
 ; CHECK-NEXT:    movq %rax, (%rcx)
 ; CHECK-NEXT:    retq
 entry:

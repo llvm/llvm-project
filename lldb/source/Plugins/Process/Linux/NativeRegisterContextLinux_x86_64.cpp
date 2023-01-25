@@ -9,7 +9,6 @@
 #if defined(__i386__) || defined(__x86_64__)
 
 #include "NativeRegisterContextLinux_x86_64.h"
-
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
@@ -20,6 +19,7 @@
 #include "lldb/Utility/Status.h"
 #include <cpuid.h>
 #include <linux/elf.h>
+#include <optional>
 
 // Newer toolchains define __get_cpuid_count in cpuid.h, but some
 // older-but-still-supported ones (e.g. gcc 5.4.0) don't, so we
@@ -255,6 +255,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
       new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
 }
 
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return DetermineArchitectureViaGPR(
+      tid, RegisterContextLinux_x86_64::GetGPRSizeStatic());
+}
+
 // NativeRegisterContextLinux_x86_64 members.
 
 static RegisterInfoInterface *
@@ -452,7 +458,7 @@ NativeRegisterContextLinux_x86_64::ReadRegister(const RegisterInfo *reg_info,
       // then use the type specified by reg_info rather than the uint64_t
       // default
       if (reg_value.GetByteSize() > reg_info->byte_size)
-        reg_value.SetType(reg_info);
+        reg_value.SetType(*reg_info);
     }
     return error;
   }
@@ -1034,7 +1040,7 @@ NativeRegisterContextLinux_x86_64::GetPtraceOffset(uint32_t reg_index) {
          (IsMPX(reg_index) ? 128 : 0);
 }
 
-llvm::Optional<NativeRegisterContextLinux::SyscallData>
+std::optional<NativeRegisterContextLinux::SyscallData>
 NativeRegisterContextLinux_x86_64::GetSyscallData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86: {
@@ -1056,7 +1062,7 @@ NativeRegisterContextLinux_x86_64::GetSyscallData() {
   }
 }
 
-llvm::Optional<NativeRegisterContextLinux::MmapData>
+std::optional<NativeRegisterContextLinux::MmapData>
 NativeRegisterContextLinux_x86_64::GetMmapData() {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:

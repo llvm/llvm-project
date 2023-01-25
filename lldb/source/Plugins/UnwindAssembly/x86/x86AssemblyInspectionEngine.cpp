@@ -682,10 +682,6 @@ bool x86AssemblyInspectionEngine::jmp_to_reg_p() {
   // The second byte is a ModR/M /4 byte, strip off the registers
   uint8_t second_byte_sans_reg = *(m_cur_insn + 1) & ~7;
 
-  // Don't handle 0x24 disp32, because the target address is
-  // knowable statically - pc_rel_branch_or_jump_p() will
-  // return the target address.
-
   // [reg]
   if (second_byte_sans_reg == 0x20)
     return true;
@@ -700,17 +696,6 @@ bool x86AssemblyInspectionEngine::jmp_to_reg_p() {
 
   // reg
   if (second_byte_sans_reg == 0xe0)
-    return true;
-
-  // disp32
-  // jumps to an address stored in memory, the value can't be cached
-  // in an unwind plan.
-  if (second_byte_sans_reg == 0x24)
-    return true;
-
-  // use SIB byte
-  // ff 24 fe  jmpq   *(%rsi,%rdi,8)
-  if (second_byte_sans_reg == 0x24)
     return true;
 
   return false;
@@ -966,7 +951,7 @@ bool x86AssemblyInspectionEngine::GetNonCallSiteUnwindPlanFromAssembly(
   // path jumps over the mid-function epilogue
 
   UnwindPlan::RowSP prologue_completed_row; // copy of prologue row of CFI
-  int prologue_completed_sp_bytes_offset_from_cfa; // The sp value before the
+  int prologue_completed_sp_bytes_offset_from_cfa = 0; // The sp value before the
                                                    // epilogue started executed
   bool prologue_completed_is_aligned = false;
   std::vector<bool> prologue_completed_saved_registers;

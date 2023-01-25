@@ -1,8 +1,8 @@
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -o - < %s | FileCheck %s
+; RUN: opt -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S -o - < %s | FileCheck %s
 
 ; This test case was written to trigger an incorrect assert statement in
 ; -simplifycfg.  Thus we don't actually want to check the output, just that
-; -simplifycfg -simplifycfg-require-and-preserve-domtree=1 ran successfully.  Thus we only check that the function still
+; -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 ran successfully.  Thus we only check that the function still
 ; exists, and that it still calls foo().
 ;
 ; NOTE: There are some obviously dead blocks and missing branch weight

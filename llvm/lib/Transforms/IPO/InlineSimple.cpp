@@ -50,7 +50,7 @@ public:
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
 
     bool RemarksEnabled = false;
-    const auto &BBs = CB.getCaller()->getBasicBlockList();
+    const auto &BBs = *CB.getCaller();
     if (!BBs.empty()) {
       auto DI = OptimizationRemark(DEBUG_TYPE, "", DebugLoc(), &BBs.front());
       if (DI.isEnabled())

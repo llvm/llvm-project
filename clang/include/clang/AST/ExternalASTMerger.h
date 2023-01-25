@@ -118,7 +118,7 @@ public:
   /// Asks all connected ASTImporters if any of them imported the given
   /// declaration. If any ASTImporter did import the given declaration,
   /// then this function returns the declaration that D was imported from.
-  /// Returns nullptr if no ASTImporter did import import D.
+  /// Returns nullptr if no ASTImporter did import D.
   Decl *FindOriginalDecl(Decl *D);
 
   /// Add a set of ASTContexts as possible origins.

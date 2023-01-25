@@ -17,10 +17,8 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -289,7 +287,8 @@ public:
         ShowCheckerHelpAlpha(false), ShowCheckerHelpDeveloper(false),
         ShowCheckerOptionList(false), ShowCheckerOptionAlphaList(false),
         ShowCheckerOptionDeveloperList(false), ShowEnabledCheckerList(false),
-        ShowConfigOptionsList(false), AnalyzeAll(false),
+        ShowConfigOptionsList(false),
+        ShouldEmitErrorsOnInvalidConfigValue(false), AnalyzeAll(false),
         AnalyzerDisplayProgress(false), eagerlyAssumeBinOpBifurcation(false),
         TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
         UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false),

@@ -1,10 +1,16 @@
 // RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++98 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++11 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++17 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -fms-compatibility
 // RUN: %clang_cc1 -std=c++2a %s -Wno-parentheses -Wdeprecated -verify=expected,cxx20 -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2a %s -Wno-parentheses -Wdeprecated -verify=expected,cxx20 -triple x86_64-linux-gnu -fms-compatibility
 
 // RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
+// RUN: %clang_cc1 -std=c++14 %s -Wno-parentheses -Wdeprecated -verify=expected,not-cxx20 -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS -fms-compatibility
 
 #include "Inputs/register.h"
 
@@ -180,10 +186,10 @@ namespace DeprecatedVolatile {
     --n; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
     n++; // cxx20-warning {{increment of object of volatile-qualified type 'volatile int' is deprecated}}
     n--; // cxx20-warning {{decrement of object of volatile-qualified type 'volatile int' is deprecated}}
-    n += 5; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n *= 3; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n /= 2; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
-    n %= 42; // cxx20-warning {{compound assignment to object of volatile-qualified type 'volatile int' is deprecated}}
+    n += 5; // undeprecated as a DR in C++23
+    n *= 3; // undeprecated as a DR in C++23
+    n /= 2; // undeprecated as a DR in C++23
+    n %= 42; // undeprecated as a DR in C++23
     n &= 2; // undeprecated as a DR in C++23
     n |= 2; // undeprecated as a DR in C++23
     n ^= 2; // undeprecated as a DR in C++23

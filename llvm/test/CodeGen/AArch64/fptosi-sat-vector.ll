@@ -2980,9 +2980,8 @@ define <8 x i8> @test_signed_v8f32_v8i8(<8 x float> %f) {
 ; CHECK-NEXT:    mvni v2.4s, #127
 ; CHECK-NEXT:    smax v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    smax v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    ret
     %x = call <8 x i8> @llvm.fptosi.sat.v8f32.v8i8(<8 x float> %f)
     ret <8 x i8> %x

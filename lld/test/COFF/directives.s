@@ -8,7 +8,6 @@
 # CHECK:      Export Table:
 # CHECK:      DLL name: directives.s.tmp.dll
 # CHECK:      Ordinal      RVA  Name
-# CHECK-NEXT:       0        0
 # CHECK-NEXT:       1   0x1000  exportfn1
 # CHECK-NEXT:       2   0x1000  exportfn2
 # CHECK-NEXT:       3   0x1000  exportfn3

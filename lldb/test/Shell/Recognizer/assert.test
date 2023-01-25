@@ -1,4 +1,3 @@
-# XFAIL: target-arm && linux-gnu
 # XFAIL: system-freebsd
 # XFAIL: system-netbsd
 #
