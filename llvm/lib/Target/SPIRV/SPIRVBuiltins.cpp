@@ -1587,7 +1587,7 @@ static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
   MIB.addUse(buildConstantIntReg(DL.getTypeStoreSize(PType), MIRBuilder, GR));
   // Param Aligment: Aligment of block literal structure.
   MIB.addUse(
-      buildConstantIntReg(DL.getPrefTypeAlignment(PType), MIRBuilder, GR));
+      buildConstantIntReg(DL.getPrefTypeAlign(PType).value(), MIRBuilder, GR));
 
   for (unsigned i = 0; i < LocalSizes.size(); i++)
     MIB.addUse(LocalSizes[i]);
