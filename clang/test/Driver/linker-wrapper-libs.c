@@ -2,6 +2,8 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
+// REQUIRES: system-linux
+
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.elf.o
 
 #if defined(RESOLVES)
