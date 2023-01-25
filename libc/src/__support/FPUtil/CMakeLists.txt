@@ -59,6 +59,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     libc.src.__support.CPP.type_traits
+    libc.src.__support.common
 )
 
 add_header_library(

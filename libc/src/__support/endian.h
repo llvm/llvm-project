@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
 #define LLVM_LIBC_SRC_SUPPORT_ENDIAN_H
 
+#include "common.h"
+
 #include <stdint.h>
 
 namespace __llvm_libc {
@@ -37,49 +39,49 @@ template <unsigned ORDER> struct Endian {
 // Little Endian specializations
 template <>
 template <>
-inline uint8_t
+LIBC_INLINE uint8_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_big_endian<uint8_t>(uint8_t v) {
   return v;
 }
 template <>
 template <>
-inline uint8_t
+LIBC_INLINE uint8_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_little_endian<uint8_t>(uint8_t v) {
   return v;
 }
 template <>
 template <>
-inline uint16_t
+LIBC_INLINE uint16_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_big_endian<uint16_t>(uint16_t v) {
   return __builtin_bswap16(v);
 }
 template <>
 template <>
-inline uint16_t
+LIBC_INLINE uint16_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_little_endian<uint16_t>(uint16_t v) {
   return v;
 }
 template <>
 template <>
-inline uint32_t
+LIBC_INLINE uint32_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_big_endian<uint32_t>(uint32_t v) {
   return __builtin_bswap32(v);
 }
 template <>
 template <>
-inline uint32_t
+LIBC_INLINE uint32_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_little_endian<uint32_t>(uint32_t v) {
   return v;
 }
 template <>
 template <>
-inline uint64_t
+LIBC_INLINE uint64_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_big_endian<uint64_t>(uint64_t v) {
   return __builtin_bswap64(v);
 }
 template <>
 template <>
-inline uint64_t
+LIBC_INLINE uint64_t
 Endian<__ORDER_LITTLE_ENDIAN__>::to_little_endian<uint64_t>(uint64_t v) {
   return v;
 }
@@ -87,48 +89,49 @@ Endian<__ORDER_LITTLE_ENDIAN__>::to_little_endian<uint64_t>(uint64_t v) {
 // Big Endian specializations
 template <>
 template <>
-inline uint8_t Endian<__ORDER_BIG_ENDIAN__>::to_big_endian<uint8_t>(uint8_t v) {
+LIBC_INLINE uint8_t
+Endian<__ORDER_BIG_ENDIAN__>::to_big_endian<uint8_t>(uint8_t v) {
   return v;
 }
 template <>
 template <>
-inline uint8_t
+LIBC_INLINE uint8_t
 Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint8_t>(uint8_t v) {
   return v;
 }
 template <>
 template <>
-inline uint16_t
+LIBC_INLINE uint16_t
 Endian<__ORDER_BIG_ENDIAN__>::to_big_endian<uint16_t>(uint16_t v) {
   return v;
 }
 template <>
 template <>
-inline uint16_t
+LIBC_INLINE uint16_t
 Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint16_t>(uint16_t v) {
   return __builtin_bswap16(v);
 }
 template <>
 template <>
-inline uint32_t
+LIBC_INLINE uint32_t
 Endian<__ORDER_BIG_ENDIAN__>::to_big_endian<uint32_t>(uint32_t v) {
   return v;
 }
 template <>
 template <>
-inline uint32_t
+LIBC_INLINE uint32_t
 Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint32_t>(uint32_t v) {
   return __builtin_bswap32(v);
 }
 template <>
 template <>
-inline uint64_t
+LIBC_INLINE uint64_t
 Endian<__ORDER_BIG_ENDIAN__>::to_big_endian<uint64_t>(uint64_t v) {
   return v;
 }
 template <>
 template <>
-inline uint64_t
+LIBC_INLINE uint64_t
 Endian<__ORDER_BIG_ENDIAN__>::to_little_endian<uint64_t>(uint64_t v) {
   return __builtin_bswap64(v);
 }
