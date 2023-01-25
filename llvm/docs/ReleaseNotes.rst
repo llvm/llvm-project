@@ -50,6 +50,9 @@ Update on required toolchains to build LLVM
 Changes to the LLVM IR
 ----------------------
 
+* Typed pointers are no longer supported. See the `opaque pointers
+  <OpaquePointers.html>`__ documentation for migration instructions.
+
 Changes to building LLVM
 ------------------------
 

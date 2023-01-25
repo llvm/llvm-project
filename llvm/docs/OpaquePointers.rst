@@ -279,15 +279,13 @@ Transition State
 
 As of January 2023:
 
-Tests are in the process of being converted to opaque pointers. All new tests
-must use opaque pointers.
+Typed pointers are **not** supported on the ``main`` branch as a matter of
+policy. Fixes for typed pointer support are not accepted. Typed pointer
+support code may be removed without notice at any time.
 
-Typed pointers are supported on a best-effort basis in LLVM 16, but are *not*
-supported in LLVM 17. Fixes for typed pointer support will be accepted on the
-``main`` branch only until the creation of the ``release/16.x`` branch
-(expected on Jan 24th 2023). After that point, typed pointer support on the
-``main`` branch will only be retained to the degree that is necessary to not
-break tests that haven't been migrated yet.
+However, tests are still in the process of being converted to opaque pointers.
+As such, care must be taken when actively removing typed pointer support, to
+avoid breaking remaining tests.
 
 The following typed pointer functionality has already been removed:
 
