@@ -3,8 +3,6 @@
 
 // RUN: not clang-tidy -verify-config \
 // RUN: --checks='-*,bad*glob,llvm*,llvm-includeorder,my-made-up-check' --config='{Checks: "readability-else-after-ret", \
-// RUN: HeaderFileExtensions: ["h", "hh", "hpp"], \
-// RUN: ImplementationFileExtensions: ["c", "cc", "hpp"], \
 // RUN: CheckOptions: [{key: "IgnoreMacros", value: "true"}, \
 // RUN:                {key: "StriceMode", value: "true"}, \
 // RUN:                {key: modernize-lop-convert.UseCxx20ReverseRanges, value: true} \
@@ -14,7 +12,6 @@
 // CHECK-VERIFY-DAG: command-line option '-config': warning: unknown check 'readability-else-after-ret'; did you mean 'readability-else-after-return' [-verify-config]
 // CHECK-VERIFY-DAG: command-line option '-config': warning: unknown check option 'modernize-lop-convert.UseCxx20ReverseRanges'; did you mean 'modernize-loop-convert.UseCxx20ReverseRanges' [-verify-config]
 // CHECK-VERIFY-DAG: command-line option '-config': warning: unknown check option 'StriceMode'; did you mean 'StrictMode' [-verify-config]
-// CHECK-VERIFY-DAG: command-line option '-config': warning: HeaderFileExtension 'hpp' is the same as ImplementationFileExtension 'hpp' [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: check glob 'bad*glob' doesn't match any known check [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'llvm-includeorder'; did you mean 'llvm-include-order' [-verify-config]
 // CHECK-VERIFY: command-line option '-checks': warning: unknown check 'my-made-up-check' [-verify-config]
