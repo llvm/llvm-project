@@ -33,6 +33,7 @@ add_header_library(
   HDRS
     architectures.h
     common.h
+    cpu_features.h
     endian.h
 )
 
