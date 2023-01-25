@@ -1,5 +1,53 @@
 // RUN: mlir-opt -split-input-file -test-linalg-transform-patterns=test-convert-to-destination-style-patterns -canonicalize %s | FileCheck %s
 
+// CHECK-LABEL: func @tensor_from_elements_0d(
+//  CHECK-SAME:     %[[arg0:.*]]: index
+//       CHECK:   %[[empty:.*]] = tensor.empty() : tensor<index>
+//       CHECK:   %[[insert:.*]] = tensor.insert %[[arg0]] into %[[empty]][]
+//       CHECK:   return %[[insert]]
+func.func @tensor_from_elements_0d(%arg0: index) -> tensor<index> {
+  %0 = tensor.from_elements %arg0 : tensor<index>
+  return %0 : tensor<index>
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_from_elements_1d(
+//  CHECK-SAME:     %[[arg0:.*]]: index, %[[arg1:.*]]: index
+//   CHECK-DAG:   %[[empty:.*]] = tensor.empty() : tensor<2xindex>
+//   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[insert:.*]] = tensor.insert %[[arg0]] into %[[empty]][%[[c0]]]
+//       CHECK:   %[[insert2:.*]] = tensor.insert %[[arg1]] into %[[insert]][%[[c1]]]
+//       CHECK:   return %[[insert2]]
+func.func @tensor_from_elements_1d(%arg0: index, %arg1: index) -> tensor<2xindex> {
+  %0 = tensor.from_elements %arg0, %arg1 : tensor<2xindex>
+  return %0 : tensor<2xindex>
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_from_elements_2d(
+//  CHECK-SAME:     %[[arg0:.*]]: index, %[[arg1:.*]]: index
+//   CHECK-DAG:   %[[empty:.*]] = tensor.empty() : tensor<3x2xindex>
+//   CHECK-DAG:   %[[c0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[c1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:   %[[c2:.*]] = arith.constant 2 : index
+//       CHECK:   %[[insert0:.*]] = tensor.insert %[[arg0]] into %[[empty]][%[[c0]], %[[c0]]]
+//       CHECK:   %[[insert1:.*]] = tensor.insert %[[arg1]] into %[[insert0]][%[[c0]], %[[c1]]]
+//       CHECK:   %[[insert2:.*]] = tensor.insert %[[arg0]] into %[[insert1]][%[[c1]], %[[c0]]]
+//       CHECK:   %[[insert3:.*]] = tensor.insert %[[arg1]] into %[[insert2]][%[[c1]], %[[c1]]]
+//       CHECK:   %[[insert4:.*]] = tensor.insert %[[arg0]] into %[[insert3]][%[[c2]], %[[c0]]]
+//       CHECK:   %[[insert5:.*]] = tensor.insert %[[arg1]] into %[[insert4]][%[[c2]], %[[c1]]]
+//       CHECK:   return %[[insert5]]
+func.func @tensor_from_elements_2d(%arg0: index, %arg1: index) -> tensor<3x2xindex> {
+  %0 = tensor.from_elements %arg0, %arg1, %arg0, %arg1, %arg0, %arg1
+         : tensor<3x2xindex>
+  return %0 : tensor<3x2xindex>
+}
+
+// -----
+
 // CHECK: #[[$map:.*]] = affine_map<(d0, d1) -> (d0, d1)>
 // CHECK-LABEL: func @tensor_generate(
 //  CHECK-SAME:     %[[s1:.*]]: index, %[[s2:.*]]: index
