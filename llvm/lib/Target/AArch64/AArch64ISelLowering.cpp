@@ -22292,8 +22292,7 @@ void AArch64TargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_LOAD_AND:
   case ISD::ATOMIC_LOAD_OR:
   case ISD::ATOMIC_SWAP: {
-    AtomicSDNode *AN = cast<AtomicSDNode>(N);
-    assert(AN->getVal().getValueType() == MVT::i128 &&
+    assert(cast<AtomicSDNode>(N)->getVal().getValueType() == MVT::i128 &&
            "Expected 128-bit atomicrmw.");
     // These need custom type legalisation so we go directly to instruction.
     ReplaceATOMIC_LOAD_128Results(N, Results, DAG, Subtarget);
