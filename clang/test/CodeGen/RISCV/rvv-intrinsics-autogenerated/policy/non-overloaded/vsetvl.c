@@ -12,7 +12,7 @@
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8mf8(size_t avl) {
-  return vsetvl_e8mf8(avl);
+  return __riscv_vsetvl_e8mf8(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8mf4(
@@ -21,7 +21,7 @@ size_t test_vsetvl_e8mf8(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8mf4(size_t avl) {
-  return vsetvl_e8mf4(avl);
+  return __riscv_vsetvl_e8mf4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8mf2(
@@ -30,7 +30,7 @@ size_t test_vsetvl_e8mf4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8mf2(size_t avl) {
-  return vsetvl_e8mf2(avl);
+  return __riscv_vsetvl_e8mf2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8m1(
@@ -39,7 +39,7 @@ size_t test_vsetvl_e8mf2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8m1(size_t avl) {
-  return vsetvl_e8m1(avl);
+  return __riscv_vsetvl_e8m1(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8m2(
@@ -48,7 +48,7 @@ size_t test_vsetvl_e8m1(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8m2(size_t avl) {
-  return vsetvl_e8m2(avl);
+  return __riscv_vsetvl_e8m2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8m4(
@@ -57,7 +57,7 @@ size_t test_vsetvl_e8m2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8m4(size_t avl) {
-  return vsetvl_e8m4(avl);
+  return __riscv_vsetvl_e8m4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e8m8(
@@ -66,7 +66,7 @@ size_t test_vsetvl_e8m4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e8m8(size_t avl) {
-  return vsetvl_e8m8(avl);
+  return __riscv_vsetvl_e8m8(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16mf4(
@@ -75,7 +75,7 @@ size_t test_vsetvl_e8m8(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16mf4(size_t avl) {
-  return vsetvl_e16mf4(avl);
+  return __riscv_vsetvl_e16mf4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16mf2(
@@ -84,7 +84,7 @@ size_t test_vsetvl_e16mf4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16mf2(size_t avl) {
-  return vsetvl_e16mf2(avl);
+  return __riscv_vsetvl_e16mf2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16m1(
@@ -93,7 +93,7 @@ size_t test_vsetvl_e16mf2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16m1(size_t avl) {
-  return vsetvl_e16m1(avl);
+  return __riscv_vsetvl_e16m1(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16m2(
@@ -102,7 +102,7 @@ size_t test_vsetvl_e16m1(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16m2(size_t avl) {
-  return vsetvl_e16m2(avl);
+  return __riscv_vsetvl_e16m2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16m4(
@@ -111,7 +111,7 @@ size_t test_vsetvl_e16m2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16m4(size_t avl) {
-  return vsetvl_e16m4(avl);
+  return __riscv_vsetvl_e16m4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e16m8(
@@ -120,7 +120,7 @@ size_t test_vsetvl_e16m4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e16m8(size_t avl) {
-  return vsetvl_e16m8(avl);
+  return __riscv_vsetvl_e16m8(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e32mf2(
@@ -129,7 +129,7 @@ size_t test_vsetvl_e16m8(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e32mf2(size_t avl) {
-  return vsetvl_e32mf2(avl);
+  return __riscv_vsetvl_e32mf2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e32m1(
@@ -138,7 +138,7 @@ size_t test_vsetvl_e32mf2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e32m1(size_t avl) {
-  return vsetvl_e32m1(avl);
+  return __riscv_vsetvl_e32m1(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e32m2(
@@ -147,7 +147,7 @@ size_t test_vsetvl_e32m1(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e32m2(size_t avl) {
-  return vsetvl_e32m2(avl);
+  return __riscv_vsetvl_e32m2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e32m4(
@@ -156,7 +156,7 @@ size_t test_vsetvl_e32m2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e32m4(size_t avl) {
-  return vsetvl_e32m4(avl);
+  return __riscv_vsetvl_e32m4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e32m8(
@@ -165,7 +165,7 @@ size_t test_vsetvl_e32m4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e32m8(size_t avl) {
-  return vsetvl_e32m8(avl);
+  return __riscv_vsetvl_e32m8(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e64m1(
@@ -174,7 +174,7 @@ size_t test_vsetvl_e32m8(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e64m1(size_t avl) {
-  return vsetvl_e64m1(avl);
+  return __riscv_vsetvl_e64m1(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e64m2(
@@ -183,7 +183,7 @@ size_t test_vsetvl_e64m1(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e64m2(size_t avl) {
-  return vsetvl_e64m2(avl);
+  return __riscv_vsetvl_e64m2(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e64m4(
@@ -192,7 +192,7 @@ size_t test_vsetvl_e64m2(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e64m4(size_t avl) {
-  return vsetvl_e64m4(avl);
+  return __riscv_vsetvl_e64m4(avl);
 }
 
 // CHECK-RV64-LABEL: @test_vsetvl_e64m8(
@@ -201,6 +201,6 @@ size_t test_vsetvl_e64m4(size_t avl) {
 // CHECK-RV64-NEXT:    ret i64 [[TMP0]]
 //
 size_t test_vsetvl_e64m8(size_t avl) {
-  return vsetvl_e64m8(avl);
+  return __riscv_vsetvl_e64m8(avl);
 }
 
