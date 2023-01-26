@@ -22,52 +22,69 @@
 namespace clang {
 namespace CodeGen {
 
+// Indicates whether a pointer is known not to be null.
+enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
+
 // We try to save some space by using 6 bits over two PointerIntPairs to store
 // the alignment. However, some arches don't support 3 bits in a PointerIntPair
 // so we fallback to storing the alignment separately.
 template <typename T, bool = alignof(llvm::Value *) >= 8> class AddressImpl {};
 
 template <typename T> class AddressImpl<T, false> {
-  llvm::Value *Pointer;
+  llvm::PointerIntPair<llvm::Value *, 1, bool> PointerAndKnownNonNull;
   llvm::Type *ElementType;
   CharUnits Alignment;
 
 public:
   AddressImpl(llvm::Value *Pointer, llvm::Type *ElementType,
-              CharUnits Alignment)
-      : Pointer(Pointer), ElementType(ElementType), Alignment(Alignment) {}
-  llvm::Value *getPointer() const { return Pointer; }
+              CharUnits Alignment, KnownNonNull_t IsKnownNonNull)
+      : PointerAndKnownNonNull(Pointer, IsKnownNonNull),
+        ElementType(ElementType), Alignment(Alignment) {}
+  llvm::Value *getPointer() const {
+    return PointerAndKnownNonNull.getPointer();
+  }
   llvm::Type *getElementType() const { return ElementType; }
   CharUnits getAlignment() const { return Alignment; }
+  KnownNonNull_t isKnownNonNull() const {
+    return (KnownNonNull_t)PointerAndKnownNonNull.getInt();
+  }
+  void setKnownNonNull() { PointerAndKnownNonNull.setInt(true); }
 };
 
 template <typename T> class AddressImpl<T, true> {
-  // Int portion stores upper 3 bits of the log of the alignment.
+  // Int portion stores the non-null bit and the upper 2 bits of the log of the
+  // alignment.
   llvm::PointerIntPair<llvm::Value *, 3, unsigned> Pointer;
   // Int portion stores lower 3 bits of the log of the alignment.
   llvm::PointerIntPair<llvm::Type *, 3, unsigned> ElementType;
 
 public:
   AddressImpl(llvm::Value *Pointer, llvm::Type *ElementType,
-              CharUnits Alignment)
+              CharUnits Alignment, KnownNonNull_t IsKnownNonNull)
       : Pointer(Pointer), ElementType(ElementType) {
-    if (Alignment.isZero())
+    if (Alignment.isZero()) {
+      this->Pointer.setInt(IsKnownNonNull << 2);
       return;
-    // Currently the max supported alignment is much less than 1 << 63 and is
+    }
+    // Currently the max supported alignment is exactly 1 << 32 and is
     // guaranteed to be a power of 2, so we can store the log of the alignment
-    // into 6 bits.
+    // into 5 bits.
     assert(Alignment.isPowerOfTwo() && "Alignment cannot be zero");
     auto AlignLog = llvm::Log2_64(Alignment.getQuantity());
-    assert(AlignLog < (1 << 6) && "cannot fit alignment into 6 bits");
-    this->Pointer.setInt(AlignLog >> 3);
+    assert(AlignLog < (1 << 5) && "cannot fit alignment into 5 bits");
+    this->Pointer.setInt(IsKnownNonNull << 2 | AlignLog >> 3);
     this->ElementType.setInt(AlignLog & 7);
   }
   llvm::Value *getPointer() const { return Pointer.getPointer(); }
   llvm::Type *getElementType() const { return ElementType.getPointer(); }
   CharUnits getAlignment() const {
-    unsigned AlignLog = (Pointer.getInt() << 3) | ElementType.getInt();
+    unsigned AlignLog = ((Pointer.getInt() & 0x3) << 3) | ElementType.getInt();
     return CharUnits::fromQuantity(CharUnits::QuantityType(1) << AlignLog);
   }
+  KnownNonNull_t isKnownNonNull() const {
+    return (KnownNonNull_t)(!!(Pointer.getInt() & 0x4));
+  }
+  void setKnownNonNull() { Pointer.setInt(Pointer.getInt() | 0x4); }
 };
 
 /// An aligned address.
@@ -75,11 +92,13 @@ class Address {
   AddressImpl<void> A;
 
 protected:
-  Address(std::nullptr_t) : A(nullptr, nullptr, CharUnits::Zero()) {}
+  Address(std::nullptr_t)
+      : A(nullptr, nullptr, CharUnits::Zero(), NotKnownNonNull) {}
 
 public:
-  Address(llvm::Value *Pointer, llvm::Type *ElementType, CharUnits Alignment)
-      : A(Pointer, ElementType, Alignment) {
+  Address(llvm::Value *Pointer, llvm::Type *ElementType, CharUnits Alignment,
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
+      : A(Pointer, ElementType, Alignment, IsKnownNonNull) {
     assert(Pointer != nullptr && "Pointer cannot be null");
     assert(ElementType != nullptr && "Element type cannot be null");
     assert(llvm::cast<llvm::PointerType>(Pointer->getType())
@@ -124,14 +143,30 @@ public:
 
   /// Return address with different pointer, but same element type and
   /// alignment.
-  Address withPointer(llvm::Value *NewPointer) const {
-    return Address(NewPointer, getElementType(), getAlignment());
+  Address withPointer(llvm::Value *NewPointer,
+                      KnownNonNull_t IsKnownNonNull) const {
+    return Address(NewPointer, getElementType(), getAlignment(),
+                   IsKnownNonNull);
   }
 
   /// Return address with different alignment, but same pointer and element
   /// type.
   Address withAlignment(CharUnits NewAlignment) const {
-    return Address(getPointer(), getElementType(), NewAlignment);
+    return Address(getPointer(), getElementType(), NewAlignment,
+                   isKnownNonNull());
+  }
+
+  /// Whether the pointer is known not to be null.
+  KnownNonNull_t isKnownNonNull() const {
+    assert(isValid());
+    return A.isKnownNonNull();
+  }
+
+  /// Set the non-null bit.
+  Address setKnownNonNull() {
+    assert(isValid());
+    A.setKnownNonNull();
+    return *this;
   }
 };
 
