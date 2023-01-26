@@ -2796,11 +2796,14 @@ bool MipsAsmParser::loadImmediate(int64_t ImmValue, unsigned DstReg,
       return true;
     }
 
+    // We've processed ImmValue satisfying isUInt<16> above, so ImmValue must be
+    // at least 17-bit wide here.
+    unsigned BitWidth = llvm::bit_width((uint64_t)ImmValue);
+    assert(BitWidth >= 17 && "ImmValue must be at least 17-bit wide");
+
     // Traditionally, these immediates are shifted as little as possible and as
     // such we align the most significant bit to bit 15 of our temporary.
-    unsigned FirstSet = findFirstSet((uint64_t)ImmValue);
-    unsigned LastSet = findLastSet((uint64_t)ImmValue);
-    unsigned ShiftAmount = FirstSet - (15 - (LastSet - FirstSet));
+    unsigned ShiftAmount = BitWidth - 16;
     uint16_t Bits = (ImmValue >> ShiftAmount) & 0xffff;
     TOut.emitRRI(Mips::ORi, TmpReg, ZeroReg, Bits, IDLoc, STI);
     TOut.emitRRI(Mips::DSLL, TmpReg, TmpReg, ShiftAmount, IDLoc, STI);
