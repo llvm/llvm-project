@@ -317,3 +317,16 @@ func.func @typemismatch(%arg: f32) -> i32 {
   %0 = "test.passthrough_fold"(%arg) : (f32) -> (i32)
   "test.return"(%0) : (i32) -> ()
 }
+
+// -----
+
+// expected-remark @below {{applyPartialConversion failed}}
+module {
+  func.func private @callee(%0 : f32) -> f32
+
+  func.func @caller( %arg: f32) {
+    // expected-error @below {{failed to legalize}}
+    %1 = func.call @callee(%arg) : (f32) -> f32
+    return
+  }
+}
