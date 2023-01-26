@@ -44,9 +44,9 @@ define internal i1 @f1(i32 %x, i32 %y, i1 %cmp) {
 ; CHECK-NEXT:    [[SEL_1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[SEL_1]], 100
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[SEL_1]], 50
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw i1 false, [[C_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], [[C_3]]
-; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], false
+; CHECK-NEXT:    [[RES_3:%.*]] = add nuw i1 [[RES_2]], false
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
   %sel.1 = select i1 %cmp, i32 %x, i32 %y
