@@ -1,4 +1,3 @@
-// XFAIL: target=aarch64-pc-windows-{{.*}}
 // RUN: %clang_builtins %s %librt -fnested-functions -o %t && %run %t
 // REQUIRES: librt_has_trampoline_setup
 

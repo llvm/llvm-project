@@ -41,6 +41,7 @@ public:
     Others,
     A64FX,
     Ampere1,
+    Ampere1A,
     AppleA7,
     AppleA10,
     AppleA11,

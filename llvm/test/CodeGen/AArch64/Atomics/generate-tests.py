@@ -105,21 +105,24 @@ FENCE_ORDERS = [
 
 
 class Feature(enum.Flag):
+    # Feature names in filenames are determined by the spelling here:
     v8a = enum.auto()
     v8_1a = enum.auto()  # -mattr=+v8.1a, mandatory FEAT_LOR, FEAT_LSE
     rcpc = enum.auto()  # FEAT_LRCPC
     lse2 = enum.auto()  # FEAT_LSE2
     outline_atomics = enum.auto()  # -moutline-atomics
-    rcpc3 = enum.auto()  # FEAT_LRCPC3
+    rcpc3 = enum.auto()  # FEAT_LSE2 + FEAT_LRCPC3
     lse128 = enum.auto()  # FEAT_LSE128
 
     @property
     def mattr(self):
         if self == Feature.outline_atomics:
-            return 'outline-atomics'
+            return '+outline-atomics'
         if self == Feature.v8_1a:
-            return 'v8.1a'
-        return self.name
+            return '+v8.1a'
+        if self == Feature.rcpc3:
+            return '+lse2,+rcpc3'
+        return '+' + self.name
 
 
 ATOMICRMW_OPS = [
@@ -230,7 +233,7 @@ def header(f, triple, features, filter_args: str):
         for OptFlag in ['-O0', '-O1']:
             f.write(' '.join([
                 ';', 'RUN:', 'llc', '%s', '-o', '-', '-verify-machineinstrs',
-                f'-mtriple={triple}', f'-mattr=+{feat.mattr}', OptFlag, '|',
+                f'-mtriple={triple}', f'-mattr={feat.mattr}', OptFlag, '|',
                 'FileCheck', '%s', f'--check-prefixes=CHECK,{OptFlag}\n'
             ]))
 

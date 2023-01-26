@@ -30,7 +30,7 @@
 #define SKIP_UNSUPPORTED_PLATFORM \
   do \
     if (!ArchSupportsMCJIT() || !OSSupportsMCJIT() || !HostCanBeTargeted()) \
-      return; \
+      GTEST_SKIP(); \
   while(0)
 
 namespace llvm {

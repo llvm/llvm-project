@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 
 #include "src/__support/arg_list.h"
+#include "src/__support/common.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/scanf_config.h"
 
@@ -34,10 +35,10 @@ class Parser {
 
 public:
 #ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
-  Parser(const char *__restrict new_str, internal::ArgList &args)
+  LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args), args_start(args) {}
 #else
-  Parser(const char *__restrict new_str, internal::ArgList &args)
+  LIBC_INLINE Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args) {}
 #endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
 
@@ -55,7 +56,7 @@ private:
   LengthModifier parse_length_modifier(size_t *local_pos);
 
   // get_next_arg_value gets the next value from the arg list as type T.
-  template <class T> T inline get_next_arg_value() {
+  template <class T> LIBC_INLINE T get_next_arg_value() {
     return args_cur.next_var<T>();
   }
 
@@ -75,7 +76,7 @@ private:
   // get_arg_value gets the value from the arg list at index (starting at 1).
   // This may require parsing the format string. An index of 0 is interpreted as
   // the next value.
-  template <class T> T inline get_arg_value(size_t index) {
+  template <class T> LIBC_INLINE T get_arg_value(size_t index) {
     if (!(index == 0 || index == args_index))
       args_to_index(index);
 

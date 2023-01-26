@@ -2290,14 +2290,6 @@ static inline APInt::WordType highHalf(APInt::WordType part) {
   return part >> (APInt::APINT_BITS_PER_WORD / 2);
 }
 
-/// Returns the bit number of the most significant set bit of a part.
-/// If the input number has no bits set -1U is returned.
-static unsigned partMSB(APInt::WordType value) { return findLastSet(value); }
-
-/// Returns the bit number of the least significant set bit of a part.  If the
-/// input number has no bits set -1U is returned.
-static unsigned partLSB(APInt::WordType value) { return findFirstSet(value); }
-
 /// Sets the least significant part of a bignum to the input value, and zeroes
 /// out higher parts.
 void APInt::tcSet(WordType *dst, WordType part, unsigned parts) {
@@ -2342,7 +2334,7 @@ void APInt::tcClearBit(WordType *parts, unsigned bit) {
 unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
   for (unsigned i = 0; i < n; i++) {
     if (parts[i] != 0) {
-      unsigned lsb = partLSB(parts[i]);
+      unsigned lsb = llvm::countr_zero(parts[i]);
       return lsb + i * APINT_BITS_PER_WORD;
     }
   }
@@ -2357,7 +2349,8 @@ unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
     --n;
 
     if (parts[n] != 0) {
-      unsigned msb = partMSB(parts[n]);
+      static_assert(sizeof(parts[n]) <= sizeof(uint64_t));
+      unsigned msb = llvm::Log2_64(parts[n]);
 
       return msb + n * APINT_BITS_PER_WORD;
     }

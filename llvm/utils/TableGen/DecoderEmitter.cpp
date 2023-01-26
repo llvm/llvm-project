@@ -1893,6 +1893,8 @@ void parseVarLenInstOperand(const Record &Def,
               OpName);
       unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(OpSubOpPair);
       Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
+      if (!EncodingSegment.CustomDecoder.empty())
+        Operands[OpIdx].Decoder = EncodingSegment.CustomDecoder.str();
 
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {

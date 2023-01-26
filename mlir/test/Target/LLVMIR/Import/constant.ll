@@ -1,4 +1,4 @@
-; RUN: mlir-translate -opaque-pointers=0 -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {
@@ -48,22 +48,10 @@ define void @undef_constant(i32 %arg0) {
 ; // -----
 
 ; CHECK-LABEL: @null_constant
-define i32* @null_constant() {
-  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr<i32>
-  ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr<i32>
-  ret i32* bitcast (double* null to i32*)
-}
-
-; // -----
-
-@global = external global double, align 8
-
-; CHECK-LABEL: @bitcast_const_expr
-define i32* @bitcast_const_expr() {
-  ; CHECK:  %[[VAL0:.*]] = llvm.mlir.addressof @global : !llvm.ptr<f64>
-  ; CHECK:  %[[VAL1:.*]] = llvm.bitcast %[[VAL0]] : !llvm.ptr<f64> to !llvm.ptr<i32>
-  ; CHECK:  llvm.return %[[VAL1]] : !llvm.ptr<i32>
-  ret i32* bitcast (double* @global to i32*)
+define ptr @null_constant() {
+  ; CHECK:  %[[NULL:[0-9]+]] = llvm.mlir.null : !llvm.ptr
+  ; CHECK:  llvm.return %[[NULL]] : !llvm.ptr
+  ret ptr null
 }
 
 ; // -----
@@ -71,12 +59,12 @@ define i32* @bitcast_const_expr() {
 @global = external global i32, align 8
 
 ; CHECK-LABEL: @gep_const_expr
-define i32* @gep_const_expr() {
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr<i32>
+define ptr @gep_const_expr() {
+  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
   ; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
-  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  ; CHECK:  llvm.return %[[GEP]] : !llvm.ptr<i32>
-  ret i32* getelementptr (i32, i32* @global, i32 2)
+  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK:  llvm.return %[[GEP]] : !llvm.ptr
+  ret ptr getelementptr (i32, ptr @global, i32 2)
 }
 
 ; // -----
@@ -85,16 +73,16 @@ define i32* @gep_const_expr() {
 
 ; CHECK-LABEL: @const_expr_with_duplicate
 define i64 @const_expr_with_duplicate() {
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr<i32>
+  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
   ; CHECK:  %[[IDX:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
-  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  ; CHECK:  %[[DUP:[0-9]+]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr<i32> to i64
+  ; CHECK:  %[[GEP:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK:  %[[DUP:[0-9]+]] = llvm.ptrtoint %[[GEP]] : !llvm.ptr to i64
 
   ; Verify the duplicate sub expression is converted only once.
   ; CHECK:  %[[SUM:[0-9]+]] = llvm.add %[[DUP]], %[[DUP]] : i64
   ; CHECK:  llvm.return %[[SUM]] : i64
-  ret i64 add (i64 ptrtoint (i32* getelementptr (i32, i32* @global, i32 7) to i64),
-               i64 ptrtoint (i32* getelementptr (i32, i32* @global, i32 7) to i64))
+  ret i64 add (i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64),
+               i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64))
 }
 
 ; // -----
@@ -105,10 +93,10 @@ define i64 @const_expr_with_duplicate() {
 define i64 @const_expr_with_aggregate() {
   ; Compute the vector elements.
   ; CHECK:  %[[VAL1:[0-9]+]] = llvm.mlir.constant(33 : i64) : i64
-  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr<i32>
+  ; CHECK:  %[[ADDR:[0-9]+]] = llvm.mlir.addressof @global : !llvm.ptr
   ; CHECK:  %[[IDX1:[0-9]+]] = llvm.mlir.constant(7 : i32) : i32
-  ; CHECK:  %[[GEP1:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX1]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  ; CHECK:  %[[VAL2:[0-9]+]] = llvm.ptrtoint %[[GEP1]] : !llvm.ptr<i32> to i64
+  ; CHECK:  %[[GEP1:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX1]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK:  %[[VAL2:[0-9]+]] = llvm.ptrtoint %[[GEP1]] : !llvm.ptr to i64
 
   ; Fill the vector.
   ; CHECK:  %[[VEC1:[0-9]+]] = llvm.mlir.undef : vector<2xi64>
@@ -119,15 +107,15 @@ define i64 @const_expr_with_aggregate() {
   ; CHECK:  %[[IDX4:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 
   ; Compute the extract index.
-  ; CHECK:  %[[GEP2:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX4]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  ; CHECK:  %[[IDX5:[0-9]+]] = llvm.ptrtoint %[[GEP2]] : !llvm.ptr<i32> to i64
+  ; CHECK:  %[[GEP2:[0-9]+]] = llvm.getelementptr %[[ADDR]][%[[IDX4]]] : (!llvm.ptr, i32) -> !llvm.ptr
+  ; CHECK:  %[[IDX5:[0-9]+]] = llvm.ptrtoint %[[GEP2]] : !llvm.ptr to i64
 
   ; Extract the vector element.
   ; CHECK:  %[[ELEM:[0-9]+]] = llvm.extractelement %[[VEC3]][%[[IDX5]] : i64] : vector<2xi64>
   ; CHECK:  llvm.return %[[ELEM]] : i64
   ret i64 extractelement (
-    <2 x i64> <i64 33, i64 ptrtoint (i32* getelementptr (i32, i32* @global, i32 7) to i64)>,
-    i64 ptrtoint (i32* getelementptr (i32, i32* @global, i32 42) to i64))
+    <2 x i64> <i64 33, i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64)>,
+    i64 ptrtoint (ptr getelementptr (i32, ptr @global, i32 42) to i64))
 }
 
 ; // -----
@@ -137,12 +125,12 @@ define i64 @const_expr_with_aggregate() {
 ; Calling a function that has not been defined yet.
 ; CHECK-LABEL: @function_address_before_def
 define i32 @function_address_before_def() {
-  %1 = alloca i32 ()*
-  ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
-  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]]
-  store i32 ()* @callee, i32 ()** %1
-  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]]
-  %2 = load i32 ()*, i32 ()** %1
+  %1 = alloca ptr
+  ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
+  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
+  store ptr @callee, ptr %1
+  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
+  %2 = load ptr, ptr %1
   ; CHECK:  llvm.call %[[INDIR]]()
   %3 = call i32 %2()
   ret i32 %3
@@ -155,12 +143,12 @@ define i32 @callee() {
 ; Calling a function that has been defined.
 ; CHECK-LABEL: @function_address_after_def
 define i32 @function_address_after_def() {
-  %1 = alloca i32 ()*
-  ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
-  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]]
-  store i32 ()* @callee, i32 ()** %1
-  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]]
-  %2 = load i32 ()*, i32 ()** %1
+  %1 = alloca ptr
+  ; CHECK:  %[[FUN:.*]] = llvm.mlir.addressof @callee : !llvm.ptr
+  ; CHECK:  llvm.store %[[FUN]], %[[PTR:.*]] : !llvm.ptr, !llvm.ptr
+  store ptr @callee, ptr %1
+  ; CHECK:  %[[INDIR:.*]] = llvm.load %[[PTR]] : !llvm.ptr -> !llvm.ptr
+  %2 = load ptr, ptr %1
   ; CHECK:  llvm.call %[[INDIR]]()
   %3 = call i32 %2()
   ret i32 %3
@@ -192,22 +180,22 @@ define i32 @function_address_after_def() {
 ; CHECK:  %[[CHAIN1:.+]] = llvm.insertvalue %[[C2]], %[[CHAIN0]][1]
 ; CHECK:  %[[CHAIN2:.+]] = llvm.insertvalue %[[C3]], %[[CHAIN1]][2]
 ; CHECK:  %[[CHAIN3:.+]] = llvm.insertvalue %[[C4]], %[[CHAIN2]][3]
-; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>
-; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>)>
+; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.struct<"nested_agg_type", (struct<"simple_agg_type", (i32, i8, i16, i32)>, ptr)>
 ; CHECK:  %[[CHAIN4:.+]] = llvm.insertvalue %[[CHAIN3]], %[[ROOT]][0]
 ; CHECK:  %[[CHAIN5:.+]] = llvm.insertvalue %[[NULL]], %[[CHAIN4]][1]
 ; CHECK:  llvm.return %[[CHAIN5]]
-%nested_agg_type = type {%simple_agg_type, %simple_agg_type*}
-@nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, %simple_agg_type* null }
+%nested_agg_type = type {%simple_agg_type, ptr}
+@nested_agg = global %nested_agg_type { %simple_agg_type{i32 1, i8 2, i16 3, i32 4}, ptr null }
 
-; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>
-; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
+; CHECK:  %[[NULL:.+]] = llvm.mlir.null : !llvm.ptr
+; CHECK:  %[[ROOT:.+]] = llvm.mlir.undef : !llvm.vec<2 x ptr>
 ; CHECK:  %[[P0:.+]] = llvm.mlir.constant(0 : i32) : i32
-; CHECK:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
+; CHECK:  %[[CHAIN0:.+]] = llvm.insertelement %[[NULL]], %[[ROOT]][%[[P0]] : i32] : !llvm.vec<2 x ptr>
 ; CHECK:  %[[P1:.+]] = llvm.mlir.constant(1 : i32) : i32
-; CHECK:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
-; CHECK:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr<struct<"simple_agg_type", (i32, i8, i16, i32)>>>
-@vector_agg = global <2 x %simple_agg_type*> <%simple_agg_type* null, %simple_agg_type* null>
+; CHECK:  %[[CHAIN1:.+]] = llvm.insertelement %[[NULL]], %[[CHAIN0]][%[[P1]] : i32] : !llvm.vec<2 x ptr>
+; CHECK:  llvm.return %[[CHAIN1]] : !llvm.vec<2 x ptr>
+@vector_agg = global <2 x ptr> <ptr null, ptr null>
 
 ; // -----
 
@@ -217,12 +205,12 @@ define i32 @function_address_after_def() {
 
 ; CHECK-LABEL: @const_exprs_with_duplicate
 define i64 @const_exprs_with_duplicate() {
-  ; CHECK: %[[ADDR:.+]] = llvm.mlir.addressof @global : !llvm.ptr<i32>
-  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  %1 = add i64 1, ptrtoint (i32* getelementptr (i32, i32* @global, i32 7) to i64)
+  ; CHECK: %[[ADDR:.+]] = llvm.mlir.addressof @global : !llvm.ptr
+  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr
+  %1 = add i64 1, ptrtoint (ptr getelementptr (i32, ptr @global, i32 7) to i64)
 
   ; Verify the address value is reused.
-  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-  %2 = add i64 %1, ptrtoint (i32* getelementptr (i32, i32* @global, i32 42) to i64)
+  ; CHECK: llvm.getelementptr %[[ADDR]][%{{.*}}] : (!llvm.ptr, i32) -> !llvm.ptr
+  %2 = add i64 %1, ptrtoint (ptr getelementptr (i32, ptr @global, i32 42) to i64)
   ret i64 %2
 }

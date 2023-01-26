@@ -10,8 +10,8 @@
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+lse2 -O1 | FileCheck %s --check-prefixes=CHECK,-O1
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+outline-atomics -O0 | FileCheck %s --check-prefixes=CHECK,-O0
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+outline-atomics -O1 | FileCheck %s --check-prefixes=CHECK,-O1
-; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+rcpc3 -O0 | FileCheck %s --check-prefixes=CHECK,-O0
-; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+rcpc3 -O1 | FileCheck %s --check-prefixes=CHECK,-O1
+; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+lse2,+rcpc3 -O0 | FileCheck %s --check-prefixes=CHECK,-O0
+; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+lse2,+rcpc3 -O1 | FileCheck %s --check-prefixes=CHECK,-O1
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+lse128 -O0 | FileCheck %s --check-prefixes=CHECK,-O0
 ; RUN: llc %s -o - -verify-machineinstrs -mtriple=aarch64 -mattr=+lse128 -O1 | FileCheck %s --check-prefixes=CHECK,-O1
 

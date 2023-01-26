@@ -1,4 +1,4 @@
-; RUN: opt -opaque-pointers=0 -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn--  -amdgpu-replace-lds-use-with-pointer -amdgpu-enable-lds-replace-with-pointer=true < %s | FileCheck %s
 
 ; DESCRIPTION:
 ;
@@ -24,39 +24,36 @@
 ; Pointer replacement code should be added.
 define internal void @function_3() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds_used_within_function_3.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [3 x i32] addrspace(3)*
-; CHECK:   %gep = getelementptr inbounds [3 x i32], [3 x i32] addrspace(3)* %2, i32 0, i32 0
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds_used_within_function_3.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %gep = getelementptr inbounds [3 x i32], ptr addrspace(3) %1, i32 0, i32 0
 ; CHECK:   ret void
 entry:
-  %gep = getelementptr inbounds [3 x i32], [3 x i32] addrspace(3)* @lds_used_within_function_3, i32 0, i32 0
+  %gep = getelementptr inbounds [3 x i32], ptr addrspace(3) @lds_used_within_function_3, i32 0, i32 0
   ret void
 }
 
 ; Pointer replacement code should be added.
 define internal void @function_2() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds_used_within_function_2.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [2 x i32] addrspace(3)*
-; CHECK:   %gep = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* %2, i32 0, i32 0
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds_used_within_function_2.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %gep = getelementptr inbounds [2 x i32], ptr addrspace(3) %1, i32 0, i32 0
 ; CHECK:   ret void
 entry:
-  %gep = getelementptr inbounds [2 x i32], [2 x i32] addrspace(3)* @lds_used_within_function_2, i32 0, i32 0
+  %gep = getelementptr inbounds [2 x i32], ptr addrspace(3) @lds_used_within_function_2, i32 0, i32 0
   ret void
 }
 
 ; Pointer replacement code should be added.
 define internal void @function_1() {
 ; CHECK-LABEL: entry:
-; CHECK:   %0 = load i16, i16 addrspace(3)* @lds_used_within_function_1.ptr, align 2
-; CHECK:   %1 = getelementptr i8, i8 addrspace(3)* null, i16 %0
-; CHECK:   %2 = bitcast i8 addrspace(3)* %1 to [1 x i32] addrspace(3)*
-; CHECK:   %gep = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* %2, i32 0, i32 0
+; CHECK:   %0 = load i16, ptr addrspace(3) @lds_used_within_function_1.ptr, align 2
+; CHECK:   %1 = getelementptr i8, ptr addrspace(3) null, i16 %0
+; CHECK:   %gep = getelementptr inbounds [1 x i32], ptr addrspace(3) %1, i32 0, i32 0
 ; CHECK:   ret void
 entry:
-  %gep = getelementptr inbounds [1 x i32], [1 x i32] addrspace(3)* @lds_used_within_function_1, i32 0, i32 0
+  %gep = getelementptr inbounds [1 x i32], ptr addrspace(3) @lds_used_within_function_1, i32 0, i32 0
   ret void
 }
 
@@ -68,8 +65,8 @@ define protected amdgpu_kernel void @kernel_calls_function_3_and_1() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([3 x i32] addrspace(3)* @lds_used_within_function_3 to i16), i16 addrspace(3)* @lds_used_within_function_3.ptr, align 2
-; CHECK:   store i16 ptrtoint ([1 x i32] addrspace(3)* @lds_used_within_function_1 to i16), i16 addrspace(3)* @lds_used_within_function_1.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_3 to i16), ptr addrspace(3) @lds_used_within_function_3.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_1 to i16), ptr addrspace(3) @lds_used_within_function_1.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:
@@ -91,8 +88,8 @@ define protected amdgpu_kernel void @kernel_calls_function_2_and_3() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([3 x i32] addrspace(3)* @lds_used_within_function_3 to i16), i16 addrspace(3)* @lds_used_within_function_3.ptr, align 2
-; CHECK:   store i16 ptrtoint ([2 x i32] addrspace(3)* @lds_used_within_function_2 to i16), i16 addrspace(3)* @lds_used_within_function_2.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_3 to i16), ptr addrspace(3) @lds_used_within_function_3.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_2 to i16), ptr addrspace(3) @lds_used_within_function_2.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:
@@ -114,8 +111,8 @@ define protected amdgpu_kernel void @kernel_calls_function_1_and_2() {
 ; CHECK:   br i1 %1, label %2, label %3
 ;
 ; CHECK-LABEL: 2:
-; CHECK:   store i16 ptrtoint ([2 x i32] addrspace(3)* @lds_used_within_function_2 to i16), i16 addrspace(3)* @lds_used_within_function_2.ptr, align 2
-; CHECK:   store i16 ptrtoint ([1 x i32] addrspace(3)* @lds_used_within_function_1 to i16), i16 addrspace(3)* @lds_used_within_function_1.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_2 to i16), ptr addrspace(3) @lds_used_within_function_2.ptr, align 2
+; CHECK:   store i16 ptrtoint (ptr addrspace(3) @lds_used_within_function_1 to i16), ptr addrspace(3) @lds_used_within_function_1.ptr, align 2
 ; CHECK:   br label %3
 ;
 ; CHECK-LABEL: 3:

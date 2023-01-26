@@ -225,6 +225,14 @@ mlirDialectRegistryDestroy(MlirDialectRegistry registry);
 // Location API.
 //===----------------------------------------------------------------------===//
 
+/// Returns the underlying location attribute of this location.
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLocationGetAttribute(MlirLocation location);
+
+/// Creates a location from a location attribute.
+MLIR_CAPI_EXPORTED MlirLocation
+mlirLocationFromAttribute(MlirAttribute attribute);
+
 /// Creates an File/Line/Column location owned by the given context.
 MLIR_CAPI_EXPORTED MlirLocation mlirLocationFileLineColGet(
     MlirContext context, MlirStringRef filename, unsigned line, unsigned col);

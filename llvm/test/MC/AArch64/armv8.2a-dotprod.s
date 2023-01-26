@@ -14,6 +14,7 @@
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-r82 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mattr=+v8r -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=ampere1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
+// RUN: llvm-mc -triple aarch64 -mcpu=ampere1a -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 
 // RUN: not llvm-mc -triple aarch64 -mattr=+v8.2a -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
@@ -38,6 +39,8 @@
 // RUN: not llvm-mc -triple aarch64 -mcpu=neoverse-n2 -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
 // RUN: not llvm-mc -triple aarch64 -mcpu=ampere1 -mattr=-dotprod -show-encoding < %s 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
+// RUN: not llvm-mc -triple aarch64 -mcpu=ampere1a -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
 
 udot v0.2s, v1.8b, v2.8b

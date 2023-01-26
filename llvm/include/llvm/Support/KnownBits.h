@@ -414,11 +414,11 @@ public:
   /// Compute known bits for the absolute value.
   KnownBits abs(bool IntMinIsPoison = false) const;
 
-  KnownBits byteSwap() {
+  KnownBits byteSwap() const {
     return KnownBits(Zero.byteSwap(), One.byteSwap());
   }
 
-  KnownBits reverseBits() {
+  KnownBits reverseBits() const {
     return KnownBits(Zero.reverseBits(), One.reverseBits());
   }
 

@@ -201,16 +201,16 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     bool Changed = false;
 
     // Figure out which case it goes to.
-    for (auto i = SI->case_begin(), e = SI->case_end(); i != e;) {
+    for (auto It = SI->case_begin(), End = SI->case_end(); It != End;) {
       // Found case matching a constant operand?
-      if (i->getCaseValue() == CI) {
-        TheOnlyDest = i->getCaseSuccessor();
+      if (It->getCaseValue() == CI) {
+        TheOnlyDest = It->getCaseSuccessor();
         break;
       }
 
       // Check to see if this branch is going to the same place as the default
       // dest.  If so, eliminate it as an explicit compare.
-      if (i->getCaseSuccessor() == DefaultDest) {
+      if (It->getCaseSuccessor() == DefaultDest) {
         MDNode *MD = getValidBranchWeightMDNode(*SI);
         unsigned NCases = SI->getNumCases();
         // Fold the case metadata into the default if there will be any branches
@@ -221,11 +221,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
           extractBranchWeights(MD, Weights);
 
           // Merge weight of this case to the default weight.
-          unsigned idx = i->getCaseIndex();
+          unsigned Idx = It->getCaseIndex();
           // TODO: Add overflow check.
-          Weights[0] += Weights[idx+1];
+          Weights[0] += Weights[Idx + 1];
           // Remove weight for this case.
-          std::swap(Weights[idx+1], Weights.back());
+          std::swap(Weights[Idx + 1], Weights.back());
           Weights.pop_back();
           SI->setMetadata(LLVMContext::MD_prof,
                           MDBuilder(BB->getContext()).
@@ -234,14 +234,14 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         // Remove this entry.
         BasicBlock *ParentBB = SI->getParent();
         DefaultDest->removePredecessor(ParentBB);
-        i = SI->removeCase(i);
-        e = SI->case_end();
+        It = SI->removeCase(It);
+        End = SI->case_end();
 
         // Removing this case may have made the condition constant. In that
         // case, update CI and restart iteration through the cases.
         if (auto *NewCI = dyn_cast<ConstantInt>(SI->getCondition())) {
           CI = NewCI;
-          i = SI->case_begin();
+          It = SI->case_begin();
         }
 
         Changed = true;
@@ -251,11 +251,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       // Otherwise, check to see if the switch only branches to one destination.
       // We do this by reseting "TheOnlyDest" to null when we find two non-equal
       // destinations.
-      if (i->getCaseSuccessor() != TheOnlyDest)
+      if (It->getCaseSuccessor() != TheOnlyDest)
         TheOnlyDest = nullptr;
 
       // Increment this iterator as we haven't removed the case.
-      ++i;
+      ++It;
     }
 
     if (CI && !TheOnlyDest) {

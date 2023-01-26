@@ -940,7 +940,7 @@ struct WhileOpInterface
   ///
   /// If this is not the case, allocs+copies are inserted and yielded from
   /// the loop. This could be a performance problem, so it must be explicitly
-  /// activated with `alloc-return-allocs`.
+  /// activated with `allow-return-allocs`.
   ///
   /// Not: In contrast to scf::ForOp, scf::WhileOp has two regions and the
   /// equivalence condition must be checked for both.

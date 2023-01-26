@@ -38,7 +38,7 @@ class UbsanUserExpressionTestCase(TestBase):
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
 
-        self.expect("p foo()", substrs=["(int) $0 = 42"])
+        self.expect("expression foo()", substrs=["(int) $0 = 42"])
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])

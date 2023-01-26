@@ -146,23 +146,19 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
 
       // Disallow substituitions involving regs in implicit uses lists
-      const MCPhysReg *ImplicitUses = Desc.getImplicitUses();
-      while (ImplicitUses && *ImplicitUses) {
+      for (MCPhysReg ImplicitUse : Desc.implicit_uses()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitUses, false).find_first();
+            BC.MIB->getAliases(ImplicitUse, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitUses;
       }
 
       // Disallow substituitions involving regs in implicit defs lists
-      const MCPhysReg *ImplicitDefs = Desc.getImplicitDefs();
-      while (ImplicitDefs && *ImplicitDefs) {
+      for (MCPhysReg ImplicitDef : Desc.implicit_defs()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitDefs, false).find_first();
+            BC.MIB->getAliases(ImplicitDef, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitDefs;
       }
 
       for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
