@@ -17,6 +17,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -584,8 +585,11 @@ public:
   ///
   /// Note that ops in `ops` could be erased as a result of folding, becoming
   /// dead, or via pattern rewrites. The return value indicates convergence.
-  LogicalResult simplifyLocally(ArrayRef<Operation *> op,
-                                bool *changed = nullptr);
+  ///
+  /// All `ops` that survived the rewrite are stored in `surviving`.
+  LogicalResult
+  simplifyLocally(ArrayRef<Operation *> ops, bool *changed = nullptr,
+                  llvm::SmallDenseSet<Operation *, 4> *surviving = nullptr);
 
   void addToWorklist(Operation *op) override {
     if (strictMode == GreedyRewriteStrictness::AnyOp ||
@@ -602,6 +606,8 @@ private:
 
   void notifyOperationRemoved(Operation *op) override {
     GreedyPatternRewriteDriver::notifyOperationRemoved(op);
+    if (survivingOps)
+      survivingOps->erase(op);
     if (strictMode != GreedyRewriteStrictness::AnyOp)
       strictModeFilteredOps.erase(op);
   }
@@ -615,13 +621,25 @@ private:
   /// depending on `strictMode`. This set is not maintained when `strictMode`
   /// is GreedyRewriteStrictness::AnyOp.
   llvm::SmallDenseSet<Operation *, 4> strictModeFilteredOps;
+
+  /// An optional set of ops that survived the rewrite. This set is populated
+  /// at the beginning of `simplifyLocally` with the inititally provided list
+  /// of ops.
+  llvm::SmallDenseSet<Operation *, 4> *survivingOps = nullptr;
 };
 
 } // namespace
 
-LogicalResult
-MultiOpPatternRewriteDriver::simplifyLocally(ArrayRef<Operation *> ops,
-                                             bool *changed) {
+LogicalResult MultiOpPatternRewriteDriver::simplifyLocally(
+    ArrayRef<Operation *> ops, bool *changed,
+    llvm::SmallDenseSet<Operation *, 4> *surviving) {
+  auto cleanup = llvm::make_scope_exit([&]() { survivingOps = nullptr; });
+  if (surviving) {
+    survivingOps = surviving;
+    survivingOps->clear();
+    survivingOps->insert(ops.begin(), ops.end());
+  }
+
   if (strictMode != GreedyRewriteStrictness::AnyOp) {
     strictModeFilteredOps.clear();
     strictModeFilteredOps.insert(ops.begin(), ops.end());
@@ -726,15 +744,22 @@ LogicalResult mlir::applyOpPatternsAndFold(
 
 LogicalResult mlir::applyOpPatternsAndFold(
     ArrayRef<Operation *> ops, const FrozenRewritePatternSet &patterns,
-    GreedyRewriteStrictness strictMode, bool *changed) {
+    GreedyRewriteStrictness strictMode, bool *changed, bool *allErased) {
   if (ops.empty()) {
     if (changed)
       *changed = false;
+    if (allErased)
+      *allErased = true;
     return success();
   }
 
   // Start the pattern driver.
   MultiOpPatternRewriteDriver driver(ops.front()->getContext(), patterns,
                                      strictMode);
-  return driver.simplifyLocally(ops, changed);
+  llvm::SmallDenseSet<Operation *, 4> surviving;
+  LogicalResult converged =
+      driver.simplifyLocally(ops, changed, allErased ? &surviving : nullptr);
+  if (allErased)
+    *allErased = surviving.empty();
+  return converged;
 }
