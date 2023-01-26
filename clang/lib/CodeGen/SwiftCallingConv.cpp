@@ -728,7 +728,7 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
 
   // The largest size that we're still considering making subvectors of.
   // Always a power of 2.
-  unsigned logCandidateNumElts = llvm::findLastSet(numElts, llvm::ZB_Undefined);
+  unsigned logCandidateNumElts = llvm::Log2_32(numElts);
   unsigned candidateNumElts = 1U << logCandidateNumElts;
   assert(candidateNumElts <= numElts && candidateNumElts * 2 > numElts);
 

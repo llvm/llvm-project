@@ -2457,7 +2457,7 @@ static bool isSeveralBitsExtractOpFromShr(SDNode *N, unsigned &Opc,
   //
   // This gets selected into a single UBFM:
   //
-  // UBFM Value, ShiftImm, findLastSet(MaskImm)
+  // UBFM Value, ShiftImm, Log2_64(MaskImm)
   //
 
   if (N->getOpcode() != ISD::SRL)
@@ -2479,7 +2479,7 @@ static bool isSeveralBitsExtractOpFromShr(SDNode *N, unsigned &Opc,
 
   Opc = N->getValueType(0) == MVT::i32 ? AArch64::UBFMWri : AArch64::UBFMXri;
   LSB = SrlImm;
-  MSB = findLastSet(AndMask, ZB_Undefined);
+  MSB = llvm::Log2_64(AndMask);
   return true;
 }
 
