@@ -299,6 +299,14 @@ def HasStdExtCOrZca
                                    "'Zca' (part of the C extension, excluding "
                                    "compressed floating point loads/stores)">;
 
+def FeatureExtZcb
+    : SubtargetFeature<"experimental-zcb", "HasStdExtZcb", "true",
+                       "'Zcb' (Compressed basic bit manipulation instructions)",
+                       [FeatureExtZca]>;
+def HasStdExtZcb : Predicate<"Subtarget->hasStdExtZcb()">,
+                             AssemblerPredicate<(all_of FeatureExtZcb),
+                             "'Zcb' (Compressed basic bit manipulation instructions)">;
+
 def FeatureExtZcd
     : SubtargetFeature<"experimental-zcd", "HasStdExtZcd", "true",
                        "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
