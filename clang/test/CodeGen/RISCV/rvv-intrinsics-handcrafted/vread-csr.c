@@ -11,7 +11,7 @@
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long vread_csr_vstart(void) {
-  return vread_csr(RVV_VSTART);
+  return __riscv_vread_csr(RVV_VSTART);
 }
 
 // CHECK-LABEL: @vread_csr_vxsat(
@@ -20,7 +20,7 @@ unsigned long vread_csr_vstart(void) {
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long vread_csr_vxsat(void) {
-  return vread_csr(RVV_VXSAT);
+  return __riscv_vread_csr(RVV_VXSAT);
 }
 
 // CHECK-LABEL: @vread_csr_vxrm(
@@ -29,7 +29,7 @@ unsigned long vread_csr_vxsat(void) {
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long vread_csr_vxrm(void) {
-  return vread_csr(RVV_VXRM);
+  return __riscv_vread_csr(RVV_VXRM);
 }
 
 // CHECK-LABEL: @vread_csr_vcsr(
@@ -38,5 +38,5 @@ unsigned long vread_csr_vxrm(void) {
 // CHECK-NEXT:    ret i64 [[TMP0]]
 //
 unsigned long vread_csr_vcsr(void) {
-  return vread_csr(RVV_VCSR);
+  return __riscv_vread_csr(RVV_VCSR);
 }
