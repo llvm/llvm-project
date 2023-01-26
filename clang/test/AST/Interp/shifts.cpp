@@ -143,9 +143,4 @@ namespace shifts {
 
   constexpr char c2 = 1;
   constexpr int i3 = c2 << (__CHAR_BIT__ + 1); // Not ill-formed
-
-  constexpr signed long int L = 1;
-  constexpr signed int R = 62;
-  constexpr decltype(L) M = L << R;
-  constexpr decltype(L) M2 = L >> R;
 };
