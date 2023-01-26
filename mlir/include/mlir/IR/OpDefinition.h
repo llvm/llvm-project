@@ -601,17 +601,11 @@ struct MultiResultTraitBase : public TraitBase<ConcreteType, TraitType> {
 template <typename ConcreteType>
 class OneResult : public TraitBase<ConcreteType, OneResult> {
 public:
-  Value getResult() { return this->getOperation()->getResult(0); }
-
-  /// If the operation returns a single value, then the Op can be implicitly
-  /// converted to an Value. This yields the value of the only result.
-  operator Value() { return getResult(); }
-
   /// Replace all uses of 'this' value with the new value, updating anything
   /// in the IR that uses 'this' to use the other value instead.  When this
   /// returns there are zero uses of 'this'.
   void replaceAllUsesWith(Value newValue) {
-    getResult().replaceAllUsesWith(newValue);
+    this->getOperation()->getResult(0).replaceAllUsesWith(newValue);
   }
 
   /// Replace all uses of 'this' value with the result of 'op'.
@@ -637,10 +631,15 @@ public:
   class Impl
       : public TraitBase<ConcreteType, OneTypedResult<ResultType>::Impl> {
   public:
-    ResultType getType() {
-      auto resultTy = this->getOperation()->getResult(0).getType();
-      return resultTy.template cast<ResultType>();
+    TypedValue<ResultType> getResult() {
+      return this->getOperation()->getResult(0);
     }
+
+    /// If the operation returns a single value, then the Op can be implicitly
+    /// converted to a Value. This yields the value of the only result.
+    operator TypedValue<ResultType>() { return getResult(); }
+
+    ResultType getType() { return getResult().getType(); }
   };
 };
 
