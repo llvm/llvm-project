@@ -4598,6 +4598,9 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       // !(X || Y) && X --> false (commuted 2 ways)
       if (match(Cond, m_Not(m_c_LogicalOr(m_Specific(TrueVal), m_Value()))))
         return ConstantInt::getFalse(Cond->getType());
+      // X && !(X || Y) --> false (commuted 2 ways)
+      if (match(TrueVal, m_Not(m_c_LogicalOr(m_Specific(Cond), m_Value()))))
+        return ConstantInt::getFalse(Cond->getType());
 
       // (X || Y) && Y --> Y (commuted 2 ways)
       if (match(Cond, m_c_LogicalOr(m_Specific(TrueVal), m_Value())))
