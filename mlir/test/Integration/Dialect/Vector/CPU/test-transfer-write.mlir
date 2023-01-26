@@ -136,6 +136,8 @@ func.func @entry() {
     : memref<4x4x4xf32>, vector<4x4x4xf32>
   vector.print %r : vector<4x4x4xf32>
 
+  memref.dealloc %A1 : memref<4x4x4xf32>
+
   return
 }
 

@@ -371,7 +371,7 @@ Example:
 Syntax:
 
 ```
-operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
+operation ::= `affine.dma_start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
 The `affine.dma_start` op starts a non-blocking DMA operation that transfers
@@ -419,7 +419,7 @@ space 1 at indices [%k + 7, %l], would be specified as follows:
 Syntax:
 
 ```
-operation ::= `affine.dma_Start` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
+operation ::= `affine.dma_wait` ssa-use `[` multi-dim-affine-map-of-ssa-ids `]`, ssa-use `:` memref-type
 ```
 
 The `affine.dma_start` op blocks until the completion of a DMA operation

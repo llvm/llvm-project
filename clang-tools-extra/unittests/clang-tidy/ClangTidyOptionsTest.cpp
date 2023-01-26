@@ -76,20 +76,13 @@ TEST(ParseLineFilter, ValidFilter) {
 
 TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
-      parseConfiguration(llvm::MemoryBufferRef(
-          "Checks: \"-*,misc-*\"\n"
-          "HeaderFileExtensions: [\"\",\"h\",\"hh\",\"hpp\",\"hxx\"]\n"
-          "ImplementationFileExtensions: [\"c\",\"cc\",\"cpp\",\"cxx\"]\n"
-          "HeaderFilterRegex: \".*\"\n"
-          "AnalyzeTemporaryDtors: true\n"
-          "User: some.user",
-          "Options"));
+      parseConfiguration(llvm::MemoryBufferRef("Checks: \"-*,misc-*\"\n"
+                                               "HeaderFilterRegex: \".*\"\n"
+                                               "AnalyzeTemporaryDtors: true\n"
+                                               "User: some.user",
+                                               "Options"));
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
-  EXPECT_EQ(std::vector<std::string>({"", "h", "hh", "hpp", "hxx"}),
-            *Options->HeaderFileExtensions);
-  EXPECT_EQ(std::vector<std::string>({"c", "cc", "cpp", "cxx"}),
-            *Options->ImplementationFileExtensions);
   EXPECT_EQ(".*", *Options->HeaderFilterRegex);
   EXPECT_EQ("some.user", *Options->User);
 }
@@ -112,8 +105,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 =
       parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check1,check2"
-      HeaderFileExtensions: ["h","hh"]
-      ImplementationFileExtensions: ["c","cc"]
       HeaderFilterRegex: "filter1"
       AnalyzeTemporaryDtors: true
       User: user1
@@ -126,8 +117,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options2 =
       parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check3,check4"
-      HeaderFileExtensions: ["hpp","hxx"]
-      ImplementationFileExtensions: ["cpp","cxx"]
       HeaderFilterRegex: "filter2"
       AnalyzeTemporaryDtors: false
       User: user2
@@ -139,10 +128,6 @@ TEST(ParseConfiguration, MergeConfigurations) {
   ASSERT_TRUE(!!Options2);
   ClangTidyOptions Options = Options1->merge(*Options2, 0);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
-  EXPECT_EQ(std::vector<std::string>({"hpp", "hxx"}),
-            *Options.HeaderFileExtensions);
-  EXPECT_EQ(std::vector<std::string>({"cpp", "cxx"}),
-            *Options.ImplementationFileExtensions);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
   EXPECT_EQ("user2", *Options.User);
   ASSERT_TRUE(Options.ExtraArgs.has_value());

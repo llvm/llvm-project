@@ -386,7 +386,7 @@ TEST_F(MCJITCAPITest, stackmap_creates_compact_unwind_on_darwin) {
   
   // This test is also not supported on non-x86 platforms.
   if (Triple(HostTriple).getArch() != Triple::x86_64)
-    return;
+    GTEST_SKIP();
   
   buildFunctionThatUsesStackmap();
   buildMCJITOptions();

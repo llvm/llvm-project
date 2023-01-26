@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/FloatProperties.h"
 #include "src/__support/UInt.h"
 #include "src/__support/UInt128.h"
+#include "src/__support/common.h"
 #include "src/__support/float_to_string.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
@@ -31,8 +32,8 @@ namespace printf_core {
 using MantissaInt = fputil::FPBits<long double>::UIntType;
 
 // Returns true if value is divisible by 2^p.
-constexpr inline bool multiple_of_power_of_2(const uint64_t value,
-                                             const uint32_t p) {
+LIBC_INLINE constexpr bool multiple_of_power_of_2(const uint64_t value,
+                                                  const uint32_t p) {
   return (value & ((uint64_t(1) << p) - 1)) == 0;
 }
 
@@ -491,9 +492,9 @@ public:
 };
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-int inline convert_float_decimal_typed(Writer *writer,
-                                       const FormatSection &to_conv,
-                                       fputil::FPBits<T> float_bits) {
+LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
+                                            const FormatSection &to_conv,
+                                            fputil::FPBits<T> float_bits) {
   // signed because later we use -MANT_WIDTH
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
@@ -634,9 +635,9 @@ int inline convert_float_decimal_typed(Writer *writer,
 }
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-int inline convert_float_dec_exp_typed(Writer *writer,
-                                       const FormatSection &to_conv,
-                                       fputil::FPBits<T> float_bits) {
+LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
+                                            const FormatSection &to_conv,
+                                            fputil::FPBits<T> float_bits) {
   // signed because later we use -MANT_WIDTH
   constexpr int32_t MANT_WIDTH = fputil::MantissaWidth<T>::VALUE;
   bool is_negative = float_bits.get_sign();
@@ -793,7 +794,8 @@ int inline convert_float_dec_exp_typed(Writer *writer,
   return WRITE_OK;
 }
 
-int inline convert_float_decimal(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_float_decimal(Writer *writer,
+                                      const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);
@@ -812,7 +814,8 @@ int inline convert_float_decimal(Writer *writer, const FormatSection &to_conv) {
   return convert_inf_nan(writer, to_conv);
 }
 
-int inline convert_float_dec_exp(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_float_dec_exp(Writer *writer,
+                                      const FormatSection &to_conv) {
   if (to_conv.length_modifier == LengthModifier::L) {
     fputil::FPBits<long double>::UIntType float_raw = to_conv.conv_val_raw;
     fputil::FPBits<long double> float_bits(float_raw);

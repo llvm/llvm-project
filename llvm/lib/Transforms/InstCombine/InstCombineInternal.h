@@ -128,8 +128,8 @@ public:
   Instruction *commonCastTransforms(CastInst &CI);
   Instruction *commonPointerCastTransforms(CastInst &CI);
   Instruction *visitTrunc(TruncInst &CI);
-  Instruction *visitZExt(ZExtInst &CI);
-  Instruction *visitSExt(SExtInst &CI);
+  Instruction *visitZExt(ZExtInst &Zext);
+  Instruction *visitSExt(SExtInst &Sext);
   Instruction *visitFPTrunc(FPTruncInst &CI);
   Instruction *visitFPExt(CastInst &CI);
   Instruction *visitFPToUI(FPToUIInst &FI);
@@ -249,9 +249,9 @@ private:
   /// \return null if the transformation cannot be performed. If the
   /// transformation can be performed the new instruction that replaces the
   /// (zext icmp) pair will be returned.
-  Instruction *transformZExtICmp(ICmpInst *ICI, ZExtInst &CI);
+  Instruction *transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext);
 
-  Instruction *transformSExtICmp(ICmpInst *ICI, Instruction &CI);
+  Instruction *transformSExtICmp(ICmpInst *Cmp, SExtInst &Sext);
 
   bool willNotOverflowSignedAdd(const Value *LHS, const Value *RHS,
                                 const Instruction &CxtI) const {

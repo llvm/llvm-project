@@ -10562,6 +10562,25 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     break;
   }
+  case RISCVISD::VFMV_S_F_VL: {
+    SDValue Src = N->getOperand(1);
+    // Try to remove vector->scalar->vector if the scalar->vector is inserting
+    // into an undef vector.
+    // TODO: Could use a vslide or vmv.v.v for non-undef.
+    if (N->getOperand(0).isUndef() &&
+        Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(1)) &&
+        Src.getOperand(0).getValueType().isScalableVector()) {
+      EVT VT = N->getValueType(0);
+      EVT SrcVT = Src.getOperand(0).getValueType();
+      assert(SrcVT.getVectorElementType() == VT.getVectorElementType());
+      // Widths match, just return the original vector.
+      if (SrcVT == VT)
+        return Src.getOperand(0);
+      // TODO: Use insert_subvector/extract_subvector to change widen/narrow?
+    }
+    break;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo = N->getConstantOperandVal(0);
     switch (IntNo) {
@@ -13750,7 +13769,9 @@ RISCVTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
   // atomicrmw {fadd,fsub} must be expanded to use compare-exchange, as floating
   // point operations can't be used in an lr/sc sequence without breaking the
   // forward-progress guarantee.
-  if (AI->isFloatingPointOperation())
+  if (AI->isFloatingPointOperation() ||
+      AI->getOperation() == AtomicRMWInst::UIncWrap ||
+      AI->getOperation() == AtomicRMWInst::UDecWrap)
     return AtomicExpansionKind::CmpXChg;
 
   // Don't expand forced atomics, we want to have __sync libcalls instead.

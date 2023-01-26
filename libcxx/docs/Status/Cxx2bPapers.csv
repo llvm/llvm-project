@@ -62,7 +62,7 @@
 "`P2093R14 <https://wg21.link/P2093R14>`__","LWG","Formatted output","July 2022","",""
 "`P2165R4 <https://wg21.link/P2165R4>`__","LWG","Compatibility between ``tuple``, ``pair`` and ``tuple-like`` objects","July 2022","",""
 "`P2278R4 <https://wg21.link/P2278R4>`__","LWG","``cbegin`` should always return a constant iterator","July 2022","","","|ranges|"
-"`P2286R8 <https://wg21.link/P2286R8>`__","LWG","Formatting Ranges","July 2022","|Partial|","","|format| |ranges|"
+"`P2286R8 <https://wg21.link/P2286R8>`__","LWG","Formatting Ranges","July 2022","|Complete|","16.0","|format| |ranges|"
 "`P2291R3 <https://wg21.link/P2291R3>`__","LWG","Add Constexpr Modifiers to Functions ``to_chars`` and ``from_chars`` for Integral Types in ``<charconv>`` Header","July 2022","|Complete|","16.0"
 "`P2302R4 <https://wg21.link/P2302R4>`__","LWG","``std::ranges::contains``","July 2022","","","|ranges|"
 "`P2322R6 <https://wg21.link/P2322R6>`__","LWG","``ranges::fold``","July 2022","","","|ranges|"

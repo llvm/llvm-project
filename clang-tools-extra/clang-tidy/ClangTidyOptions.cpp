@@ -122,9 +122,6 @@ template <> struct MappingTraits<ClangTidyOptions> {
     bool Ignored = false;
     IO.mapOptional("Checks", Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
-    IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
-    IO.mapOptional("ImplementationFileExtensions",
-                   Options.ImplementationFileExtensions);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
     IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // deprecated
     IO.mapOptional("FormatStyle", Options.FormatStyle);
@@ -145,8 +142,6 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   ClangTidyOptions Options;
   Options.Checks = "";
   Options.WarningsAsErrors = "";
-  Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
-  Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
   Options.HeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
@@ -183,9 +178,6 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
                                               unsigned Order) {
   mergeCommaSeparatedLists(Checks, Other.Checks);
   mergeCommaSeparatedLists(WarningsAsErrors, Other.WarningsAsErrors);
-  overrideValue(HeaderFileExtensions, Other.HeaderFileExtensions);
-  overrideValue(ImplementationFileExtensions,
-                Other.ImplementationFileExtensions);
   overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
   overrideValue(SystemHeaders, Other.SystemHeaders);
   overrideValue(FormatStyle, Other.FormatStyle);

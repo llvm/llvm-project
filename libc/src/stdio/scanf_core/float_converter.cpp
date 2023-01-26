@@ -11,7 +11,7 @@
 #include "src/__support/CPP/limits.h"
 #include "src/__support/char_vector.h"
 #include "src/__support/ctype_utils.h"
-#include "src/__support/str_to_float.h"
+#include "src/stdio/scanf_core/converter_utils.h"
 #include "src/stdio/scanf_core/core_structs.h"
 #include "src/stdio/scanf_core/reader.h"
 
@@ -19,35 +19,6 @@
 
 namespace __llvm_libc {
 namespace scanf_core {
-
-constexpr char inline to_lower(char a) { return a | 32; }
-
-void write_with_length(char *str, const FormatSection &to_conv) {
-  if ((to_conv.flags & NO_WRITE) != 0) {
-    return;
-  }
-
-  void *output_ptr = to_conv.output_ptr;
-
-  LengthModifier lm = to_conv.length_modifier;
-  switch (lm) {
-  case (LengthModifier::l): {
-    auto value = internal::strtofloatingpoint<double>(str, nullptr);
-    *reinterpret_cast<double *>(output_ptr) = value;
-    break;
-  }
-  case (LengthModifier::L): {
-    auto value = internal::strtofloatingpoint<long double>(str, nullptr);
-    *reinterpret_cast<long double *>(output_ptr) = value;
-    break;
-  }
-  default: {
-    auto value = internal::strtofloatingpoint<float>(str, nullptr);
-    *reinterpret_cast<float *>(output_ptr) = value;
-    break;
-  }
-  }
-}
 
 // All of the floating point conversions are the same for scanf, every name will
 // accept every style.
@@ -96,7 +67,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
     }
 
     if (inf_index == 3 || inf_index == sizeof(inf_string) - 1) {
-      write_with_length(out_str.c_str(), to_conv);
+      write_float_with_length(out_str.c_str(), to_conv);
       return READ_OK;
     } else {
       return MATCHING_FAILURE;
@@ -119,7 +90,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
     }
 
     if (nan_index == sizeof(nan_string) - 1) {
-      write_with_length(out_str.c_str(), to_conv);
+      write_float_with_length(out_str.c_str(), to_conv);
       return READ_OK;
     } else {
       return MATCHING_FAILURE;
@@ -138,7 +109,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
     }
     // If we've hit the end, then this is "0", which is valid.
     if (out_str.length() == max_width) {
-      write_with_length(out_str.c_str(), to_conv);
+      write_float_with_length(out_str.c_str(), to_conv);
       return READ_OK;
     } else {
       cur_char = reader->getc();
@@ -154,7 +125,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
       // If we've hit the end here, we have "0x" which is a valid prefix to a
       // floating point number, and will be evaluated to 0.
       if (out_str.length() == max_width) {
-        write_with_length(out_str.c_str(), to_conv);
+        write_float_with_length(out_str.c_str(), to_conv);
         return READ_OK;
       } else {
         cur_char = reader->getc();
@@ -246,7 +217,7 @@ int convert_float(Reader *reader, const FormatSection &to_conv) {
   if (!is_number) {
     return MATCHING_FAILURE;
   }
-  write_with_length(out_str.c_str(), to_conv);
+  write_float_with_length(out_str.c_str(), to_conv);
 
   return READ_OK;
 }

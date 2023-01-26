@@ -4653,14 +4653,30 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
-  // (B & (Pow2C-1)) == zext A --> A == trunc B
-  // (B & (Pow2C-1)) != zext A --> A != trunc B
-  const APInt *MaskC;
-  if (match(Op0, m_And(m_Value(B), m_LowBitMask(MaskC))) &&
-      match(Op1, m_ZExt(m_Value(A))) &&
-      MaskC->countTrailingOnes() == A->getType()->getScalarSizeInBits() &&
-      (Op0->hasOneUse() || Op1->hasOneUse()))
-    return new ICmpInst(Pred, A, Builder.CreateTrunc(B, A->getType()));
+  if (match(Op1, m_ZExt(m_Value(A))) &&
+      (Op0->hasOneUse() || Op1->hasOneUse())) {
+    // (B & (Pow2C-1)) == zext A --> A == trunc B
+    // (B & (Pow2C-1)) != zext A --> A != trunc B
+    const APInt *MaskC;
+    if (match(Op0, m_And(m_Value(B), m_LowBitMask(MaskC))) &&
+        MaskC->countTrailingOnes() == A->getType()->getScalarSizeInBits())
+      return new ICmpInst(Pred, A, Builder.CreateTrunc(B, A->getType()));
+
+    // Test if 2 values have different or same signbits:
+    // (X u>> BitWidth - 1) == zext (Y s> -1) --> (X ^ Y) < 0
+    // (X u>> BitWidth - 1) != zext (Y s> -1) --> (X ^ Y) > -1
+    unsigned OpWidth = Op0->getType()->getScalarSizeInBits();
+    Value *X, *Y;
+    ICmpInst::Predicate Pred2;
+    if (match(Op0, m_LShr(m_Value(X), m_SpecificIntAllowUndef(OpWidth - 1))) &&
+        match(A, m_ICmp(Pred2, m_Value(Y), m_AllOnes())) &&
+        Pred2 == ICmpInst::ICMP_SGT && X->getType() == Y->getType()) {
+      Value *Xor = Builder.CreateXor(X, Y, "xor.signbits");
+      Value *R = (Pred == ICmpInst::ICMP_EQ) ? Builder.CreateIsNeg(Xor) :
+                                               Builder.CreateIsNotNeg(Xor);
+      return replaceInstUsesWith(I, R);
+    }
+  }
 
   // (A >> C) == (B >> C) --> (A^B) u< (1 << C)
   // For lshr and ashr pairs.

@@ -778,12 +778,12 @@ OpFoldResult arith::AndIOp::fold(FoldAdaptor adaptor) {
   if (matchPattern(getRhs(), m_Op<XOrIOp>(matchers::m_Val(getLhs()),
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
-    return IntegerAttr::get(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
   /// and(not(x), x) -> 0
   if (matchPattern(getLhs(), m_Op<XOrIOp>(matchers::m_Val(getRhs()),
                                           m_ConstantInt(&intValue))) &&
       intValue.isAllOnes())
-    return IntegerAttr::get(getType(), 0);
+    return Builder(getContext()).getZeroAttr(getType());
 
   /// and(a, and(a, b)) -> and(a, b)
   if (Value result = foldAndIofAndI(*this))

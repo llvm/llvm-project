@@ -499,7 +499,8 @@ TEST(Support, HomeDirectoryWithNoEnv) {
 
   // Don't run the test if we have nothing to compare against.
   struct passwd *pw = getpwuid(getuid());
-  if (!pw || !pw->pw_dir) return;
+  if (!pw || !pw->pw_dir)
+    GTEST_SKIP();
   std::string PwDir = pw->pw_dir;
 
   SmallString<128> HomeDir;

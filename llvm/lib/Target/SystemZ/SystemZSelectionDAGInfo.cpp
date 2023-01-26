@@ -108,7 +108,7 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
       if (ByteVal == 0 || ByteVal == 255
               ? Bytes <= 16 && llvm::popcount(Bytes) <= 2
               : Bytes <= 4) {
-        unsigned Size1 = Bytes == 16 ? 8 : 1 << findLastSet(Bytes);
+        unsigned Size1 = Bytes == 16 ? 8 : llvm::bit_floor(Bytes);
         unsigned Size2 = Bytes - Size1;
         SDValue Chain1 = memsetStore(DAG, DL, Chain, Dst, ByteVal, Size1,
                                      Alignment, DstPtrInfo);

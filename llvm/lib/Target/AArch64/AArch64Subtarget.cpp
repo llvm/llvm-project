@@ -276,6 +276,7 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case Ampere1:
+  case Ampere1A:
     CacheLineSize = 64;
     PrefFunctionLogAlignment = 6;
     PrefLoopLogAlignment = 6;

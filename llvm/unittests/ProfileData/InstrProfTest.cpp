@@ -1253,14 +1253,14 @@ TEST(ProfileReaderTest, ReadsLargeFiles) {
 
   auto RawProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
   if (!RawProfile)
-    return;
+    GTEST_SKIP();
   auto RawProfileReaderOrErr = InstrProfReader::create(std::move(RawProfile));
   ASSERT_TRUE(InstrProfError::take(RawProfileReaderOrErr.takeError()) ==
               instrprof_error::unrecognized_format);
 
   auto IndexedProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
   if (!IndexedProfile)
-    return;
+    GTEST_SKIP();
   auto IndexedReaderOrErr =
       IndexedInstrProfReader::create(std::move(IndexedProfile), nullptr);
   ASSERT_TRUE(InstrProfError::take(IndexedReaderOrErr.takeError()) ==

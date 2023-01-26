@@ -480,6 +480,7 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
   DWARFDebugAddrTable AddrTable;
   DIDumpOptions DumpOpts;
   constexpr uint32_t HeaderSize = 8;
+  DenseMap<uint64_t, uint64_t> UnmodifiedAddressOffsets;
   for (std::unique_ptr<DWARFUnit> &CU : BC->DwCtx->compile_units()) {
     const uint64_t CUID = getCUID(*CU.get());
     const uint8_t AddrSize = CU->getAddressByteSize();
@@ -494,11 +495,18 @@ AddressSectionBuffer DebugAddrWriterDwarf5::finalize() {
       // Address base offset is to the first entry.
       // The size of header is 8 bytes.
       uint64_t Offset = *BaseOffset - HeaderSize;
+      auto Iter = UnmodifiedAddressOffsets.find(Offset);
+      if (Iter != UnmodifiedAddressOffsets.end()) {
+        DWOIdToOffsetMap[CUID] = Iter->getSecond();
+        continue;
+      }
+      UnmodifiedAddressOffsets[Offset] = Buffer.size() + HeaderSize;
       if (Error Err = AddrTable.extract(AddrData, &Offset, 5, AddrSize,
                                         DumpOpts.WarningHandler)) {
         DumpOpts.RecoverableErrorHandler(std::move(Err));
         continue;
       }
+
       uint32_t Index = 0;
       for (uint64_t Addr : AddrTable.getAddressEntries())
         AMIter->second.insert(Addr, Index++);

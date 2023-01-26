@@ -3,10 +3,7 @@
 
 #include <stdint.h>
 
-// Doubles are still passed in GPRs, so the 'e' argument will be anyext as
-// GPRs are exhausted.
-
-// CHECK: define{{.*}} void @f_fpr_tracking(double noundef %a, double noundef %b, double noundef %c, double noundef %d, i8 noundef %e)
+// CHECK: define{{.*}} void @f_fpr_tracking(double noundef %a, double noundef %b, double noundef %c, double noundef %d, i8 noundef signext %e)
 void f_fpr_tracking(double a, double b, double c, double d, int8_t e) {}
 
 // Lowering for doubles is unnmodified, as 64 > FLEN.

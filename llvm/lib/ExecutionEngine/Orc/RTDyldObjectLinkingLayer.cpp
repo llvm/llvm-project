@@ -259,6 +259,46 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       if (COFFSec.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
         I->second.setFlags(I->second.getFlags() | JITSymbolFlags::Weak);
     }
+
+    // Handle any aliases.
+    for (auto &Sym : COFFObj->symbols()) {
+      uint32_t SymFlags = cantFail(Sym.getFlags());
+      if (SymFlags & object::BasicSymbolRef::SF_Undefined)
+        continue;
+      auto Name = Sym.getName();
+      if (!Name)
+        return Name.takeError();
+      auto I = Resolved.find(*Name);
+
+      // Skip already-resolved symbols, and symbols that we're not responsible
+      // for.
+      if (I != Resolved.end() || !R.getSymbols().count(ES.intern(*Name)))
+        continue;
+
+      // Skip anything other than weak externals.
+      auto COFFSym = COFFObj->getCOFFSymbol(Sym);
+      if (!COFFSym.isWeakExternal())
+        continue;
+      auto *WeakExternal = COFFSym.getAux<object::coff_aux_weak_external>();
+      if (WeakExternal->Characteristics != COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS)
+        continue;
+
+      // We found an alias. Reuse the resolution of the alias target for the
+      // alias itself.
+      Expected<object::COFFSymbolRef> TargetSymbol =
+          COFFObj->getSymbol(WeakExternal->TagIndex);
+      if (!TargetSymbol)
+        return TargetSymbol.takeError();
+      Expected<StringRef> TargetName = COFFObj->getSymbolName(*TargetSymbol);
+      if (!TargetName)
+        return TargetName.takeError();
+      auto J = Resolved.find(*TargetName);
+      if (J == Resolved.end())
+        return make_error<StringError>("Could alias target " + *TargetName +
+                                           " not resolved",
+                                       inconvertibleErrorCode());
+      Resolved[*Name] = J->second;
+    }
   }
 
   for (auto &KV : Resolved) {

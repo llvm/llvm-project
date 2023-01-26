@@ -260,8 +260,8 @@ define i32 @fib_check(){
 // the plugin being loaded acts identically to the default inliner
 TEST(PluginInlineAdvisorTest, PluginLoad) {
 #if !defined(LLVM_ENABLE_PLUGINS)
-  // Disable the test if plugins are disabled.
-  return;
+  // Skip the test if plugins are disabled.
+  GTEST_SKIP();
 #endif
   CompilerInstance CI{};
   CI.setupPlugin();

@@ -48,5 +48,5 @@ class RecursiveTypesTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.runCmd("print tpi")
-        self.runCmd("print *tpi")
+        self.runCmd("expression tpi")
+        self.runCmd("expression *tpi")

@@ -515,5 +515,15 @@ void hlfir::NullOp::build(mlir::OpBuilder &builder,
                fir::ReferenceType::get(builder.getNoneType()));
 }
 
+//===----------------------------------------------------------------------===//
+// CopyInOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
+                            mlir::OperationState &odsState, mlir::Value var,
+                            mlir::Value var_is_present) {
+  return build(builder, odsState, var.getType(), var, var_is_present);
+}
+
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

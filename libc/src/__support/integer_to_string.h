@@ -15,6 +15,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 
@@ -44,10 +45,10 @@ namespace __llvm_libc {
 //   char b30buf[IntegerToString::bufsize<30, int>(a)];
 //   auto str = IntegerToString::convert<30>(a, b30buf);
 class IntegerToString {
-  static cpp::string_view convert_uintmax(uintmax_t uval,
-                                          cpp::span<char> &buffer,
-                                          bool lowercase,
-                                          const uint8_t conv_base) {
+  LIBC_INLINE static cpp::string_view convert_uintmax(uintmax_t uval,
+                                                      cpp::span<char> &buffer,
+                                                      bool lowercase,
+                                                      const uint8_t conv_base) {
     const char a = lowercase ? 'a' : 'A';
 
     size_t len = 0;
@@ -67,9 +68,10 @@ class IntegerToString {
     return cpp::string_view(buffer.data() + buffer.size() - len, len);
   }
 
-  static cpp::string_view convert_intmax(intmax_t val, cpp::span<char> &buffer,
-                                         bool lowercase,
-                                         const uint8_t conv_base) {
+  LIBC_INLINE static cpp::string_view convert_intmax(intmax_t val,
+                                                     cpp::span<char> &buffer,
+                                                     bool lowercase,
+                                                     const uint8_t conv_base) {
     if (val >= 0)
       return convert_uintmax(uintmax_t(val), buffer, lowercase, conv_base);
     uintmax_t uval = uintmax_t(-val);
@@ -80,7 +82,7 @@ class IntegerToString {
     return cpp::string_view(buffer.data() + buffer.size() - len, len);
   }
 
-  static constexpr inline size_t floor_log_2(size_t num) {
+  LIBC_INLINE static constexpr size_t floor_log_2(size_t num) {
     size_t i = 0;
     for (; num > 1; num /= 2) {
       ++i;
@@ -110,7 +112,8 @@ public:
   // For other bases, we approximate by rounding down to the nearest power of
   // two base, since the space needed is easy to calculate and it won't
   // overestimate by too much.
-  template <uint8_t BASE, typename T> static constexpr size_t bufsize() {
+  template <uint8_t BASE, typename T>
+  LIBC_INLINE static constexpr size_t bufsize() {
     constexpr size_t BITS_PER_DIGIT = floor_log_2(BASE);
     constexpr size_t BUFSIZE_COMMON =
         ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
@@ -119,27 +122,27 @@ public:
            (BASE == 10 ? BUFSIZE_BASE10 : BUFSIZE_COMMON);
   }
 
-  template <typename T> static constexpr size_t dec_bufsize() {
+  template <typename T> LIBC_INLINE static constexpr size_t dec_bufsize() {
     return bufsize<10, T>();
   }
 
-  template <typename T> static constexpr size_t hex_bufsize() {
+  template <typename T> LIBC_INLINE static constexpr size_t hex_bufsize() {
     return bufsize<16, T>();
   }
 
-  template <typename T> static constexpr size_t oct_bufsize() {
+  template <typename T> LIBC_INLINE static constexpr size_t oct_bufsize() {
     return bufsize<8, T>();
   }
 
-  template <typename T> static constexpr size_t bin_bufsize() {
+  template <typename T> LIBC_INLINE static constexpr size_t bin_bufsize() {
     return bufsize<2, T>();
   }
 
   template <uint8_t BASE, typename T,
             cpp::enable_if_t<2 <= BASE && BASE <= 36 && cpp::is_integral_v<T>,
                              int> = 0>
-  static cpp::optional<cpp::string_view> convert(T val, cpp::span<char> buffer,
-                                                 bool lowercase = true) {
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  convert(T val, cpp::span<char> buffer, bool lowercase = true) {
     if (buffer.size() < bufsize<BASE, T>())
       return cpp::optional<cpp::string_view>();
     if (cpp::is_signed_v<T>)
@@ -149,23 +152,26 @@ public:
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::string_view> dec(T val, cpp::span<char> buffer) {
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  dec(T val, cpp::span<char> buffer) {
     return convert<10>(val, buffer);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::string_view> hex(T val, cpp::span<char> buffer,
-                                             bool lowercase = true) {
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  hex(T val, cpp::span<char> buffer, bool lowercase = true) {
     return convert<16>(val, buffer, lowercase);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::string_view> oct(T val, cpp::span<char> buffer) {
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  oct(T val, cpp::span<char> buffer) {
     return convert<8>(val, buffer);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::string_view> bin(T val, cpp::span<char> buffer) {
+  LIBC_INLINE static cpp::optional<cpp::string_view>
+  bin(T val, cpp::span<char> buffer) {
     return convert<2>(val, buffer);
   }
 };

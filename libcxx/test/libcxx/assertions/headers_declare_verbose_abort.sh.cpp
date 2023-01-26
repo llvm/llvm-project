@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Test that all public C++ headers define the verbose termination function.
+// Test that all public C++ headers define the verbose termination function, which
+// is required for users to be able to include any public header and then override
+// the function using a strong definition.
 
 // The system-provided <uchar.h> seems to be broken on AIX, which trips up this test.
 // XFAIL: LIBCXX-AIX-FIXME

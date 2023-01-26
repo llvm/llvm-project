@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_ARG_LIST_H
 #define LLVM_LIBC_SRC_SUPPORT_ARG_LIST_H
 
+#include "src/__support/common.h"
+
 #include <stdarg.h>
 
 namespace __llvm_libc {
@@ -18,16 +20,16 @@ class ArgList {
   va_list vlist;
 
 public:
-  ArgList(va_list vlist) { va_copy(this->vlist, vlist); }
-  ArgList(ArgList &other) { va_copy(this->vlist, other.vlist); }
-  ~ArgList() { va_end(this->vlist); }
+  LIBC_INLINE ArgList(va_list vlist) { va_copy(this->vlist, vlist); }
+  LIBC_INLINE ArgList(ArgList &other) { va_copy(this->vlist, other.vlist); }
+  LIBC_INLINE ~ArgList() { va_end(this->vlist); }
 
-  ArgList &operator=(ArgList &rhs) {
+  LIBC_INLINE ArgList &operator=(ArgList &rhs) {
     va_copy(vlist, rhs.vlist);
     return *this;
   }
 
-  template <class T> T inline next_var() { return va_arg(vlist, T); }
+  template <class T> LIBC_INLINE T next_var() { return va_arg(vlist, T); }
 };
 
 } // namespace internal

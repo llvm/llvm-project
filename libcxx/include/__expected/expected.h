@@ -81,8 +81,8 @@ class expected {
           !is_function_v<_Tp> &&
           !is_same_v<remove_cv_t<_Tp>, in_place_t> &&
           !is_same_v<remove_cv_t<_Tp>, unexpect_t> &&
-          !__unexpected::__is_unexpected<remove_cv_t<_Tp>>::value &&
-          __unexpected::__valid_unexpected<_Err>::value
+          !__is_std_unexpected<remove_cv_t<_Tp>>::value &&
+          __valid_std_unexpected<_Err>::value
       ,
       "[expected.object.general] A program that instantiates the definition of template expected<T, E> for a "
       "reference type, a function type, or for possibly cv-qualified types in_place_t, unexpect_t, or a "
@@ -198,7 +198,7 @@ public:
 
   template <class _Up = _Tp>
     requires(!is_same_v<remove_cvref_t<_Up>, in_place_t> && !is_same_v<expected, remove_cvref_t<_Up>> &&
-             !__unexpected::__is_unexpected<remove_cvref_t<_Up>>::value && is_constructible_v<_Tp, _Up>)
+             !__is_std_unexpected<remove_cvref_t<_Up>>::value && is_constructible_v<_Tp, _Up>)
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_Up, _Tp>)
   expected(_Up&& __u)
     noexcept(is_nothrow_constructible_v<_Tp, _Up>) // strengthened
@@ -357,7 +357,7 @@ public:
   template <class _Up = _Tp>
   _LIBCPP_HIDE_FROM_ABI constexpr expected& operator=(_Up&& __v)
     requires(!is_same_v<expected, remove_cvref_t<_Up>> &&
-             !__unexpected::__is_unexpected<remove_cvref_t<_Up>>::value &&
+             !__is_std_unexpected<remove_cvref_t<_Up>>::value &&
              is_constructible_v<_Tp, _Up> &&
              is_assignable_v<_Tp&, _Up> &&
              (is_nothrow_constructible_v<_Tp, _Up> ||
@@ -648,7 +648,7 @@ private:
 template <class _Tp, class _Err>
   requires is_void_v<_Tp>
 class expected<_Tp, _Err> {
-  static_assert(__unexpected::__valid_unexpected<_Err>::value,
+  static_assert(__valid_std_unexpected<_Err>::value,
                 "[expected.void.general] A program that instantiates expected<T, E> with a E that is not a "
                 "valid argument for unexpected<E> is ill-formed");
 

@@ -328,9 +328,8 @@ void MCPlusBuilder::getClobberedRegs(const MCInst &Inst,
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/false);
 
   for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
     const MCOperand &Operand = Inst.getOperand(I);
@@ -345,12 +344,10 @@ void MCPlusBuilder::getTouchedRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/false);
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/false);
 
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
     if (!Inst.getOperand(I).isReg())
@@ -365,9 +362,8 @@ void MCPlusBuilder::getWrittenRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/true);
 
   for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
     const MCOperand &Operand = Inst.getOperand(I);
@@ -382,9 +378,8 @@ void MCPlusBuilder::getUsedRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
     if (!Inst.getOperand(I).isReg())
@@ -415,9 +410,8 @@ void MCPlusBuilder::getSrcRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
   for (unsigned I = InstInfo.getNumDefs(), E = InstInfo.getNumOperands();
        I != E; ++I) {
@@ -438,10 +432,9 @@ bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
     if (MI.getOperand(I).isReg() &&
         RegInfo->isSubRegisterEq(Reg, MI.getOperand(I).getReg()))
       return true;
-  if (const uint16_t *ImpUses = InstInfo.ImplicitUses) {
-    for (; *ImpUses; ++ImpUses)
-      if (*ImpUses == Reg || RegInfo->isSubRegister(Reg, *ImpUses))
-        return true;
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses()) {
+    if (ImplicitUse == Reg || RegInfo->isSubRegister(Reg, ImplicitUse))
+      return true;
   }
   return false;
 }

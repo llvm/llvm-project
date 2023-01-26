@@ -195,8 +195,7 @@ void python_generator::print_copy(QualType type)
 }
 
 /* Construct a wrapper for callback argument "param" (at position "arg").
- * Assign the wrapper to "cb".  We assume here that a function call
- * has at most one callback argument.
+ * Assign the wrapper to "cb{arg}".
  *
  * The wrapper converts the arguments of the callback to python types,
  * taking a copy if the C callback does not take its arguments.
@@ -272,7 +271,7 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
 		print_copy(return_type);
 		printf("(res.ptr)\n");
 	}
-	printf("        cb = fn(cb_func)\n");
+	printf("        cb%d = fn(cb_func)\n", arg);
 }
 
 /* Print the argument at position "arg" in call to "fd".
@@ -284,7 +283,7 @@ void python_generator::print_callback(ParmVarDecl *param, int arg)
  * assuming that the caller has made the context available
  * in a "ctx" variable.
  * Otherwise, if the argument is a callback, then print a reference to
- * the callback wrapper "cb".
+ * the corresponding callback wrapper.
  * Otherwise, if the argument is marked as consuming a reference,
  * then pass a copy of the pointer stored in the corresponding
  * argument passed to the Python method.
@@ -302,7 +301,7 @@ void python_generator::print_arg_in_call(FunctionDecl *fd, const char *fmt,
 	if (is_isl_ctx(type)) {
 		printf("ctx");
 	} else if (is_callback(type)) {
-		printf("cb");
+		printf("cb%d", arg - skip);
 	} else if (takes(param)) {
 		print_copy(type);
 		printf("(");
@@ -372,6 +371,8 @@ static void print_persistent_callback_failure_check(int indent,
  * then keep track of the constructed C callback (such that it doesn't
  * get destroyed) and the data structure that holds the captured exception
  * (such that it can be raised again).
+ * The callback appears in position 1 and the C callback is therefore
+ * called "cb1".
  *
  * If the return type is a (const) char *, then convert the result
  * to a Python string, raising an error on NULL and freeing
@@ -406,14 +407,14 @@ void python_generator::print_method_return(int indent, const isl_class &clazz,
 			string callback_name;
 
 			callback_name = clazz.persistent_callback_name(method);
-			print_indent(indent, "obj.%s = { 'func': cb, "
+			print_indent(indent, "obj.%s = { 'func': cb1, "
 				"'exc_info': exc_info }\n",
 				callback_name.c_str());
 		}
 		print_indent(indent, "return obj\n");
 	} else if (is_string(return_type)) {
 		print_indent(indent, "if res == 0:\n");
-		print_indent(indent, "    raise\n");
+		print_indent(indent, "    raise Error\n");
 		print_indent(indent, "string = "
 		       "cast(res, c_char_p).value.decode('ascii')\n");
 
@@ -423,7 +424,7 @@ void python_generator::print_method_return(int indent, const isl_class &clazz,
 		print_indent(indent, "return string\n");
 	} else if (is_isl_neg_error(return_type)) {
 		print_indent(indent, "if res < 0:\n");
-		print_indent(indent, "    raise\n");
+		print_indent(indent, "    raise Error\n");
 		if (is_isl_bool(return_type))
 			print_indent(indent, "return bool(res)\n");
 		else if (is_isl_size(return_type))
@@ -456,20 +457,19 @@ void python_generator::print_get_method(const isl_class &clazz,
 /* Print a call to "method", along with the corresponding
  * return statement, with the given indentation.
  * "drop_ctx" is set if the first argument is an isl_ctx.
- * "drop_user" is set if the last argument is a "user" argument
- * corresponding to a callback argument.
  *
  * A "ctx" variable is first initialized as it may be needed
  * in the first call to print_arg_in_call and in print_method_return.
  *
- * If the method has a callback function, then any exception
- * thrown in the callback also need to be rethrown.
+ * If the method has any callback function, then any exception
+ * thrown in any callback also need to be rethrown.
  */
 void python_generator::print_method_call(int indent, const isl_class &clazz,
-	FunctionDecl *method, const char *fmt, int drop_ctx, int drop_user)
+	FunctionDecl *method, const char *fmt, int drop_ctx)
 {
 	string fullname = method->getName().str();
 	int num_params = method->getNumParams();
+	int drop_user = 0;
 
 	if (drop_ctx) {
 		print_indent(indent, "ctx = Context.getDefaultInstance()\n");
@@ -479,16 +479,19 @@ void python_generator::print_method_call(int indent, const isl_class &clazz,
 		printf(".ctx\n");
 	}
 	print_indent(indent, "res = isl.%s(", fullname.c_str());
-	for (int i = 0; i < num_params - drop_user; ++i) {
+	for (int i = 0; i < num_params; ++i) {
 		if (i > 0)
 			printf(", ");
-		print_arg_in_call(method, fmt, i, drop_ctx);
-	}
-	if (drop_user)
+		print_arg_in_call(method, fmt, i, drop_ctx + drop_user);
+		if (!is_callback_arg(method, i))
+			continue;
+		++drop_user;
+		++i;
 		printf(", None");
+	}
 	printf(")\n");
 
-	if (drop_user)
+	if (drop_user > 0)
 		print_rethrow(indent, "exc_info[0]");
 
 	print_method_return(indent, clazz, method, fmt);
@@ -506,10 +509,10 @@ void python_generator::print_method_call(int indent, const isl_class &clazz,
  * If, moreover, this first argument is an isl_ctx, then remove
  * it from the arguments of the Python method.
  *
- * If the function has a callback argument, then it also has a "user"
- * argument.  Since Python has closures, there is no need for such
- * a user argument in the Python interface, so we simply drop it.
- * We also create a wrapper ("cb") for the callback.
+ * If the function has any callback arguments, then it also has corresponding
+ * "user" arguments.  Since Python has closures, there is no need for such
+ * user arguments in the Python interface, so we simply drop them.
+ * We also create a wrapper ("cb{arg}") for each callback.
  *
  * If the function consumes a reference, then we pass it a copy of
  * the actual argument.
@@ -527,25 +530,25 @@ void python_generator::print_method(const isl_class &clazz,
 	int drop_ctx = first_arg_is_isl_ctx(method);
 
 	for (int i = 1; i < num_params; ++i) {
-		ParmVarDecl *param = method->getParamDecl(i);
-		QualType type = param->getOriginalType();
-		if (is_callback(type))
-			drop_user = 1;
+		if (is_callback_arg(method, i))
+			drop_user += 1;
 	}
 
 	print_method_header(is_static(clazz, method), cname,
 			    num_params - drop_ctx - drop_user);
 
 	print_type_checks(cname, method, drop_ctx,
-			    num_params - drop_user, super);
+			    num_params, super);
+	drop_user = 0;
 	for (int i = 1; i < num_params; ++i) {
 		ParmVarDecl *param = method->getParamDecl(i);
 		QualType type = param->getOriginalType();
 		if (!is_callback(type))
 			continue;
-		print_callback(param, i - drop_ctx);
+		print_callback(param, i - drop_ctx - drop_user);
+		drop_user += 1;
 	}
-	print_method_call(8, clazz, method, fixed_arg_fmt, drop_ctx, drop_user);
+	print_method_call(8, clazz, method, fixed_arg_fmt, drop_ctx);
 
 	if (clazz.is_get_method(method))
 		print_get_method(clazz, method);
@@ -568,9 +571,18 @@ static void print_argument_check(QualType type, int i)
 	}
 }
 
+/* Is any element of "vector" set?
+ */
+static bool any(const std::vector<bool> &vector)
+{
+	return std::find(vector.begin(), vector.end(), true) != vector.end();
+}
+
 /* Print a test that checks whether the arguments passed
  * to the Python method correspond to the arguments
- * expected by "fd".
+ * expected by "fd" and
+ * check if the object on which the method is called, if any,
+ * is of the right type.
  * "drop_ctx" is set if the first argument of "fd" is an isl_ctx,
  * which does not appear as an argument to the Python method.
  *
@@ -579,14 +591,17 @@ static void print_argument_check(QualType type, int i)
  * to be of the type as prescribed by the second input argument
  * of the conversion function.
  * The corresponding arguments are then converted to the expected types
- * if needed.  The argument tuple first needs to be converted to a list
+ * if needed.
+ * The object on which the method is called is also converted if needed.
+ * The argument tuple first needs to be converted to a list
  * in order to be able to modify the entries.
  */
 void python_generator::print_argument_checks(const isl_class &clazz,
 	FunctionDecl *fd, int drop_ctx)
 {
 	int num_params = fd->getNumParams();
-	int first = generator::is_static(clazz, fd) ? drop_ctx : 1;
+	bool is_static = generator::is_static(clazz, fd);
+	int first = is_static ? drop_ctx : 1;
 	std::vector<bool> convert(num_params);
 
 	printf("        if len(args) == %d", num_params - drop_ctx);
@@ -610,14 +625,16 @@ void python_generator::print_argument_checks(const isl_class &clazz,
 	}
 	printf(":\n");
 
-	if (std::find(convert.begin(), convert.end(), true) == convert.end())
+	if (is_static && !any(convert))
 		return;
 	print_indent(12, "args = list(args)\n");
+	first = is_static ? drop_ctx : 0;
 	for (int i = first; i < num_params; ++i) {
+		bool is_self = !is_static && i == 0;
 		ParmVarDecl *param = fd->getParamDecl(i);
 		string type;
 
-		if (!convert[i])
+		if (!is_self && !convert[i])
 			continue;
 		type = type2python(extract_type(param->getOriginalType()));
 		print_type_check(12, type, var_arg_fmt,
@@ -639,7 +656,7 @@ void python_generator::print_method_overload(const isl_class &clazz,
 	int drop_ctx = first_arg_is_isl_ctx(method);
 
 	print_argument_checks(clazz, method, drop_ctx);
-	print_method_call(12, clazz, method, var_arg_fmt, drop_ctx, 0);
+	print_method_call(12, clazz, method, var_arg_fmt, drop_ctx);
 }
 
 /* Print a python method with a name derived from "fullname"
@@ -755,6 +772,83 @@ void python_generator::print_constructor(const isl_class &clazz,
 	printf("            return\n");
 }
 
+/* The definition of the part of constructor for the "id" class
+ * that construct an object from a name and a user object,
+ * without the initial newline.
+ *
+ * Just like the parts generated by python_generator::print_constructor,
+ * the result of the isl_id_alloc call is stored in self.ptr and
+ * a reference to the default context is stored in self.ctx.
+ * Also, just like any other constructor or method with a string argument,
+ * the python string is first encoded as a byte sequence,
+ * using 'ascii' as encoding.
+ *
+ * Since the isl_id keeps a reference to the Python user object,
+ * the reference count of the Python object needs to be incremented,
+ * but only if the construction of the isl_id is successful.
+ * The reference count of the Python object is decremented again
+ * by Context.free_user when the reference count of the isl_id
+ * drops to zero.
+ */
+static const char *const id_constructor_user = &R"(
+        if len(args) == 2 and type(args[0]) == str:
+            self.ctx = Context.getDefaultInstance()
+            name = args[0].encode('ascii')
+            self.ptr = isl.isl_id_alloc(self.ctx, name, args[1])
+            self.ptr = isl.isl_id_set_free_user(self.ptr, Context.free_user)
+            if self.ptr is not None:
+                pythonapi.Py_IncRef(py_object(args[1]))
+            return
+)"[1];
+
+/* Print any special constructor parts of this class that are not
+ * automatically derived from the C interface.
+ *
+ * In particular, print a special constructor part for the "id" class.
+ */
+void python_generator::print_special_constructors(const isl_class &clazz)
+{
+	if (clazz.name != "isl_id")
+		return;
+
+	printf("%s", id_constructor_user);
+}
+
+/* The definition of an "id" method
+ * for retrieving the user object associated to the identifier,
+ * without the initial newline.
+ *
+ * The isl_id needs to have been created by the constructor
+ * in id_constructor_user.  That is, it needs to have a user pointer and
+ * it needs to have its free_user callback set to Context.free_user.
+ * The functions need to be cast to c_void_p to be able to compare
+ * the addresses.
+ *
+ * Return None if any of the checks fail.
+ * Note that isl_id_get_user returning NULL automatically results in None.
+ */
+static const char *const id_user = &R"(
+    def user(self):
+        free_user = cast(Context.free_user, c_void_p)
+        id_free_user = cast(isl.isl_id_get_free_user(self.ptr), c_void_p)
+        if id_free_user.value != free_user.value:
+            return None
+        return isl.isl_id_get_user(self.ptr)
+)"[1];
+
+/* Print any special methods of this class that are not
+ * automatically derived from the C interface.
+ *
+ * In particular, print a special method for the "id" class.
+ */
+void python_generator::print_special_methods(const isl_class &clazz)
+{
+	if (clazz.name != "isl_id")
+		return;
+
+	printf("%s", id_user);
+}
+
 /* If "clazz" has a type function describing subclasses,
  * then add constructors that allow each of these subclasses
  * to be treated as an object to the superclass.
@@ -824,34 +918,37 @@ void python_generator::print_restype(FunctionDecl *fd)
 }
 
 /* Tell ctypes about the types of the arguments of the function "fd".
+ *
+ * Any callback argument is followed by a user pointer argument.
+ * Each such pair or arguments is handled together.
  */
 void python_generator::print_argtypes(FunctionDecl *fd)
 {
 	string fullname = fd->getName().str();
 	int n = fd->getNumParams();
-	int drop_user = 0;
 
 	printf("isl.%s.argtypes = [", fullname.c_str());
-	for (int i = 0; i < n - drop_user; ++i) {
+	for (int i = 0; i < n; ++i) {
 		ParmVarDecl *param = fd->getParamDecl(i);
 		QualType type = param->getOriginalType();
-		if (is_callback(type))
-			drop_user = 1;
 		if (i)
 			printf(", ");
 		if (is_isl_ctx(type))
 			printf("Context");
-		else if (is_isl_type(type) || is_callback(type))
+		else if (is_isl_type(type))
 			printf("c_void_p");
+		else if (is_callback(type))
+			printf("c_void_p, c_void_p");
 		else if (is_string(type))
 			printf("c_char_p");
 		else if (is_long(type))
 			printf("c_long");
 		else
 			printf("c_int");
+
+		if (is_callback(type))
+			++i;
 	}
-	if (drop_user)
-		printf(", c_void_p");
 	printf("]\n");
 }
 
@@ -867,7 +964,8 @@ void python_generator::print_method_type(FunctionDecl *fd)
  * if it is one of those type subclasses, then print a __new__ method.
  *
  * In the superclass, the __new__ method constructs an object
- * of the subclass type specified by the type function.
+ * of the subclass type specified by the type function,
+ * raising an error on an error type.
  * In the subclass, the __new__ method reverts to the original behavior.
  */
 void python_generator::print_new(const isl_class &clazz,
@@ -891,7 +989,7 @@ void python_generator::print_new(const isl_class &clazz,
 			printf("                return %s(**keywords)\n",
 				type2python(i->second).c_str());
 		}
-		printf("            raise\n");
+		printf("            raise Error\n");
 	}
 
 	printf("        return super(%s, cls).__new__(cls)\n",
@@ -1003,9 +1101,11 @@ void python_generator::print_method_types(const isl_class &clazz)
  *
  * Then we print a constructor with several cases, one for constructing
  * a Python object from a return value, one for each function that
- * was marked as a constructor and for each type based subclass.
+ * was marked as a constructor, a class specific constructor, if any, and
+ * one for each type based subclass.
  *
- * Next, we print out some common methods and the methods corresponding
+ * Next, we print out some common methods, class specific methods and
+ * the methods corresponding
  * to functions that are not marked as constructors, including those
  * that set a persistent callback and those that set an enum value.
  *
@@ -1016,9 +1116,6 @@ void python_generator::print_method_types(const isl_class &clazz)
 void python_generator::print(const isl_class &clazz)
 {
 	string p_name = type2python(clazz.subclass_name);
-	function_set::const_iterator in;
-	map<string, function_set>::const_iterator it;
-	map<FunctionDecl *, vector<set_enum> >::const_iterator ie;
 	vector<string> super = find_superclasses(clazz.type);
 	const set<FunctionDecl *> &callbacks = clazz.persistent_callbacks;
 
@@ -1038,9 +1135,9 @@ void python_generator::print(const isl_class &clazz)
 	printf("            self.ptr = keywords[\"ptr\"]\n");
 	printf("            return\n");
 
-	for (in = clazz.constructors.begin(); in != clazz.constructors.end();
-		++in)
-		print_constructor(clazz, *in);
+	for (const auto &cons : clazz.constructors)
+		print_constructor(clazz, cons);
+	print_special_constructors(clazz);
 	print_upcast_constructors(clazz);
 	printf("        raise Error\n");
 	printf("    def __del__(self):\n");
@@ -1051,12 +1148,13 @@ void python_generator::print(const isl_class &clazz)
 	print_representation(clazz, p_name);
 	print_copy_callbacks(clazz);
 
-	for (in = callbacks.begin(); in != callbacks.end(); ++in)
-		print_method(clazz, *in, super);
-	for (it = clazz.methods.begin(); it != clazz.methods.end(); ++it)
-		print_method(clazz, it->first, it->second, super);
-	for (ie = clazz.set_enums.begin(); ie != clazz.set_enums.end(); ++ie)
-		print_set_enum(clazz, ie->first, super);
+	print_special_methods(clazz);
+	for (const auto &callback : callbacks)
+		print_method(clazz, callback, super);
+	for (const auto &kvp : clazz.methods)
+		print_method(clazz, kvp.first, kvp.second, super);
+	for (const auto &kvp : clazz.set_enums)
+		print_set_enum(clazz, kvp.first, super);
 
 	printf("\n");
 

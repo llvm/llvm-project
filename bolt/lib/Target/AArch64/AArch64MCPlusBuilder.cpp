@@ -223,7 +223,7 @@ public:
     // Look for literal addressing mode (see C1-143 ARM DDI 0487B.a)
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I)
-      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
         return true;
 
     return false;
@@ -257,7 +257,7 @@ public:
     // Literal addressing mode
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-      if (MCII.OpInfo[I].OperandType != MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType != MCOI::OPERAND_PCREL)
         continue;
 
       if (!Inst.getOperand(I).isImm()) {
@@ -302,7 +302,7 @@ public:
     }
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
         break;
       ++OI;
     }

@@ -21,6 +21,14 @@ using namespace mlir;
 MlirAttribute mlirAttributeGetNull() { return {nullptr}; }
 
 //===----------------------------------------------------------------------===//
+// Location attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsALocation(MlirAttribute attr) {
+  return unwrap(attr).isa<LocationAttr>();
+}
+
+//===----------------------------------------------------------------------===//
 // Affine map attribute.
 //===----------------------------------------------------------------------===//
 
