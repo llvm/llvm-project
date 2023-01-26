@@ -2104,8 +2104,8 @@ static bool checkPointerAuthValue(Sema &S, Expr *&Arg,
 static ExprResult SemaPointerAuthStrip(Sema &S, CallExpr *Call) {
   if (checkArgCount(S, Call, 2)) return ExprError();
   if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Strip) |
-      checkPointerAuthKey(S, Call->getArgs()[1]))
+  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_Strip) |
+      (int)checkPointerAuthKey(S, Call->getArgs()[1]))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
@@ -2115,8 +2115,8 @@ static ExprResult SemaPointerAuthStrip(Sema &S, CallExpr *Call) {
 static ExprResult SemaPointerAuthBlendDiscriminator(Sema &S, CallExpr *Call) {
   if (checkArgCount(S, Call, 2)) return ExprError();
   if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_BlendPointer) |
-      checkPointerAuthValue(S, Call->getArgs()[1], PAO_BlendInteger))
+  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_BlendPointer) |
+      (int)checkPointerAuthValue(S, Call->getArgs()[1], PAO_BlendInteger))
     return ExprError();
 
   Call->setType(S.Context.getUIntPtrType());
@@ -2126,8 +2126,8 @@ static ExprResult SemaPointerAuthBlendDiscriminator(Sema &S, CallExpr *Call) {
 static ExprResult SemaPointerAuthSignGenericData(Sema &S, CallExpr *Call) {
   if (checkArgCount(S, Call, 2)) return ExprError();
   if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_SignGeneric) |
-      checkPointerAuthValue(S, Call->getArgs()[1], PAO_Discriminator))
+  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_SignGeneric) |
+      (int)checkPointerAuthValue(S, Call->getArgs()[1], PAO_Discriminator))
     return ExprError();
 
   Call->setType(S.Context.getUIntPtrType());
@@ -2139,9 +2139,9 @@ static ExprResult SemaPointerAuthSignOrAuth(Sema &S, CallExpr *Call,
                                             bool RequireConstant) {
   if (checkArgCount(S, Call, 3)) return ExprError();
   if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], OpKind, RequireConstant) |
-      checkPointerAuthKey(S, Call->getArgs()[1]) |
-      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator,
+  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], OpKind, RequireConstant) |
+      (int)checkPointerAuthKey(S, Call->getArgs()[1]) |
+      (int)checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator,
                             RequireConstant))
     return ExprError();
 
@@ -2152,11 +2152,11 @@ static ExprResult SemaPointerAuthSignOrAuth(Sema &S, CallExpr *Call,
 static ExprResult SemaPointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   if (checkArgCount(S, Call, 5)) return ExprError();
   if (checkPointerAuthEnabled(S, Call)) return ExprError();
-  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) |
-      checkPointerAuthKey(S, Call->getArgs()[1]) |
-      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) |
-      checkPointerAuthKey(S, Call->getArgs()[3]) |
-      checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
+  if ((int)checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) |
+      (int)checkPointerAuthKey(S, Call->getArgs()[1]) |
+      (int)checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) |
+      (int)checkPointerAuthKey(S, Call->getArgs()[3]) |
+      (int)checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator))
     return ExprError();
 
   Call->setType(Call->getArgs()[0]->getType());
