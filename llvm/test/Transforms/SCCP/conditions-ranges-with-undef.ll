@@ -8,7 +8,7 @@ declare void @use(i1)
 define void @val_undef_eq() {
 ; CHECK-LABEL: @val_undef_eq(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 undef, 0
+; CHECK-NEXT:    [[A:%.*]] = add i32 undef, 0
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 [[A]], 10
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
@@ -41,7 +41,7 @@ declare void @use.i32(i32)
 define void @val_undef_range() {
 ; CHECK-LABEL: @val_undef_range(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 undef, 0
+; CHECK-NEXT:    [[A:%.*]] = add i32 undef, 0
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp ult i32 [[A]], 127
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:

@@ -16,7 +16,7 @@ define void @test_2_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
-; SCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -29,7 +29,7 @@ define void @test_2_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -63,7 +63,7 @@ define void @test_3_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; SCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -79,7 +79,7 @@ define void @test_3_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -123,7 +123,7 @@ define void @test_5_incoming_constants(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
-; SCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    ret void
@@ -145,7 +145,7 @@ define void @test_5_incoming_constants(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[BB1]] ], [ 2, [[BB2]] ], [ 3, [[BB3]] ], [ 4, [[BB4]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    ret void
@@ -196,7 +196,7 @@ define void @rotated_loop_2(i32 %x) {
 ; SCCP-NEXT:    br label [[EXIT]]
 ; SCCP:       exit:
 ; SCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ]
-; SCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; SCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; SCCP-NEXT:    call void @use(i1 true)
 ; SCCP-NEXT:    call void @use(i1 false)
 ; SCCP-NEXT:    br label [[EXIT_1:%.*]]
@@ -217,7 +217,7 @@ define void @rotated_loop_2(i32 %x) {
 ; IPSCCP-NEXT:    br label [[EXIT]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    [[P:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 3, [[BB1]] ], [ 2, [[BB2]] ], [ 5, [[BB3]] ]
-; IPSCCP-NEXT:    [[A:%.*]] = add nuw i32 [[P]], 1
+; IPSCCP-NEXT:    [[A:%.*]] = add i32 [[P]], 1
 ; IPSCCP-NEXT:    call void @use(i1 true)
 ; IPSCCP-NEXT:    call void @use(i1 false)
 ; IPSCCP-NEXT:    br label [[EXIT_1:%.*]]
@@ -358,7 +358,7 @@ define void @loop_with_header_1(i32 %x) {
 ; IPSCCP-NEXT:    br i1 [[C_1]], label [[LOOP_BODY]], label [[EXIT:%.*]]
 ; IPSCCP:       loop.body:
 ; IPSCCP-NEXT:    call void @use(i1 true)
-; IPSCCP-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; IPSCCP-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; IPSCCP-NEXT:    br label [[LOOP_HEADER]]
 ; IPSCCP:       exit:
 ; IPSCCP-NEXT:    ret void
