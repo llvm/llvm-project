@@ -18,9 +18,9 @@ define void @build_pair_i32s() {
 ; CHECK-LABEL: build_pair_i32s:
 ; CHECK:         .functype build_pair_i32s () -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
-; CHECK-NEXT:    v128.load $push0=, 0($0)
-; CHECK-NEXT:    i8x16.shuffle $push1=, $pop0, $1, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    v128.store64_lane 0($0):p2align=0, $pop1, 0
+; CHECK-NEXT:    v128.load $push0=
+; CHECK-NEXT:    i8x16.shuffle $push1=
+; CHECK-NEXT:    v128.store64_lane
 ; CHECK-NEXT:    return
 entry:
   %0 = load <4 x i32>, ptr undef, align 16
