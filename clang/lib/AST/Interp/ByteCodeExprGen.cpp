@@ -1479,10 +1479,9 @@ bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   if (!this->emitCallBI(Func, E))
     return false;
 
-  if (DiscardResult) {
-    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+  QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+  if (DiscardResult && !ReturnType->isVoidType()) {
     PrimType T = classifyPrim(ReturnType);
-
     return this->emitPop(T, E);
   }
 
