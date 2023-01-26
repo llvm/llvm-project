@@ -2895,7 +2895,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
-      ReportModuleLoadingProgress));
+      /*OutputBackend=*/nullptr, ReportModuleLoadingProgress));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
