@@ -70,6 +70,9 @@ Improvements to Clang's diagnostics
 - We now generate a diagnostic for signed integer overflow due to unary minus
   in a non-constant expression context. This fixes
   `Issue 31643 <https://github.com/llvm/llvm-project/issues/31643>`_
+- Clang now warns by default for C++20 and later about deprecated capture of
+  ``this`` with a capture default of ``=``. This warning can be disabled with
+  ``-Wno-deprecated-this-capture``.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
