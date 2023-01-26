@@ -18,10 +18,9 @@ define <2 x half> @masked_load_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov w9, v1.s[1]
-; CHECK-NEXT:    mov v0.h[0], w8
-; CHECK-NEXT:    mov v0.h[1], w9
+; CHECK-NEXT:    mov v0.h[0], v1.h[0]
+; CHECK-NEXT:    mov w8, v1.s[1]
+; CHECK-NEXT:    mov v0.h[1], w8
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
