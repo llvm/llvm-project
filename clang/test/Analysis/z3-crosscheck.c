@@ -77,3 +77,15 @@ void floatUnaryLNotInEq(int h, int l) {
     // expected-warning@-1{{garbage}}
   }
 }
+
+// don't crash, and also produce a core.CallAndMessage finding
+void a(int);
+typedef struct {
+  int b;
+} c;
+c *d;
+void e() {
+  (void)d->b;
+  int f;
+  a(f); // expected-warning {{1st function call argument is an uninitialized value [core.CallAndMessage]}}
+}
