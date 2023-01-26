@@ -28,6 +28,7 @@ hsa_status_t active_wait_for_signal(hsa_signal_t signal,
   while (got == init)
     got = hsa_signal_wait_scacquire(signal, HSA_SIGNAL_CONDITION_NE, init,
                                     UINT64_MAX, HSA_WAIT_STATE_BLOCKED);
+
   if (got != success)
     return HSA_STATUS_ERROR;
 
@@ -58,6 +59,7 @@ hsa_status_t is_locked(void *ptr, void **agentBaseAddress) {
     else // address is already device-agent accessible, no need to compute
          // offset
       *agentBaseAddress = ptr;
+
   } else
     *agentBaseAddress = nullptr;
 

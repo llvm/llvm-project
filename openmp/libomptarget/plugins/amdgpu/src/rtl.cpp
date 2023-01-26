@@ -1907,9 +1907,10 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
 
   hsa_signal_t Signal;
-  bool UserLocked;
+  bool UserLocked{false};
   Err = DeviceInfo().freesignalpoolMemcpyH2D(TgtPtr, HstOrPoolPtr, (size_t)Size,
                                            DeviceId, Signal, UserLocked);
+
   if (Err != HSA_STATUS_SUCCESS) {
     DP("Error when copying data from host to device. Pointers: "
        "host = 0x%016lx, device = 0x%016lx, size = %lld\n",
@@ -3603,6 +3604,7 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)Ptr);
   Ptr = (Err == HSA_STATUS_SUCCESS) ? Ptr : NULL;
+
   return Ptr;
 }
 
@@ -3688,6 +3690,7 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
     DP("Error when freeing CUDA memory\n");
     return OFFLOAD_FAIL;
   }
+
   return OFFLOAD_SUCCESS;
 }
 
