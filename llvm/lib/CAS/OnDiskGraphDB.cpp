@@ -937,18 +937,35 @@ OnDiskGraphDB::IndexProxy OnDiskGraphDB::getIndexProxyFromPointer(
 
 ObjectID OnDiskGraphDB::getReference(ArrayRef<uint8_t> Hash) {
   IndexProxy I = indexHash(Hash);
+  return getExternalReference(I);
+}
+
+ObjectID OnDiskGraphDB::getExternalReference(const IndexProxy &I) {
   return getExternalReference(makeInternalRef(I.Offset));
 }
 
 std::optional<ObjectID>
-OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) const {
+OnDiskGraphDB::getExistingReference(ArrayRef<uint8_t> Digest) {
+  auto tryUpstream =
+      [&](std::optional<IndexProxy> I) -> std::optional<ObjectID> {
+    if (!UpstreamDB)
+      return std::nullopt;
+    std::optional<ObjectID> UpstreamID =
+        UpstreamDB->getExistingReference(Digest);
+    if (!UpstreamID)
+      return std::nullopt;
+    if (!I)
+      I.emplace(indexHash(Digest));
+    return getExternalReference(*I);
+  };
+
   OnDiskHashMappedTrie::const_pointer P = Index.find(Digest);
   if (!P)
-    return std::nullopt;
+    return tryUpstream(std::nullopt);
   IndexProxy I = getIndexProxyFromPointer(P);
   TrieRecord::Data Obj = I.Ref.load();
   if (Obj.SK == TrieRecord::StorageKind::Unknown)
-    return std::nullopt;
+    return tryUpstream(I);
   return getExternalReference(makeInternalRef(I.Offset));
 }
 
@@ -991,8 +1008,11 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
   IndexProxy I = getIndexProxyFromRef(Ref);
   TrieRecord::Data Object = I.Ref.load();
 
-  if (Object.SK == TrieRecord::StorageKind::Unknown)
-    return std::nullopt;
+  if (Object.SK == TrieRecord::StorageKind::Unknown) {
+    if (!UpstreamDB)
+      return std::nullopt;
+    return faultInFromUpstream(ExternalRef);
+  }
 
   auto toObjectHandle = [](InternalHandle H) -> ObjectHandle {
     return ObjectHandle::fromOpaqueData(H.getRawData());
@@ -1035,14 +1055,21 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
                          ->insert(I.Hash, Object.SK, std::move(*OwnedBuffer))));
 }
 
-bool OnDiskGraphDB::containsObject(ObjectID ExternalRef) const {
+bool OnDiskGraphDB::containsObject(ObjectID ExternalRef,
+                                   bool CheckUpstream) const {
   InternalRef Ref = getInternalRef(ExternalRef);
   IndexProxy I = getIndexProxyFromRef(Ref);
   TrieRecord::Data Object = I.Ref.load();
-  return Object.SK != TrieRecord::StorageKind::Unknown;
+  if (Object.SK != TrieRecord::StorageKind::Unknown)
+    return true;
+  if (!CheckUpstream || !UpstreamDB)
+    return false;
+  std::optional<ObjectID> UpstreamID =
+      UpstreamDB->getExistingReference(getDigest(I));
+  return UpstreamID.has_value();
 }
 
-InternalRef OnDiskGraphDB::makeInternalRef(FileOffset IndexOffset) const {
+InternalRef OnDiskGraphDB::makeInternalRef(FileOffset IndexOffset) {
   return InternalRef::getFromOffset(IndexOffset);
 }
 
@@ -1260,9 +1287,9 @@ Error OnDiskGraphDB::store(ObjectID ID, ArrayRef<ObjectID> Refs,
   return Error::success();
 }
 
-Expected<std::unique_ptr<OnDiskGraphDB>>
-OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
-                    unsigned HashByteSize) {
+Expected<std::unique_ptr<OnDiskGraphDB>> OnDiskGraphDB::open(
+    StringRef AbsPath, StringRef HashName, unsigned HashByteSize,
+    std::unique_ptr<OnDiskGraphDB> UpstreamDB, FaultInPolicy Policy) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -1280,21 +1307,27 @@ OnDiskGraphDB::open(StringRef AbsPath, StringRef HashName,
     return std::move(E);
 
   std::optional<OnDiskDataAllocator> DataPool;
+  StringRef PolicyName =
+      Policy == FaultInPolicy::SingleNode ? "single" : "full";
   if (Error E = OnDiskDataAllocator::create(
                     AbsPath + Slash + FilePrefix + DataPoolFile,
-                    DataPoolTableName + "[" + HashName + "]",
+                    DataPoolTableName + "[" + HashName + "]" + PolicyName,
                     /*MaxFileSize=*/16 * GB, /*MinFileSize=*/MB)
                     .moveInto(DataPool))
     return std::move(E);
 
   return std::unique_ptr<OnDiskGraphDB>(
-      new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool)));
+      new OnDiskGraphDB(AbsPath, std::move(*Index), std::move(*DataPool),
+                        std::move(UpstreamDB), Policy));
 }
 
 OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
-                             OnDiskDataAllocator DataPool)
+                             OnDiskDataAllocator DataPool,
+                             std::unique_ptr<OnDiskGraphDB> UpstreamDB,
+                             FaultInPolicy Policy)
     : Index(std::move(Index)), DataPool(std::move(DataPool)),
-      RootPath(RootPath.str()) {
+      RootPath(RootPath.str()), UpstreamDB(std::move(UpstreamDB)),
+      FIPolicy(Policy) {
   /// Lifetime for "big" objects not in DataPool.
   ///
   /// NOTE: Could use ThreadSafeHashMappedTrie here. For now, doing something
@@ -1309,4 +1342,120 @@ OnDiskGraphDB::OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
 
 OnDiskGraphDB::~OnDiskGraphDB() {
   delete static_cast<StandaloneDataMapTy *>(StandaloneData);
+}
+
+Error OnDiskGraphDB::importFullTree(ObjectID PrimaryID,
+                                    ObjectHandle UpstreamNode) {
+  // Copies the full CAS tree from upstream. Uses depth-first copying to protect
+  // against the process dying during importing and leaving the database with an
+  // incomplete tree. Note that if the upstream has missing nodes then the tree
+  // will be copied with missing nodes as well, it won't be considered an error.
+
+  struct UpstreamCursor {
+    ObjectHandle Node;
+    size_t RefsCount;
+    object_refs_iterator RefI;
+    object_refs_iterator RefE;
+  };
+  /// Keeps track of the state of visitation for current node and all of its
+  /// parents.
+  SmallVector<UpstreamCursor, 16> CursorStack;
+  /// Keeps track of the currently visited nodes as they are imported into
+  /// primary database, from current node and its parents. When a node is
+  /// entered for visitation it appends its own ID, then appends referenced IDs
+  /// as they get imported. When a node is fully imported it removes the
+  /// referenced IDs from the bottom of the stack which leaves its own ID at the
+  /// bottom, adding to the list of referenced IDs for the parent node.
+  SmallVector<ObjectID, 128> PrimaryNodesStack;
+
+  auto enqueueNode = [&](ObjectID PrimaryID, std::optional<ObjectHandle> Node) {
+    PrimaryNodesStack.push_back(PrimaryID);
+    if (!Node)
+      return;
+    auto Refs = UpstreamDB->getObjectRefs(*Node);
+    CursorStack.push_back({*Node,
+                           (size_t)std::distance(Refs.begin(), Refs.end()),
+                           Refs.begin(), Refs.end()});
+  };
+
+  enqueueNode(PrimaryID, UpstreamNode);
+
+  while (!CursorStack.empty()) {
+    UpstreamCursor &Cur = CursorStack.back();
+    if (Cur.RefI == Cur.RefE) {
+      // Copy the node data into the primary store.
+      // FIXME: Use hard-link or cloning if the file-system supports it and data
+      // is stored into a separate file.
+
+      // The bottom of \p PrimaryNodesStack contains the primary ID for the
+      // current node plus the list of imported referenced IDs.
+      assert(PrimaryNodesStack.size() >= Cur.RefsCount + 1);
+      ObjectID PrimaryID = *(PrimaryNodesStack.end() - Cur.RefsCount - 1);
+      auto PrimaryRefs = ArrayRef(PrimaryNodesStack)
+                             .slice(PrimaryNodesStack.size() - Cur.RefsCount);
+      auto Data = UpstreamDB->getObjectData(Cur.Node);
+      if (Error E = store(PrimaryID, PrimaryRefs, Data))
+        return E;
+      // Remove the current node and its IDs from the stack.
+      PrimaryNodesStack.truncate(PrimaryNodesStack.size() - Cur.RefsCount);
+      CursorStack.pop_back();
+      continue;
+    }
+
+    ObjectID UpstreamID = *(Cur.RefI++);
+    ObjectID PrimaryID = getReference(UpstreamDB->getDigest(UpstreamID));
+    if (containsObject(PrimaryID, /*CheckUpstream=*/false)) {
+      // This \p ObjectID already exists in the primary. Either it was imported
+      // via \p importFullTree or the client created it, in which case the
+      // client takes responsibility for how it was formed.
+      enqueueNode(PrimaryID, std::nullopt);
+      continue;
+    }
+    Expected<std::optional<ObjectHandle>> UpstreamNode =
+        UpstreamDB->load(UpstreamID);
+    if (!UpstreamNode)
+      return UpstreamNode.takeError();
+    enqueueNode(PrimaryID, *UpstreamNode);
+  }
+
+  assert(PrimaryNodesStack.size() == 1);
+  assert(PrimaryNodesStack.front() == PrimaryID);
+  return Error::success();
+}
+
+Error OnDiskGraphDB::importSingleNode(ObjectID PrimaryID,
+                                      ObjectHandle UpstreamNode) {
+  // Copies only a single node, it doesn't copy the referenced nodes.
+
+  // Copy the node data into the primary store.
+  // FIXME: Use hard-link or cloning if the file-system supports it and data is
+  // stored into a separate file.
+
+  auto Data = UpstreamDB->getObjectData(UpstreamNode);
+  auto UpstreamRefs = UpstreamDB->getObjectRefs(UpstreamNode);
+  SmallVector<ObjectID, 64> Refs;
+  Refs.reserve(std::distance(UpstreamRefs.begin(), UpstreamRefs.end()));
+  for (ObjectID UpstreamRef : UpstreamRefs)
+    Refs.push_back(getReference(UpstreamDB->getDigest(UpstreamRef)));
+
+  return store(PrimaryID, Refs, Data);
+}
+
+Expected<std::optional<ObjectHandle>>
+OnDiskGraphDB::faultInFromUpstream(ObjectID PrimaryID) {
+  assert(UpstreamDB);
+
+  ObjectID UpstreamID = UpstreamDB->getReference(getDigest(PrimaryID));
+  Expected<std::optional<ObjectHandle>> UpstreamNode =
+      UpstreamDB->load(UpstreamID);
+  if (!UpstreamNode)
+    return UpstreamNode.takeError();
+  if (!*UpstreamNode)
+    return std::nullopt;
+
+  if (Error E = FIPolicy == FaultInPolicy::SingleNode
+                    ? importSingleNode(PrimaryID, **UpstreamNode)
+                    : importFullTree(PrimaryID, **UpstreamNode))
+    return std::move(E);
+  return load(PrimaryID);
 }
