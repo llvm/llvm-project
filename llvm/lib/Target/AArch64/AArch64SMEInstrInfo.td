@@ -619,18 +619,18 @@ defm MOVA_VG4_MXI4Z  : sme2_mova_vec_to_array_vg4_multi<"mova", int_aarch64_sme_
 defm MOVA_VG2_2ZMXI : sme2_mova_array_to_vec_vg2_multi<0b000, "mova">;
 defm MOVA_VG4_4ZMXI : sme2_mova_array_to_vec_vg4_multi<0b1000, "mova">;
 
-defm SQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshr", 0b0, 0b0>;
-defm SQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshr", 0b000>;
+defm SQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshr", 0b0, 0b0, int_aarch64_sve_sqrshr_x2>;
+defm SQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshr", 0b000, int_aarch64_sve_sqrshr_x4>;
 
-defm UQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"uqrshr", 0b0, 0b1>;
-defm UQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshr", 0b001>;
+defm UQRSHR_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"uqrshr", 0b0, 0b1, int_aarch64_sve_uqrshr_x2>;
+defm UQRSHR_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshr", 0b001, int_aarch64_sve_uqrshr_x4>;
 
-defm SQRSHRU_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshru", 0b1, 0b0>;
-defm SQRSHRU_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshru", 0b010>;
+defm SQRSHRU_VG2_Z2ZI : sme2_sat_shift_vector_vg2<"sqrshru", 0b1, 0b0, int_aarch64_sve_sqrshru_x2>;
+defm SQRSHRU_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshru", 0b010, int_aarch64_sve_sqrshru_x4>;
 
-defm SQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrn", 0b100>;
-defm UQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshrn", 0b101>;
-defm SQRSHRUN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrun", 0b110>;
+defm SQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrn", 0b100, int_aarch64_sve_sqrshrn_x4>;
+defm UQRSHRN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"uqrshrn", 0b101, int_aarch64_sve_uqrshrn_x4>;
+defm SQRSHRUN_VG4_Z4ZI : sme2_sat_shift_vector_vg4<"sqrshrun", 0b110, int_aarch64_sve_sqrshrun_x4>;
 
 defm SEL_VG2_2ZP2Z2Z: sme2_sel_vector_vg2<"sel">;
 defm SEL_VG4_4ZP4Z4Z: sme2_sel_vector_vg4<"sel">;
