@@ -2278,12 +2278,9 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       //   %t = tLDRr %base, %idx
       Register BaseReg = User.MI->getOperand(0).getReg();
 
-      MachineBasicBlock *UserMBB = User.MI->getParent();
-      MachineBasicBlock::iterator Shift = User.MI->getIterator();
-      if (Shift == UserMBB->begin())
+      if (User.MI->getIterator() == User.MI->getParent()->begin())
         continue;
-
-      Shift = prev_nodbg(Shift, UserMBB->begin());
+      MachineInstr *Shift = User.MI->getPrevNode();
       if (Shift->getOpcode() != ARM::tLSLri ||
           Shift->getOperand(3).getImm() != 2 ||
           !Shift->getOperand(2).isKill())
