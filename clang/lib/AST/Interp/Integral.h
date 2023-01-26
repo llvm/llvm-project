@@ -234,6 +234,18 @@ public:
     return false;
   }
 
+  template <unsigned RHSBits, bool RHSSign>
+  static void shiftLeft(const Integral A, const Integral<RHSBits, RHSSign> B,
+                        unsigned OpBits, Integral *R) {
+    *R = Integral::from(A.V << B.V, OpBits);
+  }
+
+  template <unsigned RHSBits, bool RHSSign>
+  static void shiftRight(const Integral A, const Integral<RHSBits, RHSSign> B,
+                         unsigned OpBits, Integral *R) {
+    *R = Integral::from(A.V >> B.V, OpBits);
+  }
+
 private:
   template <typename T> static bool CheckAddUB(T A, T B, T &R) {
     if constexpr (std::is_signed_v<T>) {
