@@ -337,11 +337,12 @@ defm V_DOT2_U32_U16 : VOP3PInst<"v_dot2_u32_u16",
 
 } // End SubtargetPredicate = HasDot2Insts
 
-let SubtargetPredicate = HasDot7Insts in {
-
+let SubtargetPredicate = HasDot10Insts in
 defm V_DOT2_F32_F16 : VOP3PInst<"v_dot2_f32_f16",
   VOP3P_Profile<VOP_F32_V2F16_V2F16_F32, VOP3_REGULAR, /*HasDPP*/ 1>,
   AMDGPUfdot2, 1/*ExplicitClamp*/>;
+
+let SubtargetPredicate = HasDot7Insts in {
 defm V_DOT4_U32_U8  : VOP3PInst<"v_dot4_u32_u8",
   VOP3P_Profile<VOP_I32_I32_I32_I32, VOP3_PACKED>, int_amdgcn_udot4, 1>;
 defm V_DOT8_U32_U4  : VOP3PInst<"v_dot8_u32_u4",
