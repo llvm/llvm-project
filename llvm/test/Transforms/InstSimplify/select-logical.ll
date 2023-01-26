@@ -200,10 +200,7 @@ define i1 @logical_or_not_and_commute_or(i1 %x, i1 %y) {
 
 define i1 @logical_or_not_commute_and(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_or_not_commute_and(
-; CHECK-NEXT:    [[L_AND:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[L_AND]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[X]], i1 [[NOT]], i1 false
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %l.and = select i1 %x, i1 true, i1 %y
   %not = xor i1 %l.and, true
@@ -215,10 +212,7 @@ define i1 @logical_or_not_commute_and(i1 %x, i1 %y) {
 
 define i1 @logical_or_not_commute_and_commute_or(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_or_not_commute_and_commute_or(
-; CHECK-NEXT:    [[L_AND:%.*]] = select i1 [[X:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[L_AND]], true
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[Y]], i1 [[NOT]], i1 false
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %l.and = select i1 %x, i1 true, i1 %y
   %not = xor i1 %l.and, true
