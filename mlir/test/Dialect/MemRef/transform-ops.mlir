@@ -30,7 +30,7 @@ func.func @multi_buffer(%in: memref<16xf32>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1
+  %0 = transform.structured.match ops{["memref.alloc"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.memref.multibuffer %0 {factor = 2 : i64}
   // Verify that the returned handle is usable.
   transform.test_print_remark_at_operand %1, "transformed" : !pdl.operation

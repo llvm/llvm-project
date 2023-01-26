@@ -77,8 +77,9 @@ public:
       return failure();
 
     if (!useInnerDimsForReduction &&
-        (parallelDims !=
-         llvm::to_vector<4>(llvm::seq<int64_t>(0, parallelDims.size()))))
+        (parallelDims == llvm::to_vector<4>(llvm::seq<int64_t>(
+                             reductionDims.size(),
+                             parallelDims.size() + reductionDims.size()))))
       return failure();
 
     SmallVector<int64_t, 4> indices;
