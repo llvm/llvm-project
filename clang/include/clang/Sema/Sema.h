@@ -3327,9 +3327,7 @@ public:
                       SourceLocation ScopedEnumKWLoc,
                       bool ScopedEnumUsesClassTag, TypeResult UnderlyingType,
                       bool IsTypeSpecifier, bool IsTemplateParamOrArg,
-                      OffsetOfKind OOK,
-                      UsingShadowDecl*& FoundUsingShadow,
-                      SkipBodyInfo *SkipBody = nullptr);
+                      OffsetOfKind OOK, SkipBodyInfo *SkipBody = nullptr);
 
   DeclResult ActOnTemplatedFriendTag(Scope *S, SourceLocation FriendLoc,
                                      unsigned TagSpec, SourceLocation TagLoc,
