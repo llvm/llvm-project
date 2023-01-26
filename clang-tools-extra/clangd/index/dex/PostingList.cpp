@@ -132,7 +132,7 @@ bool encodeVByte(DocID Delta, llvm::MutableArrayRef<uint8_t> &Payload) {
   assert(Delta != 0 && "0 is not a valid PostingList delta.");
   // Calculate number of bytes Delta encoding would take by examining the
   // meaningful bits.
-  unsigned Width = 1 + llvm::findLastSet(Delta) / BitsPerEncodingByte;
+  unsigned Width = 1 + llvm::Log2_64(Delta) / BitsPerEncodingByte;
   if (Width > Payload.size())
     return false;
 
