@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestClass(TestBase):
 
     @swiftTest
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104681506')
     def test_class(self):
         self.build()
         self.runCmd('setting set target.experimental.swift-enable-cxx-interop true')
