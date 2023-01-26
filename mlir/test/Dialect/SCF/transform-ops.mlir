@@ -17,7 +17,7 @@ func.func @get_parent_for_op(%arg0: index, %arg1: index, %arg2: index) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // CHECK: = transform.loop.get_parent_for
   %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !transform.op<"scf.for">
   %2 = transform.loop.get_parent_for %0 { num_loops = 2 } : (!pdl.operation) -> !transform.op<"scf.for">
@@ -37,7 +37,7 @@ func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{could not find an 'scf.for' parent}}
   %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !transform.op<"scf.for">
 }
@@ -76,7 +76,7 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0  : (!pdl.operation) -> !transform.op<"scf.for">
   // CHECK: = transform.loop.outline %{{.*}}
   transform.loop.outline %1 {func_name = "foo"} : (!transform.op<"scf.for">) -> !pdl.operation
@@ -105,7 +105,7 @@ func.func @loop_peel_op() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !transform.op<"scf.for">
   transform.loop.peel %1 : (!transform.op<"scf.for">) -> !pdl.operation
 }
@@ -138,7 +138,7 @@ func.func @loop_pipeline_op(%A: memref<?xf32>, %result: memref<?xf32>) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addf"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addf"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !transform.op<"scf.for">
   %2 = transform.loop.pipeline %1 : (!transform.op<"scf.for">) -> !pdl.operation
   // Verify that the returned handle is usable.
@@ -162,7 +162,7 @@ func.func @loop_unroll_op() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !transform.op<"scf.for">
   transform.loop.unroll %1 { factor = 4 } : !transform.op<"scf.for">
 }
@@ -186,7 +186,7 @@ func.func @get_parent_for_op(%arg0: index, %arg1: index, %arg2: index) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // CHECK: = transform.loop.get_parent_for
   %1 = transform.loop.get_parent_for %0 { affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
   %2 = transform.loop.get_parent_for %0 { num_loops = 2, affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
@@ -206,7 +206,7 @@ func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   // expected-error @below {{could not find an 'affine.for' parent}}
   %1 = transform.loop.get_parent_for %0 { affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
 }
@@ -228,7 +228,7 @@ func.func @loop_unroll_op() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 { affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
   transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
   transform.loop.unroll %1 { factor = 4, affine = true } : !transform.op<"affine.for">
@@ -253,7 +253,7 @@ func.func @test_mixed_loops() {
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["arith.addi"]} in %arg1
+  %0 = transform.structured.match ops{["arith.addi"]} in %arg1 : (!pdl.operation) -> !pdl.operation
   %1 = transform.loop.get_parent_for %0 { num_loops = 1, affine = true } : (!pdl.operation) -> !transform.op<"affine.for">
   transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
   transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
