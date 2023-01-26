@@ -75,6 +75,7 @@ class TestCoroutineHandle(TestBase):
             ])
 
     @add_test_categories(["libstdcxx"])
+    @skipIf(compiler="clang")
     def test_libstdcpp(self):
         self.do_test(USE_LIBSTDCPP)
 

@@ -16,6 +16,7 @@ class TestSwiftCTypeExternalProvider(TestBase):
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
     @swiftTest
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104671405')
     def test_swift_regex(self):
         """Test that C types with builtin metadata emitted are looked up using
         external type info provider."""

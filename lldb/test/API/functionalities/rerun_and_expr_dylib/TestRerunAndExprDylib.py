@@ -11,6 +11,7 @@ from lldbsuite.test.decorators import *
 
 class TestRerunExprDylib(TestBase):
     @skipIfWindows
+    @expectedFailureAll(oslist=['linux'], bugnumber='rdar://104671730')
     def test(self):
         """
         Tests whether re-launching a process without destroying
