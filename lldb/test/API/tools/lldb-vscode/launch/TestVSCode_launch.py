@@ -445,7 +445,8 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
 
         terminateCommands = ['expr 4+2']
         self.launch(program=program,
-                    terminateCommands=terminateCommands)
+                    terminateCommands=terminateCommands,
+                    disconnectAutomatically=False)
         self.get_console()
         # Once it's disconnected the console should contain the
         # "terminateCommands"
