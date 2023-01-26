@@ -327,7 +327,7 @@ static std::array<Address, N> getParamAddrs(std::index_sequence<Ints...> IntSeq,
                                             CodeGenFunction *CGF) {
   return std::array<Address, N>{
       {Address(CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
-               CGF->VoidPtrTy, Alignments[Ints])...}};
+               CGF->VoidPtrTy, Alignments[Ints], KnownNonNull)...}};
 }
 
 // Template classes that are used as bases for classes that emit special
