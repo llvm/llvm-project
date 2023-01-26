@@ -1594,6 +1594,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
 
   let arguments = (ins PDL_Operation:$target,
                        Variadic<PDL_Operation>:$vector_sizes,
+                       UnitAttr:$vectorize_nd_extract,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
                           $static_vector_sizes);
   let results = (outs);

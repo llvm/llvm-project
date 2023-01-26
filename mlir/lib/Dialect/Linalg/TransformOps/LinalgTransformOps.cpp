@@ -2986,7 +2986,8 @@ DiagnosedSilenceableFailure transform::MaskedVectorizeOp::apply(
              << "cannot vectorize non-Linalg op";
     }
 
-    if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes))) {
+    if (failed(linalg::vectorize(rewriter, linalgOp, vectorSizes,
+                                 getVectorizeNdExtract()))) {
       return mlir::emitSilenceableFailure(target->getLoc())
              << "failed to vectorize op";
     }
