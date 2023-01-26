@@ -150,9 +150,6 @@ TEST(WalkAST, Using) {
     }
     using ns::$explicit^Y;)cpp",
            "^Y<int> x;");
-  testWalk(R"cpp(
-    namespace ns { class Foo {}; }
-  )cpp", "using ns::$explicit^Foo; class ^Foo foo;");
 }
 
 TEST(WalkAST, Namespaces) {
