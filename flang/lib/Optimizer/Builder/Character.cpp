@@ -422,7 +422,7 @@ void fir::factory::CharacterExprHelper::createAssign(
       (lhsCstLen && rhsCstLen && *lhsCstLen == *rhsCstLen) ||
       (rhs.getLen() == lhs.getLen());
 
-  if (compileTimeSameLength && *lhsCstLen == 1) {
+  if (compileTimeSameLength && lhsCstLen && *lhsCstLen == 1) {
     createLengthOneAssign(lhs, rhs);
     return;
   }
