@@ -119,7 +119,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
 
         self.check("ii", 8)
 
-        self.expect("p ii",
+        self.expect("expression ii",
                     substrs=[multimap, 'size=8',
                              '[5] = ',
                              'first = 5',
@@ -180,7 +180,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
                 '[3] = (first = "zero", second = 0)',
             ])
 
-        self.expect("p si",
+        self.expect("expression si",
                     substrs=[multimap, 'size=4',
                 '[0] = (first = "one", second = 1)',
                 '[1] = (first = "three", second = 3)',
@@ -232,7 +232,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p is",
+            "expression is",
             substrs=[
                 multimap,
                 'size=4',
@@ -291,7 +291,7 @@ class GenericMultiMapDataFormatterTestCase(TestBase):
         self.check("ss", 3)
 
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=[
                 multimap,
                 'size=3',

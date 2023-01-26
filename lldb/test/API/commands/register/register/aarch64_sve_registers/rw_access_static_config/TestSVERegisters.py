@@ -163,7 +163,7 @@ class RegisterCommandsTestCase(TestBase):
         self.check_sve_regs_read(z_reg_size)
 
         # Evaluate simple expression and print function expr_eval_func address.
-        self.expect("p expr_eval_func", substrs=["= 0x"])
+        self.expect("expression expr_eval_func", substrs=["= 0x"])
 
         # Evaluate expression call function expr_eval_func.
         self.expect_expr("expr_eval_func()",
