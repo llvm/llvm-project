@@ -1830,6 +1830,22 @@ let Predicates = [HasSVEorSME] in {
   def : Pat<(nxv2bf16 (extract_subvector (nxv8bf16 ZPR:$Zs), (i64 6))),
             (UUNPKHI_ZZ_D (UUNPKHI_ZZ_S ZPR:$Zs))>;
 
+  // extract/insert 64-bit fixed length vector from/into a scalable vector
+  foreach VT = [v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64, v4bf16] in {
+    def : Pat<(VT (vector_extract_subvec (SVEContainerVT<VT>.Value ZPR:$Zs), (i64 0))),
+              (EXTRACT_SUBREG ZPR:$Zs, dsub)>;
+    def : Pat<(SVEContainerVT<VT>.Value (vector_insert_subvec undef, (VT V64:$src), (i64 0))),
+              (INSERT_SUBREG (IMPLICIT_DEF), $src, dsub)>;
+  }
+
+  // extract/insert 128-bit fixed length vector from/into a scalable vector
+  foreach VT = [v16i8, v8i16, v4i32, v2i64, v8f16, v4f32, v2f64, v8bf16] in {
+    def : Pat<(VT (vector_extract_subvec (SVEContainerVT<VT>.Value ZPR:$Zs), (i64 0))),
+              (EXTRACT_SUBREG ZPR:$Zs, zsub)>;
+    def : Pat<(SVEContainerVT<VT>.Value (vector_insert_subvec undef, (VT V128:$src), (i64 0))),
+              (INSERT_SUBREG (IMPLICIT_DEF), $src, zsub)>;
+  }
+
   // Concatenate two predicates.
   def : Pat<(nxv2i1 (concat_vectors nxv1i1:$p1, nxv1i1:$p2)),
             (UZP1_PPP_D $p1, $p2)>;
