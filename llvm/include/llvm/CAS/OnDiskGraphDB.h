@@ -173,6 +173,9 @@ private:
 struct OnDiskContent;
 
 /// Reference to a node. The node's data may not be stored in the database.
+/// An \p ObjectID instance can only be used with the \p OnDiskGraphDB instance
+/// it came from. \p ObjectIDs from different \p OnDiskGraphDB instances are not
+/// comparable.
 class ObjectID {
 public:
   uint64_t getOpaqueData() const { return Opaque; }
@@ -273,10 +276,12 @@ public:
   /// Get an existing reference to the object \p Digest.
   ///
   /// Returns \p nullopt if the object is not stored in this CAS.
-  std::optional<ObjectID> getExistingReference(ArrayRef<uint8_t> Digest) const;
+  std::optional<ObjectID> getExistingReference(ArrayRef<uint8_t> Digest);
 
   /// \returns true if the object associated with \p Ref is stored in the CAS.
-  bool containsObject(ObjectID Ref) const;
+  bool containsObject(ObjectID Ref) const {
+    return containsObject(Ref, /*CheckUpstream=*/true);
+  }
 
   /// \returns the data part of the provided object handle.
   ArrayRef<char> getObjectData(ObjectHandle Node) const;
@@ -288,8 +293,31 @@ public:
 
   void print(raw_ostream &OS) const;
 
+  /// How to fault-in nodes if an upstream database is used.
+  enum class FaultInPolicy {
+    /// Copy only the requested node.
+    SingleNode,
+    /// Copy the the entire graph of a node.
+    FullTree,
+  };
+
+  /// Open the on-disk store from a directory.
+  ///
+  /// \param Path directory for the on-disk store. The directory will be created
+  /// if it doesn't exist.
+  /// \param HashName Identifier name for the hashing algorithm that is going to
+  /// be used.
+  /// \param HashByteSize Size for the object digest hash bytes.
+  /// \param UpstreamDB Optional on-disk store to be used for faulting-in nodes
+  /// if they don't exist in the primary store. The upstream store is only used
+  /// for reading nodes, new nodes are only written to the primary store.
+  /// \param Policy If \p UpstreamDB is provided, controls how nodes are copied
+  /// to primary store. This is recorded at creation time and subsequent opens
+  /// need to pass the same policy otherwise the \p open will fail.
   static Expected<std::unique_ptr<OnDiskGraphDB>>
-  open(StringRef Path, StringRef HashName, unsigned HashByteSize);
+  open(StringRef Path, StringRef HashName, unsigned HashByteSize,
+       std::unique_ptr<OnDiskGraphDB> UpstreamDB = nullptr,
+       FaultInPolicy Policy = FaultInPolicy::FullTree);
 
   ~OnDiskGraphDB();
 
@@ -297,6 +325,14 @@ private:
   struct IndexProxy;
   class TempFile;
   class MappedTempFile;
+
+  bool containsObject(ObjectID Ref, bool CheckUpstream) const;
+
+  /// When \p load is called for a node that doesn't exist, this function tries
+  /// to load it from the upstream store and copy it to the primary one.
+  Expected<std::optional<ObjectHandle>> faultInFromUpstream(ObjectID PrimaryID);
+  Error importFullTree(ObjectID PrimaryID, ObjectHandle UpstreamNode);
+  Error importSingleNode(ObjectID PrimaryID, ObjectHandle UpstreamNode);
 
   IndexProxy indexHash(ArrayRef<uint8_t> Hash);
 
@@ -306,12 +342,14 @@ private:
 
   OnDiskContent getContentFromHandle(ObjectHandle H) const;
 
-  InternalRef getInternalRef(ObjectID Ref) const {
+  static InternalRef getInternalRef(ObjectID Ref) {
     return InternalRef::getFromRawData(Ref.getOpaqueData());
   }
-  ObjectID getExternalReference(InternalRef Ref) const {
+  static ObjectID getExternalReference(InternalRef Ref) {
     return ObjectID::fromOpaqueData(Ref.getRawData());
   }
+
+  static ObjectID getExternalReference(const IndexProxy &I);
 
   void getStandalonePath(StringRef FileSuffix, const IndexProxy &I,
                          SmallVectorImpl<char> &Path) const;
@@ -321,7 +359,7 @@ private:
 
   IndexProxy getIndexProxyFromRef(InternalRef Ref) const;
 
-  InternalRef makeInternalRef(FileOffset IndexOffset) const;
+  static InternalRef makeInternalRef(FileOffset IndexOffset);
 
   IndexProxy
   getIndexProxyFromPointer(OnDiskHashMappedTrie::const_pointer P) const;
@@ -329,7 +367,9 @@ private:
   InternalRefArrayRef getInternalRefs(ObjectHandle Node) const;
 
   OnDiskGraphDB(StringRef RootPath, OnDiskHashMappedTrie Index,
-                OnDiskDataAllocator DataPool);
+                OnDiskDataAllocator DataPool,
+                std::unique_ptr<OnDiskGraphDB> UpstreamDB,
+                FaultInPolicy Policy);
 
   /// Mapping from hash to object reference.
   ///
@@ -344,6 +384,10 @@ private:
   void *StandaloneData; // a StandaloneDataMap.
 
   std::string RootPath;
+
+  /// Optional on-disk store to be used for faulting-in nodes.
+  std::unique_ptr<OnDiskGraphDB> UpstreamDB;
+  FaultInPolicy FIPolicy;
 };
 
 } // namespace llvm::cas::ondisk
