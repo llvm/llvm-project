@@ -21,5 +21,3 @@ add_llvm_tool(llvm-cov
   SourceCoverageViewText.cpp
   TestingSupport.cpp
   )
-
-target_link_libraries(llvm-cov PRIVATE LLVMDebuginfod)
