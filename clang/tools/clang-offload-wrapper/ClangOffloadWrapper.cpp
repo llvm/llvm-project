@@ -694,9 +694,8 @@ int main(int argc, const char **argv) {
 
   // Create a wrapper for device binaries and write its bitcode to the file.
   WriteBitcodeToFile(
-      Wrapper.wrapBinaries(
-          makeArrayRef(Images.data(), Images.size()),
-          makeArrayRef(OffloadArchs.data(), OffloadArchs.size())),
+      Wrapper.wrapBinaries(ArrayRef(Images.data(), Images.size()),
+                           ArrayRef(OffloadArchs.data(), OffloadArchs.size())),
       Out.os());
 
   if (Out.os().has_error()) {
