@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Debug.h"
@@ -343,49 +342,10 @@ static Error handleMaybeNoDataFoundError(Error E) {
       });
 }
 
-Error CoverageMapping::loadFromFile(
-    StringRef Filename, StringRef Arch, StringRef CompilationDir,
-    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
-    bool &DataFound, SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
-  auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
-      Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
-  if (std::error_code EC = CovMappingBufOrErr.getError())
-    return createFileError(Filename, errorCodeToError(EC));
-  MemoryBufferRef CovMappingBufRef =
-      CovMappingBufOrErr.get()->getMemBufferRef();
-  SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-
-  SmallVector<object::BuildIDRef> BinaryIDs;
-  auto CoverageReadersOrErr = BinaryCoverageReader::create(
-      CovMappingBufRef, Arch, Buffers, CompilationDir,
-      FoundBinaryIDs ? &BinaryIDs : nullptr);
-  if (Error E = CoverageReadersOrErr.takeError()) {
-    E = handleMaybeNoDataFoundError(std::move(E));
-    if (E)
-      return createFileError(Filename, std::move(E));
-    return E;
-  }
-
-  SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
-  for (auto &Reader : CoverageReadersOrErr.get())
-    Readers.push_back(std::move(Reader));
-  if (FoundBinaryIDs && !Readers.empty()) {
-    llvm::append_range(*FoundBinaryIDs,
-                       llvm::map_range(BinaryIDs, [](object::BuildIDRef BID) {
-                         return object::BuildID(BID);
-                       }));
-  }
-  DataFound |= !Readers.empty();
-  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage))
-    return createFileError(Filename, std::move(E));
-  return Error::success();
-}
-
 Expected<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
                       StringRef ProfileFilename, ArrayRef<StringRef> Arches,
-                      StringRef CompilationDir,
-                      const object::BuildIDFetcher *BIDFetcher) {
+                      StringRef CompilationDir) {
   auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
@@ -393,56 +353,35 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   bool DataFound = false;
 
-  auto GetArch = [&](size_t Idx) {
-    if (Arches.empty())
-      return StringRef();
-    if (Arches.size() == 1)
-      return Arches.front();
-    return Arches[Idx];
-  };
-
-  SmallVector<object::BuildID> FoundBinaryIDs;
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    if (Error E =
-            loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
-                         *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
-      return E;
-  }
-
-  if (BIDFetcher) {
-    const auto &Compare = [](object::BuildIDRef A, object::BuildIDRef B) {
-      return StringRef(reinterpret_cast<const char *>(A.data()), A.size()) <
-             StringRef(reinterpret_cast<const char *>(B.data()), B.size());
-    };
-    std::vector<object::BuildID> ProfileBinaryIDs;
-    if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
-      return createFileError(ProfileFilename, std::move(E));
-    llvm::sort(ProfileBinaryIDs, Compare);
-    std::unique(ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(), Compare);
-
-    SmallVector<object::BuildIDRef> BinaryIDsToFetch;
-    if (!ProfileBinaryIDs.empty()) {
-      llvm::sort(FoundBinaryIDs, Compare);
-      std::unique(FoundBinaryIDs.begin(), FoundBinaryIDs.end(), Compare);
-      std::set_difference(
-          ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(),
-          FoundBinaryIDs.begin(), FoundBinaryIDs.end(),
-          std::inserter(BinaryIDsToFetch, BinaryIDsToFetch.end()), Compare);
+    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
+        File.value(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
+    if (std::error_code EC = CovMappingBufOrErr.getError())
+      return createFileError(File.value(), errorCodeToError(EC));
+    StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
+    MemoryBufferRef CovMappingBufRef =
+        CovMappingBufOrErr.get()->getMemBufferRef();
+    SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
+    auto CoverageReadersOrErr = BinaryCoverageReader::create(
+        CovMappingBufRef, Arch, Buffers, CompilationDir);
+    if (Error E = CoverageReadersOrErr.takeError()) {
+      E = handleMaybeNoDataFoundError(std::move(E));
+      if (E)
+        return createFileError(File.value(), std::move(E));
+      // E == success (originally a no_data_found error).
+      continue;
     }
 
-    for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
-      std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
-      if (!PathOpt)
-        continue;
-      std::string Path = std::move(*PathOpt);
-      StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
-      if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
-                                 *Coverage, DataFound))
-        return E;
-    }
+    SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
+    for (auto &Reader : CoverageReadersOrErr.get())
+      Readers.push_back(std::move(Reader));
+    DataFound |= !Readers.empty();
+    if (Error E = loadFromReaders(Readers, *ProfileReader, *Coverage))
+      return createFileError(File.value(), std::move(E));
   }
-
-  if (!DataFound)
+  // If no readers were created, either no objects were provided or none of them
+  // had coverage data. Return an error in the latter case.
+  if (!DataFound && !ObjectFilenames.empty())
     return createFileError(
         join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "),
         make_error<CoverageMapError>(coveragemap_error::no_data_found));
