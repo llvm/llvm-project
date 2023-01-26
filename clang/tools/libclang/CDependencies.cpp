@@ -185,7 +185,8 @@ static CXErrorCode getFullDependencies(
     HandleFullDepsCallback HandleFullDeps) {
   llvm::StringSet<> AlreadySeen;
   FullDependencyConsumer DepConsumer(AlreadySeen, LookupOutput,
-                                     Worker->shouldEagerLoadModules());
+                                     Worker->shouldEagerLoadModules(),
+                                     Worker->getCASFS());
 
   bool HasDiagConsumer = DiagConsumer;
   bool HasError = Error;
