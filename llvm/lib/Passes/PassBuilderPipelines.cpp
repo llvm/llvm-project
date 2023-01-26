@@ -1712,6 +1712,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Optimize globals again after we ran the inliner.
   MPM.addPass(GlobalOptPass());
 
+  // Run the OpenMPOpt pass again after global optimizations.
+  MPM.addPass(OpenMPOptPass(ThinOrFullLTOPhase::FullLTOPostLink));
+
   // Garbage collect dead functions.
   MPM.addPass(GlobalDCEPass());
 
