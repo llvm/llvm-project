@@ -23,75 +23,44 @@ endif()
 
 libomptarget_say("Building CUDA offloading plugin.")
 
-# Define the suffix for the runtime messaging dumps.
-add_definitions(-DTARGET_NAME=CUDA)
-
 set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})
 
-set(LIBOMPTARGET_CAN_LINK_LIBCUDA FALSE)
-if (LIBOMPTARGET_DEP_CUDA_FOUND)
-  set(LIBOMPTARGET_CAN_LINK_LIBCUDA TRUE)
-endif()
+add_llvm_library(omptarget.rtl.cuda SHARED
+  src/rtl.cpp
 
-if (LIBOMPTARGET_CAN_LINK_LIBCUDA AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
+  LINK_COMPONENTS
+  Support
+  Object
+
+  LINK_LIBS PRIVATE
+  elf_common
+  MemoryManager
+  ${OPENMP_PTHREAD_LIB}
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports,-z,defs"
+
+  NO_INSTALL_RPATH
+)
+
+if(LIBOMPTARGET_DEP_CUDA_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
-  add_llvm_library(omptarget.rtl.cuda SHARED
-
-    src/rtl.cpp
-
-    ADDITIONAL_HEADER_DIRS
-    ${LIBOMPTARGET_INCLUDE_DIR}
-
-    LINK_COMPONENTS
-    Support
-    Object
-
-    LINK_LIBS
-    PRIVATE
-    elf_common
-    MemoryManager
-    CUDA::cuda_driver
-    ${OPENMP_PTHREAD_LIB}
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
-    "-Wl,-z,defs"
-
-    NO_INSTALL_RPATH
-  )
+  target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
 else()
   libomptarget_say("Building CUDA plugin for dlopened libcuda")
-  include_directories(dynamic_cuda)
-  add_llvm_library(omptarget.rtl.cuda 
-    SHARED
-
-    src/rtl.cpp
-    dynamic_cuda/cuda.cpp
-
-    ADDITIONAL_HEADER_DIRS
-    ${LIBOMPTARGET_INCLUDE_DIR}
-
-    LINK_LIBS
-    PRIVATE
-    elf_common
-    MemoryManager
-    ${OPENMP_PTHREAD_LIB}
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
-    "-Wl,-z,defs"
-
-    NO_INSTALL_RPATH
-  )
+  target_include_directories(omptarget.rtl.cuda PRIVATE dynamic_cuda)
+  target_sources(omptarget.rtl.cuda PRIVATE dynamic_cuda/cuda.cpp)
 endif()
 add_dependencies(omptarget.rtl.cuda omptarget.devicertl.nvptx)
+
+# Define the suffix for the runtime messaging dumps.
+target_compile_definitions(omptarget.rtl.cuda PRIVATE TARGET_NAME="CUDA")
+target_include_directories(omptarget.rtl.cuda PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.cuda PROPERTIES 
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   CXX_VISIBILITY_PRESET protected)
-
-target_include_directories(omptarget.rtl.cuda PRIVATE
-  ${LIBOMPTARGET_INCLUDE_DIR}
-)
 
 # Report to the parent scope that we are building a plugin for CUDA.
 # This controls whether tests are run for the nvptx offloading target
@@ -100,7 +69,6 @@ target_include_directories(omptarget.rtl.cuda PRIVATE
 option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
 if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
   libomptarget_say("Enable tests using CUDA plugin")
-  set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-oldDriver" PARENT_SCOPE)
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.cuda")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
