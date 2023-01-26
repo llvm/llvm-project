@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
@@ -41,6 +42,10 @@
 namespace llvm {
 
 class IndexedInstrProfReader;
+
+namespace object {
+class BuildIDFetcher;
+} // namespace object
 
 namespace coverage {
 
@@ -579,6 +584,13 @@ class CoverageMapping {
       ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
       IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage);
 
+  // Load coverage records from file.
+  static Error
+  loadFromFile(StringRef Filename, StringRef Arch, StringRef CompilationDir,
+               IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
+               bool &DataFound,
+               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
+
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(const CoverageMappingRecord &Record,
                            IndexedInstrProfReader &ProfileReader);
@@ -604,8 +616,8 @@ public:
   /// Ignores non-instrumented object files unless all are not instrumented.
   static Expected<std::unique_ptr<CoverageMapping>>
   load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
-       ArrayRef<StringRef> Arches = std::nullopt,
-       StringRef CompilationDir = "");
+       ArrayRef<StringRef> Arches = std::nullopt, StringRef CompilationDir = "",
+       const object::BuildIDFetcher *BIDFetcher = nullptr);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
