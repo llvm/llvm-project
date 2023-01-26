@@ -408,7 +408,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFile
     if (Error E =
             loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
                          *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
-      return E;
+      return std::move(E);
   }
 
   if (BIDFetcher) {
@@ -440,7 +440,7 @@ CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFile
       StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
       if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
                                  *Coverage, DataFound))
-        return E;
+        return std::move(E);
     }
   }
 
