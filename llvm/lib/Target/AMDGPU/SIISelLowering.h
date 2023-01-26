@@ -167,6 +167,8 @@ private:
 
   SDValue performUCharToFloatCombine(SDNode *N,
                                      DAGCombinerInfo &DCI) const;
+  SDValue performFCopySignCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
   SDValue performSHLPtrCombine(SDNode *N,
                                unsigned AS,
                                EVT MemVT,
